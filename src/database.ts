@@ -1,79 +1,57 @@
-import { supabase, isSupabaseConfigured } from './supabase';
-import { toast } from 'sonner';
+import bcrypt from 'bcryptjs';
+import { dbState } from './lib/local-db';
 
-// Re-export Auth logic from AuthService
-export {
-  auth,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  signOut,
-  createUserWithEmailAndPassword,
-  googleProvider,
-  GoogleAuthProvider
-} from './services/AuthService';
-export type { User } from './services/AuthService';
-
-// Re-export Local DB logic from LocalDatabase
-export {
-  localDb,
-  incrementStock
-} from './services/LocalDatabase';
-
-// Re-export modular services
-export {
-  generateLocalId,
-  convertKeysToCamel,
-  convertKeysToSnake,
-} from './lib/db-converters';
-
-export {
-  getLocalValue,
-  queryLocalState,
-  loadInitialState,
-  triggerObservers,
-  saveStateToStorage
-} from './lib/local-db';
-export type { QueryOptions } from './lib/local-db';
-
-export {
-  enqueueStockAdjustment,
-  onBackgroundSyncStatus,
-  loadPendingSyncQueue
-} from './services/SyncService';
-
-export {
-  initAndSyncSupabase,
-  onSyncUpdate,
-  syncStatus
-} from './services/SupabaseSync';
-
-// ----------------- Compatibility Mocks -----------------
-export const db = { type: 'database_mock' };
-export const rtdb = { type: 'realtime_mock' };
-
-export const ref = (dbInstance: any, path = '') => {
-  if (typeof dbInstance === 'string') return dbInstance;
-  return path;
-};
-
-export const child = (parent: any, path: string) => {
-  const parentPath = typeof parent === 'string' ? parent : (parent.path || '');
-  return parentPath ? `${parentPath}/${path}` : path;
-};
-
-export function rtdbQuery(pathOrRef: any, ..._constraints: any[]) {
-  return pathOrRef; 
+export interface UserAccount {
+  id: string;
+  username: string;
+  passwordHash: string;
+  role: string;
+  fullName?: string;
 }
 
-export const orderByChild = (_field: string) => ({ type: 'orderByChild' });
-export const equalTo = (_val: any) => ({ type: 'equalTo' });
-export const startAt = (_val: any) => ({ type: 'startAt' });
-export const endAt = (_val: any) => ({ type: 'endAt' });
-export const limitToLast = (_n: number) => ({ type: 'limitToLast' });
+/**
+ * Vérifie l'authentification d'un utilisateur en mode hors ligne.
+ * Utilise une promesse asynchrone pour ne pas bloquer l'interface React durant le calcul de l'empreinte bcrypt.
+ */
+export async function verifyOfflineAuth(usernameInput: string, passwordInput: string): Promise<UserAccount | null> {
+  try {
+    const usersTable = dbState['users'] || {};
+    const userList = Object.values(usersTable) as any[];
 
-export enum OperationType {
-  READ = 'READ', WRITE = 'WRITE', DELETE = 'DELETE', CREATE = 'CREATE', UPDATE = 'UPDATE', LIST = 'LIST', GET = 'GET'
+    // Recherche de l'utilisateur par nom d'utilisateur
+    const matchingUser = userList.find(
+      (u) => u.username && u.username.toLowerCase() === usernameInput.trim().toLowerCase()
+    );
+
+    if (!matchingUser || !matchingUser.passwordHash) {
+      return null;
+    }
+
+    // Comparaison asynchrone (non-bloquante pour le thread React)
+    const isPasswordValid = await new Promise<boolean>((resolve) => {
+      bcrypt.compare(passwordInput, matchingUser.passwordHash, (err, isMatch) => {
+        if (err) {
+          console.error('[Auth] Erreur lors du contrôle du mot de passe hors ligne:', err);
+          resolve(false);
+        } else {
+          resolve(Boolean(isMatch));
+        }
+      });
+    });
+
+    if (isPasswordValid) {
+      return {
+        id: matchingUser.id,
+        username: matchingUser.username,
+        passwordHash: matchingUser.passwordHash,
+        role: matchingUser.role || 'cashier',
+        fullName: matchingUser.fullName || matchingUser.name || matchingUser.username
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Auth] Échec de la vérification hors ligne:', error);
+    return null;
+  }
 }
-
-export const handleDatabaseError = (_err: any, _type: any, _module: any) => {};
