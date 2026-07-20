@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "security: sync server source",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\sync-server-source.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "security: verify auth hardening",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\verify-auth-hardening.ps1"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "security: pre-release gate",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\security-pre-release-gate.ps1"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
