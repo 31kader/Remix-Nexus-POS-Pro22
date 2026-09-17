@@ -85,7 +85,7 @@ export const AttendanceTab = memo(function AttendanceTab({
       const newId = generateUniqueId();
       const newRecord = {
         id: newId,
-        userId: targetUser?.uid || null,
+        userId: targetUser?.uid,
         employeeId: employeeId,
         employeeName: targetEmp?.name || 'Inconnu',
         date: format(now, 'yyyy-MM-dd'),

@@ -8,9 +8,9 @@ interface Props {
   transactions: Transaction[];
   settings: CompanySettings;
   onReturn: (t: Transaction) => void;
-  onMarkAsDelivered: (t: Transaction) => void;
+  onMarkAsDelivered?: (idOrTx: any) => void | Promise<void>;
   onEdit: (t: Transaction) => void;
-  onRestore: (t: Transaction) => void;
+  onRestore?: (idOrTx: any) => void | Promise<void>;
   canAccess: (permission: keyof RolePermissions) => boolean;
   requestSort: (key: any) => void;
   sortConfig: { key: any; direction: 'asc' | 'desc' } | null;
@@ -29,10 +29,9 @@ export const TransactionTable: React.FC<Props> = ({
 
   const displayedTransactions = useMemo(() => {
     if (!Array.isArray(transactions)) return [];
-    if (pageSize === 'all') return transactions;
-    const from = (validPage - 1) * effectivePageSize;
-    return transactions.slice(from, from + effectivePageSize);
-  }, [transactions, pageSize, validPage, effectivePageSize]);
+    const from = (validPage - 1) * pageSize;
+    return transactions.slice(from, from + pageSize);
+  }, [transactions, pageSize, validPage]);
 
   if (!Array.isArray(transactions) || transactions.length === 0) {
     return (
@@ -110,7 +109,7 @@ export const TransactionTable: React.FC<Props> = ({
                     )}
                     <button 
                       type="button"
-                      onClick={() => onRestore(t)} 
+                      onClick={() => onRestore?.(t)} 
                       className="p-2 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 rounded-lg transition-colors"
                       title="Modifier la vente en caisse"
                     >
@@ -169,7 +168,7 @@ export const TransactionTable: React.FC<Props> = ({
           </button>
         </div>
 
-        {pageSize !== 'all' && totalPages > 1 && (
+        {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <button
               type="button"

@@ -399,7 +399,7 @@ async function startServer() {
     app.post("/api/ai/complete", async (req, res) => {
       const { data, userPrompt, systemPromptOverride } = req.body;
       const clientKey = req.headers['x-gemini-key'];
-      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY);
+      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || '');
       
       if (!apiKey) {
         return res.status(500).json({ error: "Configuration", message: "La clé API Gemini n'est pas configurée sur le serveur." });
@@ -481,7 +481,7 @@ async function startServer() {
     app.post("/api/ai/scan", async (req, res) => {
       const { image, mimeType } = req.body;
       const clientKey = req.headers['x-gemini-key'];
-      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY);
+      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || '');
 
       if (!apiKey) {
         return res.status(500).json({ error: "Configuration", message: "La clé API Gemini n'est pas configurée pour le scanner." });
