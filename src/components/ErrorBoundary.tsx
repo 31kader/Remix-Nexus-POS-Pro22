@@ -111,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <p className="text-[8px] font-black text-white/5 uppercase tracking-[0.3em]">Nexus POS Pro v1.2.8 Safety Layer</p>
+            <p className="text-[8px] font-black text-white/5 uppercase tracking-[0.3em]">Nexus POS Pro v1.2.9 Safety Layer</p>
           </div>
         </div>
       );

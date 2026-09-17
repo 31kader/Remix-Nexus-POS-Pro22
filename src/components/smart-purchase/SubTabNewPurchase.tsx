@@ -61,6 +61,7 @@ interface SubTabNewPurchaseProps {
   setIsLinkModalOpen: (v: boolean) => void;
   updateItemField: (id: string, field: keyof PurchaseCartItem, value: any) => void;
   updateQuantity: (id: string, qty: number) => void;
+  removeFromCart: (lineId: string) => void;
   quantityInputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
   paidAmount: number;
   setPaidAmount: (v: number) => void;
@@ -85,7 +86,7 @@ export function SubTabNewPurchase({
   setIsQuickSupplierModalOpen, purchaseStatus, setPurchaseStatus, rawOcrText, setIsOcrInspectorOpen,
   detectedOcrType, invoiceNumber, setInvoiceNumber, receptionDate, setReceptionDate,
   cart, products, openQuickCreateModal, setLinkingItem, setIsLinkModalOpen,
-  updateItemField, updateQuantity, quantityInputRefs, paidAmount, setPaidAmount,
+  updateItemField, updateQuantity, removeFromCart, quantityInputRefs, paidAmount, setPaidAmount,
   paymentMethod, setPaymentMethod, resetForm, globalDiscount, setGlobalDiscount,
   globalTax, setGlobalTax, isProcessing, confirmPurchase, editingPurchaseId
 }: SubTabNewPurchaseProps) {
@@ -110,22 +111,11 @@ export function SubTabNewPurchase({
                     onClick={() => { setMode('scan'); setScanMethod('ocr'); setError(null); }} 
                     className={cn(
                       "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
-                      (mode === 'scan' && scanMethod === 'ocr') ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-industrial-500 hover:text-industrial-100"
+                      (mode === 'scan') ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-industrial-500 hover:text-industrial-100"
                     )}
                   >
-                    <FileText size={12} className={cn((mode === 'scan' && scanMethod === 'ocr') ? "text-emerald-300" : "")} />
-                    📂 Import Fichier (CSV/Excel)
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => { setMode('scan'); setScanMethod('ai'); setError(null); }} 
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
-                      (mode === 'scan' && scanMethod === 'ai') ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-100"
-                    )}
-                  >
-                    <Brain size={12} className={cn((mode === 'scan' && scanMethod === 'ai') ? "text-indigo-300 animate-pulse" : "")} />
-                    Scan IA (Internet)
+                    <FileText size={12} className={cn((mode === 'scan') ? "text-emerald-300" : "")} />
+                    📂 Importer Facture / Fichier (CSV, Excel)
                   </button>
                 </div>
                 <div className="flex items-center gap-6">
@@ -327,6 +317,7 @@ export function SubTabNewPurchase({
               setIsLinkModalOpen={setIsLinkModalOpen}
               updateItemField={updateItemField}
               updateQuantity={updateQuantity}
+              removeFromCart={removeFromCart}
               quantityInputRefs={quantityInputRefs}
               setEditingProduct={setEditingProduct}
               setIsProductModalOpen={setIsProductModalOpen}

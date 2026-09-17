@@ -210,7 +210,7 @@ export const Sidebar = ({
             <span className="font-black text-lg truncate text-white tracking-tighter uppercase italic flex items-center gap-1.5">
               NEXUS 
               <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md not-italic tracking-normal normal-case">
-                v1.2.8
+                v1.2.9
               </span>
             </span>
             <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-0.5">Systems Guard</span>

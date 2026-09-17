@@ -64,7 +64,7 @@ export function useSmartPurchaseLogic({
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null);
   const [step, setStep] = useState<'upload' | 'review' | 'confirm' | 'updatePrices'>(draft?.step || 'upload');
   const [lastPurchaseItems, setLastPurchaseItems] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'new' | 'purchases' | 'debts' | 'suggestions' | 'payments'>(draft?.activeSubTab || 'new');
+  const [activeSubTab, setActiveSubTab] = useState<'new' | 'purchases' | 'debts' | 'payments'>((draft?.activeSubTab === 'suggestions' ? 'new' : draft?.activeSubTab) || 'new');
   const [purchaseStatus, setPurchaseStatus] = useState<'draft' | 'ordered' | 'completed'>(draft?.purchaseStatus || 'completed');
   const [paidAmount, setPaidAmount] = useState<number>(draft?.paidAmount !== undefined ? draft.paidAmount : 0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'check'>(draft?.paymentMethod || 'cash');
@@ -305,26 +305,6 @@ export function useSmartPurchaseLogic({
     });
   };
 
-  const suggestedProducts = useMemo(() => {
-    return products.filter(p => (p.stock || 0) <= (p.minStock || 5)).sort((a, b) => (a.stock || 0) - (b.stock || 0));
-  }, [products]);
-
-  const addSuggestionsToCart = () => {
-    const newItems: PurchaseCartItem[] = suggestedProducts.map(p => ({
-      lineId: generateUniqueId(),
-      productId: p.id,
-      productName: p.name,
-      quantity: Math.max(1, (p.minStock || 5) * 2 - (p.stock || 0)),
-      costPrice: p.costPrice || 0,
-      taxRate: p.taxRate || 0,
-      discount: 0,
-      imageUrl: p.imageUrl
-    }));
-    setCart(newItems);
-    setPurchaseStatus('ordered');
-    setActiveSubTab('new');
-  };
-
   // Shortcuts
   usePurchaseShortcuts({
     activeSubTab,
@@ -391,8 +371,6 @@ export function useSmartPurchaseLogic({
     handleSupplierPayment,
     handleQuickSupplierSubmit,
     handleEditPurchaseRequest,
-    handleDeletePurchase,
-    suggestedProducts,
-    addSuggestionsToCart
+    handleDeletePurchase
   };
 }

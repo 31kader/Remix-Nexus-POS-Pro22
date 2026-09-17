@@ -14,6 +14,7 @@ interface PurchaseCartTableProps {
   setIsLinkModalOpen: (v: boolean) => void;
   updateItemField: (id: string, field: keyof PurchaseCartItem, value: any) => void;
   updateQuantity: (id: string, qty: number) => void;
+  removeFromCart: (lineId: string) => void;
   quantityInputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
   setEditingProduct: (v: any) => void;
   setIsProductModalOpen: (v: boolean) => void;
@@ -29,6 +30,7 @@ export function PurchaseCartTable({
   setIsLinkModalOpen,
   updateItemField,
   updateQuantity,
+  removeFromCart,
   quantityInputRefs,
   setEditingProduct,
   setIsProductModalOpen
@@ -223,8 +225,8 @@ export function PurchaseCartTable({
                       )}
                       <button 
                         type="button"
-                        onClick={() => updateQuantity(item.lineId, 0)} 
-                        title="Retirer du panier"
+                        onClick={() => removeFromCart(item.lineId)} 
+                        title="Supprimer la ligne de produit"
                         className="text-industrial-400 hover:text-rose-400 p-1.5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
                       >
                         <Trash2 size={15}/>
