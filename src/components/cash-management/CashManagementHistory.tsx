@@ -51,14 +51,14 @@ export function CashManagementHistory({
                     </div>
                   </td>
                   <td className="p-4 text-sm text-slate-600">{shift.openedBy}</td>
-                  <td className="p-4 text-sm text-slate-600">{shift.initialCash.toFixed(2)} {settings.currency}</td>
-                  <td className="p-4 text-sm font-bold text-slate-800">{shift.finalCash?.toFixed(2)} {settings.currency}</td>
+                  <td className="p-4 text-sm text-slate-600">{Number(shift.initialCash || 0).toFixed(2)} {settings.currency}</td>
+                  <td className="p-4 text-sm font-bold text-slate-800">{Number(shift.finalCash || 0).toFixed(2)} {settings.currency}</td>
                   <td className="p-4">
                     <span className={`text-xs font-bold ${diff < 0 ? 'text-rose-600' : diff > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                      {diff > 0 ? '+' : ''}{diff.toFixed(2)} {settings.currency}
+                      {diff > 0 ? '+' : ''}{Number(diff || 0).toFixed(2)} {settings.currency}
                     </span>
                   </td>
-                  <td className="p-4 text-sm font-bold text-indigo-600">{shift.totalSales?.toFixed(2)} {settings.currency}</td>
+                  <td className="p-4 text-sm font-bold text-indigo-600">{Number(shift.totalSales || 0).toFixed(2)} {settings.currency}</td>
                   <td className="p-4 text-right">
                     <button 
                       onClick={() => printZReport(shift, settings)}

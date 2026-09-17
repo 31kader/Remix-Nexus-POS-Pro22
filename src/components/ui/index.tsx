@@ -9,12 +9,22 @@ export const Button = ({ children, onClick, variant = 'primary', className = '',
   const variants: any = {
     primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_4px_12px_rgba(79,70,229,0.2)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.3)]",
     secondary: "bg-industrial-800 text-industrial-400 border-2 border-industrial-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400",
+    outline: "border border-slate-700 hover:bg-white/5 text-slate-300",
     danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]",
     ghost: "text-slate-400 hover:bg-slate-800/60 hover:text-white",
     success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-[0_4px_12px_rgba(5,150,105,0.3)]"
   };
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={cn(base, variants[variant], className)}>
+    <button 
+      type={type} 
+      onClick={(e) => {
+        if (typeof onClick === 'function') {
+          onClick(e);
+        }
+      }} 
+      disabled={disabled} 
+      className={cn(base, variants[variant] || variants.primary, className)}
+    >
       {children}
     </button>
   );
@@ -22,7 +32,11 @@ export const Button = ({ children, onClick, variant = 'primary', className = '',
 
 export const Card = ({ children, className = "", onClick }: any) => (
   <div 
-    onClick={onClick} 
+    onClick={(e) => {
+      if (typeof onClick === 'function') {
+        onClick(e);
+      }
+    }} 
     className={cn(
       "bg-workspace/40 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden transition-all duration-500 group",
       onClick && "cursor-pointer hover:border-indigo-500/40 hover:shadow-neon-indigo hover:-translate-y-1 active:scale-[0.99]",
@@ -65,13 +79,19 @@ export const BlurCard = ({ children, title, className, borderClass }: { children
 export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg", padding = "p-6", maxHeight = "max-h-[90vh]", headerAction, className = "" }: any) => {
   const modalRef = React.useRef<HTMLDivElement>(null);
 
+  const safeClose = React.useCallback(() => {
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+  }, [onClose]);
+
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        safeClose();
       } else if (e.key === 'Enter') {
         if (document.activeElement?.tagName === 'TEXTAREA') {
           return;
@@ -114,7 +134,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onClose]);
+  }, [isOpen, safeClose]);
 
   if (!isOpen) return null;
   return (
@@ -136,7 +156,11 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
                    {headerAction}
                 </div>
               )}
-              <button onClick={onClose} className="p-2 hover:bg-rose-500/10 hover:text-rose-500 rounded-xl transition-all text-slate-500 active:scale-90 border border-transparent hover:border-rose-500/20">
+              <button 
+                type="button" 
+                onClick={safeClose} 
+                className="p-2 hover:bg-rose-500/10 hover:text-rose-500 rounded-xl transition-all text-slate-500 active:scale-90 border border-transparent hover:border-rose-500/20"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -150,28 +174,52 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
   );
 };
 
-export const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirmer", cancelText = "Annuler", variant = "danger" }: any) => {
+export const ConfirmDialog = ({ 
+  isOpen, 
+  onClose, 
+  onCancel,
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "Confirmer", 
+  cancelText = "Annuler", 
+  variant = "danger" 
+}: any) => {
+  const handleClose = React.useCallback(() => {
+    if (typeof onClose === 'function') {
+      onClose();
+    } else if (typeof onCancel === 'function') {
+      onCancel();
+    }
+  }, [onClose, onCancel]);
+
+  const handleConfirm = React.useCallback(() => {
+    if (typeof onConfirm === 'function') {
+      onConfirm();
+    }
+    handleClose();
+  }, [onConfirm, handleClose]);
+
   React.useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        onConfirm();
-        onClose();
+        handleConfirm();
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [isOpen, onConfirm, onClose]);
+  }, [isOpen, handleConfirm]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <Modal isOpen={isOpen} onClose={handleClose} title={title}>
       <div className="space-y-6">
         <p className="text-industrial-400">{message}</p>
         <div className="flex gap-3 justify-end">
-          <Button onClick={onClose} variant="secondary">{cancelText}</Button>
-          <Button onClick={() => { onConfirm(); onClose(); }} variant={variant}>{confirmText}</Button>
+          <Button onClick={handleClose} variant="secondary">{cancelText}</Button>
+          <Button onClick={handleConfirm} variant={variant}>{confirmText}</Button>
         </div>
       </div>
     </Modal>

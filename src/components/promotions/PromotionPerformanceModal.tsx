@@ -60,7 +60,7 @@ export function PromotionPerformanceModal({
               .map(t => (
                 <div key={t.id} className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl flex justify-between items-center">
                   <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-white">Ticket #{t.id.slice(-6).toUpperCase()}</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">Ticket #{String(t.id || "").slice(-6).toUpperCase()}</p>
                     <p className="text-xs text-slate-500">{format(new Date(t.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
                   </div>
                   <div className="text-right">

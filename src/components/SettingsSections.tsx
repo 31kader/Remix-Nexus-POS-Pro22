@@ -4,3 +4,5 @@ export { AccountingSection } from './settings/AccountingSection';
 export { StaffSection } from './settings/StaffSection';
 export { LoyaltySection } from './settings/LoyaltySection';
 export { SecuritySection } from './settings/SecuritySection';
+export { ReceiptSection } from './settings/ReceiptSection';
+export { WhatsAppSection } from './settings/WhatsAppSection';

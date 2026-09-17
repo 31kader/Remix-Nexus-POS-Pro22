@@ -24,6 +24,30 @@ vi.mock('idb-keyval', () => {
   };
 });
 
+vi.mock('@capacitor-community/sqlite', () => {
+  return {
+    SQLiteConnection: vi.fn().mockImplementation(() => ({
+      isConnection: vi.fn(async () => ({ result: false })),
+      createConnection: vi.fn(async () => ({
+        open: vi.fn(),
+        execute: vi.fn()
+      })),
+      retrieveConnection: vi.fn(),
+      checkConnectionsConsistency: vi.fn(async () => ({ result: true }))
+    })),
+    CapacitorSQLite: {}
+  };
+});
+
+vi.mock('@capacitor/core', () => {
+  return {
+    Capacitor: {
+      isNativePlatform: () => false
+    }
+  };
+});
+
+
 describe('local-db state management', () => {
   beforeEach(() => {
     // Reset dbState before each test

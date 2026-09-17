@@ -35,7 +35,7 @@ Fait de manière numérique de plein accord des deux parties.`;
   printWindow.document.write(`
     <html>
       <head>
-        <title>Dossier Employé - ${employee.name.toUpperCase()}</title>
+        <title>Dossier Employé - ${String(employee.name || 'SALARIÉ').toUpperCase()}</title>
         <style>
           @page { size: A4 portrait; margin: 15mm; }
           body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 10px; color: #111; line-height: 1.6; }
@@ -54,7 +54,7 @@ Fait de manière numérique de plein accord des deux parties.`;
       </head>
       <body>
         <div class="badge">Dossier Numérique Certifié</div>
-        <h1 class="header-title">Nexus Staff dossier : ${employee.name.toUpperCase()}</h1>
+        <h1 class="header-title">Nexus Staff dossier : ${String(employee.name || 'SALARIÉ').toUpperCase()}</h1>
         
         <div class="section-title">Contrat de Travail Numérique</div>
         <div class="contract-paper">${contractText}</div>

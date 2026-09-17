@@ -25,7 +25,7 @@ export function DeliveryOrderCard({
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-4 border-b border-slate-50 flex justify-between items-start bg-indigo-50/30">
         <div>
-          <h3 className="font-black text-slate-800 text-lg">#{order.id.slice(0, 8).toUpperCase()}</h3>
+          <h3 className="font-black text-slate-800 text-lg">#{String(order.id || "").slice(0, 8).toUpperCase()}</h3>
           <p className="text-xs text-slate-500">{format(new Date(order.timestamp), 'dd/MM/yyyy HH:mm')}</p>
         </div>
         <span className={cn(

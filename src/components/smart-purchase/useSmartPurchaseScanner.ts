@@ -1,13 +1,9 @@
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../../supabase';
 import { generateUniqueId, logAction } from '../../lib/utils';
 import { scanInvoice } from '../../services/geminiService';
-import Tesseract from 'tesseract.js';
-import { 
-  reconcileOcrLine, isFuzzyNameMatch, preprocessImageForOcr 
-} from '../../utils/ocrUtils';
-import { parseRawInvoiceText } from './invoiceParser';
+import { matchProductInCatalog } from './invoiceParser';
+import { parseImportedFile } from './importFileParser';
 import { Product, Supplier, InvoicePattern, PurchaseCartItem } from '../../types';
 
 interface UseSmartPurchaseScannerProps {
@@ -58,7 +54,7 @@ export function useSmartPurchaseScanner({
     
     if (results.supplierName && !selectedSupplierId) {
       const matchedSupplier = suppliers.find(s => 
-        s.name.toLowerCase().includes((results.supplierName || '').toLowerCase())
+        Boolean(s?.name && s.name.toLowerCase().includes((results.supplierName || '').toLowerCase()))
       );
       if (matchedSupplier) {
         setSelectedSupplierId(matchedSupplier.id);
@@ -69,160 +65,126 @@ export function useSmartPurchaseScanner({
       setInvoiceNumber(results.invoiceNumber);
     }
     
-    if (results.date) {
-      const parsedDate = new Date(results.date);
+    if (results.date || results.receptionDate) {
+      const dateStr = results.date || results.receptionDate;
+      const parsedDate = new Date(dateStr);
       if (!isNaN(parsedDate.getTime())) {
-        setReceptionDate(results.date.split('T')[0]);
+        setReceptionDate(dateStr.split('T')[0]);
       }
     }
     
     if (results.previousBalance !== undefined && results.previousBalance !== null) {
-      toast.info(`Ancien solde détecté : ${results.previousBalance} DA`, {
-        icon: '💰'
-      });
+      toast.info(`Ancien solde détecté : ${results.previousBalance} DA`, { icon: '💰' });
     }
     
     if (results.items && Array.isArray(results.items)) {
+      let mappedCount = 0;
+      let unmappedCount = 0;
+
       const newItems: PurchaseCartItem[] = results.items
         .map((item: any) => {
-          const product = products.find(p => {
-            if (item.productId && p.id === item.productId) return true;
-            return isFuzzyNameMatch(p.name, item.name);
-          });
-          
-          if (!product) {
-            const expectedCost = item.price || (item.total && item.quantity ? item.total / item.quantity : 50);
+          const matchedProduct = item.productId 
+            ? products.find(p => p.id === item.productId)
+            : matchProductInCatalog({ 
+                name: item.name || '', 
+                barcode: item.barcode || item.code || '', 
+                sku: item.sku || '' 
+              }, products);
+
+          if (matchedProduct) {
+            mappedCount++;
             return {
               lineId: generateUniqueId(),
-              productId: '',
-              productName: item.name,
-              quantity: item.quantity || 1,
-              costPrice: expectedCost,
-              taxRate: 19,
-              discount: 0,
-              isDraft: true
+              productId: matchedProduct.id,
+              productName: matchedProduct.name,
+              quantity: item.qty || item.quantity || 1,
+              costPrice: item.price > 0 ? item.price : (matchedProduct.costPrice || matchedProduct.price || 0),
+              taxRate: matchedProduct.taxRate || 0,
+              discount: item.discount || 0,
+              imageUrl: matchedProduct.imageUrl,
+              isDraft: false
             };
           }
           
-          const expectedCost = product.costPrice || product.price * 0.7 || 50;
-          const { qty, price } = reconcileOcrLine(item.quantity, item.price, item.total, expectedCost);
-          
+          unmappedCount++;
+          const calcPrice = item.price > 0 
+            ? item.price 
+            : (item.total && (item.qty || item.quantity) ? item.total / (item.qty || item.quantity) : 0);
+
           return {
             lineId: generateUniqueId(),
-            productId: product.id,
-            productName: product.name,
-            quantity: qty,
-            costPrice: price,
-            taxRate: product.taxRate || 0,
-            discount: 0,
-            imageUrl: product.imageUrl,
-            isDraft: false
+            productId: '',
+            productName: item.name || 'Article Importé',
+            quantity: item.qty || item.quantity || 1,
+            costPrice: calcPrice > 0 ? calcPrice : 0,
+            taxRate: 19,
+            discount: item.discount || 0,
+            isDraft: true
           };
         })
-        .filter((item: any): item is PurchaseCartItem => item !== null);
+        .filter((item: any): item is PurchaseCartItem => item !== null && !!item.productName);
       
       setCart(newItems);
+
+      if (mappedCount > 0 && unmappedCount > 0) {
+        toast.success(`${mappedCount} articles associés, ${unmappedCount} nouveaux à créer.`);
+      } else if (mappedCount > 0) {
+        toast.success(`${mappedCount} articles associés automatiquement au catalogue !`);
+      } else if (unmappedCount > 0) {
+        toast.info(`${unmappedCount} articles importés (prêts à être ajoutés au catalogue).`);
+      }
     }
     
     setMode('manual');
     logAction(
       user?.uid || user?.id || 'system', 
       user?.displayName || 'Utilisateur', 
-      'Local OCR Scan', 
+      'File Import', 
       'SmartPurchase', 
-      `Analyse hors-ligne réussie pour la facture`
+      `Import réussi`
     );
   };
 
+  // ═══ NEW: Import CSV / Excel / PDF ═══
   const processFileOffline = async (selectedFile: File) => {
     setIsOfflineScanning(true);
-    setOfflineScanProgress("Initialisation...");
+    setOfflineScanProgress("Lecture du fichier...");
     setError(null);
     setFile(selectedFile);
     
     try {
-      if (selectedFile.type === 'application/pdf') {
-        setOfflineScanProgress("Lecture du PDF numérique local...");
-        const reader = new FileReader();
-        reader.onload = () => {
-          try {
-            const rawText = reader.result as string;
-            const matches = rawText.match(/\((.*?)\)\s*T[jJ]/g) || rawText.match(/\(([^)]+)\)/g);
-            let cleanedText = '';
-            
-            if (matches) {
-              cleanedText = matches.map(m => {
-                const val = m.trim();
-                if (val.startsWith('(') && val.endsWith(') Tj')) {
-                  return val.slice(1, -4);
-                } else if (val.startsWith('(') && val.endsWith(') TJ')) {
-                  return val.slice(1, -4);
-                } else if (val.startsWith('(') && val.endsWith(')')) {
-                  return val.slice(1, -1);
-                }
-                return val;
-              }).join(' ');
-            } else {
-              const alphanumeric = rawText.match(/[A-Za-zÀ-ÿ0-9\s\-:.,\/]{5,}/g);
-              if (alphanumeric) {
-                cleanedText = alphanumeric.join('\n');
-              }
-            }
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+      
+      if (['csv', 'txt', 'tsv', 'xlsx', 'xls'].includes(ext)) {
+        setOfflineScanProgress(`Import du fichier ${ext.toUpperCase()}...`);
+        const results = await parseImportedFile(selectedFile, suppliers, products);
+        
+        setRawOcrText(results.columnMapping || '');
+        applyExtractedInvoice(results);
+        setIsOfflineScanning(false);
 
-            if (cleanedText && cleanedText.trim().length > 15) {
-              setRawOcrText(cleanedText);
-              const results = parseRawInvoiceText(cleanedText, suppliers, products);
-              applyExtractedInvoice(results);
-              setIsOfflineScanning(false);
-              toast.success("Facture PDF numérique analysée avec succès en local !");
-            } else {
-              throw new Error("Ce PDF ne contient pas de texte direct extractible (c'est probablement une image scannée). Veuillez plutôt l'importer sous format d'image (PNG/JPG) pour que le moteur OCR local Tesseract puisse le lire.");
-            }
-          } catch (e: any) {
-            setError(e.message || "Erreur lors du décodage du PDF");
-            setIsOfflineScanning(false);
-          }
-        };
-        reader.readAsText(selectedFile);
+        const source = results.importSource === 'excel' ? 'Excel' : 'CSV';
+        toast.success(`Fichier ${source} importé : ${results.items.length} articles extraits !`, { icon: '📂' });
+      } else if (ext === 'pdf') {
+        setOfflineScanProgress("Extraction du texte PDF...");
+        const results = await parseImportedFile(selectedFile, suppliers, products);
+        
+        setRawOcrText(results.columnMapping || '');
+        applyExtractedInvoice(results);
+        setIsOfflineScanning(false);
+        
+        toast.success(`PDF importé : ${results.items.length} articles extraits !`, { icon: '📄' });
       } else {
-        setOfflineScanProgress("Optimisation de l'image (Binarisation & Contraste)...");
-        const processedImage = await preprocessImageForOcr(selectedFile);
-        
-        setOfflineScanProgress("Initialisation de l'OCR Tesseract...");
-        const result = await Tesseract.recognize(
-          processedImage,
-          'fra+eng',
-          {
-            logger: m => {
-              if (m.status === 'recognizing') {
-                setOfflineScanProgress(`Numérisation de l'image (OCR) : ${Math.round(m.progress * 100)}%`);
-              } else if (m.status === 'loading tesseract api') {
-                setOfflineScanProgress("Chargement de l'intelligence OCR...");
-              } else if (m.status === 'loaded tesseract api') {
-                setOfflineScanProgress("Analyse de la mise en page de la facture...");
-              }
-            }
-          }
-        );
-        
-        const rawText = result.data.text;
-        setRawOcrText(rawText);
-        if (rawText && rawText.trim().length > 10) {
-          const results = parseRawInvoiceText(rawText, suppliers, products);
-          applyExtractedInvoice(results);
-          setIsOfflineScanning(false);
-          toast.success("Facture numérisée avec succès via l'OCR local !");
-        } else {
-          throw new Error("L'OCR local n'a pas pu extraire de texte lisible de cette image. Veuillez utiliser un scan plus net.");
-        }
+        throw new Error("Format non supporté. Utilisez CSV, Excel (.xlsx) ou PDF.");
       }
     } catch (err: any) {
       console.error(err);
-      setError("Échec de la numérisation hors-ligne: " + (err.message || String(err)));
+      setError(err.message || "Échec de l'import du fichier");
       setIsOfflineScanning(false);
     }
   };
 
+  // ═══ AI Scan (Gemini - requires internet) ═══
   const processFile = async (selectedFile: File) => {
     setFile(selectedFile);
     setIsScanning(true);
@@ -258,91 +220,7 @@ export function useSmartPurchaseScanner({
   };
 
   const simulateInvoiceScanning = () => {
-    setIsScanning(true);
-    setError(null);
-    setShowMockOption(false);
-    
-    setTimeout(() => {
-      try {
-        let randomSupplier = suppliers[Math.floor(Math.random() * suppliers.length)];
-        let supplierName = randomSupplier ? randomSupplier.name : "Fournisseur Démo";
-        if (randomSupplier) setSelectedSupplierId(randomSupplier.id);
-        
-        const randomInvoiceNum = "FA-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
-        setInvoiceNumber(randomInvoiceNum);
-        
-        const todayStr = new Date().toISOString().split('T')[0];
-        setReceptionDate(todayStr);
-
-        let selectedProducts = [...products];
-        const count = 20 + Math.floor(Math.random() * 6);
-        
-        if (selectedProducts.length < count) {
-          const needed = count - selectedProducts.length;
-          for (let i = 1; i <= needed; i++) {
-            selectedProducts.push({
-              id: `demo-fill-${i}`,
-              name: `Article Démo Haute Qualité #${100 + i}`,
-              price: parseFloat((10 + Math.random() * 40).toFixed(2)),
-              costPrice: parseFloat((5 + Math.random() * 20).toFixed(2)),
-              sku: `DK-SKU-${1000 + i}`,
-              taxRate: 20,
-              stock: Math.floor(Math.random() * 10) + 1,
-              minStock: 5,
-              categoryId: '',
-              brandId: '',
-              supplier: randomSupplier ? randomSupplier.id : '',
-              description: 'Généré pour la simulation grand volume',
-              status: 'active',
-              unit: 'pcs',
-              updatedAt: new Date().toISOString()
-            } as any);
-          }
-        }
-        
-        selectedProducts = selectedProducts.sort(() => 0.5 - Math.random()).slice(0, count);
-
-        const newItems: PurchaseCartItem[] = selectedProducts.map(p => {
-          const randQty = Math.floor(Math.random() * 30) + 5;
-          const cost = p.costPrice || parseFloat((p.price * 0.7).toFixed(2));
-          return {
-            lineId: generateUniqueId(),
-            productId: p.id.startsWith('demo-fill-') ? '' : p.id,
-            productName: p.name,
-            quantity: randQty,
-            costPrice: cost,
-            taxRate: p.taxRate || 0,
-            discount: 0,
-            imageUrl: p.imageUrl
-          };
-        });
-
-        setCart(newItems);
-        setExtractedData({
-          supplierName,
-          invoiceNumber: randomInvoiceNum,
-          date: todayStr,
-          items: newItems.map(item => ({
-            name: item.productName,
-            quantity: item.quantity,
-            price: item.costPrice
-          }))
-        });
-
-        setMode('manual');
-        logAction(
-          user?.uid || user?.id || 'system', 
-          user?.displayName || 'Utilisateur', 
-          'Simulation Facture', 
-          'SmartPurchase', 
-          `Simulation réussie pour la facture ${randomInvoiceNum}`
-        );
-      } catch (err: any) {
-        setError("Erreur de simulation : " + err.message);
-      } finally {
-        setIsScanning(false);
-      }
-    }, 1200);
+    toast.error("Veuillez sélectionner un vrai fichier.", { icon: '🚫', duration: 4000 });
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

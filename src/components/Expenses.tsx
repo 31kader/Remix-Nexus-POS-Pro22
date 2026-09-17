@@ -8,6 +8,7 @@ import { localDb } from '../services/LocalDatabase';
 import { cn, formatSafe } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog, SortableHeader } from './ui';
 import { Expense, CompanySettings } from '../types';
+import { toast } from 'sonner';
 
 interface ExpensesProps {
   expenses: Expense[];
@@ -59,12 +60,12 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
     const amountNum = parseFloat(formData.amount);
 
     if (!trimmedDescription) {
-      alert("La description est obligatoire.");
+      toast.error("La description est obligatoire.");
       return;
     }
 
     if (isNaN(amountNum) || amountNum <= 0) {
-      alert("Veuillez saisir un montant valide supérieur à 0.");
+      toast.error("Veuillez saisir un montant valide supérieur à 0.");
       return;
     }
 

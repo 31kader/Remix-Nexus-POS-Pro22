@@ -31,8 +31,20 @@ export function ExpiryManager({ products, categories, onUpdateProduct, onAdjustS
     handlePrintPDF,
     handleBatchDiscount,
     analyzedProducts,
+    paginatedProducts,
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalCount,
     handleApplyPromo,
     handleRestorePrice,
+    handleSaveQuickDate,
+    previewImage,
+    setPreviewImage,
+    quickDateProduct,
+    setQuickDateProduct,
     now
   } = useExpiryManagerLogic({ products, categories, onUpdateProduct, onAdjustStock, onEditProduct });
   
@@ -56,12 +68,23 @@ export function ExpiryManager({ products, categories, onUpdateProduct, onAdjustS
 
       {view === 'list' ? (
         <ExpiryListView
-          analyzedProducts={analyzedProducts}
-          products={products}
+          paginatedProducts={paginatedProducts}
+          allProducts={products}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          setCurrentPage={setCurrentPage}
+          setPageSize={setPageSize}
           handleApplyPromo={handleApplyPromo}
           handleRestorePrice={handleRestorePrice}
           onEditProduct={onEditProduct}
           onAdjustStock={onAdjustStock}
+          handleSaveQuickDate={handleSaveQuickDate}
+          previewImage={previewImage}
+          setPreviewImage={setPreviewImage}
+          quickDateProduct={quickDateProduct}
+          setQuickDateProduct={setQuickDateProduct}
         />
       ) : view === 'calendar' ? (
         <ExpiryCalendarView

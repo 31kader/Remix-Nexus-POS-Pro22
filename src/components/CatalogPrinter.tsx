@@ -4,6 +4,7 @@ import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Product, CompanySettings } from '../types';
 import { Button } from './ui';
+import { SafeImage } from './ui/SafeImage';
 import { printCatalog, shareCatalog, exportCatalogAsHtml, CatalogPrintSettings, SocialTarget } from '../services/printService';
 import { toast } from 'sonner';
 
@@ -736,11 +737,15 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                               }`}
                             >
                               {showImage && (p.imageUrl || p.image) && (
-                                <div className="w-full overflow-hidden rounded border border-slate-100 flex-shrink-0 mb-1">
-                                  <img 
+                                <div 
+                                  className="w-full overflow-hidden rounded-md border border-slate-100 flex-shrink-0 mb-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900"
+                                  style={{ height: `${imageHeight}px` }}
+                                >
+                                  <SafeImage 
                                     src={p.imageUrl || p.image} 
-                                    style={{ height: `${imageHeight}px`, width: '100%', objectFit: 'cover' }} 
-                                    alt="product"
+                                    className="max-h-full max-w-full object-contain"
+                                    style={{ maxHeight: `${imageHeight}px`, maxWidth: '100%', objectFit: 'contain' }} 
+                                    alt={p.name}
                                   />
                                 </div>
                               )}
@@ -762,7 +767,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                                   <div className="flex justify-between items-baseline mt-1">
                                     {showPrice && (
                                       <span style={{ fontSize: `${priceFontSize}px` }} className="font-black text-indigo-600">
-                                        {p.price.toFixed(2)} {settings.currency || '€'}
+                                        {p.price.toFixed(2)} {settings.currency || 'DA'}
                                       </span>
                                     )}
                                     {showSku && (

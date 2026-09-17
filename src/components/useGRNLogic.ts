@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
 import { enqueueStockAdjustment } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { Product, GRNItem, GoodsReceiptNote, CompanySettings } from '../types';
 import { generateUniqueId } from '../lib/utils';
+import { convertKeysToCamel, convertKeysToSnake } from '../lib/db-converters';
 import { toast } from 'sonner';
 import { printPurchaseVoucher } from '../services/documentPrintService';
 
@@ -60,13 +62,16 @@ export function useGRNLogic({
 
   const handleCreate = async (shouldPrint: any = false) => {
     if (!supplierId || items.length === 0) {
-      alert("Veuillez sélectionner un fournisseur et ajouter au moins un produit.");
+      toast.error("Veuillez sélectionner un fournisseur et ajouter au moins un produit.");
       return;
     }
     
     setIsProcessing(true);
     try {
-      let grnId = '';
+      let grnId = generateUniqueId();
+      const status = validateImmediately ? 'validated' : 'draft';
+      const nowIso = new Date().toISOString();
+
       if (validateImmediately) {
         for (const item of items) {
           if (!item.productId || item.productId === 'undefined') continue;
@@ -75,9 +80,22 @@ export function useGRNLogic({
           if (p) {
             enqueueStockAdjustment(item.productId, item.quantity);
             
+            // Calcul du PMP (Prix Moyen Pondéré)
+            const currentStock = Math.max(0, p.stock || 0);
+            const currentCost = Math.max(0, p.costPrice || 0);
+            const addedQty = Math.max(0, item.quantity || 0);
+            const addedCost = Math.max(0, item.newCostPrice || 0);
+
+            let pmpCost = addedCost;
+            if (currentStock > 0 && currentCost > 0 && addedQty > 0 && addedCost > 0) {
+              const totalValue = (currentStock * currentCost) + (addedQty * addedCost);
+              const totalQty = currentStock + addedQty;
+              pmpCost = totalQty > 0 ? Number((totalValue / totalQty).toFixed(2)) : addedCost;
+            }
+
             const prodUpdates: any = {
-              costPrice: item.newCostPrice,
-              updatedAt: new Date().toISOString()
+              costPrice: pmpCost,
+              updatedAt: nowIso
             };
 
             if (item.expirationDate) {
@@ -100,7 +118,7 @@ export function useGRNLogic({
               
               const newBatch = {
                 id: Math.random().toString(36).substring(2, 9),
-                batchNumber: item.batchNumber || 'LOT-' + new Date().toISOString().split('T')[0].replace(/-/g, ''),
+                batchNumber: item.batchNumber || 'LOT-' + nowIso.split('T')[0].replace(/-/g, ''),
                 expirationDate: item.expirationDate,
                 stock: item.quantity
               };
@@ -116,28 +134,41 @@ export function useGRNLogic({
             localDb.update(`products/${item.productId}`, prodUpdates);
           }
         }
-        
-        const result = await localDb.push('goodsReceiptNotes', {
-          supplierId,
-          date: new Date().toISOString(),
-          items,
-          globalDiscount,
-          globalVat,
-          status: 'validated'
-        });
-        grnId = result.key;
-        alert("Bon de réception créé et stock mis à jour avec succès !");
+      }
+
+      const grnRecord: GoodsReceiptNote = {
+        id: grnId,
+        supplierId,
+        date: nowIso,
+        items,
+        globalDiscount,
+        globalVat,
+        status
+      };
+
+      await localDb.insert(`goodsReceiptNotes/${grnId}`, grnRecord);
+
+      // Supabase Direct Sync
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.from('goods_receipt_notes').upsert({
+            id: grnId,
+            supplier_id: supplierId,
+            date: nowIso,
+            items: items,
+            global_discount: globalDiscount,
+            global_vat: globalVat,
+            status
+          });
+        } catch (sErr) {
+          console.warn('[Supabase GRN Insert]', sErr);
+        }
+      }
+
+      if (validateImmediately) {
+        toast.success("Bon de réception créé et stock mis à jour avec succès !");
       } else {
-        const result = await localDb.push('goodsReceiptNotes', {
-          supplierId,
-          date: new Date().toISOString(),
-          items,
-          globalDiscount,
-          globalVat,
-          status: 'draft'
-        });
-        grnId = result.key;
-        alert("Bon de réception créé en brouillon.");
+        toast.success("Bon de réception créé en brouillon.");
       }
 
       const actualShouldPrint = shouldPrint === true;
@@ -179,95 +210,45 @@ export function useGRNLogic({
     const handleGlobalShortcuts = (e: KeyboardEvent) => {
       if (e.key === 'F10') {
         e.preventDefault();
-        searchRef.current?.focus();
-        searchRef.current?.select();
-      } else if (e.key === 'F11') {
-        e.preventDefault();
-        if (items.length > 0) {
-          const lastItem = items[items.length - 1];
-          setTimeout(() => {
-            const input = quantityInputRefs.current[lastItem.lineId];
-            if (input) {
-              input.focus();
-              input.select();
-            }
-          }, 10);
-        }
-      } else if (e.key === 'F5') {
-        e.preventDefault();
-        e.stopPropagation();
         handleCreate(false);
-      } else if (e.altKey && e.key.toLowerCase() === 'p') {
+      }
+      if (e.key === 'F9') {
         e.preventDefault();
-        e.stopPropagation();
         handleCreate(true);
       }
-    };
-    window.addEventListener('keydown', handleGlobalShortcuts, true);
-    return () => window.removeEventListener('keydown', handleGlobalShortcuts, true);
-  }, [items, supplierId, globalDiscount, globalVat, validateImmediately, products]);
-
-  const handleBarcodeScan = (barcode: string) => {
-    const foundProduct = products.find((p: Product) => 
-      (p.barcode && p.barcode.trim() === barcode.trim()) ||
-      (p.sku && p.sku.trim() === barcode.trim())
-    );
-
-    if (foundProduct) {
-      const existingItemIndex = items.findIndex(item => item.productId === foundProduct.id);
-      if (existingItemIndex > -1) {
-        const updatedItems = [...items];
-        updatedItems[existingItemIndex].quantity += 1;
-        setItems(updatedItems);
-        toast.success(`Quantité augmentée pour ${foundProduct.name} (+1)`);
-      } else {
-        addItem(foundProduct);
-        toast.success(`Produit ajouté : ${foundProduct.name}`);
+      if (e.key === 'F3') {
+        e.preventDefault();
+        searchRef.current?.focus();
       }
-    } else {
-      toast.error(`Aucun produit trouvé avec le code-barres : ${barcode}`);
-    }
-    setIsScannerOpen(false);
-  };
+    };
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [items, supplierId, validateImmediately, globalDiscount, globalVat]);
 
   const filteredProducts = useMemo(() => {
-    const s = search.toLowerCase().trim();
-    if (!s) return [];
-    const searchTerms = s.split(' ').filter(Boolean);
-    return products.filter((p: Product) => 
-      searchTerms.every(term =>
-        (p.name?.toLowerCase().includes(term)) || 
-        (p.sku?.toLowerCase().includes(term)) ||
-        (p.barcode?.toLowerCase().includes(term)) ||
-        (p.reference?.toLowerCase().includes(term))
-      )
-    );
-  }, [search, products]);
+    if (!deferredSearch) return [];
+    const s = deferredSearch.toLowerCase();
+    return products.filter(p => 
+      (p.name?.toLowerCase().includes(s)) || 
+      (p.sku?.toLowerCase().includes(s)) || 
+      (p.barcode?.toLowerCase().includes(s)) || 
+      (p.reference?.toLowerCase().includes(s))
+    ).slice(0, 15);
+  }, [products, deferredSearch]);
 
   const filteredGRNs = useMemo(() => {
-    const s = grnSearch.toLowerCase().trim();
-    if (!s) return grns;
-    const searchTerms = s.split(' ').filter(Boolean);
+    if (!grnSearch) return grns;
+    const s = grnSearch.toLowerCase();
     return grns.filter(g => {
-      const supplier = suppliers.find(sup => sup.id === g.supplierId);
-      const hasMatchingProduct = g.items.some(item => {
-        const product = products.find(p => p.id === item.productId);
-        return searchTerms.every(term =>
-          product?.name?.toLowerCase().includes(term) || 
-          product?.sku?.toLowerCase().includes(term) ||
-          product?.barcode?.toLowerCase().includes(term) ||
-          product?.reference?.toLowerCase().includes(term)
-        );
-      });
-      return searchTerms.every(term =>
-        g.id.toLowerCase().includes(term) || 
-        supplier?.name?.toLowerCase().includes(term) ||
-        hasMatchingProduct
+      const supplierName = suppliers.find(sup => sup.id === g.supplierId)?.name || '';
+      return (
+        g.id.toLowerCase().includes(s) ||
+        supplierName.toLowerCase().includes(s) ||
+        (g.date && g.date.toLowerCase().includes(s))
       );
     });
-  }, [grnSearch, grns, suppliers, products]);
+  }, [grns, grnSearch, suppliers]);
 
-  // For immediate response to barcode scans or rapid typing in Enter handle
   const getImmediateMatch = (searchTerm: string) => {
     const s = searchTerm.toLowerCase().trim();
     if (!s) return null;
@@ -282,21 +263,51 @@ export function useGRNLogic({
 
   const fetchGrns = async () => {
     try {
+      let combinedGrns: GoodsReceiptNote[] = [];
+
+      // 1. Fetch from Supabase if configured
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('goods_receipt_notes')
+            .select('*')
+            .order('date', { ascending: false });
+
+          if (!error && data && Array.isArray(data)) {
+            combinedGrns = data.map((item: any) => {
+              if (typeof item.items === 'string') {
+                try { item.items = JSON.parse(item.items); } catch(e) {}
+              }
+              return convertKeysToCamel(item) as GoodsReceiptNote;
+            });
+          }
+        } catch (sErr) {
+          console.warn('[Supabase GRN Fetch Error]', sErr);
+        }
+      }
+
+      // 2. Fetch localDb snapshot
       const snapshot = await localDb.get('goodsReceiptNotes');
       if (snapshot.exists()) {
         const grnsData = snapshot.val();
-        const mapped = Object.keys(grnsData).map(id => ({ id, ...grnsData[id] } as GoodsReceiptNote));
-        mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setGrns(mapped);
-      } else {
-        setGrns([]);
+        const localList = Object.keys(grnsData).map(id => ({ id, ...grnsData[id] } as GoodsReceiptNote));
+        
+        // Merge without duplicates
+        const map = new Map<string, GoodsReceiptNote>();
+        combinedGrns.forEach(g => map.set(g.id, g));
+        localList.forEach(g => map.set(g.id, { ...map.get(g.id), ...g }));
+        combinedGrns = Array.from(map.values());
       }
+
+      combinedGrns.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+      setGrns(combinedGrns);
     } catch (err) {
-      console.warn("RTDB error in GRNManager:", err);
+      console.warn("Error fetching GRNs:", err);
     }
   };
 
   useEffect(() => {
+    fetchGrns();
     const unsub = localDb.subscribe('goodsReceiptNotes', () => {
       fetchGrns();
     });
@@ -342,16 +353,30 @@ export function useGRNLogic({
     
     setIsProcessing(true);
     try {
-      for (const item of grn.items) {
+      const nowIso = new Date().toISOString();
+      for (const item of (grn.items || [])) {
         if (!item.productId || item.productId === 'undefined') continue;
         
         const p = products.find(prod => prod.id === item.productId);
         if (p) {
           enqueueStockAdjustment(item.productId, item.quantity);
-          
+
+          // Calcul du PMP (Prix Moyen Pondéré)
+          const currentStock = Math.max(0, p.stock || 0);
+          const currentCost = Math.max(0, p.costPrice || 0);
+          const addedQty = Math.max(0, item.quantity || 0);
+          const addedCost = Math.max(0, item.newCostPrice || 0);
+
+          let pmpCost = addedCost;
+          if (currentStock > 0 && currentCost > 0 && addedQty > 0 && addedCost > 0) {
+            const totalValue = (currentStock * currentCost) + (addedQty * addedCost);
+            const totalQty = currentStock + addedQty;
+            pmpCost = totalQty > 0 ? Number((totalValue / totalQty).toFixed(2)) : addedCost;
+          }
+
           const prodUpdates: any = {
-            costPrice: item.newCostPrice,
-            updatedAt: new Date().toISOString()
+            costPrice: pmpCost,
+            updatedAt: nowIso
           };
 
           if (item.expirationDate) {
@@ -374,7 +399,7 @@ export function useGRNLogic({
             
             const newBatch = {
               id: Math.random().toString(36).substring(2, 9),
-              batchNumber: item.batchNumber || 'LOT-' + new Date().toISOString().split('T')[0].replace(/-/g, ''),
+              batchNumber: item.batchNumber || 'LOT-' + nowIso.split('T')[0].replace(/-/g, ''),
               expirationDate: item.expirationDate,
               stock: item.quantity
             };
@@ -392,13 +417,35 @@ export function useGRNLogic({
       }
       
       await localDb.update(`goodsReceiptNotes/${grn.id}`, { status: 'validated' });
+
+      // Supabase Update
+      if (isSupabaseConfigured) {
+        try {
+          await supabase.from('goods_receipt_notes').update({ status: 'validated' }).eq('id', grn.id);
+        } catch (sErr) {
+          console.warn('[Supabase GRN Update Error]', sErr);
+        }
+      }
+
       await fetchGrns();
-      alert("Le stock a été mis à jour avec succès !");
+      toast.success("Bon de réception validé et stock mis à jour avec succès !");
     } catch (error) {
       console.error("Error validating GRN:", error);
       toast.error("Erreur lors de la validation");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleBarcodeScan = (scannedCode: string) => {
+    setIsScannerOpen(false);
+    if (!scannedCode) return;
+    const match = getImmediateMatch(scannedCode);
+    if (match) {
+      addItem(match);
+      toast.success(`Article "${match.name}" ajouté`);
+    } else {
+      toast.error(`Aucun produit trouvé pour le code : ${scannedCode}`);
     }
   };
 
@@ -430,11 +477,11 @@ export function useGRNLogic({
     filteredProducts,
     filteredGRNs,
     handleBarcodeScan,
+    addItem,
+    handleCreate,
     handleKeyDown,
     handleAddSupplier,
-    addItem,
     updateItem,
-    handleCreate,
     handleValidate
   };
 }

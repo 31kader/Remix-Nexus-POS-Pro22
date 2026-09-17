@@ -11,7 +11,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { auth } from './services/AuthService';
 import { localDb } from './services/LocalDatabase';
 import { initAndSyncSupabase } from './services/SupabaseSync';
-import { loadInitialState } from './lib/local-db';
+import { loadInitialState, setLocalState } from './lib/local-db';
 import { loadPendingSyncQueue } from './services/SyncService';
 
 // --- INITIALISATION DU MOTEUR DE DONNÉES (Fix Infinite Loop) ---
@@ -22,9 +22,8 @@ async function bootstrap() {
   await loadPendingSyncQueue();
 
   if (isSupabaseConfigured) {
-    // 1. Charger la catégorie par défaut
-    localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 })
-      .catch(() => {});
+    // 1. Charger la catégorie par défaut en local sans polluer la file de synchro
+    setLocalState('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
 
     let lastUserId: string | null = null;
     let initialSyncDone = false;
@@ -45,7 +44,10 @@ async function bootstrap() {
           initAndSyncSupabase().catch(err => console.warn("Sync error:", err));
         }
       } else {
-        auth.trigger(null);
+        const localSession = typeof window !== 'undefined' ? sessionStorage.getItem('nexus_auth_user') : null;
+        if (!localSession) {
+          auth.trigger(null);
+        }
         if (lastUserId !== null || !initialSyncDone) {
           lastUserId = null;
           initialSyncDone = true;
@@ -99,7 +101,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <SocketProvider>
         <LanguageProvider>
-          <App />
+          <App   />
         </LanguageProvider>
       </SocketProvider>
     </ErrorBoundary>

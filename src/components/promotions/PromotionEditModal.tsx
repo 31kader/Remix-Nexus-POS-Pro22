@@ -199,7 +199,7 @@ export function PromotionEditModal({
                   className="w-3 h-3 text-indigo-600 rounded"
                 />
                 <span className="flex-1 truncate text-left">{prod.name}</span>
-                <span className="text-slate-400 font-mono text-[10px]">{prod.sku || prod.id.slice(-4)}</span>
+                <span className="text-slate-400 font-mono text-[10px]">{prod.sku || String(prod.id || "").slice(-4)}</span>
               </label>
             ))}
             {products.length === 0 && <p className="text-[10px] text-slate-400 italic">Aucun produit dans l'inventaire</p>}

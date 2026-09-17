@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { handleDatabaseError, OperationType } from '../lib/db-compat';
-import { enqueueStockAdjustment } from '../services/SyncService';
+import { enqueueStockAdjustment, enqueueSyncBatch } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { OnlineOrder, CartItem, Transaction, Product, CompanySettings, Customer } from '../types';
 import { generateUniqueId } from '../lib/utils';
@@ -8,22 +8,54 @@ import { useCoreStore } from '../store/useCoreStore';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { supabase, isSupabaseConfigured } from '../supabase';
+import { set as idbSet } from 'idb-keyval';
+import { toast } from 'sonner';
 
-export function useCartSync(
-  autoSyncOrders: boolean
-) {
+export function useCartSync(autoSyncOrders: boolean) {
   const onlineOrders = useTransactionStore(s => s.onlineOrders);
   const products = useCoreStore(s => s.products);
   const settings = useCoreStore(s => s.settings);
   const customers = usePeopleStore(s => s.customers);
   const user = useAuthStore(s => s.user);
 
+  // Verrou atomique pour empêcher le traitement simultané d'une même commande
   const syncInProgress = useRef<Set<string>>(new Set());
 
   const syncOrder = async (order: OnlineOrder) => {
-    if (order.syncedToPos) return;
-    
+    if (!order || !order.id) return;
+    if (order.syncedToPos || syncInProgress.current.has(order.id)) return;
+
+    syncInProgress.current.add(order.id);
+
     try {
+      // 🛡️ SÉCURITÉ STOCK (Phase 3) : Vérification préventive des ruptures de stock physiques
+      const allowNegative = settings.allowNegativeStock === true;
+      const safeItems = Array.isArray(order.items) ? order.items : [];
+      const stockIssues: string[] = [];
+
+      for (const item of safeItems) {
+        if (!item || !item.productId) continue;
+        const prod = products.find(p => p.id === item.productId);
+        if (prod && !allowNegative) {
+          const currentStock = prod.stock || 0;
+          const requiredQty = Number(item.quantity || 1);
+          if (currentStock < requiredQty) {
+            stockIssues.push(`${prod.name} (Demandé: ${requiredQty}, Dispo: ${currentStock})`);
+          }
+        }
+      }
+
+      if (stockIssues.length > 0) {
+        console.warn(`[useCartSync] Stock insuffisant pour la commande #${order.id}:`, stockIssues);
+        toast.error(`Commande #${String(order.id).slice(-6)} en attente : Rupture de stock sur ${stockIssues.join(', ')}`, {
+          duration: 7000,
+          icon: '⚠️'
+        });
+        syncInProgress.current.delete(order.id);
+        return;
+      }
+
       let finalCustomerId = order.customerId;
       if (!finalCustomerId) {
         const found = customers.find(c => 
@@ -35,17 +67,17 @@ export function useCartSync(
         }
       }
 
-      const transactionItems: CartItem[] = order.items.map(item => {
+      const transactionItems: CartItem[] = safeItems.map((item, idx) => {
         const product = products.find(p => p.id === item.productId);
         return {
           ...product,
           cartItemId: generateUniqueId(),
-          id: item.productId,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
+          id: item.productId || `prod-${idx}`,
+          name: item.name || product?.name || 'Article',
+          price: Number(item.price || 0),
+          quantity: Math.max(1, Number(item.quantity || 1)),
           costPrice: product?.costPrice || 0,
-          taxRate: product?.taxRate || settings.taxRate,
+          taxRate: product?.taxRate || settings.taxRate || 19,
           stock: product?.stock || 0,
           minStock: product?.minStock || 5,
           categoryId: product?.categoryId || 'Online',
@@ -61,8 +93,8 @@ export function useCartSync(
       const transaction: Transaction = {
         id: transactionId,
         items: transactionItems,
-        total: order.total,
-        paymentMethod: 'card',
+        total: Number(order.total || 0),
+        paymentMethod: (order.paymentMethod as any) || 'card',
         deliveryMethod: order.deliveryMethod || 'in_store',
         timestamp: order.timestamp || new Date().toISOString(),
         userId: user?.uid || 'system',
@@ -72,11 +104,15 @@ export function useCartSync(
         customerName: order.customerName || null,
         status: 'completed',
         onlineOrderId: order.id,
-        pointsEarned: finalCustomerId ? Math.floor(order.total * (settings.loyaltyPointsPerCurrencyUnit || 1)) : 0
+        pointsEarned: finalCustomerId ? Math.floor(Number(order.total || 0) * (settings.loyaltyPointsPerCurrencyUnit || 1)) : 0
       };
 
+      // 1. Enregistrement transaction local & queue offline Supabase
       await localDb.insert(`transactions/${transactionId}`, transaction);
+      useTransactionStore.getState().setTransactions(prev => [transaction, ...(prev || [])]);
+      enqueueSyncBatch([{ action: 'UPSERT', table: 'transactions', recordId: transactionId, payload: transaction }]);
 
+      // 2. Déduction des stocks
       for (const item of transactionItems) {
         if (!item.id || item.id === 'undefined') continue;
         const currentProduct = products.find(p => p.id === item.id);
@@ -107,48 +143,90 @@ export function useCartSync(
         }
       }
 
+      // 3. Marquage syncedToPos en local, en mémoire Zustand, et dans le cache IDB
       await localDb.update(`onlineOrders/${order.id}`, {
         syncedToPos: true,
         ...(finalCustomerId ? { customerId: finalCustomerId } : {})
       });
 
+      const updatedOnlineOrders = (useTransactionStore.getState().onlineOrders || []).map(o => 
+        o.id === order.id ? { ...o, syncedToPos: true, ...(finalCustomerId ? { customerId: finalCustomerId } : {}) } : o
+      );
+      useTransactionStore.getState().setOnlineOrders(updatedOnlineOrders);
+      idbSet('nexus_online_orders_cache', updatedOnlineOrders).catch(() => {});
+
+      // 4. Synchronisation immédiate vers Supabase + File d'attente hors-ligne
+      if (isSupabaseConfigured && navigator.onLine) {
+        try {
+          await supabase
+            .from('online_orders')
+            .update({ 
+              synced_to_pos: true,
+              ...(finalCustomerId ? { customer_id: finalCustomerId } : {})
+            })
+            .eq('id', order.id);
+        } catch (supErr) {
+          console.warn('[useCartSync] Supabase direct update failed, queuing offline:', supErr);
+        }
+      }
+
+      enqueueSyncBatch([{
+        action: 'UPSERT',
+        table: 'online_orders',
+        recordId: String(order.id),
+        payload: { synced_to_pos: true, ...(finalCustomerId ? { customer_id: finalCustomerId } : {}) }
+      }]);
+
+      // 5. Points de fidélité si livrée
       if (order.status === 'delivered' && finalCustomerId) {
         const customer = customers.find(c => c.id === finalCustomerId);
         if (customer) {
-          const pointsEarned = Math.floor(order.total * (settings.loyaltyPointsPerCurrencyUnit || 1));
+          const pointsEarned = Math.floor(Number(order.total || 0) * (settings.loyaltyPointsPerCurrencyUnit || 1));
           await localDb.update(`customers/${finalCustomerId}`, {
             loyaltyPoints: (customer.loyaltyPoints || 0) + pointsEarned,
-            totalSpent: (customer.totalSpent || 0) + order.total,
+            totalSpent: (customer.totalSpent || 0) + Number(order.total || 0),
             lastVisit: new Date().toISOString()
           });
         }
       }
+
+      toast.success(`Commande #${String(order.id).slice(-6)} intégrée à la caisse (Stock déduit)`, {
+        icon: '✅'
+      });
     } catch (error) {
       console.error("Error syncing order:", error);
       handleDatabaseError(error, OperationType.WRITE, 'transactions');
+    } finally {
+      // Retrait du verrou après un court délai pour éviter toute réentrance
+      setTimeout(() => {
+        syncInProgress.current.delete(order.id);
+      }, 3000);
     }
   };
 
+  // 🚀 SYNCHRONISATION AUTOMATIQUE EN ARRIÈRE-PLAN
   useEffect(() => {
-    // Respect user intent: Completely disabled automated background syncing of online orders
-    if (false && autoSyncOrders && onlineOrders.length > 0) {
-      const unsynced = onlineOrders.filter(o => 
-        !o.syncedToPos && 
-        ['confirmed', 'shipped', 'delivered'].includes(o.status) &&
-        !syncInProgress.current.has(o.id)
-      );
+    if (!autoSyncOrders || !onlineOrders || onlineOrders.length === 0) return;
 
-      unsynced.forEach(async (o) => {
-        syncInProgress.current.add(o.id);
-        try {
-          await syncOrder(o);
-        } finally {
-          setTimeout(() => {
-            syncInProgress.current.delete(o.id);
-          }, 5000);
-        }
-      });
-    }
+    // Statuts autorisés pour la synchro automatique (Sécurité Métier : 'pending' requiert validation)
+    const validStatuses = ['confirmed', 'paid', 'shipped', 'delivered'];
+    const unsynced = onlineOrders.filter(o => 
+      o && o.id && 
+      !o.syncedToPos && 
+      validStatuses.includes(String(o.status || '').toLowerCase()) &&
+      !syncInProgress.current.has(o.id)
+    );
+
+    if (unsynced.length === 0) return;
+
+    // Exécution séquentielle pour garantir l'intégrité des stocks
+    const runAutoSync = async () => {
+      for (const order of unsynced) {
+        await syncOrder(order);
+      }
+    };
+
+    runAutoSync();
   }, [onlineOrders, autoSyncOrders, products, customers, settings, user]);
 
   return { syncOrder };

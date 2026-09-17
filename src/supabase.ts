@@ -30,6 +30,22 @@ export const removeChannelByName = (channelName: string) => {
   } catch (err) {}
 };
 
+export const safeRemoveChannel = (channelOrName: any) => {
+  if (!isSupabaseConfigured || !channelOrName) return;
+  try {
+    if (typeof channelOrName === 'string') {
+      removeChannelByName(channelOrName);
+    } else {
+      if (typeof channelOrName.unsubscribe === 'function') {
+        try { channelOrName.unsubscribe(); } catch (_) {}
+      }
+      supabase.removeChannel(channelOrName).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[Supabase] Channel cleanup warning:', err);
+  }
+};
+
 export const serializeError = (err: any): string => {
   if (!err) return 'null';
   if (typeof err === 'object') {
@@ -56,6 +72,13 @@ export async function uploadImageBlobToStorage(
 
   let finalBlob = blob;
   let finalContentType = contentType;
+
+  // Validation stricte du type de fichier (S9 : Images uniquement)
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'];
+  if (blob.type && !allowedTypes.includes(blob.type.toLowerCase())) {
+    console.error(`[Storage] Upload bloqué: Type de fichier '${blob.type}' non autorisé. Format d'image requis.`);
+    return null;
+  }
 
   // AUTO-OPTIMIZATION: Always compress and convert to WebP before upload
   // This saves massive amounts of data and storage space.
@@ -94,8 +117,12 @@ export async function uploadImageBlobToStorage(
     }
 
     const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-    console.log(`[Storage] ✅ Image uploadée: ${data?.publicUrl}`);
-    return data?.publicUrl || null;
+    let publicUrl = data?.publicUrl || null;
+    if (publicUrl && publicUrl.includes('/storage/v1/object/') && !publicUrl.includes('/storage/v1/object/public/')) {
+      publicUrl = publicUrl.replace('/storage/v1/object/', '/storage/v1/object/public/');
+    }
+    console.log(`[Storage] ✅ Image uploadée: ${publicUrl}`);
+    return publicUrl;
   } catch (error) {
     console.warn('[Storage] Erreur inattendue:', error);
     return null;

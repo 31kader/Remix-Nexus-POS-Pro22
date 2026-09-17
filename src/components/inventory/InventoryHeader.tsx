@@ -1,15 +1,13 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Package, History, Tag, RefreshCw, Trash2, Plus, FileSpreadsheet, Upload, ShoppingBag, FileText } from 'lucide-react';
-import { Button } from '../ui';
+import { Package, History, Tag, RefreshCw, Trash2, Plus, FileSpreadsheet, Upload, ShoppingBag, AlertTriangle, Boxes, TrendingUp, AlertCircle, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useTranslation } from '../../translations';
-import { Product } from '../../types';
+import { Product, CompanySettings } from '../../types';
 
 interface InventoryHeaderProps {
   inventoryTab: 'products' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses';
   setInventoryTab: (tab: 'products' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses') => void;
-  productsCount: number;
+  products: Product[];
+  settings: CompanySettings;
   onAddProduct: () => void;
   onExportExcel: () => void;
   onCSVImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -17,91 +15,163 @@ interface InventoryHeaderProps {
   isProcessing: boolean;
 }
 
-export const InventoryHeader = ({
+export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   inventoryTab,
   setInventoryTab,
-  productsCount,
+  products = [],
+  settings,
   onAddProduct,
   onExportExcel,
   onCSVImport,
   onLowStockOrder,
   isProcessing
-}: InventoryHeaderProps) => {
-  const { t } = useTranslation();
+}) => {
+  const totalProducts = products.length;
+  const lowStockCount = products.filter(p => (p.stock || 0) > 0 && (p.stock || 0) <= (p.minStock || 5)).length;
+  const outOfStockCount = products.filter(p => (p.stock || 0) <= 0).length;
+  const totalStockValue = products.reduce((acc, p) => acc + ((p.stock || 0) * (p.price || 0)), 0);
+
+  const tabs = [
+    { id: 'products', label: 'Articles & Stock', icon: Package },
+    { id: 'history', label: 'Historique Mouvements', icon: History },
+    { id: 'labels', label: 'Étiquettes', icon: Tag },
+    { id: 'catalog', label: 'Catalogue & Affiches', icon: FileText },
+    { id: 'losses', label: 'Pertes & Démarque', icon: Trash2 },
+    { id: 'sync', label: 'Synchronisation', icon: RefreshCw },
+  ] as const;
 
   return (
-    <div className="bg-black/20 backdrop-blur-3xl p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl space-y-6 sm:space-y-8 relative overflow-hidden group ring-1 ring-white/5">
-      <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-indigo-600/5 rounded-full blur-[60px] sm:blur-[100px] -mr-32 -mt-32 sm:-mr-48 sm:-mt-48 transition-all duration-1000 group-hover:bg-indigo-600/10 group-hover:scale-110" />
-      
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 sm:gap-8 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center gap-6 sm:gap-8">
-          <div className="border-l-4 border-indigo-600 pl-4 sm:pl-6">
-            <h3 className="text-xl sm:text-3xl font-black text-white tracking-tighter uppercase italic leading-none">Catalog<span className="text-indigo-400">.nexus</span></h3>
-            <div className="text-[8px] sm:text-[10px] font-black text-slate-500 flex items-center gap-2 uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-2 italic">
-              <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-neon-cyan" />
-              {productsCount || 0} UNITÉS RÉPERTORIÉES
+    <div className="space-y-6">
+      {/* Top Row: Title, Subtitle, and Main Action Buttons */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 backdrop-blur-xl p-6 rounded-3xl shadow-sm dark:shadow-xl">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+              <Boxes size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                Gestion des Stocks & Inventaire
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Consultez, ajoutez et suivez vos articles en temps réel
+              </p>
             </div>
           </div>
-
-          <div className="h-10 sm:h-12 w-px bg-white/5 mx-2 hidden xl:block" />
-
-          <div className="flex bg-black/40 p-1 rounded-2xl border border-white/5 shadow-inner overflow-x-auto no-scrollbar max-w-full">
-            {(['products', 'history', 'labels', 'catalog', 'sync', 'losses'] as const).map((tab) => (
-              <button 
-                key={tab}
-                onClick={() => setInventoryTab(tab)}
-                className={cn(
-                  "px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-all flex items-center gap-2 sm:gap-3 whitespace-nowrap active:scale-95 group/btn",
-                  inventoryTab === tab
-                    ? "bg-indigo-600 text-white shadow-neon-indigo border border-indigo-400 ring-1 ring-white/20 italic"
-                    : "text-slate-600 hover:text-white hover:bg-white/5"
-                )}
-              >
-                {tab === 'products' ? <Package size={14} /> : tab === 'history' ? <History size={14} /> : tab === 'labels' ? <Tag size={14} /> : tab === 'catalog' ? <FileText size={14} /> : tab === 'losses' ? <Trash2 size={14} /> : <RefreshCw size={14} />}
-                <span className="inline font-black">
-                  {tab === 'products' ? 'STOCK' : tab === 'history' ? 'LOGS' : tab === 'labels' ? 'TAGS' : tab === 'catalog' ? 'MKT' : tab === 'losses' ? 'REBUT' : 'SYNC'}
-                </span>
-              </button>
-            ))}
-          </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 bg-white/5 p-1.5 sm:p-2 rounded-2xl sm:rounded-[1.75rem] border border-white/10 ring-1 ring-white/5 shadow-2xl w-full xl:w-auto overflow-hidden">
+        {/* Action Buttons Toolbar */}
+        <div className="flex items-center flex-wrap gap-2.5">
           <button
             onClick={onAddProduct}
-            className="flex-1 xl:flex-none flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-8 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl sm:rounded-2xl text-[9px] sm:text-[11px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-neon-indigo transition-all active:scale-95 italic border border-indigo-400 whitespace-nowrap"
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg shadow-indigo-600/25 transition-all active:scale-95 cursor-pointer"
           >
-            <Plus size={16} strokeWidth={3} /> NOUVEAU
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Nouveau Produit</span>
           </button>
 
-          <div className="h-8 sm:h-10 w-px bg-white/10 mx-0.5 sm:mx-1" />
+          <button
+            onClick={onExportExcel}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+            title="Exporter le catalogue en fichier Excel / CSV"
+          >
+            <FileSpreadsheet size={15} />
+            <span className="hidden sm:inline">Exporter</span>
+          </button>
 
-          <div className="flex gap-1.5 sm:gap-2">
-            <button
-              onClick={onExportExcel}
-              className="p-2.5 sm:p-3.5 bg-black/40 text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-inner border border-white/5 active:scale-90"
-              title="EXPORT"
-            >
-              <FileSpreadsheet size={16} />
-            </button>
+          <label 
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+            title="Importer des articles depuis un fichier CSV ou Excel"
+          >
+            <input 
+              type="file" 
+              accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+              className="hidden" 
+              onChange={onCSVImport} 
+            />
+            <Upload size={15} />
+            <span className="hidden sm:inline">Importer</span>
+          </label>
 
-            <label className="cursor-pointer group/upload" title="IMPORT">
-              <input type="file" accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" onChange={onCSVImport} />
-              <div className="p-2.5 sm:p-3.5 bg-black/40 text-indigo-400 rounded-xl group-hover/upload:bg-indigo-600 group-hover/upload:text-white transition-all shadow-inner border border-white/5 active:scale-90">
-                <Upload size={16} />
-              </div>
-            </label>
+          <button
+            onClick={onLowStockOrder}
+            disabled={isProcessing}
+            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-600/20 text-amber-700 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 hover:border-amber-500/40 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer disabled:opacity-50 shadow-sm"
+            title="Générer un bon de commande automatique pour les stocks faibles"
+          >
+            <ShoppingBag size={15} />
+            <span className="hidden sm:inline">Réappro</span>
+          </button>
+        </div>
+      </div>
 
-            <button
-              onClick={onLowStockOrder}
-              disabled={isProcessing}
-              className="p-2.5 sm:p-3.5 bg-black/40 text-amber-500 rounded-xl hover:bg-amber-600 hover:text-white transition-all shadow-inner border border-white/5 active:scale-90"
-              title="RÉAPPRO"
-            >
-              <ShoppingBag size={16} />
-            </button>
+      {/* KPI Cards (Summary Metrics) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+            <Package size={22} />
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Produits</span>
+            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">{totalProducts}</span>
           </div>
         </div>
+
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+            <TrendingUp size={22} />
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Valeur du Stock</span>
+            <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+              {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase">{settings?.currency || 'DZD'}</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
+            <AlertTriangle size={22} />
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Stocks Faibles</span>
+            <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{lowStockCount}</span>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0">
+            <AlertCircle size={22} />
+          </div>
+          <div>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">En Rupture</span>
+            <span className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 tracking-tight">{outOfStockCount}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs Bar */}
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = inventoryTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setInventoryTab(tab.id as any)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer",
+                isActive 
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800/50"
+              )}
+            >
+              <Icon size={15} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

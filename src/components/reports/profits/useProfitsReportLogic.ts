@@ -1,7 +1,12 @@
 import { useState, useMemo } from 'react';
-import { isToday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
+import { isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { calculateItemPrice } from '../../../lib/utils';
 import { Transaction, Product, Employee, ProductReturn, CompanySettings, Category, Customer } from '../../../types';
+import { toast } from 'sonner';
+import { useTransactionStore } from '../../../store/useTransactionStore';
+import { set as setIDB } from 'idb-keyval';
+import { enqueueSyncBatch } from '../../../services/SyncService';
+import { preparePayload } from '../../../lib/db-converters';
 
 interface UseProfitsReportLogicProps {
   transactions: Transaction[];
@@ -22,7 +27,7 @@ export function useProfitsReportLogic({
   categories,
   customers,
 }: UseProfitsReportLogicProps) {
-  const [profitFilterDate, setProfitFilterDate] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
+  const [profitFilterDate, setProfitFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
   const [profitFilterCategory, setProfitFilterCategory] = useState<string>('all');
   const [profitSortFormat, setProfitSortFormat] = useState<'revenue_desc' | 'revenue_asc' | 'profit_desc' | 'profit_asc' | 'margin_desc' | 'margin_asc' | 'qty_desc' | 'qty_asc'>('profit_desc');
   const [profitFilterCustomer, setProfitFilterCustomer] = useState<string>('all');
@@ -42,6 +47,7 @@ export function useProfitsReportLogic({
       const tDate = new Date(t.timestamp);
       if (isNaN(tDate.getTime())) return false;
       if (profitFilterDate === 'today' && !isToday(tDate)) return false;
+      if (profitFilterDate === 'yesterday' && !isYesterday(tDate)) return false;
       if (profitFilterDate === 'week' && !isThisWeek(tDate, { weekStartsOn: 1 })) return false;
       if (profitFilterDate === 'month' && !isThisMonth(tDate)) return false;
       if (profitFilterDate === 'year' && !isThisYear(tDate)) return false;
@@ -89,23 +95,48 @@ export function useProfitsReportLogic({
     products.forEach(p => productsById.set(p.id, p));
 
     filteredTransactions.forEach(t => {
-      const subtotal = t.items.reduce((s, item) => s + (calculateItemPrice(item, t.isWholesale) * item.quantity), 0);
-      const totalDiscounts = (t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0);
+      if (!t) return;
+      let items = t.items;
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (_) { items = []; }
+      }
+      if (!Array.isArray(items) || items.length === 0) return;
 
-      t.items.forEach(item => {
-        if (!stats[item.id]) {
-          stats[item.id] = { qty: 0, revenue: 0, cost: 0 };
+      const subtotal = items.reduce((s, item) => s + (calculateItemPrice(item, t.isWholesale) * (Number(item?.quantity) || 1)), 0);
+      const totalDiscounts = (Number(t.discountAmount) || 0) + (Number(t.pointsDiscount) || 0) + (Number(t.voucherDiscount) || 0);
+
+      items.forEach(item => {
+        if (!item) return;
+        const itemSku = String((item as any).sku || '').toLowerCase().trim();
+        const itemBarcode = String((item as any).barcode || '').toLowerCase().trim();
+        const itemName = String(item.name || '').toLowerCase().trim();
+
+        const matchingProduct = productsById.get((item as any).productId) || 
+                                productsById.get(item.id) || 
+                                (itemSku ? products.find(p => p.sku && p.sku.toLowerCase().trim() === itemSku) : null) ||
+                                (itemBarcode ? products.find(p => p.barcode && p.barcode.toLowerCase().trim() === itemBarcode) : null) ||
+                                (itemName ? products.find(p => p.name && p.name.toLowerCase().trim() === itemName) : null);
+        const itemKey = matchingProduct ? matchingProduct.id : (item.id || item.name);
+        if (!itemKey) return;
+
+        if (!stats[itemKey]) {
+          stats[itemKey] = { qty: 0, revenue: 0, cost: 0 };
         }
-        stats[item.id].qty += item.quantity;
+        const qty = Number(item.quantity) || 1;
+        stats[itemKey].qty += qty;
         
-        const itemSubtotal = calculateItemPrice(item, t.isWholesale) * item.quantity;
+        const itemSubtotal = calculateItemPrice(item, t.isWholesale) * qty;
         const itemDiscount = subtotal > 0 ? (itemSubtotal / subtotal) * totalDiscounts : 0;
         const itemRevenue = itemSubtotal - itemDiscount;
         
-        stats[item.id].revenue += itemRevenue;
+        stats[itemKey].revenue += itemRevenue;
         
-        const p = productsById.get(item.id);
-        const baseCost = p?.costPrice || 0;
+        const p = matchingProduct || productsById.get(itemKey);
+
+        const rawCost = (item as any).costPrice ?? (item as any).cost_price;
+        const baseCost = (rawCost !== undefined && Number(rawCost) > 0)
+          ? Number(rawCost) 
+          : Number(p?.costPrice || (p as any)?.cost_price || 0);
         
         // Dynamic operational costs
         const opCosts = p?.operationalCosts || {};
@@ -114,12 +145,13 @@ export function useProfitsReportLogic({
         const other = opCosts.other || 0;
         
         const totalUnitCost = baseCost + packaging + shipping + other;
-        stats[item.id].cost += totalUnitCost * item.quantity;
+        stats[itemKey].cost += totalUnitCost * qty;
       });
     });
 
     // Subtract returns from stats
     returns.forEach(ret => {
+        if (!ret) return;
         const tDate = new Date(ret.timestamp);
         if (isNaN(tDate.getTime())) return;
         if (profitFilterDate === 'today' && !isToday(tDate)) return;
@@ -166,20 +198,33 @@ export function useProfitsReportLogic({
           }
         }
 
-        const retSubtotal = ret.items.reduce((s, it) => s + (calculateItemPrice(it, originalTx?.isWholesale) * it.quantity), 0);
+        let retItems = ret.items;
+        if (typeof retItems === 'string') {
+          try { retItems = JSON.parse(retItems); } catch (_) { retItems = []; }
+        }
+        if (!Array.isArray(retItems) || retItems.length === 0) return;
+
+        const retSubtotal = retItems.reduce((s, it) => s + (calculateItemPrice(it, originalTx?.isWholesale) * (Number(it?.quantity) || 1)), 0);
         
-        ret.items.forEach(item => {
-            if (stats[item.productId]) {
-                stats[item.productId].qty -= item.quantity;
+        retItems.forEach(item => {
+            const retProdId = item.productId || (item as any).id;
+            const targetStatKey = stats[retProdId] ? retProdId : Object.keys(stats).find(k => {
+              const p = productsById.get(k);
+              return p && (p.id === retProdId || (p.name && item.name && p.name.toLowerCase().trim() === item.name.toLowerCase().trim()));
+            });
+
+            if (targetStatKey && stats[targetStatKey]) {
+                const qty = Number(item.quantity) || 1;
+                stats[targetStatKey].qty -= qty;
                 
-                const itemSubtotal = calculateItemPrice(item, originalTx?.isWholesale) * item.quantity;
-                const refundedRevenue = retSubtotal > 0 ? (itemSubtotal / retSubtotal) * (ret.totalRefund || itemSubtotal) : 0;
+                const itemSubtotal = calculateItemPrice(item, originalTx?.isWholesale) * qty;
+                const refundedRevenue = retSubtotal > 0 ? (itemSubtotal / retSubtotal) * (Number(ret.totalRefund) || itemSubtotal) : 0;
                 
-                stats[item.productId].revenue -= refundedRevenue;
+                stats[targetStatKey].revenue -= refundedRevenue;
                 
-                const p = productsById.get(item.productId);
-                const baseCost = p?.costPrice || 0;
-                stats[item.productId].cost -= (baseCost * item.quantity);
+                const p = productsById.get(targetStatKey);
+                const baseCost = Number(p?.costPrice || 0);
+                stats[targetStatKey].cost -= (baseCost * qty);
             }
         });
     });
@@ -205,21 +250,24 @@ export function useProfitsReportLogic({
 
     let result = filteredProductsList
       .map(p => {
-        const stats = productStats[p.id];
-        // If there's no search query and no sales, omit it to keep report clean and fast
-        if (!stats && !profitSearchProduct) return null;
-        
+        const stats = productStats[p.id] || (p.name ? productStats[p.name] : null);
         const resolvedStats = stats || { qty: 0, revenue: 0, cost: 0 };
         const profit = resolvedStats.revenue - resolvedStats.cost;
-        const margin = resolvedStats.revenue > 0 ? (profit / resolvedStats.revenue) * 100 : 0;
+        const catalogMargin = Number(p.costPrice) > 0 ? ((Number(p.price) - Number(p.costPrice)) / Number(p.costPrice)) * 100 : 0;
+        const margin = resolvedStats.revenue > 0 ? (profit / resolvedStats.revenue) * 100 : catalogMargin;
         return {
           ...p,
           stats: resolvedStats,
           profit,
           margin
         };
-      })
-      .filter(Boolean) as any[];
+      });
+
+    // If there are sold products, prioritize them when filtering by period; otherwise display catalog items with their margins
+    const hasSoldProducts = result.some(p => p.stats && p.stats.qty > 0);
+    if (hasSoldProducts && !profitSearchProduct && profitFilterDate !== 'all') {
+      result = result.filter(p => p.stats.qty > 0);
+    }
 
     // Sorting
     return result.sort((a, b) => {
@@ -248,18 +296,96 @@ export function useProfitsReportLogic({
     let revenue = 0;
     let cost = 0;
     Object.values(productStats).forEach(s => {
-      revenue += s.revenue;
-      cost += s.cost;
+      revenue += (Number(s.revenue) || 0);
+      cost += (Number(s.cost) || 0);
     });
     const profit = revenue - cost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
     return {
-      revenue,
-      cost,
-      profit,
-      margin
+      revenue: isNaN(revenue) ? 0 : revenue,
+      cost: isNaN(cost) ? 0 : cost,
+      profit: isNaN(profit) ? 0 : profit,
+      margin: isNaN(margin) ? 0 : margin
     };
   }, [productStats]);
+
+  const [isRecalculating, setIsRecalculating] = useState<boolean>(false);
+
+  const handleRecalculateProfits = async () => {
+    if (!confirm("Voulez-vous resynchroniser et recalculer le prix d'achat et le bénéfice de toutes les ventes à partir des prix du catalogue actuel ?")) return;
+
+    setIsRecalculating(true);
+    try {
+      const productsById = new Map<string, Product>();
+      products.forEach(p => productsById.set(p.id, p));
+
+      let updatedCount = 0;
+      const currentTransactions = useTransactionStore.getState().transactions || [];
+
+      const updatedTransactions = currentTransactions.map(t => {
+        let items = t.items;
+        if (typeof items === 'string') {
+          try { items = JSON.parse(items); } catch (_) { items = []; }
+        }
+        if (!Array.isArray(items)) return t;
+
+        let txModified = false;
+        const updatedItems = items.map(item => {
+          const itemSku = String((item as any).sku || '').toLowerCase().trim();
+          const itemBarcode = String((item as any).barcode || '').toLowerCase().trim();
+          const itemName = String(item.name || '').toLowerCase().trim();
+          const itemKey = (item as any).productId || item.id;
+          const matchingProduct = productsById.get(itemKey) || 
+                                  (itemSku ? products.find(p => p.sku && p.sku.toLowerCase().trim() === itemSku) : null) ||
+                                  (itemBarcode ? products.find(p => p.barcode && p.barcode.toLowerCase().trim() === itemBarcode) : null) ||
+                                  (itemName ? products.find(p => p.name && p.name.toLowerCase().trim() === itemName) : null);
+
+          if (matchingProduct && matchingProduct.costPrice !== undefined && Number(matchingProduct.costPrice) > 0) {
+            if ((item as any).costPrice !== matchingProduct.costPrice) {
+              txModified = true;
+              return {
+                ...item,
+                costPrice: matchingProduct.costPrice
+              };
+            }
+          }
+          return item;
+        });
+
+        if (txModified) {
+          updatedCount++;
+          return {
+            ...t,
+            items: updatedItems
+          };
+        }
+        return t;
+      });
+
+      if (updatedCount > 0) {
+        useTransactionStore.setState({ transactions: updatedTransactions });
+        await setIDB('nexus_transactions_cache', updatedTransactions).catch(() => {});
+
+        const modifiedTxs = updatedTransactions.filter(t => currentTransactions.some(orig => orig.id === t.id && orig !== t));
+        if (modifiedTxs.length > 0) {
+          enqueueSyncBatch(modifiedTxs.map(t => ({
+            table: 'transactions',
+            action: 'UPSERT',
+            recordId: t.id,
+            payload: preparePayload('transactions', t.id, t)
+          })));
+        }
+
+        toast.success(`Bénéfices recalculés avec succès ! ${updatedCount} transaction(s) mise(s) à jour.`);
+      } else {
+        toast.info("Toutes les ventes sont déjà basées sur les prix d'achat actuels du catalogue.");
+      }
+    } catch (err: any) {
+      toast.error(`Erreur lors du recalcul : ${err.message || 'Erreur inconnue'}`);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   return {
     profitFilterDate,
@@ -286,6 +412,8 @@ export function useProfitsReportLogic({
     setProfitFilterMaxTotal,
     productProfitData,
     handleProfitSort,
-    totals
+    totals,
+    isRecalculating,
+    handleRecalculateProfits
   };
 }

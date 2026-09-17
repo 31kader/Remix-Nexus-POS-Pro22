@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   AlertTriangle, 
   Globe, 
@@ -8,6 +8,8 @@ import {
   Lock 
 } from 'lucide-react';
 import { CompanySettings } from '../../types';
+import { sanitizePlainPasswords } from '../../scripts/sanitizePlainPasswords';
+import { toast } from 'sonner';
 
 interface SectionProps {
   formData: CompanySettings;
@@ -15,6 +17,22 @@ interface SectionProps {
 }
 
 export function SecuritySection({ formData, setFormData }: SectionProps) {
+  const [isSanitizing, setIsSanitizing] = useState(false);
+
+  const handleSanitizePasswords = async () => {
+    setIsSanitizing(true);
+    try {
+      const stats = await sanitizePlainPasswords();
+      const totalUpdated = stats.reduce((acc, curr) => acc + curr.updated, 0);
+      toast.success(`Hachage des mots de passe terminé. ${totalUpdated} comptes mis à jour.`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Erreur de hachage: ${err.message || err}`);
+    } finally {
+      setIsSanitizing(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="space-y-6">
@@ -84,6 +102,27 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
             </div>
             <p className="text-[9px] text-slate-600 font-bold uppercase mt-1 leading-tight tracking-tighter">Période après laquelle une transaction devient immuable</p>
           </div>
+        </div>
+      </div>
+
+      <div className="pt-6 border-t border-white/5">
+        <h4 className="text-sm font-bold text-white mb-6 ml-1 flex items-center gap-2">
+          <Shield size={18} className="text-slate-500" />
+          Sécurité des Comptes
+        </h4>
+        <div className="p-6 bg-slate-900/50 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold text-slate-300">Hachage des mots de passe en clair</p>
+            <p className="text-[10px] text-slate-500 mt-1">Recherche tous les mots de passe stockés en clair dans la base de données locale (utilisateurs, clients, fournisseurs) pour les chiffrer avec bcrypt.</p>
+          </div>
+          <button
+            type="button"
+            disabled={isSanitizing}
+            onClick={handleSanitizePasswords}
+            className="h-12 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white rounded-xl text-xs font-bold tracking-wider transition-colors shrink-0"
+          >
+            {isSanitizing ? 'Sécurisation...' : 'Sécuriser les Comptes'}
+          </button>
         </div>
       </div>
     </div>

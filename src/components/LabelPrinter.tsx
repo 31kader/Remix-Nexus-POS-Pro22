@@ -69,7 +69,7 @@ export const SingleLabel = ({ product, currency }: { product: Product, currency?
           marginTop: '2mm',
           marginBottom: '2mm'
         }}>
-          {product.price.toFixed(2)} {currency || '€'}
+          {product.price.toFixed(2)} {currency || 'DA'}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', overflow: 'hidden', width: '100%' }}>
@@ -215,7 +215,7 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
           addProduct={addProduct}
           deleteProductFromList={deleteProductFromList}
           updateQuantity={updateQuantity}
-          currency={settings.currency || '€'}
+          currency={settings.currency || 'DA'}
         />
 
         <div className="space-y-4">

@@ -104,7 +104,7 @@ export function CameraSidebar({
               )}
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">#{tx.id.slice(-6).toUpperCase()}</span>
+                <span className="text-[10px] font-bold text-slate-400 font-mono tracking-tighter">#{String(tx.id || "").slice(-6).toUpperCase()}</span>
                 <span className="text-[9px] font-bold text-slate-500">{format(new Date(tx.timestamp), 'HH:mm')}</span>
               </div>
               <div className="flex items-center justify-between">

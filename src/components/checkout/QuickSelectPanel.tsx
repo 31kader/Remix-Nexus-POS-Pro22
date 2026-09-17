@@ -24,7 +24,7 @@ export const QuickSelectPanel: React.FC<Props> = ({
           animate={isMobile ? { opacity: 1 } : { x: 0, opacity: 1 }}
           exit={isMobile ? { opacity: 0 } : { x: -320, opacity: 0 }}
           transition={isMobile ? { duration: 0.2 } : { type: "spring", damping: 30, stiffness: 300 }}
-          className={`h-full flex-shrink-0 relative z-40 bg-slate-900/40 shadow-2xl ${isMobile ? 'w-full' : 'w-80 border-r border-white/5'}`}
+          className={`h-full flex-shrink-0 relative z-40 bg-white dark:bg-slate-900/40 shadow-xl ${isMobile ? 'w-full' : 'w-80 border-r border-slate-200 dark:border-white/5'}`}
         >
           <QuickSelect 
             onAddProduct={(p) => addToCart(p, isReturnMode ? -1 : 1)} 

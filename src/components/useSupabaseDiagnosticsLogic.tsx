@@ -1,12 +1,12 @@
 import { demoCategories, demoBrands, demoProducts, demoOnlineOrders } from './supabaseDemoData';
 import { sqlCreateTables, sqlDisableRLS, sqlEnableRLSPublic, sqlMigrationTables, sqlDropTables } from './supabaseDiagnosticQueries';
 import React from 'react';
-
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { initAndSyncSupabase } from '../services/SupabaseSync';
 import { del as idbDel } from 'idb-keyval';
 import { toast } from 'sonner';
+import { dbState, saveStateToStorage } from '../lib/local-db';
 
 export interface TableStatus {
   name: string;
@@ -67,67 +67,38 @@ export function useSupabaseDiagnosticsLogic() {
     };
 
     try {
-      // 1. Clean Local Emulated DB and Settings
-      const settingsRaw = localStorage.getItem('nexus_supabase_emulator_db');
-      if (settingsRaw) {
-        let dbStateLocal = JSON.parse(settingsRaw);
-        
-        // Clean Settings (RTDB settings/company)
-        if (dbStateLocal.settings?.company) {
-          const comp = dbStateLocal.settings.company;
-          if (isBadUrl(comp.logoUrl)) {
-            comp.logoUrl = '';
-            cleanedSettingsCount++;
-          }
-        }
-        
-        // Clean Products (RTDB products / emulator)
-        if (dbStateLocal.products) {
-          Object.keys(dbStateLocal.products).forEach(id => {
-            const p = dbStateLocal.products[id];
-            if (isBadUrl(p.imageUrl)) {
-              p.imageUrl = '';
-              cleanedProductsCount++;
-            }
-            if (isBadUrl(p.image)) {
-              p.image = '';
-              cleanedProductsCount++;
-            }
+      // 1. Clean Local DB State in IndexedDB
+      // 1. Clean Local DB State in IndexedDB
+      if (dbState) {
+        if (dbState.products) {
+          Object.keys(dbState.products).forEach(id => {
+            const p = dbState.products[id];
+            let modified = false;
+            if (isBadUrl(p.imageUrl)) { p.imageUrl = ''; cleanedProductsCount++; modified = true; }
+            if (isBadUrl(p.image)) { p.image = ''; cleanedProductsCount++; modified = true; }
+            if (modified) saveStateToStorage('products');
           });
         }
-
-        // Clean Categories (RTDB categories / emulator)
-        if (dbStateLocal.categories) {
-          Object.keys(dbStateLocal.categories).forEach(id => {
-            const c = dbStateLocal.categories[id];
-            if (isBadUrl(c.imageUrl)) {
-              c.imageUrl = '';
-              cleanedCategoriesCount++;
-            }
-            if (isBadUrl(c.image_url)) {
-              c.image_url = '';
-              cleanedCategoriesCount++;
-            }
+        if (dbState.categories) {
+          Object.keys(dbState.categories).forEach(id => {
+            const c = dbState.categories[id];
+            let modified = false;
+            if (isBadUrl(c.imageUrl)) { c.imageUrl = ''; cleanedCategoriesCount++; modified = true; }
+            if (isBadUrl(c.image_url)) { c.image_url = ''; cleanedCategoriesCount++; modified = true; }
+            if (modified) saveStateToStorage('categories');
           });
         }
-
-        // Clean Brands (RTDB brands / emulator)
-        if (dbStateLocal.brands) {
-          Object.keys(dbStateLocal.brands).forEach(id => {
-            const b = dbStateLocal.brands[id];
-            if (isBadUrl(b.logoUrl)) {
-              b.logoUrl = '';
-              cleanedBrandsCount++;
-            }
-            if (isBadUrl(b.logo_url)) {
-              b.logo_url = '';
-              cleanedBrandsCount++;
-            }
+        if (dbState.brands) {
+          Object.keys(dbState.brands).forEach(id => {
+            const b = dbState.brands[id];
+            let modified = false;
+            if (isBadUrl(b.logoUrl)) { b.logoUrl = ''; cleanedBrandsCount++; modified = true; }
+            if (isBadUrl(b.logo_url)) { b.logo_url = ''; cleanedBrandsCount++; modified = true; }
+            if (modified) saveStateToStorage('brands');
           });
         }
-
-        localStorage.setItem('nexus_supabase_emulator_db', JSON.stringify(dbStateLocal));
       }
+      try { localStorage.removeItem('nexus_supabase_emulator_db'); } catch (_) {}
 
       // Also clean in Supabase Cloud if configured
       if (isSupabaseConfigured) {

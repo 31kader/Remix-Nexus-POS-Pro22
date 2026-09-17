@@ -1,3 +1,4 @@
+/// <reference types="vite/client"   />
 declare module 'papaparse';
 declare module 'react-dom/client';
 declare module 'react-window';

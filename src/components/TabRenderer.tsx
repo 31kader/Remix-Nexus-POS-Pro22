@@ -27,8 +27,8 @@ const Promotions = lazy(() => import('./Promotions').then(m => ({ default: m.Pro
 const Customers = lazy(() => import('./Customers').then(m => ({ default: m.Customers })));
 const Suppliers = lazy(() => import('./Suppliers').then(m => ({ default: m.Suppliers })));
 const Employees = lazy(() => import('./Employees').then(m => ({ default: m.Employees })));
-// CORRIGÉ : TeamManagement vient de son propre fichier
-const TeamManagement = lazy(() => import('./Employees').then(m => ({ default: m.TeamManagement })));const TransactionHistory = lazy(() => import('./TransactionHistory').then(m => ({ default: m.TransactionHistory })));
+const TeamManagement = lazy(() => import('./employees/TeamManagement').then(m => ({ default: m.TeamManagement })));
+const TransactionHistory = lazy(() => import('./TransactionHistory').then(m => ({ default: m.TransactionHistory })));
 const SmartPurchase = lazy(() => import('./SmartPurchase').then(m => ({ default: m.SmartPurchase })));
 const Orders = lazy(() => import('./Orders').then(m => ({ default: m.Orders })));
 const Returns = lazy(() => import('./Returns').then(m => ({ default: m.Returns })));
@@ -40,6 +40,8 @@ const ArchiveManager = lazy(() => import('./ArchiveManager').then(m => ({ defaul
 const AuditLogs = lazy(() => import('./AuditLogs').then(m => ({ default: m.AuditLogs })));
 const Help = lazy(() => import('./Help').then(m => ({ default: m.Help })));
 const MarketingPosters = lazy(() => import('./MarketingPosters').then(m => ({ default: m.MarketingPosters })));
+const SyncStudio = lazy(() => import('./SyncStudio').then(m => ({ default: m.SyncStudio })));
+const CatalogPrinter = lazy(() => import('./CatalogPrinter').then(m => ({ default: m.CatalogPrinter })));
 
 interface TabRendererProps {
   activeTab: string;
@@ -56,159 +58,445 @@ const loadingFallback = (
   </div>
 );
 
-export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props }) => {
-  const user = useAuthStore(s => s.user);
-  const profile = useAuthStore(s => s.profile);
-
-  const settings = useCoreStore(s => s.settings);
-  const products = useCoreStore(s => s.products);
-  const categories = useCoreStore(s => s.categories);
-  const brands = useCoreStore(s => s.brands);
-  const promotions = useCoreStore(s => s.promotions);
-  const patterns = useCoreStore(s => s.patterns);
-
+// Tab Wrappers that only subscribe to what each specific tab needs
+const DashboardTab: React.FC<any> = (props) => {
   const transactions = useTransactionStore(s => s.transactions);
-  const purchaseOrders = useTransactionStore(s => s.purchaseOrders);
+  const products = useCoreStore(s => s.products);
+  const settings = useCoreStore(s => s.settings);
   const returns = useTransactionStore(s => s.returns);
-  const onlineOrders = useTransactionStore(s => s.onlineOrders);
-  const shifts = useTransactionStore(s => s.shifts);
-  const activeShift = useTransactionStore(s => s.activeShift);
+  return (
+    <Dashboard
+      transactions={transactions || []}
+      products={products || []}
+      settings={settings || {}}
+      returns={returns || []}
+      isStandalone={props.isStandalone}
+      deferredPrompt={props.deferredPrompt}
+      handleInstallApp={props.handleInstallApp}
+    />
+  );
+};
 
-  const customers = usePeopleStore(s => s.customers);
-  const suppliers = usePeopleStore(s => s.suppliers);
-  const employees = usePeopleStore(s => s.employees);
-  const users = usePeopleStore(s => s.users);
-
+const AIAssistantTab: React.FC<any> = () => {
+  const products = useCoreStore(s => s.products);
+  const transactions = useTransactionStore(s => s.transactions);
+  const expenses = useFinanceStore(s => s.expenses);
+  const settings = useCoreStore(s => s.settings);
   const stockAdjustments = useInventoryStore(s => s.stockAdjustments);
-  const audits = useInventoryStore(s => s.audits);
-  const damagedItems = useInventoryStore(s => s.damagedItems);
-  const supplierSyncs = useInventoryStore(s => s.supplierSyncs);
-  const attendance = useInventoryStore(s => s.attendance);
+  return (
+    <AIAssistant
+      products={products || []}
+      transactions={transactions || []}
+      expenses={expenses || []}
+      settings={settings || {}}
+      stockAdjustments={stockAdjustments || []}
+    />
+  );
+};
 
-  const purchases = useFinanceStore(s => s.purchases);
+const DetailedReportsTab: React.FC<any> = (props) => {
+  const transactions = useTransactionStore(s => s.transactions);
+  const products = useCoreStore(s => s.products);
+  const employees = usePeopleStore(s => s.employees);
   const expenses = useFinanceStore(s => s.expenses);
   const supplierPayments = useFinanceStore(s => s.supplierPayments);
+  const returns = useTransactionStore(s => s.returns);
+  const settings = useCoreStore(s => s.settings);
+  const categories = useCoreStore(s => s.categories);
+  const customers = usePeopleStore(s => s.customers);
+  const stockAdjustments = useInventoryStore(s => s.stockAdjustments);
+  return (
+    <DetailedReports
+      transactions={transactions || []}
+      products={products || []}
+      employees={employees || []}
+      expenses={expenses || []}
+      supplierPayments={supplierPayments || []}
+      returns={returns || []}
+      settings={settings || {}}
+      categories={categories || []}
+      customers={customers || []}
+      stockAdjustments={stockAdjustments || []}
+      setEditingProduct={props.setEditingProduct}
+      setIsProductModalOpen={props.setIsProductModalOpen}
+    />
+  );
+};
+
+const ExpiryManagerTab: React.FC<any> = (props) => {
+  const products = useCoreStore(s => s.products);
+  const categories = useCoreStore(s => s.categories);
+  return (
+    <ExpiryManager
+      products={products || []}
+      categories={categories || []}
+      onUpdateProduct={props.onUpdateProduct}
+      onAdjustStock={props.onAdjustStock}
+      onEditProduct={props.onEditProduct}
+    />
+  );
+};
+
+const InventorySettingsTab: React.FC<any> = (props) => {
+  const categories = useCoreStore(s => s.categories);
+  const brands = useCoreStore(s => s.brands);
+  return (
+    <InventorySettings
+      categories={categories || []}
+      brands={brands || []}
+      onAddCategory={props.onAddCategory}
+      onEditCategory={props.onEditCategory}
+      onDeleteCategory={props.onDeleteCategory}
+      onAddBrand={props.onAddBrand}
+      onEditBrand={props.onEditBrand}
+      onDeleteBrand={props.onDeleteBrand}
+    />
+  );
+};
+
+const MarketingTab: React.FC<any> = () => {
+  const products = useCoreStore(s => s.products);
+  const settings = useCoreStore(s => s.settings);
+  return <MarketingPosters products={products || []} settings={settings || {}} />;
+};
+
+const VoucherTab: React.FC<any> = () => {
+  const customers = usePeopleStore(s => s.customers);
+  return <VoucherManager customers={customers || []} />;
+};
+
+const GRNManagerTab: React.FC<any> = (props) => {
+  const products = useCoreStore(s => s.products);
+  const suppliers = usePeopleStore(s => s.suppliers);
+  const settings = useCoreStore(s => s.settings);
+  return (
+    <GRNManager
+      products={products || []}
+      suppliers={suppliers || []}
+      setIsProductModalOpen={props.setIsProductModalOpen}
+      setEditingProduct={props.setEditingProduct}
+      settings={settings || {}}
+    />
+  );
+};
+
+const InventoryAuditTab: React.FC<any> = () => {
+  const audits = useInventoryStore(s => s.audits);
+  const products = useCoreStore(s => s.products);
+  const user = useAuthStore(s => s.user);
+  const settings = useCoreStore(s => s.settings);
+  return <InventoryAudit audits={audits || []} products={products || []} user={user} settings={settings || {}} />;
+};
+
+const PromotionsTab: React.FC<any> = () => {
+  const promotions = useCoreStore(s => s.promotions);
+  const products = useCoreStore(s => s.products);
+  const categories = useCoreStore(s => s.categories);
+  const transactions = useTransactionStore(s => s.transactions);
+  const settings = useCoreStore(s => s.settings);
+  return (
+    <Promotions
+      promotions={promotions || []}
+      products={products || []}
+      categories={categories || []}
+      transactions={transactions || []}
+      settings={settings || {}}
+    />
+  );
+};
+
+const CustomersTab: React.FC<any> = (props) => {
+  const customers = usePeopleStore(s => s.customers);
+  const transactions = useTransactionStore(s => s.transactions);
+  const settings = useCoreStore(s => s.settings);
+  const products = useCoreStore(s => s.products);
+  const expenses = useFinanceStore(s => s.expenses);
+  const stockAdjustments = useInventoryStore(s => s.stockAdjustments);
+  const categories = useCoreStore(s => s.categories);
+  return (
+    <Customers
+      customers={customers || []}
+      transactions={transactions || []}
+      settings={settings || {}}
+      onRestore={props.onRestore || props.loadTransactionToCart}
+      products={products || []}
+      expenses={expenses || []}
+      stockAdjustments={stockAdjustments || []}
+      categories={categories || []}
+    />
+  );
+};
+
+const SuppliersTab: React.FC<any> = (props) => {
+  const suppliers = usePeopleStore(s => s.suppliers);
+  const products = useCoreStore(s => s.products);
+  const settings = useCoreStore(s => s.settings);
+  const purchases = useFinanceStore(s => s.purchases);
+  const supplierPayments = useFinanceStore(s => s.supplierPayments);
+  const categories = useCoreStore(s => s.categories);
+  const user = useAuthStore(s => s.user);
+  const damagedItems = useInventoryStore(s => s.damagedItems);
+  return (
+    <Suppliers
+      suppliers={suppliers || []}
+      products={products || []}
+      settings={settings || {}}
+      purchases={purchases || []}
+      supplierPayments={supplierPayments || []}
+      setViewingPurchaseVoucher={props.setViewingPurchaseVoucher}
+      categories={categories || []}
+      user={user}
+      damagedItems={damagedItems || []}
+    />
+  );
+};
+
+const EmployeesTab: React.FC<any> = (props) => {
+  const employees = usePeopleStore(s => s.employees);
+  const transactions = useTransactionStore(s => s.transactions);
+  const attendance = useInventoryStore(s => s.attendance);
   const advances = useFinanceStore(s => s.advances);
+  const settings = useCoreStore(s => s.settings);
+  const users = usePeopleStore(s => s.users);
+  return (
+    <Employees
+      employees={employees || []}
+      transactions={transactions || []}
+      attendance={attendance || []}
+      advances={advances || []}
+      settings={settings || {}}
+      users={users || []}
+      setIsAddUserModalOpen={props.setIsAddUserModalOpen}
+    />
+  );
+};
+
+const TransactionHistoryTab: React.FC<any> = (props) => {
+  const transactions = useTransactionStore(s => s.transactions);
+  const settings = useCoreStore(s => s.settings);
+  const profile = useAuthStore(s => s.profile);
+  return (
+    <TransactionHistory
+      transactions={transactions || []}
+      onReturn={props.onReturn}
+      onMarkAsDelivered={props.onMarkAsDelivered}
+      onEdit={props.onEdit}
+      onRestore={props.onRestore}
+      settings={settings || {}}
+      canAccess={props.canAccess}
+      profile={profile || undefined}
+    />
+  );
+};
+
+const SmartPurchaseTab: React.FC<any> = (props) => {
+  const products = useCoreStore(s => s.products);
+  const suppliers = usePeopleStore(s => s.suppliers);
+  const patterns = useCoreStore(s => s.patterns);
+  const purchases = useFinanceStore(s => s.purchases);
+  const purchaseOrders = useTransactionStore(s => s.purchaseOrders);
+  const settings = useCoreStore(s => s.settings);
+  const user = useAuthStore(s => s.user);
+  const categories = useCoreStore(s => s.categories);
+  const supplierPayments = useFinanceStore(s => s.supplierPayments);
+  return (
+    <SmartPurchase
+      products={products || []}
+      suppliers={suppliers || []}
+      patterns={patterns || []}
+      purchases={purchases || []}
+      purchaseOrders={purchaseOrders || []}
+      settings={settings || {}}
+      user={user}
+      categories={categories || []}
+      supplierPayments={supplierPayments || []}
+      setIsProductModalOpen={props.setIsProductModalOpen}
+      setEditingProduct={props.setEditingProduct}
+      isProductModalOpen={props.isProductModalOpen}
+      editingProduct={props.editingProduct}
+      setViewingPurchaseVoucher={props.setViewingPurchaseVoucher}
+    />
+  );
+};
+
+const OrdersTab: React.FC<any> = () => {
+  const onlineOrders = useTransactionStore(s => s.onlineOrders);
+  const products = useCoreStore(s => s.products);
+  const settings = useCoreStore(s => s.settings);
+  const employees = usePeopleStore(s => s.employees);
+  const customers = usePeopleStore(s => s.customers);
+  const user = useAuthStore(s => s.user);
+  const profile = useAuthStore(s => s.profile);
+  return (
+    <Orders
+      orders={onlineOrders || []}
+      products={products || []}
+      settings={settings || {}}
+      employees={employees || []}
+      customers={customers || []}
+      user={user}
+      profile={profile || undefined}
+    />
+  );
+};
+
+const ReturnsTab: React.FC<any> = () => {
+  const returns = useTransactionStore(s => s.returns);
+  const settings = useCoreStore(s => s.settings);
+  const products = useCoreStore(s => s.products);
+  return <Returns returns={returns || []} settings={settings || {}} products={products || []} />;
+};
+
+const ExpensesTab: React.FC<any> = () => {
+  const expenses = useFinanceStore(s => s.expenses);
+  const user = useAuthStore(s => s.user);
+  const settings = useCoreStore(s => s.settings);
+  return <Expenses expenses={expenses || []} user={user} settings={settings || {}} />;
+};
+
+const ShiftsTab: React.FC<any> = () => {
+  const activeShift = useTransactionStore(s => s.activeShift);
+  const shifts = useTransactionStore(s => s.shifts);
+  const transactions = useTransactionStore(s => s.transactions);
+  const expenses = useFinanceStore(s => s.expenses);
+  const profile = useAuthStore(s => s.profile);
+  const settings = useCoreStore(s => s.settings);
+  return (
+    <CashManagement
+      activeShift={activeShift}
+      shifts={shifts || []}
+      transactions={transactions || []}
+      expenses={expenses || []}
+      user={profile!}
+      settings={settings || {}}
+    />
+  );
+};
+
+const CameraTab: React.FC<any> = () => {
+  const settings = useCoreStore(s => s.settings);
+  const profile = useAuthStore(s => s.profile);
+  return <CameraPortal settings={settings || {}} user={profile!} />;
+};
+
+const SettingsTab: React.FC<any> = () => {
+  const settings = useCoreStore(s => s.settings);
+  return <Settings settings={settings || {}} />;
+};
+
+const ArchivesTab: React.FC<any> = () => {
+  const user = useAuthStore(s => s.user);
+  const settings = useCoreStore(s => s.settings);
+  return <ArchiveManager user={user} settings={settings || {}} />;
+};
+
+const TeamTab: React.FC<any> = (props) => {
+  const users = usePeopleStore(s => s.users);
+  const employees = usePeopleStore(s => s.employees);
+  const settings = useCoreStore(s => s.settings);
+  return <TeamManagement users={users || []} employees={employees || []} settings={settings || {}} setIsAddUserModalOpen={props.setIsAddUserModalOpen} />;
+};
+
+const AuditLogsTab: React.FC<any> = () => {
   const auditLogs = useFinanceStore(s => s.auditLogs);
+  const settings = useCoreStore(s => s.settings);
+  const products = useCoreStore(s => s.products);
+  const transactions = useTransactionStore(s => s.transactions);
+  return <AuditLogs logs={auditLogs || []} settings={settings || {}} products={products || []} transactions={transactions || []} />;
+};
 
-  const finalProps: any = {
-    ...props,
-    user, profile, settings, products, categories, brands, promotions, patterns,
-    transactions, purchaseOrders, returns, onlineOrders, shifts, activeShift,
-    customers, suppliers, employees, users,
-    stockAdjustments, audits, damagedItems, supplierSyncs, attendance,
-    purchases, expenses, supplierPayments, advances, auditLogs
-  };
+const CatalogPrinterTab: React.FC<any> = () => {
+  const products = useCoreStore(s => s.products);
+  const settings = useCoreStore(s => s.settings);
+  return <CatalogPrinter products={products || []} settings={settings || {}} />;
+};
 
+export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props }) => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'checkout':
+      case 'caisse':
+      case 'pos':
         return (
           <Checkout
-            setActiveTab={finalProps.setActiveTab}
-            setIsPOSCustomerModalOpen={finalProps.setIsPOSCustomerModalOpen}
-            selectedCustomer={finalProps.selectedCustomer}
-            setSelectedCustomer={finalProps.setSelectedCustomer}
-            setIsProductModalOpen={finalProps.setIsProductModalOpen}
-            setEditingProduct={finalProps.setEditingProduct}
-            activeStaffId={finalProps.activeStaffId}
+            setActiveTab={props.setActiveTab}
+            setIsPOSCustomerModalOpen={props.setIsPOSCustomerModalOpen}
+            selectedCustomer={props.selectedCustomer}
+            setSelectedCustomer={props.setSelectedCustomer}
+            setIsProductModalOpen={props.setIsProductModalOpen}
+            setEditingProduct={props.setEditingProduct}
+            activeStaffId={props.activeStaffId}
+            isSidebarOpen={props.isSidebarOpen}
           />
         );
       case 'dashboard':
-        return <Dashboard transactions={finalProps.transactions || []} products={finalProps.products || []} settings={finalProps.settings || {}} returns={finalProps.returns || []} isStandalone={finalProps.isStandalone} deferredPrompt={finalProps.deferredPrompt} handleInstallApp={finalProps.handleInstallApp} />;
+        return <DashboardTab {...props} />;
       case 'ai_assistant':
-        return <AIAssistant products={finalProps.products || []} transactions={finalProps.transactions || []} expenses={finalProps.expenses || []} settings={finalProps.settings || {}} stockAdjustments={finalProps.stockAdjustments || []} />;
+        return <AIAssistantTab {...props} />;
       case 'reports':
-        return <DetailedReports transactions={finalProps.transactions || []} products={finalProps.products || []} employees={finalProps.employees || []} expenses={finalProps.expenses || []} supplierPayments={finalProps.supplierPayments || []} returns={finalProps.returns || []} settings={finalProps.settings || {}} categories={finalProps.categories || []} customers={finalProps.customers || []} stockAdjustments={finalProps.stockAdjustments || []} />;
+        return <DetailedReportsTab {...props} />;
       case 'inventory':
-        return <Inventory setActiveTab={finalProps.setActiveTab} setIsProductModalOpen={finalProps.setIsProductModalOpen} setEditingProduct={finalProps.setEditingProduct} editingProduct={finalProps.editingProduct} isProductModalOpen={finalProps.isProductModalOpen} setViewingPurchaseVoucher={finalProps.setViewingPurchaseVoucher} />;
+        return (
+          <Inventory
+            setActiveTab={props.setActiveTab}
+            setIsProductModalOpen={props.setIsProductModalOpen}
+            setEditingProduct={props.setEditingProduct}
+            editingProduct={props.editingProduct}
+            isProductModalOpen={props.isProductModalOpen}
+            setViewingPurchaseVoucher={props.setViewingPurchaseVoucher}
+          />
+        );
       case 'expiry':
-        return (
-          <ExpiryManager
-            products={finalProps.products || []}
-            categories={finalProps.categories || []}
-            onUpdateProduct={finalProps.onUpdateProduct}
-            onAdjustStock={finalProps.onAdjustStock}
-            onEditProduct={finalProps.onEditProduct}
-          />
-        );
+        return <ExpiryManagerTab {...props} />;
       case 'inventory_settings':
-        return (
-          <InventorySettings
-            categories={finalProps.categories || []}
-            brands={finalProps.brands || []}
-            onAddCategory={finalProps.onAddCategory}
-            onEditCategory={finalProps.onEditCategory}
-            onDeleteCategory={finalProps.onDeleteCategory}
-            onAddBrand={finalProps.onAddBrand}
-            onEditBrand={finalProps.onEditBrand}
-            onDeleteBrand={finalProps.onDeleteBrand}
-          />
-        );
+        return <InventorySettingsTab {...props} />;
       case 'marketing':
-        return <MarketingPosters products={finalProps.products || []} settings={finalProps.settings || {}} />;
+      case 'posters':
+        return <MarketingTab {...props} />;
+      case 'catalog_printer':
+      case 'labels':
+        return <CatalogPrinterTab {...props} />;
       case 'vouchers':
-        return <VoucherManager customers={finalProps.customers || []} />;
+        return <VoucherTab {...props} />;
       case 'grns':
-        return <GRNManager products={finalProps.products || []} suppliers={finalProps.suppliers || []} setIsProductModalOpen={finalProps.setIsProductModalOpen} setEditingProduct={finalProps.setEditingProduct} settings={finalProps.settings || {}} />;
+      case 'grn':
+        return <GRNManagerTab {...props} />;
       case 'audit':
-        return <InventoryAudit audits={finalProps.audits || []} products={finalProps.products || []} user={finalProps.user} settings={finalProps.settings || {}} />;
+      case 'inventory_audit':
+        return <InventoryAuditTab {...props} />;
       case 'promotions':
-        return <Promotions promotions={finalProps.promotions || []} products={finalProps.products || []} categories={finalProps.categories || []} transactions={finalProps.transactions || []} settings={finalProps.settings || {}} />;
+        return <PromotionsTab {...props} />;
       case 'customers':
-        return <Customers customers={finalProps.customers || []} transactions={finalProps.transactions || []} settings={finalProps.settings || {}} onRestore={finalProps.loadTransactionToCart} products={finalProps.products || []} expenses={finalProps.expenses || []} stockAdjustments={finalProps.stockAdjustments || []} categories={finalProps.categories || []} />;
+        return <CustomersTab {...props} />;
       case 'suppliers':
-        return <Suppliers suppliers={finalProps.suppliers || []} products={finalProps.products || []} settings={finalProps.settings || {}} purchases={finalProps.purchases || []} supplierPayments={finalProps.supplierPayments || []} setViewingPurchaseVoucher={finalProps.setViewingPurchaseVoucher} categories={finalProps.categories || []} user={finalProps.user} damagedItems={finalProps.damagedItems || []} />;
+        return <SuppliersTab {...props} />;
       case 'employees':
-        return <Employees employees={finalProps.employees || []} transactions={finalProps.transactions || []} attendance={finalProps.attendance || []} advances={finalProps.advances || []} settings={finalProps.settings || {}} users={finalProps.users || []} setIsAddUserModalOpen={finalProps.setIsAddUserModalOpen} />;
+        return <EmployeesTab {...props} />;
       case 'transactions':
-        return (
-          <TransactionHistory
-            transactions={finalProps.transactions || []}
-            onReturn={finalProps.onReturn}
-            onMarkAsDelivered={finalProps.onMarkAsDelivered}
-            onEdit={finalProps.onEdit}
-            onRestore={finalProps.onRestore}
-            settings={finalProps.settings || {}}
-            canAccess={finalProps.canAccess}
-            profile={finalProps.profile}
-          />
-        );
+        return <TransactionHistoryTab {...props} />;
       case 'purchases':
-        return <SmartPurchase
-          products={finalProps.products || []}
-          suppliers={finalProps.suppliers || []}
-          patterns={finalProps.patterns || []}
-          purchases={finalProps.purchases || []}
-          purchaseOrders={finalProps.purchaseOrders || []}
-          settings={finalProps.settings || {}}
-          user={finalProps.user}
-          categories={finalProps.categories || []}
-          supplierPayments={finalProps.supplierPayments || []}
-          setIsProductModalOpen={finalProps.setIsProductModalOpen}
-          setEditingProduct={finalProps.setEditingProduct}
-          isProductModalOpen={finalProps.isProductModalOpen}
-          editingProduct={finalProps.editingProduct}
-          setViewingPurchaseVoucher={finalProps.setViewingPurchaseVoucher}
-        />;
+        return <SmartPurchaseTab {...props} />;
       case 'orders':
-        return <Orders orders={finalProps.onlineOrders || []} products={finalProps.products || []} settings={finalProps.settings || {}} employees={finalProps.employees || []} customers={finalProps.customers || []} user={finalProps.user} profile={finalProps.profile} />;
+        return <OrdersTab {...props} />;
       case 'returns':
-        return <Returns returns={finalProps.returns || []} settings={finalProps.settings || {}} products={finalProps.products || []} />;
+        return <ReturnsTab {...props} />;
       case 'expenses':
-        return <Expenses expenses={finalProps.expenses || []} user={finalProps.user} settings={finalProps.settings || {}} />;
+        return <ExpensesTab {...props} />;
       case 'shifts':
-        return <CashManagement activeShift={finalProps.activeShift} shifts={finalProps.shifts || []} transactions={finalProps.transactions || []} expenses={finalProps.expenses || []} user={finalProps.profile!} settings={finalProps.settings || {}} />;
+        return <ShiftsTab {...props} />;
       case 'camera':
-        return <CameraPortal settings={finalProps.settings || {}} user={finalProps.profile!} />;
+        return <CameraTab {...props} />;
       case 'settings':
-        return <Settings settings={finalProps.settings || {}} />;
+        return <SettingsTab {...props} />;
       case 'archives':
-        return <ArchiveManager user={finalProps.user} settings={finalProps.settings || {}} />;
+        return <ArchivesTab {...props} />;
       case 'team':
-        return <TeamManagement users={finalProps.users || []} employees={finalProps.employees || []} settings={finalProps.settings || {}} setIsAddUserModalOpen={finalProps.setIsAddUserModalOpen} />;
+        return <TeamTab {...props} />;
       case 'audit_logs':
-        return <AuditLogs logs={finalProps.auditLogs || []} settings={finalProps.settings || {}} products={finalProps.products || []} transactions={finalProps.transactions || []} />;
+        return <AuditLogsTab {...props} />;
+      case 'sync_studio':
+      case 'sync':
+        return <SyncStudio setActiveTab={props.setActiveTab} />;
       case 'help':
         return <Help />;
       default:

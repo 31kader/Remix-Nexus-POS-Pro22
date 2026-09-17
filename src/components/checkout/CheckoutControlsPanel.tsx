@@ -1,4 +1,5 @@
 import React from 'react';
+import { X, ChevronRight } from 'lucide-react';
 import { CustomerSelection } from './CustomerSelection';
 import { PaymentOrderSummary } from './PaymentOrderSummary';
 
@@ -10,10 +11,25 @@ export const CheckoutControlsPanel: React.FC<any> = ({
   appliedVoucher, setAppliedVoucher, applyVoucher, subtotal,
   discountAmount, pointsDiscount, voucherDiscount, currency,
   cart, handleCheckout, isProcessing, setIsDeliveryModalOpen,
-  addCustomerNote, setIsPOSCustomerModalOpen
+  addCustomerNote, setIsPOSCustomerModalOpen, globalDiscount, setGlobalDiscount,
+  editingTransaction,
+  onClose
 }) => {
   return (
-    <div id="checkout-panel" className="w-full lg:w-96 flex flex-col bg-slate-900/20 border-l border-slate-800/60 shadow-2xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
+    <div id="checkout-panel" className="w-full lg:w-96 shrink-0 flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
+      {onClose && (
+        <div className="hidden lg:flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 select-none">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Panneau Caisse</span>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Masquer le panneau de paiement"
+          >
+            <span>Réduire</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
       <CustomerSelection 
         selectedCustomer={selectedCustomer}
         setSelectedCustomer={setSelectedCustomer}
@@ -54,6 +70,9 @@ export const CheckoutControlsPanel: React.FC<any> = ({
         isProcessing={isProcessing}
         setIsDeliveryModalOpen={setIsDeliveryModalOpen}
         settings={settings}
+        globalDiscount={globalDiscount}
+        setGlobalDiscount={setGlobalDiscount}
+        editingTransaction={editingTransaction}
       />
     </div>
   );

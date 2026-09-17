@@ -1,6 +1,7 @@
 import React from 'react';
 import { Truck, Package, Clock, History, RefreshCw, Printer, Edit, Trash2, Check } from 'lucide-react';
 import { Card } from '../ui';
+import { SafeImage } from '../ui/SafeImage';
 import { Product, CompanySettings } from '../../types';
 import { cn } from '../../lib/utils';
 import { supabase } from '../../supabase';
@@ -80,7 +81,7 @@ export function InventorySupplierView({
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded bg-black/20 flex items-center justify-center overflow-hidden border border-white/10">
-                            {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={p.name} /> : <Package size={16} className="text-white/20" />}
+                            <SafeImage src={p.imageUrl} className="w-full h-full object-cover" alt={p.name} fallback={<Package size={16} className="text-white/20" />} />
                           </div>
                           <span className="text-sm font-medium text-white">{p.name}</span>
                         </div>

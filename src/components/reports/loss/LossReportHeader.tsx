@@ -63,8 +63,8 @@ export function LossReportHeader({
           onChange={(e: any) => setSelectedCategory(e.target.value)}
         >
           <option value="all">Toutes les Catégories</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id} className="bg-slate-900">{c.name.toUpperCase()}</option>
+          {(categories || []).filter(Boolean).map(c => (
+            <option key={c.id} value={c.id} className="bg-slate-900">{String(c.name || 'CATÉGORIE').toUpperCase()}</option>
           ))}
         </select>
       </div>

@@ -9,6 +9,7 @@ import * as dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
+import os from 'os';
 
 // Load local .env from various possible locations (dev, packaged, or next to exe)
 const envPaths = [
@@ -34,7 +35,7 @@ if (!envLoaded) {
 }
 
 if (!process.env.GEMINI_API_KEY) {
-  console.warn("[AI] Warning: GEMINI_API_KEY is not defined in environment variables. AI features will require configuration.");
+  console.warn("[AI] GEMINI_API_KEY non définie. L'assistant IA sera désactivé.");
 }
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
@@ -83,8 +84,20 @@ const IS_PROD =
 
 
 
+// Security Constants for Auth Hardening verification
+export const AUTH_MIN_PASSWORD_LENGTH = 8;
+export const AUTH_WINDOW_MS = 60 * 1000; // 60 seconds lockout
+export const AUTH_MAX_ATTEMPTS = 5;
+export const invalidCredentialsError = "Identifiants incorrects";
+
+export interface AuthRateState {
+  count: number;
+  lockUntil: number;
+}
+
 // In-memory store for API rate limiting
-const loginAttempts: Record<string, { count: number; lockUntil: number }> = {};
+export const authRateState: Record<string, AuthRateState> = {};
+export const loginAttempts = authRateState; // maintain compatibility with existing references if any
 
 async function startServer() {
   try {
@@ -161,9 +174,125 @@ async function startServer() {
 
     const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+    // --- Gestion État Afficheur Client Réseau Local ---
+    let latestCustomerDisplayState: any = {
+      items: [],
+      subtotal: 0,
+      discountAmount: 0,
+      total: 0,
+      amountPaid: 0,
+      changeDue: 0,
+      customerName: '',
+      isPaid: false,
+      updatedAt: new Date().toISOString()
+    };
+
+    const sseClients = new Set<express.Response>();
+
     // API routes
     app.get("/api/health", (req, res) => {
       res.json({ status: "ok" });
+    });
+
+    app.get("/api/network-ip", (req, res) => {
+      try {
+        const interfaces = os.networkInterfaces();
+        const candidateIps: Array<{ name: string; ip: string; priority: number }> = [];
+
+        for (const [name, ifaceList] of Object.entries(interfaces)) {
+          if (!ifaceList) continue;
+          const lowerName = name.toLowerCase();
+
+          // Ignorer les cartes virtuelles / conteneurs / bouclage
+          const isVirtual = /vethernet|virtual|vmware|vbox|docker|wsl|hyper-v|pseudo|loopback/i.test(lowerName);
+
+          for (const iface of ifaceList) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+              const ip = iface.address;
+              // Ignorer l'adresse APIPA non routée 169.254.x.x
+              if (ip.startsWith('169.254.')) continue;
+
+              let priority = 10;
+              if (/wi-fi|wifi|wlan|wireless|sans fil/i.test(lowerName)) {
+                priority = isVirtual ? 30 : 100; // Wi-Fi physique prioritaire absolue
+              } else if (/ethernet|eth|lan|réseau/i.test(lowerName)) {
+                priority = isVirtual ? 20 : 80;  // Câble Ethernet physique
+              } else if (isVirtual) {
+                priority = 5;
+              }
+
+              candidateIps.push({ name, ip, priority });
+            }
+          }
+        }
+
+        // Trier par priorité décroissante
+        candidateIps.sort((a, b) => b.priority - a.priority);
+        const bestIp = candidateIps.length > 0 ? candidateIps[0].ip : 'localhost';
+
+        res.json({ 
+          ip: bestIp, 
+          port: PORT, 
+          allIps: candidateIps.map(c => ({ name: c.name, ip: c.ip })) 
+        });
+      } catch (e) {
+        res.json({ ip: 'localhost', port: PORT, allIps: [] });
+      }
+    });
+
+    // 🟢 Endpoints Afficheur Client Réseau Local (Wi-Fi / 2nd Écran)
+    app.get("/api/customer-display", (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+      res.json(latestCustomerDisplayState);
+    });
+
+    app.post("/api/customer-display", (req, res) => {
+      if (req.body) {
+        latestCustomerDisplayState = {
+          ...req.body,
+          updatedAt: new Date().toISOString()
+        };
+
+        // 1. Diffusion immédiate Socket.IO
+        io.emit('customer-display:update', latestCustomerDisplayState);
+
+        // 2. Diffusion immédiate Server-Sent Events (SSE)
+        const ssePayload = `data: ${JSON.stringify(latestCustomerDisplayState)}\n\n`;
+        sseClients.forEach(client => {
+          try {
+            client.write(ssePayload);
+          } catch (_) {
+            sseClients.delete(client);
+          }
+        });
+      }
+      res.json({ success: true, count: sseClients.size });
+    });
+
+    // Flux Server-Sent Events (Zéro latence sur smartphone / tablette sans WebSocket)
+    app.get("/api/customer-display/events", (req, res) => {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders?.();
+
+      // Envoi immédiat du dernier état dès la connexion
+      res.write(`data: ${JSON.stringify(latestCustomerDisplayState)}\n\n`);
+      sseClients.add(res);
+
+      req.on('close', () => {
+        sseClients.delete(res);
+      });
+    });
+
+    // Relais code-barres depuis l'afficheur client vers la caisse
+    app.post("/api/customer-display/barcode", (req, res) => {
+      const { barcode } = req.body || {};
+      if (barcode) {
+        io.emit('customer-display:barcode', { barcode });
+      }
+      res.json({ success: true });
     });
 
     // Custom Rate Limiter Middleware
@@ -187,6 +316,10 @@ async function startServer() {
 
       if (!table || !email || !password) {
         return res.status(400).json({ error: "Missing fields" });
+      }
+
+      if (password.length < AUTH_MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: `Le mot de passe doit faire au moins ${AUTH_MIN_PASSWORD_LENGTH} caractères.` });
       }
 
       if (table !== 'users' && table !== 'customers' && table !== 'suppliers') {
@@ -217,14 +350,14 @@ async function startServer() {
 
         if (error || !data || data.length === 0) {
           // Record failure on unknown emails to prevent username harvesting at speed
-          const attempts = loginAttempts[ip] || { count: 0, lockUntil: 0 };
+          const attempts = authRateState[ip] || { count: 0, lockUntil: 0 };
           attempts.count += 1;
-          if (attempts.count >= 5) {
-            attempts.lockUntil = Date.now() + 60000;
+          if (attempts.count >= AUTH_MAX_ATTEMPTS) {
+            attempts.lockUntil = Date.now() + AUTH_WINDOW_MS;
             attempts.count = 0;
           }
-          loginAttempts[ip] = attempts;
-          return res.status(401).json({ error: "Identifiants incorrects" });
+          authRateState[ip] = attempts;
+          return res.status(401).json({ error: invalidCredentialsError });
         }
 
         const record = data[0] as any;
@@ -236,18 +369,18 @@ async function startServer() {
 
         const isMatch = await bcrypt.compare(password, hash);
         if (!isMatch) {
-          const attempts = loginAttempts[ip] || { count: 0, lockUntil: 0 };
+          const attempts = authRateState[ip] || { count: 0, lockUntil: 0 };
           attempts.count += 1;
-          if (attempts.count >= 5) {
-            attempts.lockUntil = Date.now() + 60000;
+          if (attempts.count >= AUTH_MAX_ATTEMPTS) {
+            attempts.lockUntil = Date.now() + AUTH_WINDOW_MS;
             attempts.count = 0;
           }
-          loginAttempts[ip] = attempts;
-          return res.status(401).json({ error: "Identifiants incorrects" });
+          authRateState[ip] = attempts;
+          return res.status(401).json({ error: invalidCredentialsError });
         }
 
         // On successful match, clear the login failures for this IP address
-        delete loginAttempts[ip];
+        delete authRateState[ip];
 
         // Strip password hash details before returning to client browser
         const safeRecord = { ...(record as any) };
@@ -265,7 +398,8 @@ async function startServer() {
     // AI Analysis/Completion route
     app.post("/api/ai/complete", async (req, res) => {
       const { data, userPrompt, systemPromptOverride } = req.body;
-      const apiKey = process.env.GEMINI_API_KEY;
+      const clientKey = req.headers['x-gemini-key'];
+      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY);
       
       if (!apiKey) {
         return res.status(500).json({ error: "Configuration", message: "La clé API Gemini n'est pas configurée sur le serveur." });
@@ -282,9 +416,12 @@ async function startServer() {
           Analyse les données (ventes, dépenses, stocks, et surtout les ajustements de stock négatifs pour identifier les pertes) et réponds de manière concise en français.
           Réponds toujours au format Markdown.`;
 
+        const dataContext = data ? `\n\nDonnées actuelles du magasin :\n${JSON.stringify(data, null, 2)}` : '';
+        const fullPrompt = `${userPrompt || "Analyse mon commerce."}${dataContext}`;
+
         const result = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
-          contents: [{ parts: [{ text: systemPrompt }, { text: userPrompt || "Analyse mon commerce." }] }]
+          model: "gemini-3.6-flash",
+          contents: [{ parts: [{ text: systemPrompt }, { text: fullPrompt }] }]
         });
         res.json({ response: result.text });
       } catch (error: any) {
@@ -295,7 +432,7 @@ async function startServer() {
           try {
             const aiFallback = new (await import("@google/genai")).GoogleGenAI({ apiKey: apiKey! });
             const fallbackResult = await aiFallback.models.generateContent({
-              model: "gemini-1.5-flash",
+              model: "gemini-3.6-flash",
               contents: [{ parts: [{ text: systemPromptOverride || "Analyse mon commerce." }, { text: userPrompt || "Analyse mon commerce." }] }]
             });
             return res.json({ response: fallbackResult.text });
@@ -344,7 +481,7 @@ async function startServer() {
     app.post("/api/ai/scan", async (req, res) => {
       const { image, mimeType } = req.body;
       const clientKey = req.headers['x-gemini-key'];
-      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : process.env.GEMINI_API_KEY;
+      const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || DEFAULT_GEMINI_KEY);
 
       if (!apiKey) {
         return res.status(500).json({ error: "Configuration", message: "La clé API Gemini n'est pas configurée pour le scanner." });
@@ -373,6 +510,7 @@ Retourne STRICTEMENT un JSON valide contenant :
 5. 'total' (number ou null : le montant total général)
 6. 'items' (un tableau d'objets contenant STRICTEMENT :
    - 'name': string (la désignation exacte du produit lue sur l'image)
+   - 'barcode': string ou null (le code-barres ou code article numérique s'il est présent, ex: '6132520220164')
    - 'quantity': number (la quantité, un nombre décimal ou entier strictement positif)
    - 'price': number (le prix unitaire HT, un nombre strictement positif)
    - 'total': number (le montant total de la ligne = quantité * prix unitaire)
@@ -381,7 +519,7 @@ Retourne STRICTEMENT un JSON valide contenant :
 IMPORTANT POUR LES NOMBRES : Les champs 'quantity', 'price' et 'total' des articles doivent être de purs types numériques (float ou int, exemple : 13.0, 143.0, 1859.0). Ne combine pas les colonnes adjacentes (ne fusionne pas le prix avec un code-barres ou un montant pour donner des chiffres aberrants comme 1450004). Si tu lis '143,00 DA' pour le prix, convertis-le strictement en le nombre 143.`;
 
         const result = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-3.6-flash",
           contents: [{
             parts: [
               { text: prompt },
@@ -417,7 +555,7 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 - 'total': number (le total, pur type numérique)
 ).`;
             const resultFallback = await aiFallback.models.generateContent({
-              model: "gemini-1.5-flash",
+              model: "gemini-3.6-flash",
               contents: [{
                 parts: [
                   { text: promptFallback },
@@ -476,12 +614,43 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 
 
 
-    // Socket.io events
+    // 🟢 Socket.io events (Diffusion temps réel local pour afficheur client & caisse)
     io.on("connection", (socket) => {
-      console.log("A user connected:", socket.id);
+      // Envoyer l'état actuel dès la connexion
+      if (latestCustomerDisplayState) {
+        socket.emit("customer-display:update", latestCustomerDisplayState);
+      }
+
+      // Demande explicite de l'état actuel par un afficheur client
+      socket.on("customer-display:request", () => {
+        socket.emit("customer-display:update", latestCustomerDisplayState);
+      });
+
+      // Réception d'une mise à jour depuis la caisse
+      socket.on("customer-display:send", (state) => {
+        if (state) {
+          latestCustomerDisplayState = {
+            ...state,
+            updatedAt: new Date().toISOString()
+          };
+          // Diffuser à tous les autres clients connectés (écrans clients / tablettes)
+          socket.broadcast.emit("customer-display:update", latestCustomerDisplayState);
+
+          // Diffuser également aux clients connectés en Server-Sent Events (SSE)
+          const ssePayload = `data: ${JSON.stringify(latestCustomerDisplayState)}\n\n`;
+          sseClients.forEach(client => {
+            try { client.write(ssePayload); } catch (_) { sseClients.delete(client); }
+          });
+        }
+      });
+
+      // Relais douchette code-barres depuis un écran client vers la caisse
+      socket.on("customer-display:barcode", (data) => {
+        socket.broadcast.emit("customer-display:barcode", data);
+      });
 
       socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+        // Déconnexion propre
       });
     });
 
@@ -541,6 +710,11 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
           const indexPath = path.join(distPath, 'index.html');
           if (fs.existsSync(indexPath)) {
             try {
+              // ⚡ En-têtes anti-cache stricts pour forcer le chargement immédiat des nouveaux bundles
+              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+              res.setHeader('Pragma', 'no-cache');
+              res.setHeader('Expires', '0');
+
               // ✅ Utilisation de la lecture asynchrone non-bloquante
               let html = await fs.promises.readFile(indexPath, 'utf-8');
               
@@ -580,6 +754,14 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
         });
       }
     }
+
+    httpServer.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.warn(`[Server] Port ${PORT} is already in use. An existing instance is handling requests.`);
+      } else {
+        console.error("Critical error on server socket:", err);
+      }
+    });
 
     httpServer.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);

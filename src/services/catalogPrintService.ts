@@ -1,6 +1,7 @@
 import { Product, CompanySettings } from '../types';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
+import { escapeHtml } from './receiptPrintService';
 
 export interface CatalogPrintSettings {
   title: string;
@@ -188,8 +189,8 @@ export const printCatalog = async (
           <div style="display: flex; align-items: center;">
             ${logoTag}
             <div>
-              <h1 class="catalog-title">${title || companySettings.name || 'CATALOGUE'}</h1>
-              <p class="catalog-subtitle">${subtitle || 'Nos produits disponibles'}</p>
+              <h1 class="catalog-title">${escapeHtml(title || companySettings.name || 'CATALOGUE')}</h1>
+              <p class="catalog-subtitle">${escapeHtml(subtitle || 'Nos produits disponibles')}</p>
             </div>
           </div>
           ${showDate ? `<div class="catalog-date">${todayDate}</div>` : ''}
@@ -205,22 +206,22 @@ export const printCatalog = async (
       const qrSvg = assets?.qrSvg || '';
 
       const imgTag = showImage && (p.imageUrl || p.image) 
-        ? `<div class="item-image-wrapper"><img src="${p.imageUrl || p.image}" style="height: ${imageHeight}px; width: 100%; object-fit: cover;" referrerpolicy="no-referrer" /></div>` 
+        ? `<div class="item-image-wrapper" style="height: ${imageHeight}px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 4px; overflow: hidden; margin-bottom: 4px;"><img src="${p.imageUrl || p.image}" style="max-height: ${imageHeight}px; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` 
         : '';
       const nameTag = showName 
-        ? `<div class="item-name" style="font-size: ${nameFontSize}px;">${p.name}</div>` 
+        ? `<div class="item-name" style="font-size: ${nameFontSize}px;">${escapeHtml(p.name)}</div>` 
         : '';
       const priceTag = showPrice 
-        ? `<div class="item-price" style="font-size: ${priceFontSize}px;">${p.price.toFixed(2)} ${companySettings.currency || '€'}</div>` 
+        ? `<div class="item-price" style="font-size: ${priceFontSize}px;">${p.price.toFixed(2)} ${companySettings.currency || 'DA'}</div>` 
         : '';
       const skuTag = showSku 
-        ? `<div class="item-sku">REF : ${p.sku || p.id.substring(0, 8).toUpperCase()}</div>` 
+        ? `<div class="item-sku">REF : ${escapeHtml(p.sku || p.id.substring(0, 8).toUpperCase())}</div>` 
         : '';
       const stockTag = showStock 
-        ? `<div class="item-stock">Stock disponible : ${p.stock} ${p.unit || 'u'}</div>` 
+        ? `<div class="item-stock">Stock disponible : ${p.stock} ${escapeHtml(p.unit || 'u')}</div>` 
         : '';
       const descTag = showDescription && p.description 
-        ? `<div class="item-desc" style="font-size: ${descFontSize}px;">${p.description.length > 80 ? p.description.slice(0, 77) + '...' : p.description}</div>` 
+        ? `<div class="item-desc" style="font-size: ${descFontSize}px;">${escapeHtml(p.description.length > 80 ? p.description.slice(0, 77) + '...' : p.description)}</div>` 
         : '';
       const barcodeBlock = showBarcode && barcodeSvg 
         ? `<div class="item-barcode-wrapper">${barcodeSvg}</div>` 
@@ -385,8 +386,18 @@ export const printCatalog = async (
             overflow: hidden;
             border-radius: 4px;
             border: 1px solid #f1f5f9;
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             flex-shrink: 0;
             margin-bottom: 4px;
+          }
+          .item-image-wrapper img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
           }
           .item-details {
             flex: 1;
@@ -540,9 +551,9 @@ export const buildCatalogHtml = async (
     let gridItemsHtml = '';
     pageItems.forEach((p) => {
       const assets = assetMap.get(p.id);
-      const imgTag = showImage && (p.imageUrl || p.image) ? `<div class="item-image-wrapper"><img src="${p.imageUrl || p.image}" style="height: ${imageHeight}px; width: 100%; object-fit: cover;" /></div>` : '';
+      const imgTag = showImage && (p.imageUrl || p.image) ? `<div class="item-image-wrapper" style="height: ${imageHeight}px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 4px; overflow: hidden; margin-bottom: 4px;"><img src="${p.imageUrl || p.image}" style="max-height: ${imageHeight}px; max-width: 100%; object-fit: contain;" /></div>` : '';
       const nameTag = showName ? `<div class="item-name" style="font-size: ${nameFontSize}px;">${p.name}</div>` : '';
-      const priceTag = showPrice ? `<div class="item-price" style="font-size: ${priceFontSize}px;">${p.price.toFixed(2)} ${companySettings.currency || '€'}</div>` : '';
+      const priceTag = showPrice ? `<div class="item-price" style="font-size: ${priceFontSize}px;">${p.price.toFixed(2)} ${companySettings.currency || 'DA'}</div>` : '';
       const skuTag = showSku ? `<div class="item-sku">REF : ${p.sku || p.id.substring(0, 8).toUpperCase()}</div>` : '';
       const stockTag = showStock ? `<div class="item-stock">Stock : ${p.stock} ${p.unit || 'u'}</div>` : '';
       const descTag = showDescription && p.description ? `<div class="item-desc" style="font-size: ${descFontSize}px;">${p.description.length > 80 ? p.description.slice(0, 77) + '...' : p.description}</div>` : '';
@@ -568,7 +579,8 @@ export const buildCatalogHtml = async (
     .grid-item { background: #fff; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; padding: 8px; overflow: hidden; height: 100%; width: 100%; }
     .grid-item.border-thin { border: 1px solid #e2e8f0; border-radius: 6px; }
     .grid-item.border-shadow { border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .item-image-wrapper { width: 100%; overflow: hidden; border-radius: 4px; border: 1px solid #f1f5f9; flex-shrink: 0; margin-bottom: 4px; }
+    .item-image-wrapper { width: 100%; overflow: hidden; border-radius: 4px; border: 1px solid #f1f5f9; background-color: #f8fafc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 4px; }
+    .item-image-wrapper img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
     .item-details { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; }
     .item-name { font-weight: bold; color: #0f172a; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
     .item-desc { color: #475569; margin-bottom: 4px; line-height: 1.2; }

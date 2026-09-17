@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../database';
-import { supabase, isSupabaseConfigured, removeChannelByName } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
 import { setLocalState, saveStateToStorage } from '../../lib/local-db';
+import { getTerminalId } from '../../services/terminalService';
 
 interface useFastChangingDataParams {
   loading: boolean;
@@ -14,6 +15,16 @@ interface useFastChangingDataParams {
   setShifts: React.Dispatch<React.SetStateAction<CashShift[]>>;
   setActiveShift: React.Dispatch<React.SetStateAction<CashShift | null>>;
   setSettings: React.Dispatch<React.SetStateAction<CompanySettings>>;
+}
+
+export function findActiveShiftForTerminal(shifts: CashShift[]): CashShift | null {
+  if (!shifts || shifts.length === 0) return null;
+  const currentTerminalId = getTerminalId();
+  // 1. Chercher d'abord le shift ouvert spécifiquement pour ce terminal
+  const terminalShift = shifts.find(s => s.status === 'open' && s.terminalId === currentTerminalId);
+  if (terminalShift) return terminalShift;
+  // 2. Rétrocompatibilité : shift ouvert sans terminalId assigné
+  return shifts.find(s => s.status === 'open' && !s.terminalId) || null;
 }
 
 export function useFastChangingData({
@@ -25,7 +36,7 @@ export function useFastChangingData({
   setSettings
 }: useFastChangingDataParams) {
   useEffect(() => {
-    if (loading || !userId) return;
+    if (loading) return;
     
     let isSubscribed = true;
     const listeners: (() => void)[] = [];
@@ -43,7 +54,7 @@ export function useFastChangingData({
           }
           if (cachedShifts && cachedShifts.length > 0) {
             setShifts(cachedShifts);
-            setActiveShift(cachedShifts.find((s: any) => s.status === 'open') || null);
+            setActiveShift(findActiveShiftForTerminal(cachedShifts));
           }
         }
       } catch (err) {
@@ -104,7 +115,7 @@ export function useFastChangingData({
           const shiftsData = shiftsRes.data.map((item: any) => convertKeysToCamel(item) as CashShift);
           shiftsData.sort((a: any, b: any) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
           setShifts(shiftsData);
-          setActiveShift(shiftsData.find((s: any) => s.status === 'open') || null);
+          setActiveShift(findActiveShiftForTerminal(shiftsData));
           idbSet('nexus_cash_shifts_cache', shiftsData).catch(err => console.warn('[IDB Error]', err));
         }
         
@@ -176,8 +187,117 @@ export function useFastChangingData({
       const docs = data as CashShift[];
       docs.sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
       setShifts(docs);
-      setActiveShift(docs.find(s => s.status === 'open') || null);
+      setActiveShift(findActiveShiftForTerminal(docs));
     });
+
+    // Realtime Supabase pour settings, online_orders et cash_shifts
+    if (isSupabaseConfigured) {
+      removeChannelByName('nexus-fast-realtime');
+      const fastChannel = supabase.channel('nexus-fast-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'settings' },
+          (payload: any) => {
+            if (!isSubscribed || !payload.new) return;
+            const companyRow = payload.new;
+            if (companyRow.id === 'company' || !companyRow.id) {
+              const jsonFields = ['site_locations', 'role_kpis', 'notifications', 'operational_costs', 'delivery_zones', 'api_keys', 'available_taxes', 'loyalty_tiers', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
+              jsonFields.forEach(field => {
+                if (companyRow[field] && typeof companyRow[field] === 'string') {
+                  try { companyRow[field] = JSON.parse(companyRow[field]); } catch (e) {}
+                }
+              });
+              const camelSettings = convertKeysToCamel(companyRow) as CompanySettings;
+              setSettings(camelSettings);
+              setLocalState('settings/company', camelSettings);
+              saveStateToStorage();
+              console.log('[Realtime] ⚙️ Paramètres système mis à jour en direct.');
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'online_orders' },
+          (payload: any) => {
+            if (!isSubscribed) return;
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old?.id;
+              if (deletedId) {
+                setOnlineOrders(prev => {
+                  const safe = Array.isArray(prev) ? prev : [];
+                  const updated = safe.filter(o => String(o.id) !== String(deletedId));
+                  idbSet('nexus_online_orders_cache', updated).catch(() => {});
+                  return updated;
+                });
+              }
+            } else if (payload.new && payload.new.id) {
+              const rawOrder = payload.new;
+              if (rawOrder.items && typeof rawOrder.items === 'string') {
+                try { rawOrder.items = JSON.parse(rawOrder.items); } catch(e) {}
+              }
+              const camelOrder = convertKeysToCamel(rawOrder) as OnlineOrder;
+              setOnlineOrders(prev => {
+                const safe = Array.isArray(prev) ? prev : [];
+                const idx = safe.findIndex(o => String(o.id) === String(camelOrder.id));
+                let updated: OnlineOrder[];
+                if (idx >= 0) {
+                  updated = [...safe];
+                  updated[idx] = { ...updated[idx], ...camelOrder };
+                } else {
+                  updated = [camelOrder, ...safe];
+                }
+                idbSet('nexus_online_orders_cache', updated).catch(() => {});
+                return updated;
+              });
+              console.log('[Realtime] 📦 Commande en ligne synchronisée en direct:', camelOrder.id);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cash_shifts' },
+          (payload: any) => {
+            if (!isSubscribed) return;
+            if (payload.new && payload.new.id) {
+              const camelShift = convertKeysToCamel(payload.new) as CashShift;
+              setShifts(prev => {
+                const safe = Array.isArray(prev) ? prev : [];
+                const idx = safe.findIndex(s => s.id === camelShift.id);
+                let updated: CashShift[];
+                if (idx >= 0) {
+                  updated = [...safe];
+                  updated[idx] = { ...updated[idx], ...camelShift };
+                } else {
+                  updated = [camelShift, ...safe];
+                }
+                updated.sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
+                setActiveShift(findActiveShiftForTerminal(updated));
+                idbSet('nexus_cash_shifts_cache', updated).catch(() => {});
+                return updated;
+              });
+            }
+          }
+        );
+
+      fastChannel.subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
+        }
+      });
+
+      listeners.push(() => safeRemoveChannel(fastChannel));
+    }
+
+    // Écouteur pour changement de poste / terminal local
+    const handleTerminalChanged = () => {
+      idbGet<CashShift[]>('nexus_cash_shifts_cache').then(cachedShifts => {
+        if (cachedShifts && cachedShifts.length > 0) {
+          setActiveShift(findActiveShiftForTerminal(cachedShifts));
+        }
+      }).catch(() => {});
+    };
+    window.addEventListener('nexus-terminal-changed', handleTerminalChanged);
+    listeners.push(() => window.removeEventListener('nexus-terminal-changed', handleTerminalChanged));
 
     return () => {
       isSubscribed = false;

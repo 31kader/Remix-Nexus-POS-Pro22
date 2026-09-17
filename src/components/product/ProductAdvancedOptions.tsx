@@ -138,15 +138,10 @@ export function ProductAdvancedOptions({
       </div>
 
       <div className="space-y-6 pt-6 border-t border-white/5">
-        <p className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Tarification Spéciale</p>
-        
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-white uppercase tracking-widest pl-2">Prix de gros ({settings?.currency})</label>
-          <input type="number" step="0.01" className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 font-black shadow-inner" value={formData.wholesalePrice} onChange={e => setFormData({...formData, wholesalePrice: e.target.value})} />
-        </div>
+        <p className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Remises Quantitatives</p>
         
         <div className="space-y-4">
-          <p className="text-[10px] font-black text-white uppercase tracking-widest pl-2">Remises par quantité</p>
+          <p className="text-[10px] font-black text-white uppercase tracking-widest pl-2">Paliers de remises par quantité</p>
           {formData.quantityDiscounts.map((discount: any, idx: number) => (
             <div key={`discount-${idx}`} className="flex gap-3 items-center group">
               <div className="flex-1">

@@ -204,7 +204,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                           </div>
                           <div>
                             <div className="flex items-center gap-3 mb-2">
-                              <p className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none font-sans">BR-{p.id.slice(-6).toUpperCase()}</p>
+                              <p className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none font-sans">BR-{String(p.id || "").slice(-6).toUpperCase()}</p>
                               <span className={cn(
                                 "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
                                 p.status === 'completed' ? "bg-emerald-100 text-emerald-600" : "bg-indigo-100 text-indigo-600"

@@ -33,14 +33,7 @@ export const useTransactionStore = create<TransactionState>((set) => ({
       incoming = update;
     }
 
-    let offlineTxs: Transaction[] = [];
-    try {
-      offlineTxs = JSON.parse(localStorage.getItem('nexus_offline_transactions') || '[]');
-    } catch (err) {
-      console.warn('Failed parsing local offline transactions', err);
-    }
-
-    const merged = [...offlineTxs, ...incoming];
+    const merged = [...(state.transactions || []), ...(Array.isArray(incoming) ? incoming : [])];
     const uniqueMap = new Map<string, Transaction>();
     merged.forEach(t => {
       if (t && t.id) {
@@ -49,9 +42,9 @@ export const useTransactionStore = create<TransactionState>((set) => ({
     });
     const unique = Array.from(uniqueMap.values());
 
-    unique.sort((a, b) => {
-      const d1 = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const d2 = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+    unique.sort((a: any, b: any) => {
+      const d1 = new Date(a.timestamp || a.created_at || a.date || 0).getTime() || 0;
+      const d2 = new Date(b.timestamp || b.created_at || b.date || 0).getTime() || 0;
       return d2 - d1;
     });
 

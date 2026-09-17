@@ -44,7 +44,7 @@ export function VoucherLogsDialog({ voucher, onClose }: VoucherLogsDialogProps) 
                     <p className="text-[10px] text-white/20 font-bold uppercase">{log.date}</p>
                   </div>
                   <div className="text-right space-y-0.5 font-mono">
-                    <p className="text-sm font-black text-amber-500">-{Number(log.amountUsed || 0).toFixed(2)} FCFA</p>
+                    <p className="text-sm font-black text-amber-500">-{Number(log.amountUsed || 0).toFixed(2)} DA</p>
                     <p className="text-[8px] font-bold text-white/20 uppercase">Solde: {Number(log.remainingBalance || 0).toFixed(2)}</p>
                   </div>
                 </div>

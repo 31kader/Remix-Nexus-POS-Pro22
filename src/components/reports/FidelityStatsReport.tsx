@@ -3,13 +3,13 @@ import { Gift, Tag } from 'lucide-react';
 import { formatSafe, cn } from '../../lib/utils';
 import { Card } from '../ui';
 import { Transaction, CompanySettings } from '../../types';
-import { isToday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
+import { isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 
 interface FidelityStatsReportProps {
   transactions: Transaction[];
   settings: CompanySettings;
-  marketingFilterDate: 'today' | 'week' | 'month' | 'year' | 'all';
-  setMarketingFilterDate: (date: 'today' | 'week' | 'month' | 'year' | 'all') => void;
+  marketingFilterDate: 'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all';
+  setMarketingFilterDate: (date: 'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all') => void;
 }
 
 export const FidelityStatsReport = React.memo(function FidelityStatsReport({
@@ -25,6 +25,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
       const tDate = new Date(t.timestamp);
       if (isNaN(tDate.getTime())) return false;
       if (marketingFilterDate === 'today' && !isToday(tDate)) return false;
+      if (marketingFilterDate === 'yesterday' && !isYesterday(tDate)) return false;
       if (marketingFilterDate === 'week' && !isThisWeek(tDate, { weekStartsOn: 1 })) return false;
       if (marketingFilterDate === 'month' && !isThisMonth(tDate)) return false;
       if (marketingFilterDate === 'year' && !isThisYear(tDate)) return false;
@@ -72,6 +73,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
            >
              <option value="all">Toutes périodes</option>
              <option value="today">Aujourd'hui</option>
+             <option value="yesterday">Hier</option>
              <option value="week">Cette semaine</option>
              <option value="month">Ce mois-ci</option>
              <option value="year">Cette année</option>
@@ -123,7 +125,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
                   <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
                       <p className="font-bold text-slate-800">{formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">#{t.id.slice(-8)}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">#{String(t.id || "").slice(-8)}</p>
                     </td>
                     <td className="p-4">
                       <span className="font-bold text-slate-700">{t.customerName || 'Client de passage'}</span>

@@ -90,12 +90,14 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '6px', margin: '4px 0 2px 0', width: '100%' }}>
                   {state.showImage && (previewProduct.imageUrl || previewProduct.image) && (
-                    <img 
-                      src={previewProduct.imageUrl || previewProduct.image} 
-                      style={{ width: '24px', height: '24px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} 
-                      referrerPolicy="no-referrer"
-                      alt="preview"
-                    />
+                    <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #ddd', overflow: 'hidden', flexShrink: 0 }}>
+                      <img 
+                        src={previewProduct.imageUrl || previewProduct.image} 
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                        referrerPolicy="no-referrer"
+                        alt="preview"
+                      />
+                    </div>
                   )}
                   {state.showPrice && (
                     <div style={{ fontSize: `${state.priceFontSize}px`, fontWeight: '900', lineHeight: '1.1' }}>
@@ -234,12 +236,14 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
               )}
               
               {state.showImage && (previewProduct.imageUrl || previewProduct.image) && (
-                <img 
-                  src={previewProduct.imageUrl || previewProduct.image} 
-                  style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '4px', margin: '4px 0', border: '1px solid #eee' }} 
-                  referrerPolicy="no-referrer"
-                  alt="preview"
-                />
+                <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: '4px', margin: '4px 0', border: '1px solid #eee', overflow: 'hidden' }}>
+                  <img 
+                    src={previewProduct.imageUrl || previewProduct.image} 
+                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
+                    referrerPolicy="no-referrer"
+                    alt="preview"
+                  />
+                </div>
               )}
 
               {state.showPrice && (

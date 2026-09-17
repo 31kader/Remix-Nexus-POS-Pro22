@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { get as idbGet } from 'idb-keyval';
 import { supabase } from '../../supabase';
 import { Product } from '../../types';
 import { Package, Search, X, Check, Loader2, Star } from 'lucide-react';
@@ -27,13 +28,38 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const fetchPickerResults = async (page: number, append = false, currentSearch = pickerSearch) => {
-    if (currentSearch.length < 2 && currentSearch.length !== 0 && !append) {
+    const trimmed = (currentSearch || '').trim().toLowerCase();
+    if (trimmed.length < 2) {
       setPickerResults([]);
+      setPickerLoading(false);
+      setIsLoadingMore(false);
       return;
     }
     if (append) setIsLoadingMore(true);
     else setPickerLoading(true);
+
     try {
+      // 1. LOCAL-FIRST: Tenter la recherche instantanée (0ms) dans le cache IndexedDB
+      const cachedProducts = await idbGet<Product[]>('nexus_products_cache').catch(() => null);
+      if (cachedProducts && cachedProducts.length > 0 && !append) {
+        const localMatches = cachedProducts.filter(p => 
+          (p.name && p.name.toLowerCase().includes(trimmed)) ||
+          (p.sku && p.sku.toLowerCase().includes(trimmed)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(trimmed))
+        );
+
+        if (localMatches.length > 0) {
+          const paginatedLocal = localMatches.slice(0, PAGE_SIZE);
+          setPickerResults(paginatedLocal);
+          setHasMorePicker(localMatches.length > PAGE_SIZE);
+          setPickerPage(0);
+          setPickerLoading(false);
+          setIsLoadingMore(false);
+          return;
+        }
+      }
+
+      // 2. Réseau Supabase si pas trouvé dans le cache local
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
       let query = supabase
@@ -41,7 +67,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
         .select('id, name, price, cost_price, stock, min_stock, unit, image_url, category_id, sku, status, tax_rate, show_in_pos, is_quick_select, updated_at')
         .order('name', { ascending: true })
         .range(from, to);
-      if (currentSearch) query = query.ilike('name', `%${currentSearch}%`);
+      if (currentSearch) query = query.or(`name.ilike.%${currentSearch}%,sku.ilike.%${currentSearch}%,barcode.ilike.%${currentSearch}%`);
       const { data, error } = await query;
       if (error) throw error;
       const mappedResults: Product[] = (data || []).map((p: any) => ({

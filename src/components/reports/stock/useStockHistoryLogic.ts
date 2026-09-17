@@ -27,13 +27,24 @@ export function useStockHistoryLogic({ adjustments, products }: UseStockHistoryL
 
   const getProductForAdjustment = (adj: StockAdjustment | null) => {
     if (!adj) return null;
-    return products.find(p => p.id === adj.productId) || null;
+    return products.find(p => p.id === adj.productId || p.id === (adj as any).product_id) || null;
   };
 
+  const enrichedAdjustments = useMemo(() => {
+    return (adjustments || []).map(adj => {
+      const matchedProd = products.find(p => p.id === adj.productId || p.id === (adj as any).product_id);
+      const name = adj.productName || (adj as any).product_name || (adj as any).name || matchedProd?.name || ('Produit #' + String(adj.productId || adj.id || '').slice(-6));
+      return {
+        ...adj,
+        productName: name
+      };
+    });
+  }, [adjustments, products]);
+
   const sortedAdjustments = useMemo(() => {
-    let sortableItems = [...adjustments];
+    let sortableItems = [...enrichedAdjustments];
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
+      sortableItems.sort((a: any, b: any) => {
         const aValue = a[sortConfig.key] ?? '';
         const bValue = b[sortConfig.key] ?? '';
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -42,7 +53,7 @@ export function useStockHistoryLogic({ adjustments, products }: UseStockHistoryL
       });
     }
     return sortableItems;
-  }, [adjustments, sortConfig]);
+  }, [enrichedAdjustments, sortConfig]);
 
   const requestSort = (key: keyof StockAdjustment) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -57,7 +68,7 @@ export function useStockHistoryLogic({ adjustments, products }: UseStockHistoryL
     return sortedAdjustments.slice(start, start + pageSize);
   }, [sortedAdjustments, currentPage]);
 
-  const totalPages = Math.ceil(adjustments.length / pageSize);
+  const totalPages = Math.ceil(enrichedAdjustments.length / pageSize);
 
   const handleEditClick = (adj: StockAdjustment) => {
     setSelectedAdjustment(adj);

@@ -35,6 +35,7 @@ export interface OnlineOrder {
   deliveryMethod?: 'delivery' | 'pickup';
   pickupTime?: string;
   shippingAddress?: string;
+  deliveryNotes?: string;
   syncedToPos?: boolean;
   assignedEmployeeId?: string;
   assignedEmployeeName?: string;
@@ -51,7 +52,7 @@ export interface Transaction {
   id: string;
   items: CartItem[];
   total: number;
-  paymentMethod: 'cash' | 'card';
+  paymentMethod: 'cash' | 'card' | 'balance' | string;
   deliveryMethod?: 'in_store' | 'delivery' | 'pickup';
   timestamp: string;
   userId: string;
@@ -60,12 +61,14 @@ export interface Transaction {
   status?: 'completed' | 'returned' | 'partially_returned' | 'pending' | 'delivered';
   employeeId?: string;
   employeeName?: string;
-  promotionId?: string;
+  promotionId?: string | null;
   pointsEarned?: number;
   discountAmount?: number;
   pointsDiscount?: number;
   balanceUsed?: number;
   voucherDiscount?: number;
+  amountReceived?: number;
+  amountReturned?: number;
   isWholesale?: boolean;
   onlineOrderId?: string;
   auditStatus?: 'verified' | 'suspicious' | 'pending';
@@ -73,6 +76,15 @@ export interface Transaction {
   auditedAt?: string;
   auditNote?: string;
   auditDuration?: number;
+  notes?: string;
+  updatedAt?: string;
+  isEdited?: boolean;
+  editedAt?: string;
+  editedBy?: string;
+  originalTotal?: number;
+  originalItems?: CartItem[];
+  terminalId?: string;
+  terminalName?: string;
 }
 
 export interface ProductReturn {
@@ -102,6 +114,7 @@ export interface POSSession {
   name: string;
   cart: CartItem[];
   selectedCustomer: Customer | null;
+  editingTransaction?: Transaction | null;
 }
 export interface Promotion {
   id: string;

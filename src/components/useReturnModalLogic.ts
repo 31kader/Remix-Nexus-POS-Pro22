@@ -1,3 +1,5 @@
+﻿import { useTransactionStore } from '../store/useTransactionStore';
+import { useCoreStore } from '../store/useCoreStore';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { enqueueStockAdjustment } from '../services/SyncService';
@@ -106,11 +108,11 @@ export function useReturnModalLogic({
           ? crypto.randomUUID()
           : generateUniqueId();
         
-        generatedPromoCode = `AVOIR-${transaction.id.slice(-6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        generatedPromoCode = `AVOIR-${String(transaction.id || "").slice(-6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         
         const promoData = {
           id: promoId,
-          name: `Avoir - Retour Transaction #${transaction.id.slice(-8).toUpperCase()}`,
+          name: `Avoir - Retour Transaction #${String(transaction.id || "").slice(-8).toUpperCase()}`,
           description: `Avoir de ${totalRefund.toFixed(2)} ${settings.currency} généré le ${format(new Date(), 'dd/MM/yyyy')}`,
           type: 'fixed' as const,
           value: totalRefund,
@@ -135,13 +137,22 @@ export function useReturnModalLogic({
               for (const bundleItem of product.bundleItems) {
                 const componentProduct = products.find((p: Product) => p.id === bundleItem.productId);
                 if (componentProduct && componentProduct.id) {
-                  enqueueStockAdjustment(componentProduct.id, bundleItem.quantity * item.quantity);
-                  await localDb.insert(`products/${componentProduct.id}`, { ...componentProduct, updatedAt: new Date().toISOString() });
+                  const qtyToAdd = bundleItem.quantity * item.quantity;
+                  const newStock = (componentProduct.stock || 0) + qtyToAdd;
+                  enqueueStockAdjustment(componentProduct.id, qtyToAdd);
+                  const updatedComp = { ...componentProduct, stock: newStock, updatedAt: new Date().toISOString() };
+                  await localDb.update(`products/${componentProduct.id}`, { stock: newStock, updatedAt: updatedComp.updatedAt });
+                  useCoreStore.getState().setProducts(prev => (prev || []).map(p => p.id === componentProduct.id ? updatedComp : p));
+                  window.dispatchEvent(new CustomEvent('product-cache-update', { detail: updatedComp }));
                 }
               }
             } else if (product.id) {
+              const newStock = (product.stock || 0) + item.quantity;
               enqueueStockAdjustment(product.id, item.quantity);
-              await localDb.insert(`products/${product.id}`, { ...product, updatedAt: new Date().toISOString() });
+              const updatedProd = { ...product, stock: newStock, updatedAt: new Date().toISOString() };
+              await localDb.update(`products/${product.id}`, { stock: newStock, updatedAt: updatedProd.updatedAt });
+              useCoreStore.getState().setProducts(prev => (prev || []).map(p => p.id === product.id ? updatedProd : p));
+              window.dispatchEvent(new CustomEvent('product-cache-update', { detail: updatedProd }));
             }
           }
         }
@@ -172,7 +183,7 @@ export function useReturnModalLogic({
         const expenseId = localDb.push('expenses').key || generateUniqueId();
         const expenseData = {
           id: expenseId,
-          description: `Remboursement Client (Retour #${transaction.id.slice(-6).toUpperCase()})`,
+          description: `Remboursement Client (Retour #${String(transaction.id || "").slice(-6).toUpperCase()})`,
           amount: totalRefund,
           category: 'Remboursement / Retour',
           date: parsedDate,
@@ -182,7 +193,7 @@ export function useReturnModalLogic({
         await localDb.insert(`expenses/${expenseId}`, expenseData);
       }
 
-      logAction(user?.uid || 'unknown', user?.displayName || 'Utilisateur', 'Retour', 'Vente', `Retour de ${totalRefund.toFixed(2)} ${settings.currency} pour la transaction #${transaction.id.slice(-8).toUpperCase()}`);
+      logAction(user?.uid || 'unknown', user?.displayName || 'Utilisateur', 'Retour', 'Vente', `Retour de ${totalRefund.toFixed(2)} ${settings.currency} pour la transaction #${String(transaction.id || "").slice(-8).toUpperCase()}`);
 
       if (generatedPromoCode) {
         toast.success(`Retour enregistré ! Code Avoir : ${generatedPromoCode}`, { duration: 15000 });

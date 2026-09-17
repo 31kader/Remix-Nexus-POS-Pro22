@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '../../supabase';
 import { enqueueStockAdjustment } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
 import { logAction } from '../../lib/utils';
 import { Button, Modal, ConfirmDialog } from '../ui';
-import { StockAdjustmentModal } from '../StockAdjustmentModal';
-import { DuplicateSKUModal } from '../DuplicateSKUModal';
-import { ImportModal } from '../ImportModal';
-import { ProductFormModal } from '../ProductFormModal';
-import { SingleLabel } from '../LabelPrinter';
 import { InventoryConfirmModal } from './InventoryConfirmModal';
 import { ImageZoomModal } from './ImageZoomModal';
-import { MassDeleteModal } from './MassDeleteModal';
-import { BulkUpdateModal } from './BulkUpdateModal';
-import { ProductHistoryModal } from './ProductHistoryModal';
 import { FloatingBulkActions } from './FloatingBulkActions';
+
+const StockAdjustmentModal = lazy(() => import('../StockAdjustmentModal').then(m => ({ default: m.StockAdjustmentModal })));
+const DuplicateSKUModal = lazy(() => import('../DuplicateSKUModal').then(m => ({ default: m.DuplicateSKUModal })));
+const ImportModal = lazy(() => import('../ImportModal').then(m => ({ default: m.ImportModal })));
+const SingleLabel = lazy(() => import('../LabelPrinter').then(m => ({ default: m.SingleLabel })));
+
+const MassDeleteModal = lazy(() => import('./MassDeleteModal').then(m => ({ default: m.MassDeleteModal })));
+const BulkUpdateModal = lazy(() => import('./BulkUpdateModal').then(m => ({ default: m.BulkUpdateModal })));
+const ProductHistoryModal = lazy(() => import('./ProductHistoryModal').then(m => ({ default: m.ProductHistoryModal })));
 
 export function InventoryModalsGroup(props: any) {
   const {
@@ -41,14 +42,16 @@ export function InventoryModalsGroup(props: any) {
   } = props;
 
   return (
-    <>
-      <StockAdjustmentModal 
-        isOpen={isAdjustmentModalOpen}
-        onClose={() => { setIsAdjustmentModalOpen(false); setSelectedProductForAdjustment(null); }}
-        product={selectedProductForAdjustment}
-        user={user}
-        settings={settings}
-      />
+    <Suspense fallback={null}>
+      {isAdjustmentModalOpen && (
+        <StockAdjustmentModal 
+          isOpen={isAdjustmentModalOpen}
+          onClose={() => { setIsAdjustmentModalOpen(false); setSelectedProductForAdjustment(null); }}
+          product={selectedProductForAdjustment}
+          user={user}
+          settings={settings}
+        />
+      )}
 
       <InventoryConfirmModal 
         confirmAction={confirmAction}
@@ -60,15 +63,18 @@ export function InventoryModalsGroup(props: any) {
         onClose={() => setEnlargedImage(null)}
       />
 
-      <MassDeleteModal 
-        isOpen={isMassDeleteConfirmOpen}
-        onClose={() => setIsMassDeleteConfirmOpen(false)}
-        isDeleting={isMassDeleting}
-        progress={massDeleteProgress}
-        onConfirm={handleMassDeleteProducts}
-      />
+      {isMassDeleteConfirmOpen && (
+        <MassDeleteModal 
+          isOpen={isMassDeleteConfirmOpen}
+          onClose={() => setIsMassDeleteConfirmOpen(false)}
+          isDeleting={isMassDeleting}
+          progress={massDeleteProgress}
+          onConfirm={handleMassDeleteProducts}
+        />
+      )}
 
-      <DuplicateSKUModal
+      {isDuplicateModalOpen && (
+        <DuplicateSKUModal
           isOpen={isDuplicateModalOpen}
           onClose={() => setIsDuplicateModalOpen(false)}
           groups={duplicateSKUGroups}
@@ -120,17 +126,20 @@ export function InventoryModalsGroup(props: any) {
           }}
           settings={settings}
         />
+      )}
 
-      <ImportModal 
-        isOpen={isImportModalOpen} 
-        onClose={() => setIsImportModalOpen(false)} 
-        headers={csvHeaders} 
-        data={importPreviewData}
-        onConfirm={executeImport} 
-        isProcessing={isProcessing}
-        progress={importProgress}
-        errors={importErrors}
-      />
+      {isImportModalOpen && (
+        <ImportModal 
+          isOpen={isImportModalOpen} 
+          onClose={() => setIsImportModalOpen(false)} 
+          headers={csvHeaders} 
+          data={importPreviewData}
+          onConfirm={executeImport} 
+          isProcessing={isProcessing}
+          progress={importProgress}
+          errors={importErrors}
+        />
+      )}
 
       {selectedProductForLabel && (
         <Modal 
@@ -149,73 +158,67 @@ export function InventoryModalsGroup(props: any) {
       )}
 
       {/* Bulk category / brand update modal */}
-      <BulkUpdateModal
-        isOpen={isBulkUpdateModalOpen}
-        onClose={() => setIsBulkUpdateModalOpen(false)}
-        selectedCount={selectedProductIds.length}
-        categories={categories}
-        brands={brands}
-        bulkUpdateCategory={bulkUpdateCategory}
-        setBulkUpdateCategory={setBulkUpdateCategory}
-        bulkUpdateBrand={bulkUpdateBrand}
-        setBulkUpdateBrand={setBulkUpdateBrand}
-        bulkParentCatId={bulkParentCatId}
-        setBulkParentCatId={setBulkParentCatId}
-        bulkSubCatId={bulkSubCatId}
-        setBulkSubCatId={setBulkSubCatId}
-        bulkBrandId={bulkBrandId}
-        setBulkBrandId={setBulkBrandId}
-        onConfirm={handleBulkUpdate}
-        isProcessing={isMassUpdating}
-      />
+      {isBulkUpdateModalOpen && (
+        <BulkUpdateModal
+          isOpen={isBulkUpdateModalOpen}
+          onClose={() => setIsBulkUpdateModalOpen(false)}
+          selectedCount={selectedProductIds.length}
+          categories={categories}
+          brands={brands}
+          bulkUpdateCategory={bulkUpdateCategory}
+          setBulkUpdateCategory={setBulkUpdateCategory}
+          bulkUpdateBrand={bulkUpdateBrand}
+          setBulkUpdateBrand={setBulkUpdateBrand}
+          bulkParentCatId={bulkParentCatId}
+          setBulkParentCatId={setBulkParentCatId}
+          bulkSubCatId={bulkSubCatId}
+          setBulkSubCatId={setBulkSubCatId}
+          bulkBrandId={bulkBrandId}
+          setBulkBrandId={setBulkBrandId}
+          onConfirm={handleBulkUpdate}
+          isProcessing={isMassUpdating}
+        />
+      )}
 
-      <Modal isOpen={isPurchaseHistoryModalOpen} onClose={() => setIsPurchaseHistoryModalOpen(false)} title="Historique des Achats">
-        <div className="space-y-4">
-          {purchases.filter((p: any) => p.items.some((item: any) => item.productId === editingProduct?.id)).map((p: any) => (
-            <div key={p.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
-              <div>
-                <p className="font-bold">{format(new Date(p.date), 'dd/MM/yyyy')}</p>
-                <p className="text-sm text-slate-500">{p.supplierName}</p>
+      {isPurchaseHistoryModalOpen && (
+        <Modal isOpen={isPurchaseHistoryModalOpen} onClose={() => setIsPurchaseHistoryModalOpen(false)} title="Historique des Achats">
+          <div className="space-y-4">
+            {purchases.filter((p: any) => p.items.some((item: any) => item.productId === editingProduct?.id)).map((p: any) => (
+              <div key={p.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{format(new Date(p.date), 'dd/MM/yyyy')}</p>
+                  <p className="text-sm text-slate-500">{p.supplierName}</p>
+                </div>
+                <Button onClick={() => { 
+                  setIsPurchaseHistoryModalOpen(false);
+                  setActiveTab('purchases');
+                }}>Voir</Button>
               </div>
-              <Button onClick={() => { 
-                setIsPurchaseHistoryModalOpen(false);
-                setActiveTab('purchases');
-              }}>Voir</Button>
-            </div>
-          ))}
-        </div>
-      </Modal>
+            ))}
+          </div>
+        </Modal>
+      )}
 
-      <Modal isOpen={isSalesHistoryModalOpen} onClose={() => setIsSalesHistoryModalOpen(false)} title="Historique des Ventes">
-        <div className="space-y-4">
-          {transactions.filter((t: any) => t.items.some((item: any) => item.id === editingProduct?.id)).map((t: any) => (
-            <div key={t.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
-              <div>
-                <p className="font-bold">{format(new Date(t.timestamp), 'dd/MM/yyyy')}</p>
-                <p className="text-sm text-slate-500">{t.customerName || 'Client inconnu'}</p>
+      {isSalesHistoryModalOpen && (
+        <Modal isOpen={isSalesHistoryModalOpen} onClose={() => setIsSalesHistoryModalOpen(false)} title="Historique des Ventes">
+          <div className="space-y-4">
+            {transactions.filter((t: any) => t.items.some((item: any) => item.id === editingProduct?.id)).map((t: any) => (
+              <div key={t.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{format(new Date(t.timestamp), 'dd/MM/yyyy')}</p>
+                  <p className="text-sm text-slate-500">{t.customerName || 'Client inconnu'}</p>
+                </div>
+                <Button onClick={() => { 
+                  setIsSalesHistoryModalOpen(false);
+                  setActiveTab('pos');
+                }}>Voir</Button>
               </div>
-              <Button onClick={() => { 
-                setIsSalesHistoryModalOpen(false);
-                setActiveTab('pos');
-              }}>Voir</Button>
-            </div>
-          ))}
-        </div>
-      </Modal>
+            ))}
+          </div>
+        </Modal>
+      )}
 
-      <ProductFormModal 
-        isOpen={isProductModalOpen}
-        onClose={() => { setIsProductModalOpen(false); setEditingProduct(null); }}
-        editingProduct={editingProduct}
-        products={products}
-        categories={categories}
-        brands={brands}
-        settings={settings}
-        user={user}
-        setIsPurchaseHistoryModalOpen={setIsPurchaseHistoryModalOpen}
-        setIsSalesHistoryModalOpen={setIsSalesHistoryModalOpen}
-        setActiveTab={setActiveTab}
-      />
+
 
       <ConfirmDialog 
         isOpen={isDeleteConfirmOpen}
@@ -227,16 +230,18 @@ export function InventoryModalsGroup(props: any) {
         variant="danger"
       />
 
-      <ProductHistoryModal
-        isOpen={isProductHistoryModalOpen}
-        onClose={() => setIsProductHistoryModalOpen(false)}
-        viewingHistoryProduct={viewingHistoryProduct}
-        setViewingHistoryProduct={setViewingHistoryProduct}
-        transactions={transactions}
-        purchases={purchases}
-        settings={settings}
-        setViewingPurchaseVoucher={setViewingPurchaseVoucher}
-      />
+      {isProductHistoryModalOpen && (
+        <ProductHistoryModal
+          isOpen={isProductHistoryModalOpen}
+          onClose={() => setIsProductHistoryModalOpen(false)}
+          viewingHistoryProduct={viewingHistoryProduct}
+          setViewingHistoryProduct={setViewingHistoryProduct}
+          transactions={transactions}
+          purchases={purchases}
+          settings={settings}
+          setViewingPurchaseVoucher={setViewingPurchaseVoucher}
+        />
+      )}
 
       {/* Floating Bulk Action Bar */}
       <FloatingBulkActions
@@ -245,6 +250,6 @@ export function InventoryModalsGroup(props: any) {
         onOpenBulkUpdate={() => setIsBulkUpdateModalOpen(true)}
         onBulkDelete={handleBulkDelete}
       />
-    </>
+    </Suspense>
   );
 }

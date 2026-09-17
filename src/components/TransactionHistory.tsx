@@ -20,10 +20,6 @@ import { SupplierSyncManager } from './SupplierSyncManager';
 import { StockHistory } from './StockHistory';
 import { BarcodeScanner } from './BarcodeScanner';
 import { ManualQRCodeGenerator } from './ManualQRCodeGenerator';
-
-
- // TODO: fix missing imports 
-
 import { TransactionFilters } from './transactions/TransactionFilters';
 import { TransactionTable } from './transactions/TransactionTable';
 import { useTransactionHistoryLogic, TransactionHistoryProps } from './useTransactionHistoryLogic';
@@ -151,9 +147,9 @@ export function TransactionHistory(props: TransactionHistoryProps) {
         transactions={filteredTransactions}
         settings={settings}
         onReturn={onReturn}
-        onMarkAsDelivered={(t) => onMarkAsDelivered(t.id)}
+        onMarkAsDelivered={onMarkAsDelivered}
         onEdit={onEdit}
-        onRestore={(t) => onRestore(t.id)}
+        onRestore={onRestore}
         canAccess={canAccess}
         requestSort={requestSort}
         sortConfig={sortConfig}

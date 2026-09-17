@@ -62,7 +62,7 @@ export function CategoryModal({
               <option value="" className="bg-[#0a0c10] text-slate-700">RACINE DU SYSTÈME (MAIN)</option>
               {getHierarchicalCategories(categories.filter((c: Category) => c.id !== editingCategory?.id)).map((c: any) => (
                 <option key={c.id} value={c.id} className="bg-[#0a0c10] text-white">
-                  {'—'.repeat(c.level)} {c.name.toUpperCase()}
+                  {'—'.repeat(c.level)} {String(c.name || 'CATÉGORIE').toUpperCase()}
                 </option>
               ))}
             </select>

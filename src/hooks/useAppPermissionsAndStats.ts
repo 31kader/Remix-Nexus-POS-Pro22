@@ -9,9 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { useInventoryStore } from '../store/useInventoryStore';
-
-const OWNER_EMAIL = (import.meta as any).env?.VITE_OWNER_EMAIL || 'hrskader305@gmail.com';
-const OWNER_UID = (import.meta as any).env?.VITE_OWNER_UID || 'FaQiBWkg8uTxZ2np7BQjDINTyQc2';
+import { checkIsOwner } from '../config/ownerConfig';
 
 export function useAppPermissionsAndTheme() {
   const user = useAuthStore(s => s.user);
@@ -35,12 +33,22 @@ export function useAppPermissionsAndTheme() {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('autoSyncOrders', JSON.stringify(autoSyncOrders));
+    } catch (e) {}
+  }, [autoSyncOrders]);
+
+  useEffect(() => {
     localStorage.setItem('nexus-pos-theme', theme);
-    document.documentElement.classList.remove('light', 'emerald', 'gold', 'nardo-grey-racing');
-    if (theme === 'light') document.documentElement.classList.add('light');
-    else if (theme === 'emerald') document.documentElement.classList.add('emerald');
-    else if (theme === 'gold') document.documentElement.classList.add('gold');
-    else if (theme === 'nardo') document.documentElement.classList.add('nardo-grey-racing');
+    document.documentElement.classList.remove('light', 'dark', 'emerald', 'gold', 'nardo-grey-racing');
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.add('dark');
+      if (theme === 'emerald') document.documentElement.classList.add('emerald');
+      else if (theme === 'gold') document.documentElement.classList.add('gold');
+      else if (theme === 'nardo') document.documentElement.classList.add('nardo-grey-racing');
+    }
   }, [theme]);
 
   const permissions = useMemo(() => {
@@ -48,14 +56,18 @@ export function useAppPermissionsAndTheme() {
     return settings.rolePermissions?.[profile.role] || DEFAULT_PERMISSIONS[profile.role as keyof typeof DEFAULT_PERMISSIONS] || DEFAULT_PERMISSIONS.cashier;
   }, [profile, settings]);
 
-  const isOwner = (user?.email?.toLowerCase().trim() === OWNER_EMAIL) || 
-                 (profile?.email?.toLowerCase().trim() === OWNER_EMAIL) ||
-                 (user?.uid === OWNER_UID);
+  const isOwner = checkIsOwner(user?.email, user?.uid) || checkIsOwner(profile?.email, profile?.uid);
 
   const canAccess = (permission: keyof RolePermissions) => {
     if (isOwner) return true;
     if (!profile || !profile.role) return false;
-    if (profile.role === 'admin') return true;
+
+    // Renforcement de sécurité : Vérifier l'authenticité du rôle admin
+    if (profile.role === 'admin') {
+      const isVerifiedAdmin = isOwner || (user?.email && (user.email === profile.email || user.email === settings?.email));
+      if (isVerifiedAdmin) return true;
+    }
+
     return !!permissions[permission];
   };
 

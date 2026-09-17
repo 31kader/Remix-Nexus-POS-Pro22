@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../supabase';
-import { convertKeysToSnake } from '../../lib/db-converters';
+import { supabase, isSupabaseConfigured } from '../../supabase';
+import { usePeopleStore } from '../../store/usePeopleStore';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { localDb } from '../../services/LocalDatabase';
+import { preparePayload } from '../../lib/db-converters';
+import { enqueueSyncBatch } from '../../services/SyncService';
 import { Supplier, SupplierPayment } from '../../types';
 
 interface UseSupplierPaymentsParams {
@@ -11,24 +15,26 @@ interface UseSupplierPaymentsParams {
 export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSupplierPaymentsParams) {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SupplierPayment | null>(null);
-  const [paymentData, setPaymentData] = useState<{ amount: number, method: 'cash' | 'card' | 'transfer' | 'check', note: string, date: string }>({ 
+  const [paymentData, setPaymentData] = useState<{ amount: number, method: 'cash' | 'card' | 'transfer' | 'check', note: string, date: string, opType?: 'decaissement' | 'encaissement' }>({ 
     amount: 0, 
     method: 'cash', 
     note: '', 
-    date: new Date().toISOString() 
+    date: new Date().toISOString(),
+    opType: 'decaissement'
   });
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     if (editingPayment) {
       setPaymentData({
-        amount: editingPayment.amount,
+        amount: Math.abs(editingPayment.amount),
         method: editingPayment.method,
         note: editingPayment.note || '',
-        date: editingPayment.date
+        date: editingPayment.date,
+        opType: editingPayment.amount < 0 ? 'encaissement' : 'decaissement'
       });
     } else {
-      setPaymentData({ amount: 0, method: 'cash', note: '', date: new Date().toISOString() });
+      setPaymentData({ amount: 0, method: 'cash', note: '', date: new Date().toISOString(), opType: 'decaissement' });
     }
   }, [editingPayment]);
 
@@ -45,55 +51,92 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
         console.error("Invalid payment date", e);
       }
 
+      const opType = paymentData.opType || 'decaissement';
+      // Signed amount: positive for payment/décaissement (reduces debt), negative for encaissement/refund (increases balance)
+      const signedAmount = opType === 'encaissement' ? -Math.abs(paymentData.amount) : Math.abs(paymentData.amount);
+
       const payment: SupplierPayment = {
-        id: editingPayment?.id || '',
+        id: editingPayment?.id || ('pay_' + Date.now() + Math.random().toString(36).substring(2, 6)),
         supplierId: viewingDetailsSupplier.id,
         supplierName: viewingDetailsSupplier.name,
-        amount: paymentData.amount,
+        amount: signedAmount,
         method: paymentData.method,
-        note: paymentData.note,
+        note: `${opType === 'encaissement' ? '[ENCAISSEMENT/AVOIR] ' : '[DECAISSEMENT/VERSEMENT] '}${paymentData.note || ''}`.trim(),
         date: paymentDate
       };
 
       const currentBalance = viewingDetailsSupplier.balance || 0;
-      const snakePayment = convertKeysToSnake(payment);
+      let newBalance = currentBalance;
 
       if (editingPayment) {
-        const { error: payError } = await supabase
-          .from('supplier_payments')
-          .update(snakePayment)
-          .eq('id', editingPayment.id);
-        if (payError) throw payError;
-        
-        const diff = paymentData.amount - editingPayment.amount;
-        const { error: supError } = await supabase
-          .from('suppliers')
-          .update({
-            balance: currentBalance - diff
-          })
-          .eq('id', viewingDetailsSupplier.id);
-        if (supError) throw supError;
+        const oldSigned = editingPayment.amount;
+        const diff = signedAmount - oldSigned;
+        newBalance = currentBalance - diff;
       } else {
-        const newPaymentId = Math.random().toString(36).substring(2, 11);
-        payment.id = newPaymentId;
-        const snakeNewPayment = convertKeysToSnake(payment);
-        const { error: payError } = await supabase
-          .from('supplier_payments')
-          .insert(snakeNewPayment);
-        if (payError) throw payError;
+        newBalance = currentBalance - signedAmount;
+      }
 
-        const { error: supError } = await supabase
-          .from('suppliers')
-          .update({
-            balance: currentBalance - paymentData.amount
-          })
-          .eq('id', viewingDetailsSupplier.id);
-        if (supError) throw supError;
+      // 1. Mettre à jour immédiatement le store local et LocalDatabase
+      const updatedSupplier: Supplier = {
+        ...viewingDetailsSupplier,
+        balance: newBalance,
+        updatedAt: new Date().toISOString()
+      };
+
+      usePeopleStore.getState().setSuppliers(prev =>
+        prev.map(s => s.id === viewingDetailsSupplier.id ? updatedSupplier : s)
+      );
+
+      // Mettre à jour immédiatement le store des paiements
+      useFinanceStore.getState().setSupplierPayments(prev => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (editingPayment) {
+          return list.map(p => p.id === editingPayment.id ? payment : p);
+        }
+        return [payment, ...list];
+      });
+
+      try {
+        await localDb.update('suppliers', viewingDetailsSupplier.id, updatedSupplier);
+      } catch (localErr) {
+        console.warn("LocalDb supplier update:", localErr);
+      }
+
+      // 2. Synchronisation Supabase (si connecté)
+      if (isSupabaseConfigured) {
+        try {
+          const payload = preparePayload('supplier_payments', payment.id, payment);
+          if (editingPayment) {
+            const { error: payErr } = await supabase
+              .from('supplier_payments')
+              .update(payload)
+              .eq('id', editingPayment.id);
+            if (payErr) throw payErr;
+          } else {
+            const { error: payErr } = await supabase
+              .from('supplier_payments')
+              .insert(payload);
+            if (payErr) throw payErr;
+          }
+
+          await supabase
+            .from('suppliers')
+            .update({ balance: newBalance, updated_at: new Date().toISOString() })
+            .eq('id', viewingDetailsSupplier.id);
+        } catch (cloudErr: any) {
+          console.warn("Supabase supplier payment error, enqueuing:", cloudErr);
+          enqueueSyncBatch([{
+            table: 'supplier_payments',
+            action: 'UPSERT',
+            recordId: payment.id,
+            payload: preparePayload('supplier_payments', payment.id, payment)
+          }]);
+        }
       }
 
       setIsPaymentModalOpen(false);
       setEditingPayment(null);
-      setPaymentData({ amount: 0, method: 'cash', note: '', date: new Date().toISOString() });
+      setPaymentData({ amount: 0, method: 'cash', note: '', date: new Date().toISOString(), opType: 'decaissement' });
     } catch (error: any) {
       console.error("Error submitting supplier payment:", error);
       alert("Erreur de paiement : " + error.message);
@@ -106,21 +149,43 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce versement ? Cela réajustera la dette du fournisseur.')) return;
     try {
       const supplier = suppliers.find(s => s.id === payment.supplierId);
-      
-      const { error: payError } = await supabase
-        .from('supplier_payments')
-        .delete()
-        .eq('id', payment.id);
-      if (payError) throw payError;
-      
+      const currentBalance = supplier?.balance || 0;
+      const newBalance = currentBalance + payment.amount;
+
+      // 1. Local update
       if (supplier) {
-        const { error: supError } = await supabase
-          .from('suppliers')
-          .update({
-            balance: (supplier.balance || 0) + payment.amount
-          })
-          .eq('id', payment.supplierId);
-        if (supError) throw supError;
+        const updatedSupplier: Supplier = {
+          ...supplier,
+          balance: newBalance,
+          updatedAt: new Date().toISOString()
+        };
+        usePeopleStore.getState().setSuppliers(prev =>
+          prev.map(s => s.id === payment.supplierId ? updatedSupplier : s)
+        );
+        try {
+          await localDb.update('suppliers', payment.supplierId, updatedSupplier);
+        } catch (e) {}
+      }
+
+      // Update local finance store
+      useFinanceStore.getState().setSupplierPayments(prev => 
+        (Array.isArray(prev) ? prev : []).filter(p => p.id !== payment.id)
+      );
+
+      // 2. Cloud update
+      if (isSupabaseConfigured) {
+        const { error: payError } = await supabase
+          .from('supplier_payments')
+          .delete()
+          .eq('id', payment.id);
+        if (payError) throw payError;
+        
+        if (supplier) {
+          await supabase
+            .from('suppliers')
+            .update({ balance: newBalance, updated_at: new Date().toISOString() })
+            .eq('id', payment.supplierId);
+        }
       }
     } catch (error: any) {
       console.error("Error deleting payment:", error);

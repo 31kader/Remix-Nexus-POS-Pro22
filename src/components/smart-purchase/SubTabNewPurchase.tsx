@@ -107,17 +107,6 @@ export function SubTabNewPurchase({
                   </button>
                   <button 
                     type="button"
-                    onClick={() => { setMode('scan'); setScanMethod('ai'); setError(null); }} 
-                    className={cn(
-                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
-                      (mode === 'scan' && scanMethod === 'ai') ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-100"
-                    )}
-                  >
-                    <Brain size={12} className={cn((mode === 'scan' && scanMethod === 'ai') ? "text-indigo-300 animate-pulse" : "")} />
-                    Scan IA (Gemini Cloud)
-                  </button>
-                  <button 
-                    type="button"
                     onClick={() => { setMode('scan'); setScanMethod('ocr'); setError(null); }} 
                     className={cn(
                       "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
@@ -125,7 +114,18 @@ export function SubTabNewPurchase({
                     )}
                   >
                     <FileText size={12} className={cn((mode === 'scan' && scanMethod === 'ocr') ? "text-emerald-300" : "")} />
-                    OCR Direct (Local de secours)
+                    📂 Import Fichier (CSV/Excel)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => { setMode('scan'); setScanMethod('ai'); setError(null); }} 
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
+                      (mode === 'scan' && scanMethod === 'ai') ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-100"
+                    )}
+                  >
+                    <Brain size={12} className={cn((mode === 'scan' && scanMethod === 'ai') ? "text-indigo-300 animate-pulse" : "")} />
+                    Scan IA (Internet)
                   </button>
                 </div>
                 <div className="flex items-center gap-6">
@@ -274,7 +274,11 @@ export function SubTabNewPurchase({
                     <div className="flex items-center gap-2">
                       <select value={selectedSupplierId} onChange={(e) => setSelectedSupplierId(e.target.value)} className="w-full flex-1 p-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-2xl bg-industrial-950 text-white text-sm font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-inner">
                         <option value="">SÉLECTIONNER...</option>
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
+                        {(suppliers || []).filter(Boolean).map(s => (
+                          <option key={s.id} value={s.id}>
+                            {String(s.name || (s as any).company || (s as any).supplier_name || 'FOURNISSEUR').toUpperCase()}
+                          </option>
+                        ))}
                       </select>
                       <button onClick={() => setIsQuickSupplierModalOpen(true)} className="p-3 bg-industrial-800 text-indigo-400 rounded-2xl hover:bg-industrial-700 hover:text-indigo-300 transition-all border border-industrial-800 active:scale-95"><Plus size={20} /></button>
                     </div>
@@ -303,7 +307,7 @@ export function SubTabNewPurchase({
                     className="py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-xl border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-md"
                   >
                     <Eye size={12} className="text-indigo-400 animate-pulse" />
-                    Inspecter l'OCR {detectedOcrType === 'pos' ? '🖥️ (Mode POS)' : ''}
+                    Détails du Fichier / Colonnes
                   </button>
                 )}
               </div>

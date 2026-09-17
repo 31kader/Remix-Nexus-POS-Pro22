@@ -217,7 +217,7 @@ export function SmartPurchaseModals({
           />
           <div className="divide-y divide-industrial-805 border border-industrial-800 rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto bg-industrial-950">
             {products
-              .filter(p => !quickCreateSearchFilter || p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())))
+              .filter(p => !quickCreateSearchFilter || (p?.name && p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())) || (p?.sku && p.sku.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())))
               .slice(0, 50)
               .map(p => (
                 <button
@@ -234,7 +234,7 @@ export function SmartPurchaseModals({
                   className="w-full p-3 text-left hover:bg-industrial-800/40 flex justify-between items-center transition-colors cursor-pointer"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-white text-xs uppercase truncate">{p.name}</p>
+                    <p className="font-bold text-white text-xs uppercase truncate">{p.name || 'SANS NOM'}</p>
                     <p className="text-[10px] text-industrial-500 font-mono">SKU: {p.sku || 'N/A'} • Stock: {formatProductStock(p, products)}</p>
                   </div>
                   <span className="text-[10px] font-black text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded border border-cyan-500/20 uppercase tracking-widest shrink-0">
@@ -242,7 +242,7 @@ export function SmartPurchaseModals({
                   </span>
                 </button>
               ))}
-            {products.filter(p => !quickCreateSearchFilter || p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())).length === 0 && (
+            {products.filter(p => !quickCreateSearchFilter || (p?.name && p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase()))).length === 0 && (
               <p className="p-4 text-center text-xs text-industrial-500 italic">Aucun produit ne correspond à la recherche.</p>
             )}
           </div>

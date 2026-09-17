@@ -71,11 +71,11 @@ export function CashManagementModals({
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Attendu (Espèces)</p>
-              <p className="text-sm font-bold text-slate-800">{currentShiftStats?.expectedCash.toFixed(2)} {settings.currency}</p>
+              <p className="text-sm font-bold text-slate-800">{Number(currentShiftStats?.expectedCash || 0).toFixed(2)} {settings.currency}</p>
             </div>
             <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-100">
               <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Total Ventes</p>
-              <p className="text-sm font-bold text-indigo-700">{currentShiftStats?.totalSales.toFixed(2)} {settings.currency}</p>
+              <p className="text-sm font-bold text-indigo-700">{Number(currentShiftStats?.totalSales || 0).toFixed(2)} {settings.currency}</p>
             </div>
           </div>
 

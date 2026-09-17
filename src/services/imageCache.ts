@@ -1,6 +1,27 @@
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 
+const MAX_CACHED_OBJECT_URLS = 150;
 const objectUrlMap = new Map<string, string>();
+
+function setBoundedObjectUrl(url: string, objUrl: string) {
+  if (objectUrlMap.has(url)) {
+    const existing = objectUrlMap.get(url);
+    if (existing && existing !== objUrl && existing.startsWith('blob:')) {
+      try { URL.revokeObjectURL(existing); } catch (_) {}
+    }
+    objectUrlMap.delete(url);
+  } else if (objectUrlMap.size >= MAX_CACHED_OBJECT_URLS) {
+    const oldestKey = objectUrlMap.keys().next().value;
+    if (oldestKey) {
+      const oldObjUrl = objectUrlMap.get(oldestKey);
+      if (oldObjUrl && oldObjUrl.startsWith('blob:')) {
+        try { URL.revokeObjectURL(oldObjUrl); } catch (_) {}
+      }
+      objectUrlMap.delete(oldestKey);
+    }
+  }
+  objectUrlMap.set(url, objUrl);
+}
 
 /**
  * Resizes an image to maxWidth and compresses it to WebP format client-side.
@@ -60,14 +81,18 @@ export async function getLocalImage(url: string): Promise<string | null> {
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   
   if (objectUrlMap.has(url)) {
-    return objectUrlMap.get(url)!;
+    const cached = objectUrlMap.get(url)!;
+    // Re-insert to refresh LRU order
+    objectUrlMap.delete(url);
+    objectUrlMap.set(url, cached);
+    return cached;
   }
   
   try {
     const cachedBlob = await getIDB(`img_${url}`);
     if (cachedBlob instanceof Blob) {
       const objUrl = URL.createObjectURL(cachedBlob);
-      objectUrlMap.set(url, objUrl);
+      setBoundedObjectUrl(url, objUrl);
       return objUrl;
     }
   } catch (err) {
@@ -81,14 +106,17 @@ export async function cacheImage(url: string): Promise<string | null> {
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   
   if (objectUrlMap.has(url)) {
-    return objectUrlMap.get(url)!;
+    const cached = objectUrlMap.get(url)!;
+    objectUrlMap.delete(url);
+    objectUrlMap.set(url, cached);
+    return cached;
   }
   
   try {
     const cachedBlob = await getIDB(`img_${url}`);
     if (cachedBlob instanceof Blob) {
       const objUrl = URL.createObjectURL(cachedBlob);
-      objectUrlMap.set(url, objUrl);
+      setBoundedObjectUrl(url, objUrl);
       return objUrl;
     }
     
@@ -101,7 +129,7 @@ export async function cacheImage(url: string): Promise<string | null> {
     
     await setIDB(`img_${url}`, compressedBlob);
     const objUrl = URL.createObjectURL(compressedBlob);
-    objectUrlMap.set(url, objUrl);
+    setBoundedObjectUrl(url, objUrl);
     return objUrl;
   } catch (err) {
     console.warn(`[ImageCache] Failed to fetch and cache image: ${url}`, err);

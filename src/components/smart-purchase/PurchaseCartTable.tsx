@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Edit, Plus, Package } from 'lucide-react';
+import { Trash2, Edit, Plus, Package, Link2, Sparkles } from 'lucide-react';
 import { SafeImage } from '../ui';
 import { Product, CompanySettings } from '../../types';
 import { PurchaseCartItem } from '../usePurchaseCart';
@@ -34,174 +34,206 @@ export function PurchaseCartTable({
   setIsProductModalOpen
 }: PurchaseCartTableProps) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-industrial-950/50 text-industrial-500 font-black uppercase text-[10px] tracking-widest">
-          <tr>
-            <th className="p-6 text-left">Article</th>
-            <th className="p-6 text-right">P. Achat HT</th>
-            <th className="p-6 text-center">Qté</th>
-            <th className="p-6 text-center">Remise (%)</th>
-            <th className="p-6 text-center">TVA (%)</th>
-            <th className="p-6 text-right">Total HT</th>
-            <th className="p-6"></th>
+    <div className="w-full overflow-x-auto">
+      <table className="w-full text-left border-collapse min-w-[760px]">
+        <thead>
+          <tr className="bg-industrial-950/70 border-b border-industrial-800 text-industrial-400 font-black uppercase text-[11px] tracking-wider select-none">
+            <th className="py-3 px-4 text-left">
+              Article {cart.length > 0 && <span className="text-industrial-500 font-mono font-normal">({cart.length})</span>}
+            </th>
+            <th className="py-3 px-3 text-right w-32">P. Achat HT</th>
+            <th className="py-3 px-3 text-center w-24">Qté</th>
+            <th className="py-3 px-3 text-center w-24">Remise (%)</th>
+            <th className="py-3 px-3 text-center w-24">TVA (%)</th>
+            <th className="py-3 px-4 text-right w-36">Total HT</th>
+            <th className="py-3 px-3 text-center w-20">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-industrial-800">
+        <tbody className="divide-y divide-industrial-800/60">
           {cart.length === 0 ? (
             <tr>
-              <td colSpan={7} className="p-32 text-center text-industrial-600 font-black uppercase tracking-widest text-sm italic">
-                Panier vide.
+              <td colSpan={7} className="py-20 text-center text-industrial-600 font-black uppercase tracking-widest text-xs italic">
+                Panier vide. Scannez un bon ou ajoutez des articles.
               </td>
             </tr>
           ) : (
-            cart.map((item) => (
-              <tr key={item.lineId} className="hover:bg-industrial-800/30 group transition-colors">
-                <td className="p-6 flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-industrial-950 border border-industrial-800 flex items-center justify-center overflow-hidden shrink-0 shadow-lg">
-                    {item.imageUrl ? (
-                      <SafeImage 
-                        src={item.imageUrl} 
-                        className="w-full h-full object-cover" 
-                        fallback={<Package size={20} className="text-industrial-600"/>}
-                      />
-                    ) : <Package size={20} className="text-industrial-600"/>}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    {item.productId ? (
-                      <div>
-                        <p className="font-black text-white uppercase tracking-tight truncate">
-                          {products.find(p => p.id === item.productId)?.name || item.productName}
-                        </p>
-                        {item.isDraft && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider mt-1">
-                            Brouillon (OCR)
-                          </span>
+            cart.map((item) => {
+              const matchedProd = item.productId ? products.find(p => p.id === item.productId) : undefined;
+              const lineTotal = (item.costPrice * item.quantity) * (1 - (item.discount || 0) / 100);
+
+              return (
+                <tr key={item.lineId} className="hover:bg-industrial-800/30 group transition-colors">
+                  {/* Article Name & Thumbnail */}
+                  <td className="py-2.5 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-industrial-950 border border-industrial-800 flex items-center justify-center overflow-hidden shrink-0 shadow">
+                        {item.imageUrl ? (
+                          <SafeImage 
+                            src={item.imageUrl} 
+                            className="w-full h-full object-cover" 
+                            fallback={<Package size={18} className="text-industrial-600"/>}
+                          />
+                        ) : <Package size={18} className="text-industrial-600"/>}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        {item.productId ? (
+                          <div>
+                            <p className="font-bold text-white uppercase text-sm tracking-tight truncate leading-tight group-hover:text-indigo-400 transition-colors">
+                              {matchedProd?.name || item.productName}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {matchedProd?.sku && (
+                                <span className="text-[10px] font-mono text-industrial-500 uppercase">
+                                  REF: {matchedProd.sku}
+                                </span>
+                              )}
+                              {matchedProd?.barcode && (
+                                <span className="text-[10px] font-mono text-industrial-500">
+                                  EAN: {matchedProd.barcode}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                                ✓ Associé
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="font-bold text-amber-400 uppercase text-sm tracking-tight truncate leading-tight">
+                              {item.productName}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => openQuickCreateModal(item)}
+                                className="px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500 hover:text-industrial-950 text-amber-400 font-black rounded text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
+                              >
+                                <Plus size={10} /> Créer Fiche
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setLinkingItem(item); setIsLinkModalOpen(true); }}
+                                className="px-2 py-0.5 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500 hover:text-industrial-950 text-cyan-400 font-black rounded text-[9px] uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
+                              >
+                                <Link2 size={10} /> Associer
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1 bg-amber-500/5 px-2.5 py-1.5 rounded-lg border border-amber-500/10">
-                          <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span>
-                          <p className="text-xs font-bold text-amber-500 uppercase tracking-tight truncate">
-                            Non reconnu : "{item.productName}"
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5 font-sans">
-                          <button
-                            type="button"
-                            onClick={() => openQuickCreateModal(item)}
-                            className="px-2 py-1 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500 hover:text-industrial-950 text-amber-400 font-extrabold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer"
-                          >
-                            ➕ Ajouter à l'inventaire
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setLinkingItem(item); setIsLinkModalOpen(true); }}
-                            className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500 hover:text-industrial-950 text-cyan-400 font-extrabold rounded-md text-[9px] uppercase tracking-wider transition-all cursor-pointer"
-                          >
-                            🔗 Associer à l'existant
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td className="p-6 text-right">
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={item.costPrice} 
-                    onChange={(e) => updateItemField(item.lineId, 'costPrice', parseFloat(e.target.value) || 0)} 
-                    className="w-28 p-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl text-white text-right outline-none font-mono font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
-                  />
-                </td>
-                <td className="p-6 text-center">
-                  <input 
-                    type="number" 
-                    ref={(el) => { if (el) quantityInputRefs.current[item.lineId] = el; }}
-                    value={item.quantity} 
-                    onChange={(e) => updateQuantity(item.lineId, parseFloat(e.target.value) || 0)} 
-                    className="w-20 p-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl text-white text-center font-black font-mono focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
-                  />
-                </td>
-                <td className="p-6 text-center">
-                  <input 
-                    type="number" 
-                    value={item.discount} 
-                    onChange={(e) => updateItemField(item.lineId, 'discount', parseFloat(e.target.value) || 0)} 
-                    className="w-20 p-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl text-indigo-600 dark:text-indigo-400 text-center font-black font-mono focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
-                  />
-                </td>
-                <td className="p-6 text-center">
-                  <input 
-                    type="number" 
-                    value={item.taxRate} 
-                    onChange={(e) => updateItemField(item.lineId, 'taxRate', parseFloat(e.target.value) || 0)} 
-                    className="w-20 p-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl text-slate-500 dark:text-slate-400 text-center font-mono font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
-                  />
-                </td>
-                <td className="p-6 text-right font-black text-white font-mono text-lg">
-                  {((item.costPrice * item.quantity) * (1 - (item.discount || 0) / 100)).toFixed(2)}
-                </td>
-                <td className="p-6 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    {item.productId ? (
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          const prod = products.find(p => p.id === item.productId);
-                          if (prod) {
-                            setEditingProduct(prod);
+                    </div>
+                  </td>
+
+                  {/* Prix Achat HT */}
+                  <td className="py-2.5 px-3 text-right">
+                    <input 
+                      type="number" 
+                      step="any"
+                      value={item.costPrice} 
+                      onChange={(e) => updateItemField(item.lineId, 'costPrice', parseFloat(e.target.value) || 0)} 
+                      className="w-24 sm:w-28 py-1.5 px-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/40 focus:border-indigo-500 rounded-xl text-white text-right outline-none font-mono font-bold text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
+                    />
+                  </td>
+
+                  {/* Quantité */}
+                  <td className="py-2.5 px-3 text-center">
+                    <input 
+                      type="number" 
+                      step="any"
+                      ref={(el) => { if (el) quantityInputRefs.current[item.lineId] = el; }}
+                      value={item.quantity} 
+                      onChange={(e) => updateQuantity(item.lineId, parseFloat(e.target.value) || 0)} 
+                      className="w-18 sm:w-20 py-1.5 px-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/40 focus:border-indigo-500 rounded-xl text-white text-center font-black font-mono text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
+                    />
+                  </td>
+
+                  {/* Remise (%) */}
+                  <td className="py-2.5 px-3 text-center">
+                    <input 
+                      type="number" 
+                      step="any"
+                      value={item.discount} 
+                      onChange={(e) => updateItemField(item.lineId, 'discount', parseFloat(e.target.value) || 0)} 
+                      className="w-16 sm:w-20 py-1.5 px-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/40 focus:border-indigo-500 rounded-xl text-indigo-400 text-center font-bold font-mono text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
+                    />
+                  </td>
+
+                  {/* TVA (%) */}
+                  <td className="py-2.5 px-3 text-center">
+                    <input 
+                      type="number" 
+                      step="any"
+                      value={item.taxRate} 
+                      onChange={(e) => updateItemField(item.lineId, 'taxRate', parseFloat(e.target.value) || 0)} 
+                      className="w-16 sm:w-20 py-1.5 px-2 bg-industrial-950 border border-industrial-800 hover:border-indigo-500/40 focus:border-indigo-500 rounded-xl text-slate-400 text-center font-mono font-bold text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all select-all shadow-inner" 
+                    />
+                  </td>
+
+                  {/* Total HT */}
+                  <td className="py-2.5 px-4 text-right font-black text-white font-mono text-base tracking-tight">
+                    {lineTotal.toFixed(2)}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="py-2.5 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1.5">
+                      {item.productId ? (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (matchedProd) {
+                              setEditingProduct(matchedProd);
+                              setIsProductModalOpen(true);
+                            }
+                          }} 
+                          title="Modifier la fiche produit"
+                          className="text-industrial-400 hover:text-amber-400 p-1.5 hover:bg-amber-500/10 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Edit size={15}/>
+                        </button>
+                      ) : (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setEditingProduct({
+                              id: '',
+                              name: item.productName,
+                              price: 0,
+                              costPrice: item.costPrice,
+                              sku: '',
+                              taxRate: item.taxRate || 0,
+                              stock: 0,
+                              minStock: 5,
+                              categoryId: '',
+                              brandId: '',
+                              supplier: selectedSupplierId || '',
+                              description: '',
+                              status: 'active',
+                              unit: 'pcs',
+                              updatedAt: new Date().toISOString()
+                            });
                             setIsProductModalOpen(true);
-                          }
-                        }} 
-                        title="Modifier la fiche produit"
-                        className="opacity-0 group-hover:opacity-100 text-amber-500 hover:scale-110 transition-all p-2 bg-amber-500/10 rounded-lg border border-amber-500/20 cursor-pointer"
-                      >
-                        <Edit size={16}/>
-                      </button>
-                    ) : (
+                          }} 
+                          title="Créer la fiche produit"
+                          className="text-industrial-400 hover:text-indigo-400 p-1.5 hover:bg-indigo-500/10 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Plus size={15}/>
+                        </button>
+                      )}
                       <button 
                         type="button"
-                        onClick={() => {
-                          setEditingProduct({
-                            id: '',
-                            name: item.productName,
-                            price: 0,
-                            costPrice: item.costPrice,
-                            sku: '',
-                            taxRate: item.taxRate || 0,
-                            stock: 0,
-                            minStock: 5,
-                            categoryId: '',
-                            brandId: '',
-                            supplier: selectedSupplierId || '',
-                            description: '',
-                            status: 'active',
-                            unit: 'pcs',
-                            updatedAt: new Date().toISOString()
-                          });
-                          setIsProductModalOpen(true);
-                        }} 
-                        title="Créer la fiche produit"
-                        className="opacity-0 group-hover:opacity-100 text-indigo-400 hover:scale-110 transition-all p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 cursor-pointer"
+                        onClick={() => updateQuantity(item.lineId, 0)} 
+                        title="Retirer du panier"
+                        className="text-industrial-400 hover:text-rose-400 p-1.5 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
                       >
-                        <Plus size={16}/>
+                        <Trash2 size={15}/>
                       </button>
-                    )}
-                    <button 
-                      type="button"
-                      onClick={() => updateQuantity(item.lineId, 0)} 
-                      title="Retirer du panier"
-                      className="opacity-0 group-hover:opacity-100 text-rose-500 hover:scale-110 transition-all p-2 bg-rose-500/10 rounded-lg border border-rose-500/20 cursor-pointer"
-                    >
-                      <Trash2 size={18}/>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

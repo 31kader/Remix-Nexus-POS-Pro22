@@ -6,7 +6,7 @@ import { exportToExcel, exportToCSV } from '../lib/utils';
 import { EditLogModal } from './audit-logs/EditLogModal';
 import { UndoLogModal } from './audit-logs/UndoLogModal';
 import { AuditLogsTable } from './audit-logs/AuditLogsTable';
-import { useAuditLogsLogic } from './useAuditLogsLogic';
+import { useAuditLogsLogic } from '../hooks/useAuditLogsLogic';
 
 interface AuditLogsProps {
   logs: AuditLog[];

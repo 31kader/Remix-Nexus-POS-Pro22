@@ -63,15 +63,17 @@ export function ProductFormModal(props: ProductFormModalProps) {
     isVoiceScanning
   } = useProductFormLogic(props);
 
+  const [scannerTarget, setScannerTarget] = React.useState<'barcode' | 'sku'>('barcode');
+
   const headerAction = (
     <button
       type="button"
       onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
-      disabled={!!skuError || isGlobalLoading}
-      className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-neon-indigo border border-indigo-400/50"
+      disabled={!!skuError}
+      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-neon-indigo border border-indigo-400/50 cursor-pointer"
     >
-      {isGlobalLoading ? <RefreshCw size={10} className="animate-spin" /> : <RefreshCw size={10} />}
-      {editingProduct ? "MAJ" : "CRÉER"}
+      <RefreshCw size={12} className={isGlobalLoading ? "animate-spin" : ""} />
+      {editingProduct ? "ENREGISTRER" : "CRÉER"}
     </button>
   );
 
@@ -101,6 +103,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
                     skuError={skuError}
                     isGlobalLoading={isGlobalLoading}
                     setIsScannerOpen={setIsScannerOpen}
+                    setScannerTarget={setScannerTarget}
                   />
                 </div>
 
@@ -201,13 +204,52 @@ export function ProductFormModal(props: ProductFormModalProps) {
               </div>
             </div>
           </div>
+
+          {/* Barre d'action inférieure visible et claire */}
+          <div className="p-4 sm:p-5 bg-slate-900/95 backdrop-blur-md border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 z-10">
+            <div className="flex-1 w-full">
+              {skuError ? (
+                <div className="flex items-center gap-2 text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-2 rounded-xl text-xs font-semibold">
+                  <span>⚠️</span>
+                  <span>{skuError}</span>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 font-medium">
+                  {editingProduct ? "Les modifications seront enregistrées et appliquées en temps réel." : "Le produit sera immédiatement créé et disponible à la vente."}
+                </p>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onClose}
+                className="px-6 py-3 text-xs font-bold text-slate-300 hover:text-white rounded-xl border border-white/10 cursor-pointer"
+              >
+                Annuler
+              </Button>
+              <button
+                type="submit"
+                disabled={!!skuError}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer"
+              >
+                <RefreshCw size={14} className={isGlobalLoading ? "animate-spin" : ""} />
+                <span>{editingProduct ? "Enregistrer les modifications" : "Créer le produit"}</span>
+              </button>
+            </div>
+          </div>
         </form>
       </Modal>
       
       {isScannerOpen && (
         <BarcodeScanner 
           onScan={(code) => {
-            setFormData(prev => ({ ...prev, sku: code }));
+            if (scannerTarget === 'sku') {
+              setFormData(prev => ({ ...prev, sku: code }));
+            } else {
+              setFormData(prev => ({ ...prev, barcode: code }));
+            }
             setIsScannerOpen(false);
           }}
           onClose={() => setIsScannerOpen(false)}

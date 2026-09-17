@@ -70,7 +70,7 @@ export function VoucherCreationForm({
               className="w-full px-4 py-2 rounded-xl border border-white/10 bg-[#0a0a0f] text-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold" 
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/20 font-bold">
-              {type === 'percent' ? '%' : 'FCFA'}
+              {type === 'percent' ? '%' : 'DA'}
             </div>
           </div>
         </div>

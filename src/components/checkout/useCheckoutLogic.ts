@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useDeferredValue, useCallback } from 'react';
 import { Product, Category, CompanySettings, Employee, Customer, CartItem, Transaction, Promotion, POSSession, CashShift } from '../../types';
-import { calculateItemPrice, playScanSound, announcePrice, generateUniqueId } from '../../lib/utils';
+import { calculateItemPrice, playScanSound, announcePrice, generateUniqueId, normalizeSearchText } from '../../lib/utils';
 import { printReceipt } from '../../services/printService';
 import { DEFAULT_PERMISSIONS } from '../../constants';
 import { useCheckoutProcess } from '../../hooks/useCheckoutProcess';
@@ -66,7 +66,25 @@ export function useCheckoutLogic(props: CheckoutProps) {
   }, []);
 
   const [search, setSearch] = useState('');
-  const [showQuickSelect, setShowQuickSelect] = useState(true);
+
+  // 💾 Persistance de l'état d'affichage des favoris dans le localStorage
+  const [showQuickSelect, setShowQuickSelect] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('nexus_pos_show_quick_select');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexus_pos_show_quick_select', JSON.stringify(showQuickSelect));
+    } catch (e) {
+      console.error('[Checkout] Erreur d\'écriture localStorage pour showQuickSelect:', e);
+    }
+  }, [showQuickSelect]);
+
   const searchRef = useRef<HTMLInputElement>(null);
   const cartEndRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +127,6 @@ export function useCheckoutLogic(props: CheckoutProps) {
     setIsReturnMode(false);
     setReceivedAmount('');
     setKeepExcessInBalance(false);
-    setTimeout(() => searchRef.current?.focus(), 100);
   }, [activeSessionId]);
 
   // Reset payment calculations when customer changes
@@ -117,13 +134,6 @@ export function useCheckoutLogic(props: CheckoutProps) {
     setReceivedAmount('');
     setKeepExcessInBalance(false);
   }, [selectedCustomer]);
-
-  // Auto-focus search on active shift or mount
-  useEffect(() => {
-    if (activeShift) {
-      setTimeout(() => searchRef.current?.focus(), 100);
-    }
-  }, [activeShift]);
 
   useEffect(() => {
     // 🛡️ SÉCURISÉ : Remplacement de cart.find par un fallback tableau vide
@@ -142,7 +152,7 @@ export function useCheckoutLogic(props: CheckoutProps) {
   }, [selectedCustomer, transactions]);
 
   // 🛡️ MODIFIÉ & SÉCURISÉ : Plus aucun risque de findIndex sur undefined au clic/scan produit
-  const addToCart = useCallback((product: Product, quantity: number = 1) => {
+  const addToCart = useCallback((product: Product, quantity: number = 1, isDistinctScan: boolean = false) => {
     if (!product) return;
     if (!settings.allowNegativeStock && (product.stock || 0) <= 0 && quantity > 0) {
       toast.error(`Rupture de stock pour ${product.name}. Stock actuel: ${product.stock}`);
@@ -158,21 +168,26 @@ export function useCheckoutLogic(props: CheckoutProps) {
       if (quantity === 0) return safePrev;
       const existingIdx = safePrev.findIndex(item => item && item.id === product.id);
       
-      if (existingIdx !== -1 && !isReturnMode) {
-        const updated = [...safePrev];
-        const existing = updated[existingIdx];
-        const newQty = (existing?.quantity || 0) + quantity;
+      if (existingIdx !== -1 && !isDistinctScan) {
+        const existing = safePrev[existingIdx];
+        const samePolarity = (existing.quantity > 0 && quantity > 0) || (existing.quantity < 0 && quantity < 0);
         
-        if (!settings.allowNegativeStock && newQty > (product.stock || 0) && quantity > 0) {
-           toast.error(`Stock insuffisant pour ${product.name}. Stock: ${product.stock}`);
-           return safePrev;
+        if (samePolarity) {
+          const updated = [...safePrev];
+          const newQty = (existing?.quantity || 0) + quantity;
+          
+          if (!settings.allowNegativeStock && newQty > (product.stock || 0) && quantity > 0) {
+             toast.error(`Stock insuffisant pour ${product.name}. Stock: ${product.stock}`);
+             return safePrev;
+          }
+          updated[existingIdx] = { ...existing, quantity: newQty };
+          toast.success(`${product.name} mis à jour (${newQty < 0 ? `${newQty} (Retour)` : `+${quantity}`})`);
+          return updated;
         }
-        updated.splice(existingIdx, 1);
-        toast.success(`${product.name} mis à jour (+${quantity})`);
-        return [...updated, { ...existing, quantity: newQty }];
       }
       
-      const initQty = settings.allowNegativeStock ? quantity : (quantity > 0 ? Math.min(quantity, Math.max(0, product.stock)) : quantity);
+      const availableStock = Math.max(0, product.stock ?? 0);
+      const initQty = settings.allowNegativeStock ? quantity : (quantity > 0 ? Math.min(quantity, availableStock) : quantity);
       if (initQty <= 0 && quantity > 0 && !settings.allowNegativeStock) {
         toast.error(`Stock épuisé pour ${product.name}`);
         return safePrev;
@@ -180,7 +195,6 @@ export function useCheckoutLogic(props: CheckoutProps) {
       toast.success(`${product.name} ajouté au panier`);
       return [...safePrev, { ...product, quantity: initQty, cartItemId: newCartItemId }];
     });
-    setTimeout(() => searchRef.current?.focus(), 50);
   }, [settings.allowNegativeStock, setCart, isReturnMode]);
 
   // Sub-hook for auto-saving and restoring draft carts
@@ -207,45 +221,71 @@ export function useCheckoutLogic(props: CheckoutProps) {
     }
   }, [cart, isWholesale, settings.enableVoiceGuidance, settings.currency]);
 
-  // Pre-compile search strings for products once to avoid repetitive lowercasing and array joins
+  // Pre-compile search strings for products with normalized tokens
   const searchableProducts = useMemo(() => {
     return (products || [])
       .filter(p => p && p.status === 'active')
       .map(p => ({
         product: p,
-        searchStr: `${p.name || ''} ${p.sku || ''} ${p.barcode || ''} ${p.description || ''} ${(p.tags || []).join(' ')}`.toLowerCase()
+        searchStr: normalizeSearchText(`${p.name || ''} ${p.sku || ''} ${p.barcode || ''} ${p.reference || ''} ${p.supplier || ''} ${p.description || ''} ${(p.tags || []).join(' ')}`)
       }));
   }, [products]);
 
-  // Filter products by search key with optimized index lookup and early exit
+  // Full-text token-based search matching + Exact Barcode Shortcut Priority
   const filteredProducts = useMemo(() => {
     const safeProducts = Array.isArray(products) ? products : [];
-    if (!deferredSearch) {
+    if (!deferredSearch || !deferredSearch.trim()) {
       return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
     }
-    const lower = deferredSearch.toLowerCase();
+    const rawSearch = deferredSearch.trim().toLowerCase();
+    const query = normalizeSearchText(deferredSearch);
+    const tokens = query.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
+      return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
+    }
+
     const matches: Product[] = [];
+    let exactShortcutMatch: Product | null = null;
+
     for (let i = 0; i < searchableProducts.length; i++) {
-      if (searchableProducts[i].searchStr.includes(lower)) {
-        matches.push(searchableProducts[i].product);
+      const p = searchableProducts[i].product;
+      const bc = (p.barcode || '').trim().toLowerCase();
+      const sku = (p.sku || '').trim().toLowerCase();
+      const ref = (p.reference || '').trim().toLowerCase();
+
+      if (bc === rawSearch || sku === rawSearch || ref === rawSearch) {
+        exactShortcutMatch = p;
+      }
+
+      const target = searchableProducts[i].searchStr;
+      const isMatch = tokens.every(token => target.includes(token));
+      if (isMatch) {
+        matches.push(p);
         if (matches.length >= 80) break;
       }
     }
+
+    if (exactShortcutMatch) {
+      const rest = matches.filter(p => p.id !== exactShortcutMatch!.id);
+      return [exactShortcutMatch, ...rest];
+    }
+
     return matches;
   }, [deferredSearch, products, searchableProducts]);
 
-  // 🛡️ SÉCURISÉ : Protection de setQuantity
-  const setQuantity = useCallback((cartItemId: string, quantity: number) => {
+  // 🛡️ SÉCURISÉ : Protection de setQuantity + Focus optionnel
+  const setQuantity = useCallback((cartItemId: string, quantity: number, shouldFocusSearch: boolean = false) => {
     setCart((prev) => {
       const safePrev = Array.isArray(prev) ? prev : [];
       return safePrev.map(item => {
-        if (item && item.cartItemId === cartItemId) {
+        if (item && (item.cartItemId === cartItemId || item.id === cartItemId)) {
           const safeProducts = Array.isArray(products) ? products : [];
           const prod = safeProducts.find(p => p && p.id === item.id);
-          const resolved = isNaN(quantity) ? 1 : quantity;
+          const resolved = isNaN(quantity) ? 0 : quantity;
+          const maxStock = Math.max(0, prod?.stock ?? 0);
           return { 
             ...item,
-            quantity: settings.allowNegativeStock ? resolved : (resolved > 0 ? Math.min(resolved, Math.max(resolved, prod?.stock || 0)) : resolved) 
+            quantity: settings.allowNegativeStock ? resolved : (resolved > 0 ? Math.min(resolved, maxStock) : resolved) 
           };
         }
         return item;
@@ -253,12 +293,12 @@ export function useCheckoutLogic(props: CheckoutProps) {
     });
   }, [settings.allowNegativeStock, setCart, products]);
 
-  // 🛡️ SÉCURISÉ : Protection de setPrice
+  // 🛡️ SÉCURISÉ : Protection de setPrice sans vol de focus
   const setPrice = useCallback((cartItemId: string, price: number) => {
     setCart((prev) => {
       const safePrev = Array.isArray(prev) ? prev : [];
       return safePrev.map(item => {
-        if (item && item.cartItemId === cartItemId) return { ...item, overriddenPrice: price };
+        if (item && (item.cartItemId === cartItemId || item.id === cartItemId)) return { ...item, overriddenPrice: price };
         return item;
       });
     });
@@ -268,9 +308,8 @@ export function useCheckoutLogic(props: CheckoutProps) {
   const removeFromCart = useCallback((cartItemId: string) => {
     setCart((prev) => {
       const safePrev = Array.isArray(prev) ? prev : [];
-      return safePrev.filter(item => item && item.cartItemId !== cartItemId);
+      return safePrev.filter(item => item && (item.cartItemId !== cartItemId && item.id !== cartItemId));
     });
-    searchRef.current?.focus();
   }, [setCart]);
 
   const [discountingItemId, setDiscountingItemId] = useState<string | null>(null);
@@ -302,12 +341,41 @@ export function useCheckoutLogic(props: CheckoutProps) {
     });
   }, [setCart]);
 
+  const [globalDiscount, setGlobalDiscount] = useState<{ type: 'percentage' | 'fixed', value: number } | null>(null);
+
+  // Détection du mode modification de vente sur la session active
+  const activeSession = (posSessions || []).find(s => s && s.id === activeSessionId) || posSessions?.[0];
+  const editingTransaction = activeSession?.editingTransaction || null;
+
+  const handleCancelEditTransaction = useCallback(() => {
+    if (window.confirm("Voulez-vous annuler la modification de ce ticket ? Le panier sera vidé et le ticket initial restera intact.")) {
+      setCart([]);
+      if (typeof setPosSessions === 'function') {
+        setPosSessions((prev: any) => {
+          const safePrev = Array.isArray(prev) ? prev : [];
+          return safePrev.map((s: any) => 
+            s?.id === activeSessionId 
+              ? { 
+                  ...s, 
+                  name: s.name?.includes('(Modif)') ? 'Ticket 1' : s.name,
+                  cart: [], 
+                  selectedCustomer: null,
+                  editingTransaction: null 
+                } 
+              : s
+          );
+        });
+      }
+      toast.info("Modification de vente annulée.");
+    }
+  }, [activeSessionId, setCart, setPosSessions]);
+
   // Main calculations sub-hook integration
   const {
     subtotal, discountAmount, pointsDiscount, voucherDiscount, total, promotionToApply
   } = useCheckoutCalculations({ 
     isWholesale, cart, promotions, activePromotion, selectedCustomer, useLoyaltyPoints,
-    appliedVoucher, settings
+    appliedVoucher, settings, globalDiscount
   });
 
   // Main payment processor sub-hook integration
@@ -318,14 +386,15 @@ export function useCheckoutLogic(props: CheckoutProps) {
     pointsDiscount, voucherDiscount, isWholesale, cart, setCart, user, profile,
     activeStaffId, employees, settings, deliveryMethod, products,
     receivedAmount, keepExcessInBalance, promotionToApply: promotionToApply || null, activeSessionId,
-    setPosSessions, setLastTransaction, setShowSuccess, printReceipt
+    setPosSessions, setLastTransaction, setShowSuccess, printReceipt,
+    editingTransaction
   });
 
   const isProcessing = isCheckoutProcessing;
 
   // Shortcuts keys handler Sub-hook integration
   useCheckoutShortcuts({
-    cart, searchRef, setSelectedItemId, quantityInputRefs, handleCheckout, setCart,
+    cart, searchRef, setSelectedItemId, quantityInputRefs, handleCheckout, setCart, addNewSession
   });
 
   return {
@@ -343,7 +412,8 @@ export function useCheckoutLogic(props: CheckoutProps) {
     searchRef, cartEndRef, quantityInputRefs, scannerBuffer, role, permissions, deferredSearch,
     customerHistory, subtotal, isProcessing, addNewSession, removeSession, handleDirectOpenShift,
     addToCart, removeFromCart, handleCheckout, isCheckoutProcessing, handleBarcodeScan,
-    filteredProducts, setQuantity, setPrice, setLineDiscount, addCustomerNote,
+    filteredProducts, setQuantity, setPrice, setLineDiscount, addCustomerNote, globalDiscount, setGlobalDiscount,
+    editingTransaction, handleCancelEditTransaction,
     applyVoucher: () => applyVoucher(subtotal)
   };
 }

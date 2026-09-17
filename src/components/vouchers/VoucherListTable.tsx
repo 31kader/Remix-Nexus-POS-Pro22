@@ -77,7 +77,7 @@ export function VoucherListTable({
                     <td className="p-3">
                       <div className="space-y-0.5 font-mono">
                         <p className="text-sm font-black text-white">
-                          {v.type === 'percent' ? `${v.value}%` : `${Number(v.value || 0).toFixed(2)} FCFA`}
+                          {v.type === 'percent' ? `${v.value}%` : `${Number(v.value || 0).toFixed(2)} DA`}
                         </p>
                         {v.type === 'fixed' && v.currentBalance !== undefined && Number(v.currentBalance || 0) < Number(v.value || 0) && (
                           <p className="text-[10px] text-emerald-400 font-bold">Reste: {Number(v.currentBalance || 0).toFixed(2)}</p>

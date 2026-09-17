@@ -27,7 +27,17 @@ export function classifySupabaseError(error: unknown): SupabaseErrorClassificati
   if (msg.includes('jwt') || msg.includes('permission denied') || e.code === '42501') {
     return 'PERMISSION_DENIED';
   }
-  if (e.code === 'OFFLINE_ERR' || msg.includes('offline') || msg.includes('failed to fetch') || msg.includes('network')) {
+  if (
+    e.code === 'OFFLINE_ERR' || 
+    msg.includes('offline') || 
+    msg.includes('failed to fetch') || 
+    msg.includes('network') ||
+    msg.includes('timeout') ||
+    msg.includes('err_timed_out') ||
+    msg.includes('aborterror') ||
+    e.status === 0 ||
+    e.status === 504
+  ) {
     return 'NETWORK_ERROR';
   }
   return 'OTHER';

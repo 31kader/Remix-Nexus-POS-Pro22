@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+// motion removed for high-speed tab rendering
 import { cn } from '../lib/utils';
 import { Sidebar } from './Sidebar';
 import { BottomBar } from './BottomBar';
@@ -94,46 +94,14 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         />
 
         <div className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.99 }}
-              transition={{ duration: 0.2 }}
-              className={cn(
-                "h-full overflow-y-auto custom-scrollbar",
-                activeTab !== 'checkout' && (isMobile ? "p-4" : "p-8")
-              )}
-            >
-              {isDataLoading ? (
-                <div className="h-full">
-                  {activeTab === 'checkout' && <CheckoutSkeleton />}
-                  {activeTab === 'dashboard' && <DashboardSkeleton />}
-                  {activeTab === 'inventory' && <InventorySkeleton />}
-                  {!['checkout', 'dashboard', 'inventory'].includes(activeTab) && (
-                    <div className="space-y-6">
-                      <div className="flex justify-between items-center">
-                        <Skeleton className="h-10 w-64 rounded-xl" />
-                        <Skeleton className="h-10 w-32 rounded-xl" />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[...Array(6)].map((_, i) => (
-                           <Card key={i} className="p-6 space-y-4">
-                              <Skeleton className="h-6 w-1/2" />
-                              <Skeleton className="h-20 w-full" />
-                              <Skeleton className="h-4 w-1/3" />
-                           </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                children
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <div className={cn(
+            "h-full overflow-y-auto custom-scrollbar animate-in fade-in duration-150",
+            activeTab !== 'checkout' && (isMobile ? "p-4" : "p-8")
+          )}>
+            
+              {children}
+            
+          </div>
         </div>
 
         {isMobile && <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />}

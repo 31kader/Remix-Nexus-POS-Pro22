@@ -1,13 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
 import { 
   Product, Category, Brand, Transaction, Promotion, Customer, Supplier, UserProfile,
   ProductReturn, Expense, StockAdjustment, Purchase, SupplierPayment, DamagedRecord, AuditLog
 } from '../../types';
 import { fetchProductsFromSupabase, fetchTableFromSupabase } from './supabaseFetchHelper';
 import { convertKeysToCamel } from '../../lib/db-converters';
+import { getArchivedTransactionsFromStorage } from '../../lib/local-db';
+import { toast } from 'sonner';
+import { playOrderChime } from '../../lib/audioNotification';
+import { useTransactionStore } from '../../store/useTransactionStore';
 
 
 interface useProductsAndCoreDataParams {
@@ -58,15 +62,12 @@ export function useProductsAndCoreData({
   useEffect(() => {
     if (loading) return;
 
-    // Migration du cache pour intégrer les champs d'expiration et de lots
-    const CACHE_VERSION = '1.3';
+    // Migration du cache pour aligner tous les appareils avec les 7237 produits Supabase
+    const CACHE_VERSION = '2.1';
     const currentVersion = localStorage.getItem('nexus_products_cache_version');
     if (currentVersion !== CACHE_VERSION) {
-      localStorage.removeItem('nexus_has_cached_products');
       localStorage.removeItem('last_sync_timestamp');
-      idbSet('nexus_products_cache', null).catch(err => console.warn('[IDB Error]', err));
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
-      console.log('[Cache Migration] Ancien cache produit vidé pour charger les nouvelles colonnes.');
     }
 
     if (appMode !== 'price_checker' && !userId) {
@@ -83,6 +84,22 @@ export function useProductsAndCoreData({
       setIsDataLoading(true);
     }
 
+let productsSaveTimeout: any = null;
+function debouncedSaveProductsCache(products: Product[], delay = 300) {
+  if (productsSaveTimeout) clearTimeout(productsSaveTimeout);
+  productsSaveTimeout = setTimeout(() => {
+    idbSet('nexus_products_cache', products).catch(err => console.warn('[IDB Error]', err));
+  }, delay);
+}
+
+let categoriesSaveTimeout: any = null;
+function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
+  if (categoriesSaveTimeout) clearTimeout(categoriesSaveTimeout);
+  categoriesSaveTimeout = setTimeout(() => {
+    idbSet('nexus_categories', categories).catch(err => console.warn('[IDB Error]', err));
+  }, delay);
+}
+
     const handleProductCacheUpdate = (e: Event) => {
       const customEvent = e as CustomEvent<Product>;
       if (customEvent.detail && customEvent.detail.id) {
@@ -96,7 +113,7 @@ export function useProductsAndCoreData({
           } else {
             newProducts = [updatedProduct, ...prev];
           }
-          idbSet('nexus_products_cache', newProducts).catch(err => console.warn('[IDB Error]', err));
+          debouncedSaveProductsCache(newProducts);
           return newProducts;
         });
       }
@@ -108,7 +125,7 @@ export function useProductsAndCoreData({
         const idToDelete = customEvent.detail.id;
         setProducts(prev => {
           const newProducts = prev.filter(p => p.id !== idToDelete);
-          idbSet('nexus_products_cache', newProducts).catch(err => console.warn('[IDB Error]', err));
+          debouncedSaveProductsCache(newProducts);
           return newProducts;
         });
       }
@@ -120,7 +137,7 @@ export function useProductsAndCoreData({
         const idsToDelete = customEvent.detail.ids;
         setProducts(prev => {
           const newProducts = prev.filter(p => !idsToDelete.includes(p.id));
-          idbSet('nexus_products_cache', newProducts).catch(err => console.warn('[IDB Error]', err));
+          debouncedSaveProductsCache(newProducts);
           return newProducts;
         });
       }
@@ -139,7 +156,7 @@ export function useProductsAndCoreData({
           } else {
             newCats = [...prev, updatedCat];
           }
-          idbSet('nexus_categories', newCats).catch(err => console.warn('[IDB Error]', err));
+          debouncedSaveCategoriesCache(newCats);
           return newCats;
         });
       }
@@ -151,7 +168,7 @@ export function useProductsAndCoreData({
         const idToDelete = customEvent.detail.id;
         setCategories(prev => {
           const newCats = prev.filter(c => c.id !== idToDelete);
-          idbSet('nexus_categories', newCats).catch(err => console.warn('[IDB Error]', err));
+          debouncedSaveCategoriesCache(newCats);
           return newCats;
         });
       }
@@ -176,8 +193,15 @@ export function useProductsAndCoreData({
       const customEvent = e as CustomEvent<Transaction>;
       if (customEvent.detail && isSubscribed) {
         setTransactions(prev => {
-          const merged = [customEvent.detail, ...prev];
-          const unique = Array.from(new Map(merged.map(t => [t.id, t])).values());
+          const map = new Map<string, Transaction>();
+          (Array.isArray(prev) ? prev : []).forEach(t => { if (t && t.id) map.set(t.id, t); });
+          if (customEvent.detail && customEvent.detail.id) {
+            map.set(customEvent.detail.id, customEvent.detail);
+          }
+          const unique = Array.from(map.values());
+          setTimeout(() => {
+            idbSet('nexus_transactions_cache', unique).catch(() => {});
+          }, 0);
           return unique;
         });
       }
@@ -187,9 +211,12 @@ export function useProductsAndCoreData({
       const customEvent = e as CustomEvent<any>;
       if (customEvent.detail && isSubscribed) {
         setReturns(prev => {
-          const merged = [customEvent.detail, ...prev];
-          const unique = Array.from(new Map(merged.map(t => [t.id, t])).values());
-          return unique;
+          const map = new Map<string, any>();
+          (Array.isArray(prev) ? prev : []).forEach(r => { if (r && r.id) map.set(r.id, r); });
+          if (customEvent.detail && customEvent.detail.id) {
+            map.set(customEvent.detail.id, customEvent.detail);
+          }
+          return Array.from(map.values());
         });
       }
     };
@@ -197,20 +224,17 @@ export function useProductsAndCoreData({
     window.addEventListener('offline-transaction-created', handleOfflineTxCreated);
     window.addEventListener('offline-return-created', handleOfflineReturnCreated);
 
-    const syncProducts = async () => {
+    const syncProducts = async (forceFull = false) => {
       if (!isSubscribed || isFetching.current) return;
       isFetching.current = true;
       try {
-        // Note: le cache IDB est déjà chargé par runQueue en parallèle
-        // Ici on ne fait que la synchronisation réseau
         const cachedProducts = await idbGet<Product[]>('nexus_products_cache');
         const hasCache = cachedProducts && cachedProducts.length > 0;
 
         if (isSupabaseConfigured) {
-          if (hasCache) {
-            // OPTIMISATION DELTA : Demander uniquement les produits modifiés depuis le dernier timestamp de synchronisation réussie
+          if (hasCache && !forceFull) {
+            // 1. Delta Sync intelligent (uniquement les articles modifiés depuis la dernière synchronisation)
             const lastSyncTimestamp = localStorage.getItem('last_sync_timestamp');
-            
             let fetchSince = lastSyncTimestamp;
             if (!fetchSince) {
               const yesterdayDate = new Date();
@@ -218,145 +242,45 @@ export function useProductsAndCoreData({
               fetchSince = yesterdayDate.toISOString();
             }
 
-            console.log(`[useProductsAndCoreData] Checking for product changes since last sync timestamp: ${fetchSince}...`);
             const modifiedProducts = await fetchProductsFromSupabase(undefined, true, fetchSince);
-            
-            if (isSubscribed) {
-              if (modifiedProducts && modifiedProducts.length > 0) {
-                console.log(`[useProductsAndCoreData] Delta found! ${modifiedProducts.length} products updated/created since ${fetchSince}. Merging with cache.`);
-                const mergedMap = new Map<string, Product>();
-                cachedProducts.forEach(p => mergedMap.set(p.id, p));
-                modifiedProducts.forEach(p => mergedMap.set(p.id, p));
-                const mergedProducts = Array.from(mergedMap.values());
-                
-                setProducts(mergedProducts);
-                await idbSet('nexus_products_cache', mergedProducts).catch(err => console.warn('[IDB Error]', err));
-              } else {
-                console.log('[useProductsAndCoreData] No product changes since last sync. Using 100% local cache.');
-              }
-              // Mettre à jour le timestamp de la dernière synchronisation réussie
-              localStorage.setItem('last_sync_timestamp', new Date().toISOString());
-              // Note: isDataLoading est géré par runQueue
+            const nowIso = new Date().toISOString();
+            if (isSubscribed && modifiedProducts && modifiedProducts.length > 0) {
+              const mergedMap = new Map<string, Product>();
+              cachedProducts.forEach(p => { if (p && p.id) mergedMap.set(p.id, p); });
+              modifiedProducts.forEach(p => { if (p && p.id) mergedMap.set(p.id, p); });
+              const mergedProducts = Array.from(mergedMap.values()).filter(p => p && p.name && p.name !== 'Sans nom' && p.name !== 'Article Sans Nom');
+              setProducts(mergedProducts);
+              await idbSet('nexus_products_cache', mergedProducts).catch(err => console.warn('[IDB Error]', err));
+              localStorage.setItem('last_sync_timestamp', nowIso);
+              console.log(`[DeltaSync] ${modifiedProducts.length} produit(s) mis à jour incrémentalement.`);
+            } else if (isSubscribed) {
+              localStorage.setItem('last_sync_timestamp', nowIso);
             }
           } else {
-            // Pas de cache local : Premier chargement classique (premiers 50 puis déchargement en arrière-plan)
-            const updatedDocs = await fetchProductsFromSupabase(50);
-            if (updatedDocs && isSubscribed) {
-              setProducts(updatedDocs);
-              await idbSet('nexus_products_cache', updatedDocs).catch(err => console.warn('[IDB Error]', err));
+            // Pas de cache ou synchronisation complète forcée
+            const fullDocs = await fetchProductsFromSupabase();
+            if (fullDocs && fullDocs.length > 0 && isSubscribed) {
+              const validFullDocs = fullDocs.filter(p => p && p.id && p.name && p.name !== 'Sans nom' && p.name !== 'Article Sans Nom');
+              setProducts(validFullDocs);
+              await idbSet('nexus_products_cache', validFullDocs).catch(err => console.warn('[IDB Error]', err));
+              localStorage.setItem('last_sync_timestamp', new Date().toISOString());
               localStorage.setItem('nexus_has_cached_products', 'true');
-              // Note: isDataLoading est géré par runQueue
-            } else {
-              if (isSubscribed) {
-                // Note: isDataLoading est géré par runQueue
-              }
+              console.log(`[FullSync] Synchronisation complète réussie : ${validFullDocs.length} produits mis en cache.`);
             }
-
-            const bgLoadTimeout = setTimeout(async () => {
-              if (!isSubscribed) return;
-              try {
-                console.log('[useProductsAndCoreData] Non-blocking background fetch of the remaining product catalog starts.');
-                const fullDocs = await fetchProductsFromSupabase();
-                if (fullDocs && isSubscribed) {
-                  setProducts(fullDocs);
-                  await idbSet('nexus_products_cache', fullDocs).catch(err => console.warn('[IDB Error]', err));
-                  localStorage.setItem('last_sync_timestamp', new Date().toISOString());
-                  console.log(`[useProductsAndCoreData] Background product sync complete. Total cached: ${fullDocs.length}`);
-                }
-              } catch (err) {
-                console.warn('[useProductsAndCoreData] Background catalog fetch failed:', err);
-              }
-            }, 3000);
-
-            unsubscribes.push(() => clearTimeout(bgLoadTimeout));
           }
-
-          // Realtime postgres_changes subscription for products table with batching to prevent update flood
-          let productUpdateQueue: Product[] = [];
-          let productDeleteQueue: string[] = [];
-          let updateTimeout: any = null;
-
-          const processBatchedProductUpdates = () => {
-            if (productUpdateQueue.length === 0 && productDeleteQueue.length === 0) return;
-            setProducts(prev => {
-              const map = new Map<string, Product>();
-              prev.forEach(p => map.set(p.id, p));
-              productUpdateQueue.forEach(p => map.set(p.id, p));
-              productDeleteQueue.forEach(id => map.delete(id));
-              const newProds = Array.from(map.values());
-              idbSet('nexus_products_cache', newProds).catch(err => console.warn('[IDB Error]', err));
-              return newProds;
-            });
-            productUpdateQueue = [];
-            productDeleteQueue = [];
-          };
-
-          removeChannelByName('public:products');
-          const channel = supabase
-            .channel('public:products')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload: any) => {
-              if (!isSubscribed) return;
-              if (payload.eventType === 'DELETE') {
-                const deletedId = payload.old?.id;
-                if (deletedId) {
-                  productDeleteQueue.push(deletedId);
-                  if (updateTimeout) clearTimeout(updateTimeout);
-                  updateTimeout = setTimeout(processBatchedProductUpdates, 100);
-                }
-              } else {
-                const rawItem = payload.new;
-                if (rawItem && rawItem.id) {
-                  const jsonFields = ['image_urls', 'bundle_items', 'quantity_discounts', 'batches', 'tags'];
-                  jsonFields.forEach(field => {
-                    if (rawItem[field] && typeof rawItem[field] === 'string') {
-                      try { rawItem[field] = JSON.parse(rawItem[field]); } catch (e) {}
-                    }
-                  });
-                  const camelItem = convertKeysToCamel(rawItem) as Product;
-                  productUpdateQueue.push(camelItem);
-                  if (updateTimeout) clearTimeout(updateTimeout);
-                  updateTimeout = setTimeout(processBatchedProductUpdates, 100);
-                }
-              }
-            })
-            .subscribe();
-
-          unsubscribes.push(() => {
-            if (updateTimeout) clearTimeout(updateTimeout);
-            supabase.removeChannel(channel);
-          });
-        } else {
-          const unsub = localDb.subscribe('products', (snapshot) => {
-            if (isSubscribed) {
-              if (snapshot.exists()) {
-                const productsData = snapshot.val();
-                if (productsData) {
-                  const updatedDocs = Object.keys(productsData).map(id => ({ id, ...productsData[id] } as Product));
-                  setProducts(updatedDocs);
-                  idbSet('nexus_products_cache', updatedDocs).catch(err => console.warn('[IDB Error]', err));
-                } else {
-                  setProducts([]);
-                  idbSet('nexus_products_cache', []).catch(err => console.warn('[IDB Error]', err));
-                }
-              } else {
-                setProducts([]);
-                idbSet('nexus_products_cache', []).catch(err => console.warn('[IDB Error]', err));
-              }
-              setIsDataLoading(false);
-            }
-          });
-          unsubscribes.push(unsub);
         }
       } catch (err) {
-        console.warn("Product sync failed:", err);
-        if (isSubscribed) setIsDataLoading(false);
+        console.warn('[useProductsAndCoreData] Erreur synchronisation produits:', err);
       } finally {
         isFetching.current = false;
       }
     };
 
-
-    syncProducts();
+    const handleForceFullSync = () => {
+      syncProducts(true);
+    };
+    window.addEventListener('force-full-sync', handleForceFullSync);
+    unsubscribes.push(() => window.removeEventListener('force-full-sync', handleForceFullSync));
 
     type QueueConfig = {
       cacheKey: string;
@@ -365,6 +289,7 @@ export function useProductsAndCoreData({
       limit?: number;
       startDate?: string;
       timestampColumn?: string;
+      enableRealtime?: boolean;
     };
 
     const queueConfig: QueueConfig[] = [
@@ -376,31 +301,299 @@ export function useProductsAndCoreData({
       { cacheKey: 'nexus_users', collectionName: 'users', setState: setUsers }
     ];
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
     if (appMode !== 'customer') {
       queueConfig.push(
-        { cacheKey: 'nexus_transactions_cache', collectionName: 'transactions', setState: setTransactions as any, limit: 100, startDate: thirtyDaysAgo, timestampColumn: 'timestamp' },
-        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, timestampColumn: 'date' },
-        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments },
-        { cacheKey: 'nexus_purchases_cache', collectionName: 'purchases', setState: setPurchases, timestampColumn: 'date' },
-        { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, timestampColumn: 'date' },
-        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, timestampColumn: 'date' },
-        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems },
-        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, timestampColumn: 'updated_at' },
-        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: () => {} }
+        { cacheKey: 'nexus_transactions_cache', collectionName: 'transactions', setState: setTransactions as any, limit: 500, startDate: ninetyDaysAgo, timestampColumn: 'timestamp' },
+        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 50, timestampColumn: 'date' },
+        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments, limit: 50 },
+        { cacheKey: 'nexus_purchases_cache', collectionName: 'purchases', setState: setPurchases, limit: 50, timestampColumn: 'date' },
+        { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, limit: 50, timestampColumn: 'date' },
+        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 50, timestampColumn: 'date' },
+        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 50 },
+        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 50, timestampColumn: 'updated_at', enableRealtime: false },
+        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 50 },
+        { 
+          cacheKey: 'nexus_online_orders_cache', 
+          collectionName: 'onlineOrders', 
+          setState: (orders: any) => { 
+            const arr = Array.isArray(orders) ? orders : [];
+            useTransactionStore.getState().setOnlineOrders(arr);
+            const map: Record<string, any> = {};
+            arr.forEach(o => { if (o && o.id) map[o.id] = o; });
+            localDb.insertBatch('onlineOrders', map).catch(() => {});
+          }, 
+          limit: 100, 
+          timestampColumn: 'timestamp' 
+        }
       );
+    }
+
+    if (isSupabaseConfigured) {
+      // 1. CANAL TEMPS RÉEL UNIQUE & MULTIPLEXÉ POUR TOUTES LES TABLES
+      let productUpdateQueue: Product[] = [];
+      let productDeleteQueue: string[] = [];
+      let productUpdateTimeout: any = null;
+
+      const processBatchedProductUpdates = () => {
+        if (productUpdateQueue.length === 0 && productDeleteQueue.length === 0) return;
+        setProducts(prev => {
+          const map = new Map<string, Product>();
+          prev.forEach(p => map.set(p.id, p));
+          let hasActualChange = false;
+
+          productUpdateQueue.forEach(p => {
+            const existing = map.get(p.id);
+            if (!existing || existing.updatedAt !== p.updatedAt || existing.name !== p.name || existing.price !== p.price || existing.stock !== p.stock) {
+              map.set(p.id, { ...existing, ...p });
+              hasActualChange = true;
+            }
+          });
+
+          productDeleteQueue.forEach(id => {
+            if (map.has(id)) {
+              map.delete(id);
+              hasActualChange = true;
+            }
+          });
+
+          if (!hasActualChange) return prev;
+
+          const newProds = Array.from(map.values());
+          debouncedSaveProductsCache(newProds);
+          return newProds;
+        });
+        productUpdateQueue = [];
+        productDeleteQueue = [];
+      };
+
+      removeChannelByName('nexus-pos-realtime');
+      removeChannelByName('public:products');
+      let multiplexedChannel = supabase.channel('nexus-pos-realtime');
+
+      // Écouteur Produits
+      multiplexedChannel = multiplexedChannel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload: any) => {
+          if (!isSubscribed) return;
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              productDeleteQueue.push(deletedId);
+              if (productUpdateTimeout) clearTimeout(productUpdateTimeout);
+              productUpdateTimeout = setTimeout(processBatchedProductUpdates, 100);
+            }
+          } else {
+            const rawItem = payload.new;
+            if (rawItem && rawItem.id) {
+              const jsonFields = ['image_urls', 'bundle_items', 'quantity_discounts', 'batches', 'tags'];
+              jsonFields.forEach(field => {
+                if (rawItem[field] && typeof rawItem[field] === 'string') {
+                  try { rawItem[field] = JSON.parse(rawItem[field]); } catch (e) {}
+                }
+              });
+              const camelItem = convertKeysToCamel(rawItem) as Product;
+              productUpdateQueue.push(camelItem);
+              if (productUpdateTimeout) clearTimeout(productUpdateTimeout);
+              productUpdateTimeout = setTimeout(processBatchedProductUpdates, 100);
+            }
+          }
+        }
+      );
+
+      // Écouteurs chaînés sur le même canal pour toutes les autres tables actives
+      const tableCleanups: (() => void)[] = [];
+      queueConfig.forEach(config => {
+        if (config.enableRealtime === false) return;
+        const mappedTable = config.collectionName === 'shifts' ? 'cash_shifts' : 
+                            config.collectionName === 'onlineOrders' ? 'online_orders' :
+                            config.collectionName === 'purchaseOrders' ? 'purchase_orders' :
+                            config.collectionName === 'stockAdjustments' ? 'stock_adjustments' :
+                            config.collectionName === 'supplierPayments' || config.collectionName === 'supplier_payments' ? 'supplier_payments' :
+                            config.collectionName === 'damagedItems' || config.collectionName === 'damaged_items' ? 'damaged_items' :
+                            config.collectionName === 'goodsReceiptNotes' || config.collectionName === 'goods_receipt_notes' ? 'goods_receipt_notes' :
+                            config.collectionName === 'auditLogs' || config.collectionName === 'audit_logs' ? 'audit_logs' : config.collectionName;
+
+        let tableUpdateQueue: any[] = [];
+        let tableDeleteQueue: string[] = [];
+        let tableTimeout: any = null;
+
+        const processTableBatch = () => {
+          if (tableUpdateQueue.length === 0 && tableDeleteQueue.length === 0) return;
+          config.setState((prev: any[]) => {
+            const map = new Map<string, any>();
+            (prev || []).forEach(item => { if (item && item.id) map.set(item.id, item); });
+            tableUpdateQueue.forEach(item => { if (item && item.id) map.set(item.id, item); });
+            tableDeleteQueue.forEach(id => map.delete(id));
+            
+            let updated = Array.from(map.values());
+            if (config.timestampColumn) {
+              updated.sort((a, b) => new Date(b[config.timestampColumn!]).getTime() - new Date(a[config.timestampColumn!]).getTime());
+            }
+            if (config.limit && updated.length > config.limit) {
+              updated = updated.slice(0, config.limit);
+            }
+            setTimeout(() => {
+              idbSet(config.cacheKey, updated).catch(err => console.warn('[IDB Error]', err));
+            }, 0);
+            return updated;
+          });
+          tableUpdateQueue = [];
+          tableDeleteQueue = [];
+        };
+
+        tableCleanups.push(() => {
+          if (tableTimeout) clearTimeout(tableTimeout);
+        });
+
+        multiplexedChannel = multiplexedChannel.on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: mappedTable },
+          (payload: any) => {
+            if (!isSubscribed) return;
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old?.id;
+              if (deletedId) {
+                tableDeleteQueue.push(deletedId);
+                if (tableTimeout) clearTimeout(tableTimeout);
+                tableTimeout = setTimeout(processTableBatch, 100);
+              }
+            } else {
+              const rawItem = payload.new;
+              if (rawItem && rawItem.id) {
+                const jsonFields = ['items', 'status_history', 'metadata', 'details', 'documents', 'bundle_items', 'quantity_discounts', 'usage_logs', 'batches', 'alerts', 'favorite_items', 'conditions', 'discrepancies', 'notifications', 'role_kpis', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
+                jsonFields.forEach(field => {
+                  if (rawItem[field] && typeof rawItem[field] === 'string') {
+                    try { rawItem[field] = JSON.parse(rawItem[field]); } catch (e) {}
+                  }
+                });
+                const camelItem = convertKeysToCamel(rawItem);
+                tableUpdateQueue.push(camelItem);
+
+                // 🔔 Alerte sonore et visuelle immédiate pour les commandes en ligne entrantes
+                if (mappedTable === 'online_orders' && payload.eventType === 'INSERT') {
+                  try {
+                    playOrderChime();
+                    toast.info(`Nouvelle commande en ligne reçue (#${String(camelItem.id || '').slice(-6)}) !`, {
+                      icon: '🛍️',
+                      duration: 8000
+                    });
+                    window.dispatchEvent(new CustomEvent('nexus-new-online-order', { detail: camelItem }));
+                  } catch (audioErr) {
+                    console.warn('[AudioChime] Error triggering chime:', audioErr);
+                  }
+                }
+
+                if (tableTimeout) clearTimeout(tableTimeout);
+                tableTimeout = setTimeout(processTableBatch, 100);
+              }
+            }
+          }
+        );
+      });
+
+      // 3. Présence et Broadcast inter-caisses
+      multiplexedChannel = multiplexedChannel
+        .on('presence', { event: 'sync' }, () => {
+          try {
+            const newState = multiplexedChannel.presenceState();
+            const terminals = Object.values(newState).flat();
+            window.dispatchEvent(new CustomEvent('nexus-terminals-presence', { detail: terminals }));
+          } catch (e) {}
+        })
+        .on('broadcast', { event: 'cashier-alert' }, (eventPayload: any) => {
+          if (eventPayload?.payload) {
+            window.dispatchEvent(new CustomEvent('cashier-alert-received', { detail: eventPayload.payload }));
+          }
+        });
+
+      const handleSendBroadcast = (e: Event) => {
+        const custom = e as CustomEvent<any>;
+        if (custom.detail) {
+          multiplexedChannel.send({
+            type: 'broadcast',
+            event: 'cashier-alert',
+            payload: custom.detail
+          }).catch((err: any) => console.warn('[Realtime Broadcast Error]', err));
+        }
+      };
+      window.addEventListener('send-cashier-alert', handleSendBroadcast);
+      unsubscribes.push(() => window.removeEventListener('send-cashier-alert', handleSendBroadcast));
+
+      let wasDisconnected = false;
+
+      multiplexedChannel.subscribe(async (status: string, err?: Error) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] ✅ Canal unique multiplexé nexus-pos-realtime connecté avec succès.');
+          window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'connected' } }));
+          
+          try {
+            await multiplexedChannel.track({
+              userId: userId || 'pos-terminal',
+              onlineAt: new Date().toISOString()
+            });
+          } catch (e) {}
+
+          // Rattrapage d'événements (Event Backfill) après coupure réseau
+          if (wasDisconnected) {
+            console.log('[Realtime] 🔄 Reconnexion détectée : rattrapage automatique des données...');
+            syncProducts(false);
+            window.dispatchEvent(new CustomEvent('force-full-sync'));
+            wasDisconnected = false;
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          wasDisconnected = true;
+          window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'reconnecting' } }));
+          console.warn(`[Realtime] Canal nexus-pos-realtime état: ${status}`, err?.message || '');
+        }
+      });
+
+      unsubscribes.push(() => {
+        if (productUpdateTimeout) clearTimeout(productUpdateTimeout);
+        tableCleanups.forEach(c => c());
+        safeRemoveChannel(multiplexedChannel);
+      });
+    } else {
+      const unsub = localDb.subscribe('products', (snapshot) => {
+        if (isSubscribed) {
+          if (snapshot.exists()) {
+            const productsData = snapshot.val();
+            if (productsData && typeof productsData === 'object') {
+              const updatedDocs = Object.keys(productsData).map(id => ({ id, ...productsData[id] } as Product));
+              setProducts(prev => {
+                const map = new Map<string, Product>();
+                (prev || []).forEach(p => { if (p && p.id) map.set(p.id, p); });
+                updatedDocs.forEach(p => { if (p && p.id) map.set(p.id, p); });
+                const merged = Array.from(map.values());
+                setTimeout(() => {
+                  idbSet('nexus_products_cache', merged).catch(err => console.warn('[IDB Error]', err));
+                }, 0);
+                return merged;
+              });
+            }
+          }
+          setIsDataLoading(false);
+        }
+      });
+      unsubscribes.push(unsub);
     }
 
     const runQueue = async () => {
       try {
-        // 1. Charger en parallèle: produits IDB + toutes les autres tables IDB
-        const [cachedProducts, ...otherCaches] = await Promise.all([
+        // 1. Charger en parallèle: produits IDB + toutes les autres tables IDB + base locale des transactions + archives
+        const [cachedProducts, localDbTxsRaw, archivedTxsRaw, ...otherCaches] = await Promise.all([
           idbGet<Product[]>('nexus_products_cache').catch(() => null),
+          idbGet<Record<string, any>>('nexus_db_transactions').catch(() => ({})),
+          getArchivedTransactionsFromStorage().catch(() => []),
           ...queueConfig.map(config =>
             idbGet<any[]>(config.cacheKey).catch(() => [])
           )
         ]);
+
+        const localDbTxList = localDbTxsRaw ? Object.values(localDbTxsRaw) : [];
+        const archivedTxList = Array.isArray(archivedTxsRaw) ? archivedTxsRaw : [];
 
         // Appliquer le cache des produits
         if (cachedProducts && cachedProducts.length > 0 && isSubscribed) {
@@ -408,9 +601,18 @@ export function useProductsAndCoreData({
           localStorage.setItem('nexus_has_cached_products', 'true');
         }
 
-        // Appliquer le cache des autres tables
+        // Appliquer le cache des autres tables avec fusion des ventes locales et archivées
         queueConfig.forEach((config, i) => {
-          const cached = otherCaches[i];
+          let cached = otherCaches[i] || [];
+          if (config.collectionName === 'transactions') {
+            const mergedMap = new Map<string, any>();
+            archivedTxList.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+            localDbTxList.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+            cached.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+            cached = Array.from(mergedMap.values()).sort((a: any, b: any) => 
+              new Date(b.timestamp || b.created_at || b.date || 0).getTime() - new Date(a.timestamp || a.created_at || a.date || 0).getTime()
+            );
+          }
           if (cached && cached.length > 0 && isSubscribed) {
             config.setState(cached);
           }
@@ -423,11 +625,12 @@ export function useProductsAndCoreData({
       // 3. Synchronisation réseau en arrière-plan (ne bloque plus l'UI)
       await syncProducts();
 
-      // 4. Synchronisation séquentielle des autres tables
-      for (const config of queueConfig) {
+      // 4. Synchronisation réseau concurrente par lots de 4 tables (5x plus rapide, zéro saturation)
+      const CONCURRENCY = 4;
+      for (let i = 0; i < queueConfig.length; i += CONCURRENCY) {
         if (!isSubscribed) break;
-        await syncTableFromNetwork(config);
-        await new Promise(resolve => setTimeout(resolve, 150));
+        const chunk = queueConfig.slice(i, i + CONCURRENCY);
+        await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
       }
     };
 
@@ -440,87 +643,34 @@ export function useProductsAndCoreData({
           const camelData = await fetchTableFromSupabase<T>(collectionName, limit, startDate, lastSyncTime || undefined, timestampColumn);
           
           if (camelData && isSubscribed) {
-            const updatedCache = [...cached];
-            camelData.forEach((newRow: any) => {
-              const idx = updatedCache.findIndex((r: any) => r.id === newRow.id);
-              if (idx > -1) updatedCache[idx] = newRow;
-              else updatedCache.push(newRow);
-            });
+            const mergedMap = new Map<string, any>();
+            // Si c'est les transactions, préserver d'abord toutes les transactions locales et archivées
+            if (collectionName === 'transactions') {
+              const localDbTxs = await idbGet<Record<string, any>>('nexus_db_transactions').catch(() => ({}));
+              const archivedTxs = await getArchivedTransactionsFromStorage().catch(() => []);
+              if (Array.isArray(archivedTxs)) {
+                archivedTxs.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+              }
+              if (localDbTxs) {
+                Object.values(localDbTxs).forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+              }
+            }
+            cached.forEach((r: any) => r && r.id && mergedMap.set(r.id, r));
+            camelData.forEach((newRow: any) => newRow && newRow.id && mergedMap.set(newRow.id, newRow));
+
+            let updatedCache = Array.from(mergedMap.values());
+            if (timestampColumn) {
+              updatedCache.sort((a: any, b: any) => 
+                new Date(b[timestampColumn] || b.timestamp || b.created_at || 0).getTime() - 
+                new Date(a[timestampColumn] || a.timestamp || a.created_at || 0).getTime()
+              );
+            }
 
             setState(updatedCache);
             idbSet(cacheKey, updatedCache).catch(err => console.warn('[IDB Error]', err));
             localStorage.setItem(`last_sync_${collectionName}`, new Date().toISOString());
           }
-
-          const mappedTable = collectionName === 'shifts' ? 'cash_shifts' : 
-                              collectionName === 'onlineOrders' ? 'online_orders' :
-                              collectionName === 'purchaseOrders' ? 'purchase_orders' :
-                              collectionName === 'stockAdjustments' ? 'stock_adjustments' :
-                              collectionName === 'supplierPayments' ? 'supplier_payments' :
-                              collectionName === 'damagedItems' ? 'damaged_items' :
-                              collectionName === 'goodsReceiptNotes' ? 'goods_receipt_notes' :
-                              collectionName === 'auditLogs' ? 'audit_logs' : collectionName;
-
-          let updateQueue: any[] = [];
-          let deleteQueue: string[] = [];
-          let updateTimeout: any = null;
-
-          const processBatchedUpdates = () => {
-            if (updateQueue.length === 0 && deleteQueue.length === 0) return;
-            setState((prev: any[]) => {
-              const map = new Map<string, any>();
-              prev.forEach(item => map.set(item.id, item));
-              updateQueue.forEach(item => map.set(item.id, item));
-              deleteQueue.forEach(id => map.delete(id));
-              
-              let updated = Array.from(map.values());
-              if (timestampColumn) {
-                updated.sort((a, b) => new Date(b[timestampColumn]).getTime() - new Date(a[timestampColumn]).getTime());
-              }
-              if (limit && updated.length > limit) {
-                updated = updated.slice(0, limit);
-              }
-              idbSet(cacheKey, updated).catch(err => console.warn('[IDB Error]', err));
-              return updated;
-            });
-            updateQueue = [];
-            deleteQueue = [];
-          };
-
-          removeChannelByName(`public:${mappedTable}`);
-          const channel = supabase
-            .channel(`public:${mappedTable}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: mappedTable }, async (payload: any) => {
-              if (!isSubscribed) return;
-              if (payload.eventType === 'DELETE') {
-                const deletedId = payload.old?.id;
-                if (deletedId) {
-                  deleteQueue.push(deletedId);
-                  if (updateTimeout) clearTimeout(updateTimeout);
-                  updateTimeout = setTimeout(processBatchedUpdates, 100);
-                }
-              } else {
-                const rawItem = payload.new;
-                if (rawItem && rawItem.id) {
-                  const jsonFields = ['items', 'status_history', 'metadata', 'details', 'documents', 'bundle_items', 'quantity_discounts', 'usage_logs', 'batches', 'alerts', 'favorite_items', 'conditions', 'discrepancies', 'notifications', 'role_kpis', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
-                  jsonFields.forEach(field => {
-                    if (rawItem[field] && typeof rawItem[field] === 'string') {
-                      try { rawItem[field] = JSON.parse(rawItem[field]); } catch (e) {}
-                    }
-                  });
-                  const camelItem = convertKeysToCamel(rawItem);
-                  updateQueue.push(camelItem);
-                  if (updateTimeout) clearTimeout(updateTimeout);
-                  updateTimeout = setTimeout(processBatchedUpdates, 100);
-                }
-              }
-            })
-            .subscribe();
-
-          unsubscribes.push(() => {
-            if (updateTimeout) clearTimeout(updateTimeout);
-            supabase.removeChannel(channel);
-          });
+          // (Les événements temps réel sont gérés par le canal unique multiplexé 'nexus-pos-realtime')
         } else {
           const unsub = localDb.subscribe(collectionName, (snapshot) => {
             if (isSubscribed) {

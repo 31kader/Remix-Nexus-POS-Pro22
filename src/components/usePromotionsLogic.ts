@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../supabase';
+import { supabase, isSupabaseConfigured } from '../supabase';
+import { localDb } from '../services/LocalDatabase';
+import { useCoreStore } from '../store/useCoreStore';
+import { enqueueSyncBatch } from '../services/SyncService';
 import { Promotion, Transaction } from '../types';
+import { toast } from 'sonner';
 
 interface UsePromotionsLogicProps {
   promotions: Promotion[];
@@ -42,7 +46,7 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
         minPurchase: (editingPromotion.minPurchase ?? '').toString(),
         startDate: editingPromotion.startDate || '',
         endDate: editingPromotion.endDate || '',
-        isActive: editingPromotion.isActive ?? true,
+        isActive: (editingPromotion.isActive ?? (editingPromotion as any).active) ?? true,
         applicableCategories: editingPromotion.applicableCategories || [],
         applicableProducts: editingPromotion.applicableProducts || [],
         code: editingPromotion.code || '',
@@ -65,25 +69,45 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
     const promoValue = parseFloat(formData.value || '0');
 
     if (!trimmedName) {
-      alert("Le nom de la promotion est obligatoire.");
+      toast.error("Le nom de la promotion est obligatoire.");
       return;
     }
 
     if (isNaN(promoValue) || promoValue < 0) {
-      alert("Veuillez saisir une valeur de promotion valide.");
+      toast.error("Veuillez saisir une valeur de promotion valide.");
       return;
     }
 
-    const data = {
+    const promoId = editingPromotion?.id || Math.random().toString(36).substring(2, 10);
+    const promoRecord: Promotion = {
+      id: promoId,
       name: trimmedName,
       code: formData.code?.trim().toUpperCase() || '',
       type: formData.type,
       value: promoValue,
-      min_purchase: formData.minPurchase ? parseFloat(formData.minPurchase) : null,
+      minPurchase: formData.minPurchase ? parseFloat(formData.minPurchase) : undefined,
+      buyQuantity: formData.buyQuantity ? parseInt(formData.buyQuantity) : undefined,
+      getQuantity: formData.getQuantity ? parseInt(formData.getQuantity) : undefined,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || undefined,
+      isActive: formData.isActive,
+      applicableCategories: formData.applicableCategories || [],
+      applicableProducts: formData.applicableProducts || [],
+    };
+
+    const supabasePayload = {
+      id: promoId,
+      name: trimmedName,
+      code: formData.code?.trim().toUpperCase() || '',
+      description: (editingPromotion as any)?.description || null,
+      type: formData.type,
+      value: promoValue,
+      min_purchase: formData.minPurchase ? parseFloat(formData.minPurchase) : 0,
       buy_quantity: formData.buyQuantity ? parseInt(formData.buyQuantity) : null,
       get_quantity: formData.getQuantity ? parseInt(formData.getQuantity) : null,
       start_date: formData.startDate || null,
       end_date: formData.endDate || null,
+      active: formData.isActive,
       is_active: formData.isActive,
       applicable_categories: formData.applicableCategories || [],
       applicable_products: formData.applicableProducts || [],
@@ -91,23 +115,43 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
     };
 
     try {
-      if (editingPromotion) {
+      // 1. Sauvegarde locale immédiate (Offline-First)
+      await localDb.insert(`promotions/${promoId}`, promoRecord);
+      useCoreStore.getState().setPromotions(prev => {
+        const list = Array.isArray(prev) ? prev : [];
+        const idx = list.findIndex(p => p.id === promoId);
+        if (idx > -1) {
+          const copy = [...list];
+          copy[idx] = promoRecord;
+          return copy;
+        }
+        return [promoRecord, ...list];
+      });
+
+      // 2. File de synchronisation garantie
+      enqueueSyncBatch([{
+        action: 'UPSERT',
+        table: 'promotions',
+        recordId: promoId,
+        payload: supabasePayload
+      }]);
+
+      // 3. Poussée directe Supabase si en ligne
+      if (isSupabaseConfigured && navigator.onLine) {
         const { error } = await supabase
           .from('promotions')
-          .update(data)
-          .eq('id', editingPromotion.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('promotions')
-          .insert({ id: Math.random().toString(36).substring(2, 10), ...data });
-        if (error) throw error;
+          .upsert(supabasePayload, { onConflict: 'id' });
+        if (error) {
+          console.warn('[usePromotionsLogic] Supabase direct upsert error, queued in background:', error);
+        }
       }
+
+      toast.success(editingPromotion ? "Promotion mise à jour !" : "Promotion enregistrée !");
       setIsModalOpen(false);
       setEditingPromotion(null);
     } catch (error: any) {
       console.error("Error saving promotion:", error);
-      alert("Erreur lors de la sauvegarde: " + error.message);
+      toast.error("Erreur lors de la sauvegarde: " + error.message);
     }
   };
 
@@ -119,16 +163,29 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
   const confirmDelete = async () => {
     if (!promoToDelete) return;
     try {
-      const { error } = await supabase
-        .from('promotions')
-        .delete()
-        .eq('id', promoToDelete);
-      if (error) throw error;
+      // 1. Suppression locale
+      await localDb.delete(`promotions/${promoToDelete}`);
+      useCoreStore.getState().setPromotions(prev => (prev || []).filter(p => p.id !== promoToDelete));
+
+      // 2. Enfilement suppression hors-ligne
+      enqueueSyncBatch([{
+        action: 'DELETE',
+        table: 'promotions',
+        recordId: promoToDelete,
+        payload: { id: promoToDelete }
+      }]);
+
+      // 3. Supabase direct
+      if (isSupabaseConfigured && navigator.onLine) {
+        await supabase.from('promotions').delete().eq('id', promoToDelete);
+      }
+
+      toast.success("Promotion supprimée.");
       setPromoToDelete(null);
       setIsDeleteConfirmOpen(false);
     } catch (error: any) {
       console.error("Error deleting promotion:", error);
-      alert("Erreur lors de la suppression: " + error.message);
+      toast.error("Erreur lors de la suppression: " + error.message);
     }
   };
 

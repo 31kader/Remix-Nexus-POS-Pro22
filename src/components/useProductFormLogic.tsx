@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { localDb } from '../services/LocalDatabase';
 import { getLocalValue } from '../lib/local-db';
 import { Product, Category, CompanySettings, Brand } from '../types';
@@ -38,43 +40,73 @@ export function useProductFormLogic(props: ProductFormModalProps) {
 
   const [formData, setFormData] = useState({
     name: '', price: '', costPrice: '', taxRate: settings?.taxRate?.toString() || '0', 
-    stock: '', minStock: '5', categoryId: '', brandId: '', supplier: '', 
-    unit: 'unité', sku: '', status: 'active', imageUrl: '', description: '',
+    stock: '0', minStock: '5', categoryId: '', brandId: '', supplier: '', 
+    unit: 'unité', sku: '', barcode: '', status: 'active', imageUrl: '', description: '',
     imageUrls: [] as string[],
     isBundle: false, wholesalePrice: '', onlinePrice: '', tags: '', location: '', reference: '', expirationDate: '', batchNumber: '', showInPos: true, isQuickSelect: false, bundleItems: [] as { productId: string; quantity: number }[],
     parentId: '', unitsPerParent: '', autoUnpack: false,
     quantityDiscounts: [] as { minQuantity: number; discountPrice: number }[],
     operationalCosts: { packaging: '', shipping: '', other: '' },
     batches: [] as { id: string; batchNumber: string; expirationDate: string; stock: number }[],
-    useMultiExpiry: false
+    useMultiExpiry: false,
+    damagedStock: '0'
   });
 
-  // SKU Uniqueness validation
+  // Map d'indexation O(1) ultra-rapide des SKU et codes-barres existants
+  const productCodesMap = useMemo(() => {
+    const map = new Map<string, Product>();
+    (products || []).forEach(p => {
+      if (!p) return;
+      if (p.sku) map.set(p.sku.trim().toLowerCase(), p);
+      if (p.barcode) map.set(p.barcode.trim().toLowerCase(), p);
+    });
+    return map;
+  }, [products]);
+
+  // Validation stricte O(1) de l'unicité du SKU et du Code-barres
   useEffect(() => {
-    if (!formData.sku) {
+    const trimmedSku = formData.sku ? formData.sku.trim().toLowerCase() : '';
+    const trimmedBarcode = formData.barcode ? formData.barcode.trim().toLowerCase() : '';
+    
+    if (!trimmedSku && !trimmedBarcode) {
       setSkuError(null);
       return;
     }
-    const duplicate = products.find(p => p.sku === formData.sku && p.id !== editingProduct?.id);
+    
+    const dupSku = trimmedSku ? productCodesMap.get(trimmedSku) : null;
+    const dupBarcode = trimmedBarcode ? productCodesMap.get(trimmedBarcode) : null;
+    
+    const duplicate = (dupSku && dupSku.id !== editingProduct?.id) 
+      ? dupSku 
+      : ((dupBarcode && dupBarcode.id !== editingProduct?.id) ? dupBarcode : null);
+    
     if (duplicate) {
-      setSkuError(`Ce code-barre est déjà utilisé par le produit : "${duplicate.name}"`);
+      const conflictCode = duplicate.barcode || duplicate.sku || 'N/A';
+      setSkuError(`Le Code-barres/SKU "${conflictCode}" est déjà utilisé par : "${duplicate.name}"`);
     } else {
       setSkuError(null);
     }
-  }, [formData.sku, products, editingProduct]);
+  }, [formData.sku, formData.barcode, productCodesMap, editingProduct]);
 
   const formatDisplayDate = (isoDate: string) => {
     if (!isoDate) return '';
     try {
-      const [y, m, d] = isoDate.split('-');
-      if (!y || !m || !d) return '';
-      return `${d} ${m} ${y.substring(2)}`;
+      const cleanDate = isoDate.split('T')[0].split(' ')[0].trim();
+      const parts = cleanDate.split('-');
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        return `${d} ${m} ${y.slice(-2)}`;
+      }
+      return '';
     } catch (e) {
       return '';
     }
   };
 
   const parseDisplayDate = (display: string) => {
+    if (!display) return '';
     const numbers = display.replace(/\D/g, '');
     if (numbers.length < 6) return '';
     
@@ -82,10 +114,14 @@ export function useProductFormLogic(props: ProductFormModalProps) {
     const month = numbers.substring(2, 4);
     const year = numbers.substring(4, 6);
     
-    if (parseInt(day) > 31 || parseInt(month) > 12) return '';
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(month, 10);
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31 || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return '';
+    }
     
     const fullYear = `20${year}`;
-    return `${fullYear}-${month}-${day}`;
+    return `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   };
 
   useEffect(() => {
@@ -112,6 +148,7 @@ export function useProductFormLogic(props: ProductFormModalProps) {
         supplier: editingProduct.supplier || '',
         unit: editingProduct.unit || 'unité',
         sku: editingProduct.sku || '',
+        barcode: (!editingProduct.id ? '' : (editingProduct as any).barcode) || '',
         status: editingProduct.status || 'active',
         imageUrl: editingProduct.imageUrl || '',
         imageUrls: editingProduct.imageUrls || (editingProduct.imageUrl ? [editingProduct.imageUrl] : []),
@@ -137,7 +174,8 @@ export function useProductFormLogic(props: ProductFormModalProps) {
           other: editingProduct.operationalCosts?.other?.toString() || ''
         },
         batches: editingProduct.batches || [],
-        useMultiExpiry: editingProduct.useMultiExpiry || false
+        useMultiExpiry: editingProduct.useMultiExpiry || false,
+        damagedStock: (editingProduct.damagedStock ?? 0).toString()
       });
     } else {
       setParentCatId('');
@@ -146,13 +184,14 @@ export function useProductFormLogic(props: ProductFormModalProps) {
       setFormData({ 
         name: '', price: '', costPrice: '', taxRate: settings?.taxRate?.toString() || '0', 
         stock: '', minStock: '5', categoryId: '', brandId: '', supplier: '', 
-        unit: 'unité', sku: '', status: 'active', imageUrl: '', description: '',
+        unit: 'unité', sku: '', barcode: '', status: 'active', imageUrl: '', description: '',
         imageUrls: [],
         isBundle: false, wholesalePrice: '', onlinePrice: '', tags: '', location: '', reference: '', expirationDate: '', batchNumber: '', showInPos: true, isQuickSelect: false, bundleItems: [], quantityDiscounts: [],
         operationalCosts: { packaging: '', shipping: '', other: '' },
         parentId: '', unitsPerParent: '1', autoUnpack: false,
         batches: [],
-        useMultiExpiry: false
+        useMultiExpiry: false,
+        damagedStock: '0'
       });
     }
   }, [editingProduct, settings?.taxRate, isOpen]);
@@ -217,12 +256,12 @@ export function useProductFormLogic(props: ProductFormModalProps) {
     const trimmedSku = formData.sku.trim();
     
     if (!trimmedName) {
-      alert("Le nom du produit est obligatoire.");
+      toast.error("Le nom du produit est obligatoire.");
       return;
     }
     
     if (skuError) {
-      alert("Veuillez corriger l'erreur de SKU/Code-barre.");
+      toast.error("Veuillez corriger le SKU / Code-barre en double avant d'enregistrer.");
       return;
     }
 
@@ -231,12 +270,12 @@ export function useProductFormLogic(props: ProductFormModalProps) {
     const newStock = parseFloat(formData.stock || '0');
     
     if (newPrice < 0 || newCostPrice < 0) {
-      alert("Les prix ne peuvent pas être négatifs.");
+      toast.error("Les prix ne peuvent pas être négatifs.");
       return;
     }
 
     if (newStock < -1000) {
-      alert("La valeur de stock semble incorrecte.");
+      toast.error("La valeur de stock semble incorrecte.");
       return;
     }
     
@@ -255,6 +294,9 @@ export function useProductFormLogic(props: ProductFormModalProps) {
     }
 
     let earliestDate = formData.expirationDate;
+    if (!formData.useMultiExpiry && (!earliestDate || earliestDate.trim() === '') && displayExpDate) {
+      earliestDate = parseDisplayDate(displayExpDate);
+    }
     let primaryBatch = formData.batchNumber;
     if (formData.useMultiExpiry && formData.batches && formData.batches.length > 0) {
       const sorted = [...formData.batches].sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
@@ -262,10 +304,18 @@ export function useProductFormLogic(props: ProductFormModalProps) {
       primaryBatch = sorted[0].batchNumber;
     }
 
+    const chosenCatId = subCatId || parentCatId || formData.categoryId || 'uncategorized';
+    const chosenBrandId = formData.brandId || null;
+
     const data = {
       ...formData,
       name: trimmedName,
       sku: trimmedSku,
+      barcode: formData.barcode ? formData.barcode.trim() : null,
+      supplier: formData.supplier ? formData.supplier.trim() : '',
+      showInPos: formData.showInPos !== false,
+      isQuickSelect: !!formData.isQuickSelect,
+      damagedStock: parseFloat(formData.damagedStock || '0') || 0,
       price: newPrice,
       costPrice: newCostPrice,
       taxRate: parseFloat(formData.taxRate || '0'),
@@ -276,11 +326,12 @@ export function useProductFormLogic(props: ProductFormModalProps) {
       autoUnpack: !!formData.autoUnpack,
       wholesalePrice: formData.wholesalePrice ? parseFloat(formData.wholesalePrice) : null,
       onlinePrice: formData.onlinePrice ? parseFloat(formData.onlinePrice) : null,
-      tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-      categoryId: subCatId || parentCatId || '',
+      tags: formData.tags ? (Array.isArray(formData.tags) ? formData.tags : formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean)) : [],
+      categoryId: chosenCatId,
+      brandId: chosenBrandId,
       updatedAt: new Date().toISOString(),
-      expirationDate: earliestDate,
-      batchNumber: primaryBatch,
+      expirationDate: earliestDate ? earliestDate.trim() : null,
+      batchNumber: primaryBatch || null,
       priceHistory,
       operationalCosts: {
         packaging: formData.operationalCosts.packaging ? parseFloat(formData.operationalCosts.packaging) : null,
@@ -290,38 +341,8 @@ export function useProductFormLogic(props: ProductFormModalProps) {
     };
 
     try {
-      const submitPayload = sanitizeProductForSupabase(data);
-
-      if (!submitPayload.category_id || submitPayload.category_id === "") {
-        submitPayload.category_id = 'uncategorized';
-      } else {
-        const localCategories = getLocalValue('categories') || {};
-        const existingCat = localCategories[submitPayload.category_id];
-        
-        if (!existingCat) {
-          console.warn("Category not found in database, defaulting to 'uncategorized':", submitPayload.category_id);
-          submitPayload.category_id = 'uncategorized';
-        }
-      }
-
-      // Ensure 'uncategorized' category exists in database before inserting/updating product
-      if (submitPayload.category_id === 'uncategorized') {
-        await localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
-      }
-
-      let brandId = submitPayload.brand_id;
-      if (brandId === "") brandId = null;
-      submitPayload.brand_id = brandId;
-
-      if (brandId) {
-        const localBrands = getLocalValue('brands') || {};
-        const existingBrand = localBrands[brandId];
-          
-        if (!existingBrand) {
-          console.warn("Brand not found in database, removing from product update:", brandId);
-          submitPayload.brand_id = null;
-        }
-      }
+      // Fermer immédiatement la fenêtre pour une réactivité instantanée
+      onClose();
 
       if (editingProduct && editingProduct.id) {
         const updatedProduct = {
@@ -331,10 +352,17 @@ export function useProductFormLogic(props: ProductFormModalProps) {
         } as Product;
         
         window.dispatchEvent(new CustomEvent('product-cache-update', { detail: updatedProduct }));
-        
-        await localDb.update(`products/${editingProduct.id}`, updatedProduct);
-        
+        localDb.update(`products/${editingProduct.id}`, updatedProduct).catch(console.error);
+
+        if (isSupabaseConfigured) {
+          const supabasePayload = sanitizeProductForSupabase(updatedProduct);
+          supabase.from('products').upsert(supabasePayload, { onConflict: 'id' }).then(({ error }: { error: any }) => {
+            if (error) console.warn('[Supabase Direct Update] Retrying via SyncService:', error.message);
+          }).catch(console.warn);
+        }
+
         logAction(user?.uid || 'admin', user?.displayName || 'Utilisateur', 'Modification Produit', 'Inventaire', `Produit: ${data.name}, SKU: ${data.sku}`);
+        toast.success(`Produit "${data.name}" mis à jour !`);
       } else {
         const newProductId = Math.random().toString(36).substring(2, 11);
         const createdProduct = {
@@ -344,15 +372,21 @@ export function useProductFormLogic(props: ProductFormModalProps) {
         } as Product;
         
         window.dispatchEvent(new CustomEvent('product-cache-update', { detail: createdProduct }));
-        
-        await localDb.insert(`products/${newProductId}`, createdProduct);
+        localDb.insert(`products/${newProductId}`, createdProduct).catch(console.error);
+
+        if (isSupabaseConfigured) {
+          const supabasePayload = sanitizeProductForSupabase(createdProduct);
+          supabase.from('products').upsert(supabasePayload, { onConflict: 'id' }).then(({ error }: { error: any }) => {
+            if (error) console.warn('[Supabase Direct Insert] Retrying via SyncService:', error.message);
+          }).catch(console.warn);
+        }
 
         logAction(user?.uid || 'admin', user?.displayName || 'Utilisateur', 'Création Produit', 'Inventaire', `Produit: ${data.name}, SKU: ${data.sku}`);
+        toast.success(`Nouveau produit "${data.name}" créé avec succès !`);
       }
-      onClose();
     } catch (error: any) {
       console.error("Error submitting product:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur lors de la sauvegarde: " + error.message);
     }
   };
 

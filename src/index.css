@@ -1,10 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/* High-Performance Native System Fonts */
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-sans-arabic: "Cairo", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans-arabic: "Segoe UI", "Tahoma", "Arial", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --animate-spin-slow: spin-slow 20s linear infinite;
 
   --color-industrial-950: #05070a;
@@ -27,17 +29,28 @@
 }
 
 :root {
+  --bg-industrial-950: #05070a;
+  --bg-industrial-900: #0a0c12;
+  --bg-industrial-800: #12141c;
+  --bg-industrial-700: #1c1f2a;
+  --text-industrial-400: #f1f5f9;
+  --text-industrial-500: #94a3b8;
   --bg-nardo: #05070a;
   --bg-workspace: #0a0c12;
-  --card-border: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.06);
   --text-primary: #ffffff;
-  --text-secondary: #64748b;
+  --text-secondary: #94a3b8;
   --input-bg: rgba(0, 0, 0, 0.4);
   --input-border: rgba(255, 255, 255, 0.08);
+  --neon-indigo: 0 0 20px rgba(99, 102, 241, 0.25), 0 0 40px rgba(99, 102, 241, 0.1);
+  --neon-cyan: 0 0 20px rgba(6, 182, 212, 0.25);
+  --soft-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+  --brand-primary: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-shadow: rgba(79, 70, 229, 0.3);
 }
 
 @layer base {
-  /* Force system-wide tabular numbers for all data */
   .font-mono, .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
@@ -46,7 +59,6 @@
     @apply cursor-pointer select-none active:scale-[0.96] transition-all duration-300;
   }
 
-  /* Smooth reveal for all cards */
   .card-reveal {
     animation: reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -57,25 +69,28 @@
   }
 
   body {
-    @apply text-slate-300 font-sans antialiased selection:bg-indigo-500/30;
-    background-color: var(--bg-nardo);
-    background-image:
-      radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(circle at 0% 100%, rgba(6, 182, 212, 0.03) 0px, transparent 40%);
-    background-attachment: fixed;
+    @apply text-slate-200 font-sans antialiased selection:bg-indigo-500/30;
+    background-color: #080a10;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-black/40 backdrop-blur-3xl border border-white/5 shadow-2xl ring-1 ring-white/5;
+    @apply bg-slate-900/95 border border-slate-800 shadow-md;
   }
 
   .neon-border-hover {
-    @apply hover:border-indigo-500/40 hover:shadow-neon-indigo transition-all duration-500;
+    @apply hover:border-indigo-500/60 transition-colors duration-200;
   }
 }
 
+/* ==========================================================================
+   THEMES SYSTEM (Onyx, Albâtre / Light, Émeraude, Or Luxe, Nardo)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Cyber Émeraude (Matrix Sci-Fi Neon Green)
+   -------------------------------------------------------------------------- */
 .emerald {
   --bg-industrial-950: #020904;
   --bg-industrial-900: #041407;
@@ -98,6 +113,9 @@
   --brand-shadow: rgba(16, 185, 129, 0.25);
 }
 
+/* --------------------------------------------------------------------------
+   2. Obsidienne Or Luxe (Warm Obsidian Gold)
+   -------------------------------------------------------------------------- */
 .gold {
   --bg-industrial-950: #080603;
   --bg-industrial-900: #100c06;
@@ -112,290 +130,392 @@
   --text-secondary: #fde68a;
   --input-bg: rgba(217, 119, 6, 0.04);
   --input-border: rgba(217, 119, 6, 0.2);
-  --neon-indigo: 0 0 15px rgba(217, 119, 6, 0.35);
-  --neon-cyan: 0 0 15px rgba(245, 158, 11, 0.3);
   --soft-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.6);
-  --brand-primary: #d97706;
-  --brand-hover: #b45309;
-  --brand-shadow: rgba(217, 119, 6, 0.25);
+  --brand-primary: #f59e0b;
+  --brand-hover: #d97706;
+  --brand-shadow: rgba(245, 158, 11, 0.25);
 }
 
+/* --------------------------------------------------------------------------
+   3. Nardo Motorsport (Grey Racing & Track Atmosphere)
+   -------------------------------------------------------------------------- */
 .nardo-grey-racing {
-  --bg-industrial-950: #111317;
-  --bg-industrial-900: #1b1c21;
-  --bg-industrial-800: #2b2c32;
-  --bg-industrial-700: #3f4047;
-  --text-industrial-400: #f3f4f6;
-  --text-industrial-500: #f97316;
-  --bg-nardo: #111317;
-  --bg-workspace: #1b1c21;
-  --card-border: rgba(249, 115, 22, 0.18);
+  --bg-industrial-950: #111216;
+  --bg-industrial-900: #18191f;
+  --bg-industrial-800: #22242c;
+  --bg-industrial-700: #2e303b;
+  --text-industrial-400: #f8fafc;
+  --text-industrial-500: #94a3b8;
+  --bg-nardo: #111216;
+  --bg-workspace: #18191f;
+  --card-border: rgba(255, 255, 255, 0.08);
   --text-primary: #ffffff;
-  --text-secondary: #ffedd5;
-  --input-bg: rgba(249, 115, 22, 0.03);
-  --input-border: rgba(249, 115, 22, 0.2);
-  --neon-indigo: 0 0 15px rgba(249, 115, 22, 0.4);
-  --neon-cyan: 0 0 15px rgba(251, 146, 60, 0.35);
-  --soft-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.6);
+  --text-secondary: #94a3b8;
+  --input-bg: #22242c;
+  --input-border: #3b3e4c;
   --brand-primary: #f97316;
   --brand-hover: #ea580c;
   --brand-shadow: rgba(249, 115, 22, 0.25);
 }
 
-/* Custom dark overrides for hardcoded background & text tailwind classes */
-html:not(.light) .bg-white,
-html:not(.light) .bg-slate-50,
-html:not(.light) .bg-slate-100,
-html:not(.light) .bg-zinc-50,
-html:not(.light) .bg-gray-50,
-html:not(.light) .bg-neutral-50,
-html:not(.light) .bg-slate-100\/40,
-html:not(.light) .bg-slate-50\/40 {
-  background-color: var(--bg-industrial-800) !important;
-}
-
-html:not(.light) .border-slate-200,
-html:not(.light) .border-slate-300,
-html:not(.light) .border-slate-100,
-html:not(.light) .border-zinc-200,
-html:not(.light) .border-gray-200 {
-  border-color: var(--input-border) !important;
-}
-
-html:not(.light) .text-slate-700,
-html:not(.light) .text-slate-800,
-html:not(.light) .text-slate-900,
-html:not(.light) .text-zinc-700,
-html:not(.light) .text-zinc-800,
-html:not(.light) .text-zinc-900,
-html:not(.light) .text-gray-700,
-html:not(.light) .text-gray-800,
-html:not(.light) .text-gray-900,
-html:not(.light) .text-neutral-700,
-html:not(.light) .text-neutral-800,
-html:not(.light) .text-neutral-900 {
-  color: var(--text-primary) !important;
-}
-
-html:not(.light) .text-slate-400,
-html:not(.light) .text-slate-500,
-html:not(.light) .text-slate-600,
-html:not(.light) .text-zinc-400,
-html:not(.light) .text-zinc-500,
-html:not(.light) .text-zinc-600,
-html:not(.light) .text-gray-400,
-html:not(.light) .text-gray-500,
-html:not(.light) .text-gray-600 {
-  color: var(--text-secondary) !important;
-}
-
-.light {
-  --bg-industrial-950: #f8fafc;
-  --bg-industrial-900: #ffffff;
-  --bg-industrial-800: #f1f5f9;
-  --bg-industrial-700: #e2e8f0;
-  --text-industrial-400: #334155;
-  --text-industrial-500: #64748b;
-  --bg-nardo: #f1f5f9;
+/* --------------------------------------------------------------------------
+   4. Albâtre / Alabaster Puro (Complete, High-Contrast Premium Light Mode)
+   -------------------------------------------------------------------------- */
+html.light {
+  color-scheme: light;
+  --color-industrial-950: #f8fafc;
+  --color-industrial-900: #ffffff;
+  --color-industrial-800: #f1f5f9;
+  --color-industrial-700: #e2e8f0;
+  --color-industrial-500: #64748b;
+  --color-industrial-400: #0f172a;
+  --color-nardo: #f8fafc;
+  --color-workspace: #ffffff;
+  --bg-nardo: #f8fafc;
   --bg-workspace: #ffffff;
-  --card-border: rgba(15, 23, 42, 0.08);
+  --card-border: #e2e8f0;
   --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --input-bg: #f8fafc;
-  --input-border: #e2e8f0;
-  --neon-indigo: 0 4px 12px rgba(79, 70, 229, 0.15);
-  --neon-cyan: 0 4px 12px rgba(6, 182, 212, 0.15);
-  --soft-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  /* Brand specific colors */
+  --text-secondary: #475569;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
   --brand-primary: #4f46e5;
   --brand-hover: #4338ca;
   --brand-shadow: rgba(79, 70, 229, 0.15);
 }
 
-@layer base {
-  @keyframes item-pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-  }
+/* Base Body & Root */
+html.light,
+html.light body,
+.light,
+.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
 
-  .animate-item-pop {
-    animation: item-pop 0.2s ease-out;
-  }
+/* Universal Background & Subtle Border Depth Overrides */
+html.light [class*="bg-[#05070a]"],
+html.light [class*="bg-[#0a0c12]"],
+html.light [class*="bg-[#080a10]"],
+html.light [class*="bg-[#08080c]"],
+html.light [class*="bg-[#06080e]"],
+html.light [class*="bg-[#0a0a0f]"],
+html.light [class*="bg-[#050508]"],
+html.light [class*="bg-slate-950"],
+html.light [class*="bg-slate-900"],
+html.light [class*="bg-industrial-950"],
+html.light [class*="bg-workspace"],
+html.light [class*="bg-[#12141c]"],
+html.light [class*="bg-[#1c1f2a]"],
+html.light [class*="bg-[#0f111a]"],
+html.light [class*="bg-[#0c0d12]"],
+html.light [class*="bg-[#151823]"],
+html.light [class*="bg-[#1a1a24]"],
+html.light [class*="bg-[#0f172a]"],
+html.light [class*="bg-[#0f1117]"],
+html.light [class*="bg-industrial-900"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
 
-  body {
-    @apply text-industrial-400 font-sans antialiased selection:bg-indigo-500/30;
-    background-color: var(--bg-nardo);
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%);
-    background-attachment: fixed;
-    color: var(--text-industrial-400);
-    transition: background-color 0.3s ease;
-    overflow-x: hidden;
-  }
+/* Layered Soft Shadows for High-End Depth */
+html.light [class*="shadow-2xl"],
+html.light .shadow-2xl {
+  box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.08), 0 8px 12px -6px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.06) !important;
+}
 
-  /* Force smoother scrolling */
-  * {
-    scroll-behavior: smooth;
-  }
+html.light [class*="shadow-xl"],
+html.light .shadow-xl {
+  box-shadow: 0 8px 20px -3px rgba(15, 23, 42, 0.06), 0 4px 8px -4px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+}
 
-  html.rtl,
-  html.rtl * {
-    font-family: "Cairo", "Inter", ui-sans-serif, system-ui, sans-serif !important;
-  }
+html.light [class*="shadow-lg"],
+html.light .shadow-lg {
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 5px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+}
 
-  html.rtl .font-mono,
-  html.rtl .font-mono * {
-    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
-  }
+html.light [class*="shadow-sm"],
+html.light .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+}
 
-  .shadow-2xl, .shadow-xl {
-    box-shadow: var(--soft-shadow) !important;
-  }
+/* --------------------------------------------------------------------------
+   Sidebar (Left Navigation)
+   -------------------------------------------------------------------------- */
+html.light aside,
+html.light aside[class*="bg-[#08080c]"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 4px 0 24px -2px rgba(0, 0, 0, 0.04) !important;
+}
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-black tracking-tight uppercase;
-    color: var(--text-primary);
-  }
-  
-  .text-white, 
-  .text-slate-50, .text-zinc-50, .text-gray-50, .text-neutral-50, 
-  .text-slate-100, .text-zinc-100, .text-gray-100, .text-neutral-100, 
-  .text-slate-200, .text-zinc-200, .text-gray-200, .text-neutral-200, 
-  .text-slate-800, .text-zinc-800, .text-gray-800, .text-neutral-800, 
-  .text-slate-900, .text-zinc-900, .text-gray-900, .text-neutral-900, 
-  .text-white\/90 {
-    color: var(--text-primary) !important;
-  }
-  
-  .text-white\/40, .text-white\/50, .text-white\/60 {
-    color: var(--text-secondary) !important;
-  }
-  
-  .text-white\/10, .text-white\/20, .text-white\/30 {
-    color: var(--text-industrial-500) !important;
-    opacity: 0.6;
-  }
-  
-  .text-slate-300, .text-zinc-300, .text-gray-300, .text-neutral-300 {
-    color: var(--text-secondary) !important;
-  }
-  
-  .text-slate-400, .text-zinc-400, .text-gray-400, .text-neutral-400, 
-  .text-slate-500, .text-zinc-500, .text-gray-500, .text-neutral-500 {
-    color: var(--text-secondary) !important;
-  }
+html.light aside > div,
+html.light aside nav,
+html.light aside [class*="bg-[#050508]"],
+html.light aside [class*="bg-[#08080c]"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
 
-  .text-slate-600, .text-zinc-600, .text-gray-600, .text-neutral-600, 
-  .text-slate-700, .text-zinc-700, .text-gray-700, .text-neutral-700 {
-    color: var(--text-industrial-400) !important;
-  }
-  
-  .border-slate-800\/40, .border-slate-800, .border-industrial-800, .border-slate-700\/50, .border-white\/5, .border-white\/10 {
-    border-color: var(--card-border) !important;
-  }
+html.light aside .border-b,
+html.light aside .border-t,
+html.light aside .border-r {
+  border-color: #e2e8f0 !important;
+}
 
-  .bg-workspace, .bg-industrial-900, .bg-industrial-950, .bg-nardo, .bg-slate-950 {
-    background-color: var(--bg-workspace) !important;
-  }
-  
-  .bg-industrial-800, .bg-slate-900, .bg-slate-900\/60, .bg-slate-800\/40, .bg-slate-800, .bg-slate-950\/50, .bg-slate-900\/40 {
-    background-color: var(--bg-industrial-800) !important;
-    backdrop-filter: blur(16px) !important;
-    border: 1px solid var(--card-border) !important;
-    box-shadow: var(--soft-shadow) !important;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
-  
-  .bg-industrial-800:hover, .bg-slate-900:hover, .bg-slate-800\/40:hover {
-    border-color: rgba(255, 255, 255, 0.08) !important;
-  }
+html.light aside button[class*="text-white/30"],
+html.light aside [class*="text-white/30"] {
+  color: #64748b !important;
+}
 
-  /* Micro-interactions & button glows */
-  button, input, select, textarea, a {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  }
+html.light aside a {
+  color: #475569 !important;
+}
 
-  button:active, a:active {
-    transform: scale(0.98) !important;
-  }
+html.light aside a:hover {
+  color: #4f46e5 !important;
+  background-color: #eef2ff !important;
+}
 
-  /* Glowing indicators for active states */
-  .bg-indigo-600, .bg-indigo-500, .bg-brand-primary {
-    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2) !important;
-  }
+html.light aside a[class*="bg-indigo-600/10"],
+html.light aside a[class*="text-indigo-400"] {
+  background-color: #eef2ff !important;
+  color: #4f46e5 !important;
+  border-color: #c7d2fe !important;
+}
 
-  .bg-indigo-600:hover, .bg-indigo-500:hover, .bg-brand-primary:hover {
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35) !important;
-    transform: translateY(-1px) !important;
-  }
+/* --------------------------------------------------------------------------
+   Top App Header
+   -------------------------------------------------------------------------- */
+html.light header,
+html.light header[class*="bg-[#0a0c12]"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
+}
 
-  .bg-emerald-600, .bg-emerald-500 {
-    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
-  }
+html.light header button,
+html.light header button[class*="bg-industrial-800"],
+html.light header button[class*="bg-white/5"],
+html.light header div[class*="bg-industrial-800"],
+html.light button[class*="bg-industrial-800"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
 
-  .bg-emerald-600:hover, .bg-emerald-500:hover {
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35) !important;
-    transform: translateY(-1px) !important;
-  }
-  
-  .bg-white\/5, .bg-white\/10 {
-    background-color: var(--input-bg) !important;
-  }
-  
-  .border-white\/5, .border-white\/10 {
-    border-color: var(--input-border) !important;
-  }
-  
-  .placeholder-white\/20::placeholder, .placeholder-slate-500::placeholder, .placeholder-white\/10::placeholder {
-    color: var(--text-industrial-500) !important;
-    opacity: 0.5;
-  }
+html.light header button:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
 
-  input::placeholder, textarea::placeholder {
-    color: var(--text-industrial-500) !important;
-    opacity: 0.5;
-  }
+html.light header [class*="bg-industrial-900"],
+html.light div[class*="bg-industrial-900"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+}
 
-  input, select, textarea {
-    color: var(--text-primary);
-  }
+/* --------------------------------------------------------------------------
+   POS / Terminal de Vente
+   -------------------------------------------------------------------------- */
+/* POS Header Search & Total Banner */
+html.light div[class*="from-emerald-950"],
+html.light [class*="from-emerald-950"] {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  border-color: #34d399 !important;
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3) !important;
+}
+html.light div[class*="from-emerald-950"] * {
+  color: #ffffff !important;
+}
 
-  /* Force table inheritance */
-  table {
-    @apply text-industrial-400;
-  }
+html.light input[id="direct-barcode-input"] {
+  background-color: #f0fdf4 !important;
+  border-color: #86efac !important;
+  color: #166534 !important;
+}
+html.light input[id="direct-barcode-input"]::placeholder {
+  color: #15803d !important;
+}
 
-  th {
-    @apply font-black text-industrial-500 uppercase tracking-widest text-[10px] p-4;
-  }
+html.light input[id="product-search-input"],
+html.light input[placeholder*="Rechercher"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
 
-  /* Modern Scrollbar Global Styles for Dark Theme */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--bg-industrial-700) transparent;
-  }
+/* POS QuickSelect Panel (Left Column) */
+html.light div[class*="bg-slate-900/60"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
 
-  /* Chrome, Edge, and Safari */
-  *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+html.light div[class*="aspect-square"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+}
 
-  *::-webkit-scrollbar-track {
-    background: transparent;
-  }
+html.light div[class*="aspect-square"]:hover {
+  border-color: #f59e0b !important;
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.15) !important;
+}
 
-  *::-webkit-scrollbar-thumb {
-    background-color: var(--bg-industrial-700);
-    border-radius: 10px;
-    transition: background-color 0.2s;
-  }
+html.light div[class*="aspect-square"] .bg-gradient-to-t {
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.5) 45%, transparent 100%) !important;
+}
 
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--text-industrial-400);
-  }
+html.light div[class*="aspect-square"] p[class*="text-white"] {
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+}
+
+html.light div[class*="aspect-square"] p[class*="text-amber-400"] {
+  color: #fde047 !important;
+  font-weight: 800 !important;
+}
+
+html.light button[class*="bg-white/5"][class*="aspect-square"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light button[class*="bg-white/5"][class*="aspect-square"] svg {
+  color: #94a3b8 !important;
+}
+
+/* POS Cart Items (Center Column) */
+html.light div[class*="bg-black/40"][class*="rounded-2xl"],
+html.light div[class*="bg-black/50"][class*="rounded-2xl"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+html.light div[class*="bg-indigo-500/5"][class*="rounded-2xl"] {
+  background-color: #eef2ff !important;
+  border-color: #818cf8 !important;
+}
+
+html.light div[class*="bg-slate-900/90"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #4f46e5 !important;
+}
+
+html.light div[class*="bg-black/50"][class*="rounded-xl"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input[id*="qty-input"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* POS Right Panel (Customer, Order Summary, Payments) */
+html.light div[id="checkout-panel"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light div[id="checkout-panel"] div[class*="bg-black/"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light input[placeholder*="Client"],
+html.light input[placeholder*="Rechercher ou scanner"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light div[id="checkout-panel"] button[class*="rounded-[2rem]"]:not([class*="bg-indigo-600"]) {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html.light div[id="checkout-panel"] button[class*="rounded-[2rem]"][class*="bg-indigo-600"] {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+}
+
+/* --------------------------------------------------------------------------
+   Universal High-Contrast Text Color Management
+   -------------------------------------------------------------------------- */
+/* Subdued / Secondary text */
+html.light [class*="text-slate-400"],
+html.light [class*="text-slate-500"],
+html.light [class*="text-slate-600"],
+html.light [class*="text-white/40"],
+html.light [class*="text-white/50"],
+html.light [class*="text-white/60"],
+html.light [class*="text-white/70"] {
+  color: #475569 !important;
+}
+
+/* Primary text */
+html.light [class*="text-white"]:not([class*="aspect-square"] *):not(button[class*="bg-indigo"] *):not(button[class*="bg-emerald"] *):not(button[class*="bg-rose"] *):not(button[class*="bg-red"] *):not(button[class*="bg-amber"] *):not(button.bg-indigo-600):not(button.bg-emerald-600):not(a[class*="bg-indigo-600"] *),
+html.light [class*="text-slate-100"],
+html.light [class*="text-slate-200"],
+html.light [class*="text-slate-300"],
+html.light h1:not(button *),
+html.light h2:not(button *),
+html.light h3:not(button *),
+html.light h4:not(button *),
+html.light p:not(button *),
+html.light span:not([class*="bg-"] *):not(button *) {
+  color: #0f172a !important;
+}
+
+/* Solid Colored Buttons Must Retain Pure White Text */
+html.light button[class*="bg-indigo-600"],
+html.light button[class*="bg-indigo-600"] *,
+html.light button[class*="bg-indigo-500"],
+html.light button[class*="bg-indigo-500"] *,
+html.light button[class*="bg-emerald-600"],
+html.light button[class*="bg-emerald-600"] *,
+html.light button[class*="bg-emerald-500"],
+html.light button[class*="bg-emerald-500"] *,
+html.light button[class*="bg-rose-600"],
+html.light button[class*="bg-rose-600"] *,
+html.light button[class*="bg-red-600"],
+html.light button[class*="bg-red-600"] *,
+html.light button[class*="bg-red-500"],
+html.light button[class*="bg-red-500"] *,
+html.light button[class*="bg-amber-500"],
+html.light button[class*="bg-amber-500"] *,
+html.light button[class*="bg-amber-600"],
+html.light button[class*="bg-amber-600"] *,
+html.light div[class*="from-emerald-"] *,
+html.light [class*="toast"] * {
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   Tables, Modals & Dialogs
+   -------------------------------------------------------------------------- */
+html.light table thead {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+html.light table thead th {
+  color: #334155 !important;
+  font-weight: 800 !important;
+}
+html.light table tbody tr {
+  border-color: #f1f5f9 !important;
+}
+html.light table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+html.light table tbody td {
+  color: #0f172a !important;
 }
 
 @layer components {
@@ -443,84 +563,31 @@ html:not(.light) .text-gray-600 {
     cursor: not-allowed;
   }
 }
-  /* Specific containers that should always show scrollbar if content overflows */
-  .overflow-y-auto, .overflow-x-auto, .overflow-auto {
-    scrollbar-gutter: stable;
-  }
 
-  /* Support for dark mode if implemented via class */
-  .dark *::-webkit-scrollbar-thumb {
-    background-color: #475569;
-  }
-  
-  .dark *::-webkit-scrollbar-thumb:hover {
-    background-color: #64748b;
-  }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 20px;
+  border: 3px solid transparent;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #334155;
-    border-radius: 20px;
-    border: 3px solid transparent;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: #475569;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
 
 @layer base {
-  /* Scanner library overrides */
   #camera-reader-main video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
     border-radius: inherit !important;
-  }
-}
-
-/* 
- * CLEANING OF NON-COMPOSITED ANIMATIONS (GPU OPTIMIZATION)
- *
- * Replaces heavy paint-inducing properties like 'stroke-dashoffset' or 'background-position-x'
- * with modern, composited 'transform' and 'opacity' transitions executed directly on the GPU.
- */
-.ms-gradient-spinner,
-[class*="ms-gradient-spinner"],
-ms-gradient-spinner {
-  animation: spin 1s linear infinite !important;
-}
-
-.ms-gradient-spinner circle,
-ms-gradient-spinner circle,
-[class*="ms-gradient-spinner"] circle {
-  stroke-dashoffset: 0 !important;
-  transform-origin: center;
-  transition: transform 0.3s ease, opacity 0.3s ease !important;
-}
-
-.waiting-for-message,
-[class*="waiting-for-message"],
-waiting-for-message,
-.waiting-message {
-  background-position-x: 0 !important;
-  animation: pulse-composited 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
-}
-
-@keyframes pulse-composited {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.55;
-    transform: scale(0.985);
   }
 }

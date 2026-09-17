@@ -43,8 +43,8 @@ export function ReminderForm({
             onChange={e => setNewReminderData({ ...newReminderData, supplierId: e.target.value })}
           >
             <option value="" className="text-black">SÉLECTIONNEZ LE PARTENAIRE...</option>
-            {suppliers.map(s => (
-              <option key={s.id} value={s.id} className="text-black">{s.name.toUpperCase()}</option>
+            {(suppliers || []).filter(Boolean).map(s => (
+              <option key={s.id} value={s.id} className="text-black">{String(s.name || (s as any).company || 'FOURNISSEUR').toUpperCase()}</option>
             ))}
           </select>
         </div>

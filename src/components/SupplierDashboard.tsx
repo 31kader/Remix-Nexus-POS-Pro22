@@ -18,7 +18,7 @@ import { ProductFormModal } from './ProductFormModal';
 import { SupplierProductsTab } from './suppliers/SupplierProductsTab';
 import { SupplierOrdersTab } from './suppliers/SupplierOrdersTab';
 import { SupplierOrderForm } from './suppliers/SupplierOrderForm';
-import { useSupplierOrder } from '../hooks/supplier/useSupplierOrder';
+import { useSupplierOrder } from '../hooks/suppliers/useSupplierOrder';
 
 export const SupplierDashboard = ({ 
   supplier, 

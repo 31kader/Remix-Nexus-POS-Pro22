@@ -115,7 +115,7 @@ export const StockValueReport = React.memo(function StockValueReport({
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <h4 className="text-sm font-black text-slate-800 uppercase tracking-tighter">Valorisation par Catégorie</h4>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Note: Les stocks négatifs sont traités à 0€</span>
+            <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Note: Les stocks négatifs sont traités à 0 DA</span>
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-200">
               {filteredStockProducts.length} Articles Filtrés
             </span>

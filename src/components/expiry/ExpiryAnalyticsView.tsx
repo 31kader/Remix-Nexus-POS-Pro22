@@ -28,10 +28,10 @@ export function ExpiryAnalyticsView({
               <div key={`loss-${p.id}`} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                 <div className="min-w-0">
                   <p className="text-[10px] font-black text-white uppercase truncate">{p.name}</p>
-                  <p className="text-[9px] text-white/40 uppercase tracking-widest">{p.stock} {p.unit} à {p.price} CFA</p>
+                  <p className="text-[9px] text-white/40 uppercase tracking-widest">{p.stock} {p.unit} à {p.price} DA</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-black text-rose-500">-{(p.stock * p.price).toLocaleString()} CFA</p>
+                  <p className="text-xs font-black text-rose-500">-{(p.stock * p.price).toLocaleString()} DA</p>
                   <p className="text-[8px] text-white/20 uppercase font-black">{p.daysLeft} jours restants</p>
                 </div>
               </div>
@@ -55,7 +55,7 @@ export function ExpiryAnalyticsView({
                 <div key={`cat-loss-${cat.id}`}>
                   <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest mb-2">
                     <span className="text-white/60">{cat.name}</span>
-                    <span className="text-white">{catValue.toLocaleString()} CFA</span>
+                    <span className="text-white">{catValue.toLocaleString()} DA</span>
                   </div>
                   <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                     <motion.div 

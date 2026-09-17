@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { Product } from '../../types';
+import { isNetworkOrTimeoutError, notifyNetworkIssue } from '../../services/networkErrorHandler';
 
 let lastFetchTime = 0;
 let consecutiveFailures = 0;
@@ -8,131 +9,111 @@ let consecutiveFailures = 0;
 export async function fetchProductsFromSupabase(limit?: number, isLightweight: boolean = true, sinceUpdatedAt?: string): Promise<Product[] | null> {
   if (!isSupabaseConfigured) return null;
 
-  // Implement progressive cooldown / backoff to entirely prevent infinite loop request saturation under throttled 3G
-  const now = Date.now();
-  if (consecutiveFailures > 0) {
-    const cooldownMs = Math.min(1000 * Math.pow(2, consecutiveFailures), 45000);
-    if (now - lastFetchTime < cooldownMs) {
-      console.warn(`[Supabase Fetch Products Cooldown] Skipping request to prevent network loop saturation (cooldown active: ${Math.round((cooldownMs - (now - lastFetchTime))/1000)}s left, consecutive failures: ${consecutiveFailures}).`);
-      return null;
-    }
-  } else {
-    // Normal rate limiting
-    if (now - lastFetchTime < 2000) {
-      console.warn('[Supabase Fetch Products RateLimit] Throttled multiple rapid calls within 2s.');
-      return null;
-    }
-  }
-
-  lastFetchTime = now;
-  
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 500;
   const allProducts: any[] = [];
+  let from = 0;
   let hasMore = true;
-  let cursor: { updatedAt: string; id: string } | null = null;
-  
-  // Excluded heavy description/JSON fields to prevent 500s and save bandwidth
-  const baseColumns = 'id, name, barcode, price, online_price, cost_price, tax_rate, stock, min_stock, category_id, brand_id, supplier, unit, sku, status, image_url, is_bundle, wholesale_price, location, reference, show_in_pos, created_at, updated_at, damaged_stock, expiration_date, batch_number, use_multi_expiry, batches, is_quick_select';
-  const selectColumns = isLightweight ? baseColumns : `${baseColumns}, bundle_items, quantity_discounts, tags`;
+
+  // Essential columns that exist across all schema versions
+  const CORE_COLUMNS = ['id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 'stock', 'min_stock', 'category_id', 'brand_id', 'supplier', 'unit', 'status', 'is_bundle', 'show_in_pos', 'damaged_stock', 'expiration_date', 'batch_number', 'location', 'created_at', 'updated_at', 'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'];
+  let activeCols = [...CORE_COLUMNS];
 
   try {
     while (hasMore) {
-      const currentLimit = limit ? Math.min(PAGE_SIZE, limit - allProducts.length) : PAGE_SIZE;
-      if (currentLimit <= 0) {
-        break;
-      }
+      const currentBatchSize = limit ? Math.min(PAGE_SIZE, limit - allProducts.length) : PAGE_SIZE;
+      if (currentBatchSize <= 0) break;
 
-      let query = supabase
-        .from('products')
-        .select(selectColumns)
-        .order('updated_at', { ascending: false })
-        .order('id', { ascending: false })
-        .limit(currentLimit);
+      const to = from + currentBatchSize - 1;
+      let attempts = 0;
+      let batchResult: any = null;
 
-      if (sinceUpdatedAt) {
-        query = query.gt('updated_at', sinceUpdatedAt);
-      }
+      while (attempts < 4) {
+        attempts++;
+        const selectQueryStr = activeCols.length > 0 ? activeCols.join(',') : '*';
 
-      if (cursor) {
-        query = query.or(
-          `updated_at.lt.${cursor.updatedAt},and(updated_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`
-        );
-      }
-
-      let result = await query;
-
-      if (result.error) {
-        console.warn('[Supabase Paginated Product Fetch Page Error] Retrying with select(*)...', result.error);
-        let fallbackQuery = supabase
+        let query = supabase
           .from('products')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(currentLimit);
+          .select(selectQueryStr)
+          .order('id', { ascending: true })
+          .range(from, to);
 
         if (sinceUpdatedAt) {
-          fallbackQuery = fallbackQuery.gt('updated_at', sinceUpdatedAt);
+          query = query.gt('updated_at', sinceUpdatedAt);
         }
 
-        if (cursor) {
-          fallbackQuery = fallbackQuery.or(
-            `updated_at.lt.${cursor.updatedAt},and(updated_at.eq.${cursor.updatedAt},id.lt.${cursor.id})`
-          );
-        }
+        batchResult = await query;
 
-        result = await fallbackQuery;
-      }
+        if (!batchResult.error) break;
 
-      if (result.error) {
-        console.warn('[Supabase Paginated Product Fetch Fallback Failed]', result.error);
-        throw result.error;
-      }
-
-      const data = result.data;
-
-      if (!data || data.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      allProducts.push(...data);
-
-      if (limit && allProducts.length >= limit) {
-        hasMore = false;
-        break;
-      }
-
-      if (data.length < PAGE_SIZE) {
-        hasMore = false;
-      } else {
-        const lastItem = data[data.length - 1];
-        if (lastItem) {
-          cursor = {
-            updatedAt: lastItem.updated_at,
-            id: lastItem.id
-          };
-        } else {
+        // Si c'est une erreur réseau ou de timeout, ne pas réessayer inutilement
+        if (isNetworkOrTimeoutError(batchResult.error)) {
+          notifyNetworkIssue(batchResult.error, 'Produits');
           hasMore = false;
+          break;
         }
+
+        const errMsg = batchResult.error.message || '';
+        const isColumnError = batchResult.error.code === '42703' || 
+                              batchResult.error.code === 'PGRST204' || 
+                              errMsg.includes('column') || 
+                              errMsg.includes('schema cache');
+
+        if (isColumnError && activeCols.length > 0) {
+          const columnsToPrune = activeCols.filter(col => {
+            const escaped = col.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`(?:\\b|\\.|\'|\")${escaped}(?:\\b|\'|\")`, 'i');
+            return regex.test(errMsg);
+          });
+
+          if (columnsToPrune.length > 0) {
+            console.warn('[Supabase Products Auto-Prune] Pruning missing columns:', columnsToPrune);
+            activeCols = activeCols.filter(c => !columnsToPrune.includes(c));
+            continue;
+          }
+        }
+
+        // Fallback to safe basic select if column pruning didn't work
+        if (activeCols.length > 10) {
+          console.warn('[Supabase Products Fallback] Falling back to core columns select');
+          activeCols = ['id', 'name', 'barcode', 'sku', 'price', 'cost_price', 'stock', 'category_id', 'unit', 'status', 'image_url'];
+          continue;
+        }
+
+        break;
+      }
+
+      if (batchResult && !batchResult.error && batchResult.data) {
+        const data = batchResult.data;
+        if (data.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        allProducts.push(...data);
+        if (data.length < currentBatchSize || (limit && allProducts.length >= limit)) {
+          hasMore = false;
+        } else {
+          from += currentBatchSize;
+        }
+      } else {
+        console.warn('[Supabase Products Fetch Batch Failed]', batchResult?.error);
+        hasMore = false;
+        break;
       }
     }
 
-    consecutiveFailures = 0; // successfully loaded all products
-
-    return allProducts.map((item: any) => {
-      const jsonFields = ['image_urls', 'bundle_items', 'quantity_discounts', 'batches', 'tags'];
-      jsonFields.forEach(field => {
-        if (item[field] && typeof item[field] === 'string') {
-          try { item[field] = JSON.parse(item[field]); } catch (e) {}
-        }
-      });
-      return convertKeysToCamel(item) as Product;
-    });
-  } catch (e) {
-    consecutiveFailures++;
-    console.warn('[Supabase Direct Product Fetch Failed (Paginated)]', e);
+    consecutiveFailures = 0;
+    const finalCamelProducts = allProducts
+      .map(p => convertKeysToCamel(p) as Product)
+      .filter(p => p && p.id);
+    return finalCamelProducts;
+  } catch (err: any) {
+    if (isNetworkOrTimeoutError(err)) {
+      notifyNetworkIssue(err, 'Produits');
+    }
+    console.error('[Supabase Fetch Products Exception]', err);
+    return null;
   }
-  return null;
 }
 
 export async function fetchTableFromSupabase<T>(
@@ -150,7 +131,9 @@ export async function fetchTableFromSupabase<T>(
       'purchaseOrders': 'purchase_orders',
       'stockAdjustments': 'stock_adjustments',
       'supplierPayments': 'supplier_payments',
+      'supplier_payments': 'supplier_payments',
       'damagedItems': 'damaged_items',
+      'damaged_items': 'damaged_items',
       'auditLogs': 'audit_logs',
       'transactions': 'transactions',
       'customers': 'customers',
@@ -165,104 +148,151 @@ export async function fetchTableFromSupabase<T>(
       'employees': 'employees',
       'attendance': 'attendance',
       'invoice_patterns': 'invoice_patterns',
-      'goodsReceiptNotes': 'goods_receipt_notes'
+      'goodsReceiptNotes': 'goods_receipt_notes',
+      'goods_receipt_notes': 'goods_receipt_notes'
     };
     
     const mappedTable = collectionName === 'shifts' ? 'cash_shifts' : 
                         collectionName === 'onlineOrders' ? 'online_orders' :
                         collectionName === 'purchaseOrders' ? 'purchase_orders' :
                         collectionName === 'stockAdjustments' ? 'stock_adjustments' :
-                        collectionName === 'supplierPayments' ? 'supplier_payments' :
-                        collectionName === 'damagedItems' ? 'damaged_items' :
-                        collectionName === 'goodsReceiptNotes' ? 'goods_receipt_notes' :
-                        collectionName === 'auditLogs' ? 'audit_logs' : collectionName;
+                        collectionName === 'supplierPayments' || collectionName === 'supplier_payments' ? 'supplier_payments' :
+                        collectionName === 'damagedItems' || collectionName === 'damaged_items' ? 'damaged_items' :
+                        collectionName === 'goodsReceiptNotes' || collectionName === 'goods_receipt_notes' ? 'goods_receipt_notes' :
+                        collectionName === 'auditLogs' || collectionName === 'audit_logs' ? 'audit_logs' : collectionName;
                         
     const key = TABLE_TO_KEY[collectionName] || collectionName;
     
     let activeCols = TABLE_COLUMNS[key] ? [...TABLE_COLUMNS[key]] : [];
-    let attempts = 0;
-    let result = null;
 
-    while (attempts < 5) {
-      attempts++;
-      let cols = activeCols.length > 0 ? activeCols.join(',') : '*';
+    // 🚀 PAGINATION UNIVERSELLE PAR TRANCHES DE 500 (Zéro plafond arbitraire pour les clients et gros volumes)
+    const PAGE_SIZE = 500;
+    const allRecords: any[] = [];
+    let from = 0;
+    let hasMore = true;
 
-      // Use dynamic sort column based on what columns actually exist in activeCols list
-      let sortCol: string | null = null;
-      if (timestampColumn && (activeCols.includes(timestampColumn) || activeCols.length === 0)) {
-        sortCol = timestampColumn;
-      } else if (activeCols.length === 0) {
-        sortCol = 'updated_at';
-      } else {
-        const candidates = ['updated_at', 'created_at', 'timestamp', 'date', 'id'];
-        for (const candidate of candidates) {
-          if (activeCols.includes(candidate)) {
-            sortCol = candidate;
-            break;
+    // Si limit est spécifié (ex: transactions 500, expenses 50), on le respecte
+    // Pour customers et suppliers sans limit : téléchargement intégral sans limite arbitraire !
+    const smallStaticTables = ['categories', 'brands', 'settings', 'promotions', 'users', 'employees', 'vouchers', 'invoice_patterns'];
+    const maxTarget = limit !== undefined 
+      ? limit 
+      : (smallStaticTables.includes(collectionName) ? 500 : (collectionName === 'customers' || collectionName === 'suppliers' ? Infinity : 100));
+
+    while (hasMore) {
+      const currentBatchSize = maxTarget !== Infinity ? Math.min(PAGE_SIZE, maxTarget - allRecords.length) : PAGE_SIZE;
+      if (currentBatchSize <= 0) break;
+
+      const to = from + currentBatchSize - 1;
+      let attempts = 0;
+      let batchResult: any = null;
+
+      while (attempts < 5) {
+        attempts++;
+        let cols = activeCols.length > 0 ? activeCols.join(',') : '*';
+
+        // Use dynamic sort column based on what columns actually exist in activeCols list
+        let sortCol: string | null = null;
+        if (timestampColumn && activeCols.includes(timestampColumn)) {
+          sortCol = timestampColumn;
+        } else if (activeCols.length === 0) {
+          sortCol = 'id';
+        } else {
+          const candidates = ['updated_at', 'created_at', 'timestamp', 'date', 'id'];
+          for (const candidate of candidates) {
+            if (activeCols.includes(candidate)) {
+              sortCol = candidate;
+              break;
+            }
           }
         }
-      }
 
-      let query = supabase
-        .from(mappedTable)
-        .select(cols);
+        let query = supabase
+          .from(mappedTable)
+          .select(cols);
 
-      if (sortCol) {
-        query = query.order(sortCol, { ascending: false });
-      }
-
-      if (startDate) {
-        query = query.gte('created_at', startDate);
-      }
-      
-      // Only add incremental filter if deltaSyncTime AND timestampColumn exist and are in activeCols
-      if (deltaSyncTime && timestampColumn && (activeCols.includes(timestampColumn) || activeCols.length === 0)) {
-        query = query.gt(timestampColumn, deltaSyncTime);
-      }
-      
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      result = await query;
-
-      if (!result.error) {
-        break; // Success! No error occurred!
-      }
-
-      // If an error occurred, check if we can prune missing columns dynamically
-      const errMsg = result.error.message || '';
-      const isColumnError = result.error.code === '42703' || 
-                            result.error.code === 'PGRST204' || 
-                            errMsg.includes('column') || 
-                            errMsg.includes('schema cache');
-
-      if (isColumnError && activeCols.length > 0) {
-        const columnsToPrune = activeCols.filter(col => {
-          const escaped = col.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-          const regex = new RegExp(`(?:\\b|\\.|\'|\")${escaped}(?:\\b|\'|\")`, 'i');
-          return regex.test(errMsg);
-        });
-
-        if (columnsToPrune.length > 0) {
-          console.warn(`[Supabase Fetch Auto-Prune] Pruning columns from ${collectionName} due to schema mismatch:`, columnsToPrune, errMsg);
-          activeCols = activeCols.filter(c => !columnsToPrune.includes(c));
-          continue; // Try again with fewer columns!
+        if (sortCol) {
+          query = query.order(sortCol, { ascending: false });
         }
+
+        if (startDate) {
+          query = query.gte('created_at', startDate);
+        }
+        
+        // Only add incremental filter if deltaSyncTime AND timestampColumn exist and are in activeCols
+        if (deltaSyncTime && timestampColumn && (activeCols.includes(timestampColumn) || activeCols.length === 0)) {
+          query = query.gt(timestampColumn, deltaSyncTime);
+        }
+        
+        query = query.range(from, to);
+
+        batchResult = await query;
+
+        if (!batchResult.error) {
+          break; // Success! No error occurred!
+        }
+
+        // Si c'est une erreur réseau ou de timeout, ne pas boucler inutilement
+        if (isNetworkOrTimeoutError(batchResult.error)) {
+          notifyNetworkIssue(batchResult.error, collectionName);
+          hasMore = false;
+          break;
+        }
+
+        // If an error occurred, check if we can prune missing columns dynamically
+        const errMsg = batchResult.error.message || '';
+        const isColumnError = batchResult.error.code === '42703' || 
+                              batchResult.error.code === 'PGRST204' || 
+                              errMsg.includes('column') || 
+                              errMsg.includes('schema cache');
+
+        if (isColumnError && activeCols.length > 0) {
+          const columnsToPrune = activeCols.filter(col => {
+            const escaped = col.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`(?:\\b|\\.|\'|\")${escaped}(?:\\b|\'|\")`, 'i');
+            return regex.test(errMsg);
+          });
+
+          if (columnsToPrune.length > 0) {
+            console.warn(`[Supabase Fetch Auto-Prune] Pruning columns from ${collectionName} due to schema mismatch:`, columnsToPrune, errMsg);
+            activeCols = activeCols.filter(c => !columnsToPrune.includes(c));
+            continue; // Try again with fewer columns!
+          }
+        }
+
+        // If we couldn't prune any more, or it is a different kind of error, try fallback to '*'
+        if (activeCols.length > 0) {
+          console.warn(`[Supabase Fetch Fallback] Query failed for ${collectionName}. Falling back to select('*')`, batchResult.error);
+          activeCols = [];
+          continue;
+        }
+
+        break; // Stop retrying if we fail even with select('*')
       }
 
-      // If we couldn't prune any more, or it is a different kind of error, try fallback to '*'
-      if (activeCols.length > 0) {
-        console.warn(`[Supabase Fetch Fallback] Query failed for ${collectionName}. Falling back to select('*')`, result.error);
-        activeCols = [];
-        continue;
-      }
+      if (batchResult && !batchResult.error && batchResult.data) {
+        const data = batchResult.data;
+        if (data.length === 0) {
+          hasMore = false;
+          break;
+        }
 
-      break; // Stop retrying if we fail even with select('*')
+        allRecords.push(...data);
+        if (data.length < currentBatchSize || (maxTarget !== Infinity && allRecords.length >= maxTarget)) {
+          hasMore = false;
+        } else {
+          from += currentBatchSize;
+        }
+      } else {
+        if (batchResult?.error) {
+          console.warn(`[Supabase Batch Fetch Error on ${collectionName}]`, batchResult.error);
+        }
+        hasMore = false;
+        break;
+      }
     }
       
-    if (!result.error && result.data) {
-      return result.data.map((item: any) => {
+    if (allRecords.length > 0) {
+      return allRecords.map((item: any) => {
         const jsonFields = ['items', 'status_history', 'metadata', 'details', 'documents', 'bundle_items', 'quantity_discounts', 'usage_logs', 'batches', 'alerts', 'favorite_items', 'conditions', 'discrepancies', 'notifications', 'role_kpis', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
         jsonFields.forEach(field => {
           if (item[field] && typeof item[field] === 'string') {
@@ -271,10 +301,13 @@ export async function fetchTableFromSupabase<T>(
         });
         return convertKeysToCamel(item) as T;
       });
-    } else if (result.error) {
-      throw result.error;
     }
+
+    return [];
   } catch (e) {
+    if (isNetworkOrTimeoutError(e)) {
+      notifyNetworkIssue(e, collectionName);
+    }
     console.warn(`[Supabase Direct Fetch Failed for ${collectionName}]`, e);
   }
   return null;

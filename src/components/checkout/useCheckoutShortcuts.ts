@@ -6,8 +6,9 @@ interface UseCheckoutShortcutsProps {
   searchRef: RefObject<HTMLInputElement | null>;
   setSelectedItemId: (id: string | null) => void;
   quantityInputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
-  handleCheckout: (method: 'cash', isFreeHand?: boolean) => void;
+  handleCheckout: (method: 'cash', shouldPrint?: boolean) => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  addNewSession?: () => void;
 }
 
 export function useCheckoutShortcuts({
@@ -17,17 +18,48 @@ export function useCheckoutShortcuts({
   quantityInputRefs,
   handleCheckout,
   setCart,
+  addNewSession
 }: UseCheckoutShortcutsProps) {
   
-  // 🛡️ SÉCURISATION : On garantit qu'on manipule toujours un tableau valide
   const safeCart = Array.isArray(cart) ? cart : [];
 
-  // Focus and general keyboard shortcuts (F2, F11, F10, F3)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2' || e.key === 'F11') {
+      const isAltP = (e.altKey || (e.getModifierState && e.getModifierState('AltGraph'))) && e.key.toLowerCase() === 'p';
+
+      // F1: Valider la vente SANS imprimer le ticket
+      if (e.key === 'F1') {
         e.preventDefault();
-        // Utilisation du tableau sécurisé pour éviter le crash .length
+        handleCheckout('cash', false);
+      }
+      // F2: Vider le panier actuel (avec confirmation)
+      else if (e.key === 'F2') {
+        e.preventDefault();
+        if (safeCart.length > 0) {
+          if (window.confirm("Voulez-vous vraiment vider le panier ?")) {
+            setCart([]);
+          }
+        }
+      }
+      // F3: Activer et sélectionner la barre de recherche
+      else if (e.key === 'F3') {
+        e.preventDefault();
+        searchRef.current?.focus();
+        searchRef.current?.select();
+      }
+      // F4: Ouvrir un nouveau panier/session
+      else if (e.key === 'F4') {
+        e.preventDefault();
+        if (addNewSession) addNewSession();
+      }
+      // F5 ou AltGr+P ou Ctrl+Enter: Valider ET Imprimer le ticket
+      else if (e.key === 'F5' || isAltP || (e.ctrlKey && e.key === 'Enter')) {
+        e.preventDefault();
+        handleCheckout('cash', true);
+      }
+      // F11: Focus sur la quantité du dernier article
+      else if (e.key === 'F11') {
+        e.preventDefault();
         if (safeCart.length > 0) {
           const lastItem = safeCart[safeCart.length - 1];
           if (lastItem) {
@@ -41,32 +73,10 @@ export function useCheckoutShortcuts({
             }, 10);
           }
         }
-      } else if (e.key === 'F10' || e.key === 'F3') {
-        e.preventDefault();
-        searchRef.current?.focus();
-        searchRef.current?.select();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [safeCart, setSelectedItemId, quantityInputRefs, searchRef]); // Dépendance mise à jour avec safeCart
 
-  // Checkout and special actions keyboard shortcuts (F1, F5, Ctrl+Enter, Ctrl+V)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F1' || e.key === 'F5') { 
-        e.preventDefault(); 
-        handleCheckout('cash', false); 
-      }
-      else if (e.key === 'F3' || e.key === 'F10') { 
-        e.preventDefault(); 
-        searchRef.current?.focus(); 
-        searchRef.current?.select();
-      }
-      else if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleCheckout('cash'); }
-      else if (e.ctrlKey && e.key === 'v') { e.preventDefault(); setCart([]); }
-    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCheckout, setCart, searchRef]);
+  }, [safeCart, setSelectedItemId, quantityInputRefs, searchRef, handleCheckout, setCart, addNewSession]);
 }

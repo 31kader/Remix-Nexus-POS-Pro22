@@ -4,6 +4,7 @@ import { convertKeysToSnake, convertKeysToCamel } from '../lib/db-converters';
 import { localDb } from '../services/LocalDatabase';
 import { cn, generateUniqueId } from '../lib/utils';
 import { X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { VoucherCreationForm } from './vouchers/VoucherCreationForm';
 import { VoucherListTable } from './vouchers/VoucherListTable';
@@ -66,15 +67,19 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
   }, []);
 
   const handleGenerate = async () => {
-    if (!value || parseFloat(value) <= 0) return alert("Valeur invalide");
+    if (!value || parseFloat(value) <= 0) {
+      toast.error("Valeur invalide. Veuillez saisir un montant ou pourcentage supérieur à 0.");
+      return;
+    }
     setIsGenerating(true);
     try {
       const code = 'VOUCH-' + generateUniqueId();
       const numValue = parseFloat(value);
       const customer = customers.find(c => c.id === selectedCustomer);
+      const newVoucherId = generateUniqueId();
       
       const voucherData: any = {
-        id: Math.random().toString(36).substring(2, 10),
+        id: newVoucherId,
         code,
         type,
         value: numValue,
@@ -89,12 +94,12 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
 
       if (selectedCustomer) {
         voucherData.customerId = selectedCustomer;
-        number_parse_safety: 
         voucherData.customerName = customer?.name || 'Inconnu';
       }
 
       await localDb.insert(`vouchers/${voucherData.id}`, voucherData);
       setNewVoucher(voucherData);
+      toast.success("Bon généré avec succès !");
       
       // Reset form
       setValue('');
@@ -102,8 +107,9 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
       setExpiryDate('');
       setSelectedCustomer('');
       setNotes('');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating voucher:", error);
+      toast.error("Erreur lors de la génération du bon: " + (error?.message || "Erreur"));
     } finally {
       setIsGenerating(false);
     }
@@ -115,8 +121,10 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
     
     try {
       await localDb.update(`vouchers/${voucher.id}`, { status: newStatus });
-    } catch (error) {
+      toast.success(`Bon ${newStatus === 'revoked' ? 'désactivé' : 'réactivé'} avec succès.`);
+    } catch (error: any) {
       console.error("Error updating voucher status:", error);
+      toast.error("Erreur lors de la mise à jour du statut: " + (error?.message || "Erreur"));
     }
   };
 
@@ -174,7 +182,7 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
               <div>
                 <p className="text-[8px] font-bold text-slate-400 uppercase">Valeur</p>
                 <p className="text-sm font-bold text-amber-500">
-                  {newVoucher.type === 'percent' ? `${newVoucher.value}%` : `${newVoucher.value} FCFA`}
+                  {newVoucher.type === 'percent' ? `${newVoucher.value}%` : `${newVoucher.value} DA`}
                 </p>
               </div>
               <div>

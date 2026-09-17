@@ -5,11 +5,15 @@ import {
   Package, CalendarClock, FolderTree, Truck, TrendingDown, 
   LayoutDashboard, Brain, FileText, Wallet, UserCog, ShieldCheck, 
   Camera, Settings as SettingsIcon, Database, HelpCircle, Download, 
-  Menu, X, LogOut, ChevronDown, ChevronUp 
+  Menu, X, LogOut, ChevronDown, ChevronUp, Activity,
+  FileCheck, ClipboardCheck, UserCheck, Image as ImageIcon, Printer,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTranslation } from '../translations';
 import { RolePermissions, CompanySettings } from '../types';
+
+import { useTransactionStore } from '../store/useTransactionStore';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -18,15 +22,29 @@ interface NavItemProps {
   onClick: () => void;
   collapsed: boolean;
   href?: string;
+  badge?: number | string;
+  badgePulse?: boolean;
 }
 
-function NavItem({ icon, label, active, onClick, collapsed, href }: NavItemProps) {
+function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePulse }: NavItemProps) {
   return (
     <a
       href={href || "#"}
+      tabIndex={-1}
       onClick={(e) => {
+        // Laisser le comportement natif du navigateur si Ctrl, Cmd ou clic du milieu
+        if (e.ctrlKey || e.metaKey || (e as any).button === 1) {
+          return;
+        }
         e.preventDefault();
-        onClick();
+        if (typeof onClick === 'function') {
+          onClick();
+        }
+      }}
+      onAuxClick={(e) => {
+        if (e.button === 1 && href && href !== '#') {
+          window.open(href, '_blank');
+        }
       }}
       className={cn(
         "flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group relative cursor-pointer border",
@@ -42,16 +60,45 @@ function NavItem({ icon, label, active, onClick, collapsed, href }: NavItemProps
         {React.cloneElement(icon as React.ReactElement<any>, { size: 18 })}
       </div>
       {!collapsed && (
-        <span className="font-semibold text-xs tracking-wide transition-all group-hover:translate-x-1 duration-300">
+        <span className="font-semibold text-xs tracking-wide transition-all group-hover:translate-x-1 duration-300 truncate">
           {label}
         </span>
       )}
-      {active && !collapsed && (
+      
+      {/* Bouton d'action directe pour ouvrir dans une nouvelle fenêtre (2ème écran) */}
+      {!collapsed && href && href !== '#' && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(href, '_blank', 'width=1400,height=900');
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-indigo-500/20 text-slate-500 hover:text-indigo-300 rounded-md transition-all ml-auto"
+          title="Ouvrir dans une nouvelle page / fenêtre (2ème écran)"
+        >
+          <ExternalLink size={12} />
+        </button>
+      )}
+
+      {badge !== undefined && Number(badge) > 0 && (
+        <span className={cn(
+          "px-1.5 py-0.5 text-[9px] font-black rounded-full transition-all",
+          collapsed ? "absolute top-1 right-1 px-1 py-0 text-[8px]" : (href && href !== '#' ? "ml-1" : "ml-auto"),
+          badgePulse 
+            ? "bg-amber-500 text-slate-950 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.6)]" 
+            : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+        )}>
+          {badge}
+        </span>
+      )}
+      {active && !collapsed && badge === undefined && (!href || href === '#') && (
         <span className="absolute right-3 w-1.5 h-1.5 bg-indigo-400 rounded-full shadow-[0_0_8px_#6366f1]" />
       )}
       {collapsed && (
-        <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-50 shadow-2xl border border-white/10">
-          {label}
+        <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-50 shadow-2xl border border-white/10 flex items-center gap-1.5">
+          <span>{label}</span>
+          {href && href !== '#' && <ExternalLink size={10} className="text-indigo-400" />}
         </div>
       )}
     </a>
@@ -102,6 +149,11 @@ export const Sidebar = ({
   const { t } = useTranslation();
   const canAccess = (perm: keyof RolePermissions) => permissions[perm];
 
+  // Calcul dynamique ciblé des commandes en attente (évite les re-renders inutiles de toute la Sidebar)
+  const pendingOrdersCount = useTransactionStore(s => 
+    Array.isArray(s.onlineOrders) ? s.onlineOrders.filter(o => o && o.status === 'pending').length : 0
+  );
+
   // Accordion open/close state to keep sidebar lightweight
   const [isVentesOpen, setIsVentesOpen] = useState(true);
   const [isGestionOpen, setIsGestionOpen] = useState(true);
@@ -111,6 +163,7 @@ export const Sidebar = ({
     if (!isSidebarOpen && !isMobile) return null;
     return (
       <button 
+        tabIndex={-1}
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] hover:text-white/60 transition-colors mb-2 cursor-pointer group"
       >
@@ -131,8 +184,8 @@ export const Sidebar = ({
         x: isMobile && !isMobileOverlayOpen ? -300 : 0
       }}
       className={cn(
-        "border-r flex flex-col h-full z-40 bg-[#08080c]/90 backdrop-blur-2xl border-white/5 shadow-2xl relative",
-        isMobile ? "fixed inset-y-0 left-0" : "relative"
+        "border-r flex flex-col h-full bg-[#08080c] border-slate-800 shadow-2xl relative",
+        isMobile ? "fixed inset-y-0 left-0 z-[70]" : "relative z-40"
       )}
     >
       {/* Background radial gradient overlay */}
@@ -157,7 +210,7 @@ export const Sidebar = ({
             <span className="font-black text-lg truncate text-white tracking-tighter uppercase italic flex items-center gap-1.5">
               NEXUS 
               <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md not-italic tracking-normal normal-case">
-                v1.2
+                v1.2.8
               </span>
             </span>
             <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-0.5">Systems Guard</span>
@@ -179,7 +232,18 @@ export const Sidebar = ({
                 className="space-y-1 overflow-hidden"
               >
                 <NavItem href="#checkout" icon={<ShoppingCart size={20} />} label={t("Caisse")} active={activeTab === 'checkout'} onClick={() => { setActiveTab('checkout'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
-                {canAccess('canAccessOnlineOrders') && <NavItem href="#orders" icon={<ShoppingBag size={20} />} label={t("Commandes")} active={activeTab === 'orders'} onClick={() => { setActiveTab('orders'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessOnlineOrders') && (
+                  <NavItem 
+                    href="#orders" 
+                    icon={<ShoppingBag size={20} />} 
+                    label={t("Commandes")} 
+                    active={activeTab === 'orders'} 
+                    onClick={() => { setActiveTab('orders'); setIsMobileOverlayOpen(false); }} 
+                    collapsed={!isSidebarOpen && !isMobile}
+                    badge={pendingOrdersCount > 0 ? pendingOrdersCount : undefined}
+                    badgePulse={pendingOrdersCount > 0}
+                  />
+                )}
                 {canAccess('canAccessCustomers') && <NavItem href="#customers" icon={<Users size={20} />} label={t("Clients")} active={activeTab === 'customers'} onClick={() => { setActiveTab('customers'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessSales') && <NavItem href="#transactions" icon={<History size={20} />} label={t("Transactions")} active={activeTab === 'transactions'} onClick={() => { setActiveTab('transactions'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessReturns') && <NavItem href="#returns" icon={<RotateCcw size={20} />} label={t("Retours")} active={activeTab === 'returns'} onClick={() => { setActiveTab('returns'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
@@ -202,6 +266,8 @@ export const Sidebar = ({
                 className="space-y-1 overflow-hidden"
               >
                 {canAccess('canAccessInventory') && <NavItem href="#inventory" icon={<Package size={20} />} label={t("Inventaire")} active={activeTab === 'inventory'} onClick={() => { setActiveTab('inventory'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessInventory') && <NavItem href="#grns" icon={<FileCheck size={20} />} label={t("Bons de Réception (BR)")} active={activeTab === 'grns' || activeTab === 'grn'} onClick={() => { setActiveTab('grns'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessInventory') && <NavItem href="#audit" icon={<ClipboardCheck size={20} />} label={t("Inventaire Physique")} active={activeTab === 'audit' || activeTab === 'inventory_audit'} onClick={() => { setActiveTab('audit'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessInventory') && <NavItem href="#expiry" icon={<CalendarClock size={20} />} label={t("Suivi Péremption")} active={activeTab === 'expiry'} onClick={() => { setActiveTab('expiry'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessInventory') && <NavItem href="#inventory_settings" icon={<FolderTree size={20} />} label={t("Classifications")} active={activeTab === 'inventory_settings'} onClick={() => { setActiveTab('inventory_settings'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessVouchers') && <NavItem href="#vouchers" icon={<Tag size={20} />} label={t("Cartes Cadeaux & Bons")} active={activeTab === 'vouchers'} onClick={() => { setActiveTab('vouchers'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
@@ -229,9 +295,13 @@ export const Sidebar = ({
                 {canAccess('canAccessAnalytics') && <NavItem href="#reports" icon={<FileText size={20} />} label={t("Rapports")} active={activeTab === 'reports'} onClick={() => { setActiveTab('reports'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessShifts') && <NavItem href="#shifts" icon={<Wallet size={20} />} label={t("Clôture")} active={activeTab === 'shifts'} onClick={() => { setActiveTab('shifts'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessEmployees') && <NavItem href="#employees" icon={<UserCog size={20} />} label={t("Personnel & Accès")} active={activeTab === 'employees'} onClick={() => { setActiveTab('employees'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessEmployees') && <NavItem href="#team" icon={<UserCheck size={20} />} label={t("Planning & Équipe")} active={activeTab === 'team'} onClick={() => { setActiveTab('team'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessInventory') && <NavItem href="#marketing" icon={<ImageIcon size={20} />} label={t("Affiches & Posters")} active={activeTab === 'marketing' || activeTab === 'posters'} onClick={() => { setActiveTab('marketing'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                {canAccess('canAccessInventory') && <NavItem href="#catalog_printer" icon={<Printer size={20} />} label={t("Impression Catalogue")} active={activeTab === 'catalog_printer' || activeTab === 'labels'} onClick={() => { setActiveTab('catalog_printer'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessAuditLogs') && <NavItem href="#audit_logs" icon={<ShieldCheck size={20} />} label={t("Audit")} active={activeTab === 'audit_logs'} onClick={() => { setActiveTab('audit_logs'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {(isCameraAgent || isAdmin || isManager) && settings.enableCameraPortal !== false && <NavItem href="#camera" icon={<Camera size={20} />} label={t("Audit Caméra")} active={activeTab === 'camera'} onClick={() => { setActiveTab('camera'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessSettings') && <NavItem href="#settings" icon={<SettingsIcon size={20} />} label={t("Paramètres")} active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
+                <NavItem href="#sync_studio" icon={<Activity size={20} />} label="Studio de Synchro" active={activeTab === 'sync_studio' || activeTab === 'sync'} onClick={() => { setActiveTab('sync_studio'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
                 {canAccess('canAccessSettings') && <NavItem href="#archives" icon={<Database size={20} />} label={t("Clôture de Mois")} active={activeTab === 'archives'} onClick={() => { setActiveTab('archives'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 <NavItem href="#help" icon={<HelpCircle size={20} />} label={t("Aide")} active={activeTab === 'help'} onClick={() => { setActiveTab('help'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
               </motion.div>
@@ -254,6 +324,7 @@ export const Sidebar = ({
         
         {!isMobile && (
           <button 
+            tabIndex={-1}
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="w-full p-2.5 rounded-xl flex items-center justify-center transition-colors hover:bg-white/5 text-slate-500 hover:text-white cursor-pointer border border-transparent hover:border-white/5"
           >

@@ -41,6 +41,8 @@ export const pwaConfig: Partial<VitePWAOptions> = {
     cleanupOutdatedCaches: true,
     globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
     maximumFileSizeToCacheInBytes: 5000000,
+    navigateFallback: 'index.html',
+    navigateFallbackDenylist: [/^\/api/, /^\/socket\.io/],
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -50,6 +52,20 @@ export const pwaConfig: Partial<VitePWAOptions> = {
           expiration: {
             maxEntries: 10,
             maxAgeSeconds: 60 * 60 * 24 * 365 // 365 jours
+          },
+          cacheableResponse: {
+            statuses: [0, 200]
+          }
+        }
+      },
+      {
+        urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'supabase-product-images',
+          expiration: {
+            maxEntries: 150,
+            maxAgeSeconds: 60 * 60 * 24 * 30 // 30 jours
           },
           cacheableResponse: {
             statuses: [0, 200]

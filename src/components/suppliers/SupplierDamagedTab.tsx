@@ -24,25 +24,33 @@ export function SupplierDamagedTab({
   setIsDamageModalOpen,
   handleUpdateClaimStatus
 }: SupplierDamagedTabProps) {
-  const supplierDamaged = damagedItems.filter(
-    d => products.find(p => p.id === d.productId)?.supplier === viewingDetailsSupplier.name
-  );
+  const supName = (viewingDetailsSupplier.name || '').toLowerCase().trim();
+  const supId = viewingDetailsSupplier.id;
+
+  const supplierDamaged = (damagedItems || []).filter(d => {
+    if (!d) return false;
+    if ((d as any).supplierId === supId || (d as any).supplier_id === supId) return true;
+    const p = products.find(prod => prod.id === d.productId);
+    if (!p) return false;
+    const pSup = (p.supplier || '').toLowerCase().trim();
+    return p.supplier === supId || (supName && pSup === supName);
+  });
   
   const totalLoss = supplierDamaged.reduce((acc, d) => {
-    const cost = d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0;
-    return acc + (d.quantity * cost);
+    const cost = Number(d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0);
+    return acc + ((Number(d.quantity) || 0) * cost);
   }, 0);
 
   const totalRecovered = supplierDamaged.reduce((acc, d) => {
     if (d.claimStatus !== 'refunded' && d.claimStatus !== 'replaced') return acc;
-    const cost = d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0;
-    return acc + (d.quantity * cost);
+    const cost = Number(d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0);
+    return acc + ((Number(d.quantity) || 0) * cost);
   }, 0);
 
   const totalPendingClaim = supplierDamaged.reduce((acc, d) => {
     if (d.claimStatus !== 'to_claim' && d.claimStatus !== 'claimed' && d.claimStatus !== undefined) return acc;
-    const cost = d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0;
-    return acc + (d.quantity * cost);
+    const cost = Number(d.costPrice || products.find(p => p.id === d.productId)?.costPrice || 0);
+    return acc + ((Number(d.quantity) || 0) * cost);
   }, 0);
 
   return (
@@ -90,10 +98,13 @@ export function SupplierDamagedTab({
             >
               <option value="">➕ Article Défectueux...</option>
               {products
-                .filter(p => p.supplier === viewingDetailsSupplier.name)
+                .filter(p => {
+                  const pSup = (p.supplier || '').toLowerCase().trim();
+                  return p.supplier === supId || (supName && pSup === supName);
+                })
                 .map(p => (
                   <option key={p.id} value={p.id}>
-                    {p.name.toUpperCase()} (STOCK: {p.stock})
+                    {String(p.name || 'PRODUIT').toUpperCase()} (STOCK: {p.stock ?? 0})
                   </option>
                 ))}
             </select>

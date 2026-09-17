@@ -15,6 +15,12 @@ export interface Customer {
   password_hash?: string;
   updatedAt?: string;
   joinDate?: string;
+  address?: string;
+  city?: string;
+  creditLimit?: number;
+  isWholesale?: boolean;
+  birthday?: string;
+  purchaseCount?: number;
   favoriteItems?: string[];
   alerts?: string[];
   cashierNotes?: { note: string; timestamp: string; author: string }[];

@@ -1,10 +1,13 @@
 import React from 'react';
+import { PinLockModal } from './PinLockModal';
 import { 
   Menu, Languages, ChevronDown, Palette, AlertTriangle, 
-  Calendar, LogOut, LogIn 
+  Calendar, LogOut, LogIn, Monitor, Lock, Sun, Moon, Banknote 
 } from 'lucide-react';
 import { cn, formatSafe } from '../lib/utils';
 import { fr } from 'date-fns/locale';
+import { getTerminalId, getTerminalName } from '../services/terminalService';
+import { testCashDrawer } from '../services/hardwareService';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -59,26 +62,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   t,
   toast
 }) => {
+  const [isPinLockOpen, setIsPinLockOpen] = React.useState(false);
   return (
-    <header className="h-20 border-b px-6 sm:px-10 flex items-center justify-between flex-shrink-0 bg-workspace/60 backdrop-blur-2xl border-white/5 sticky top-0 z-30">
+    <header className="h-20 border-b px-6 sm:px-10 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-[#0a0c12]/95 border-slate-200 dark:border-slate-800 sticky top-0 z-[60] shadow-sm">
       <div className="flex items-center gap-6">
         {isMobile && (
           <button 
             onClick={() => setIsMobileOverlayOpen(true)}
-            className="p-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-90"
+            className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-all active:scale-90"
           >
             <Menu size={20} />
           </button>
         )}
         <div className="flex flex-col">
-          <p className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[0.3em] mb-0.5">Navigation Active</p>
-          <h2 className="text-xl font-black uppercase tracking-tight text-white italic">
+          <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400/60 uppercase tracking-[0.3em] mb-0.5">Navigation Active</p>
+          <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white italic">
             {activeTab === 'checkout' ? (isMobile ? 'POS' : 'Terminal de Vente') : activeTab === 'dashboard' ? 'Analytics Pro' : activeTab.toUpperCase()}
           </h2>
         </div>
-      </div>
 
-      <div className="flex items-center gap-4">
         {lowStockProducts.length > 0 && (
           <button 
             onClick={() => setIsLowStockModalOpen(true)}
@@ -87,7 +89,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           >
             <div className="relative">
               <AlertTriangle size={24} className="animate-pulse" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-industrial-900">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-industrial-900">
                 {lowStockProducts.length}
               </span>
             </div>
@@ -100,7 +102,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             className="relative p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all animate-pulse"
             title="Alertes de péremption (DLC)"
           >
-            <Calendar size={24} />
+            <Calendar size={24}   />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-industrial-900">
               {expiringProducts.length}
             </span>
@@ -118,7 +120,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
               )}
             >
-              {isClockedIn ? <LogOut size={18} /> : <LogIn size={18} />}
+              {isClockedIn ? <LogOut size={18}   /> : <LogIn size={18}   />}
               <span className="hidden sm:inline">{isClockedIn ? 'Fin de service' : 'Début de service'}</span>
             </button>
           </div>
@@ -127,15 +129,66 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       <div className="flex items-center gap-4">
         {/* Language Selector Dropdown */}
+                {/* Badge Terminal / Poste Multi-Caisses */}
+        <div 
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-bold tracking-wider cursor-default"
+          title={`Poste de caisse actif : ${getTerminalName()} (${getTerminalId()})`}
+        >
+          <Monitor size={14} className="text-indigo-400" />
+          <span>{getTerminalId()}</span>
+        </div>
+
+        {/* Bouton Rapide Tiroir-Caisse */}
+        {activeTab === 'checkout' && (
+          <button 
+            type="button"
+            onClick={async () => {
+              const res = await testCashDrawer();
+              toast.success(res.message || 'Impulsion tiroir transmise');
+            }}
+            className="p-2.5 rounded-xl bg-industrial-800 border border-industrial-700 text-industrial-400 hover:text-emerald-400 hover:border-emerald-500/30 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+            title="Ouvrir manuellement le tiroir-caisse"
+          >
+            <Banknote size={17} className="text-emerald-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden xl:inline">Tiroir</span>
+          </button>
+        )}
+
+        {/* Bouton Afficheur Client 2ème Écran */}
+        <button 
+          type="button"
+          onClick={() => {
+            const url = `${window.location.origin}${window.location.pathname}#customer-display`;
+            window.open(url, 'NexusCustomerDisplay', 'width=1024,height=768,menubar=no,toolbar=no,location=no');
+            toast.success("Écran Afficheur Client ouvert !");
+          }}
+          className="p-2.5 rounded-xl bg-industrial-800 border border-industrial-700 text-industrial-400 hover:text-indigo-400 hover:border-indigo-500/30 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+          title="Ouvrir l'afficheur client sur un 2ème écran"
+        >
+          <Monitor size={17} className="text-indigo-400" />
+          <span className="text-[10px] font-black uppercase tracking-widest hidden xl:inline">Écran Client</span>
+        </button>
+
+        {/* Bouton Verrouillage Rapide PIN */}
+        <button 
+          type="button"
+          onClick={() => setIsPinLockOpen(true)}
+          className="p-2.5 rounded-xl bg-industrial-800 border border-industrial-700 text-industrial-400 hover:text-rose-400 hover:border-rose-500/30 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+          title="Verrouiller rapidement la caisse (Code PIN)"
+        >
+          <Lock size={17} className="text-rose-400" />
+          <span className="text-[10px] font-black uppercase tracking-widest hidden xl:inline">Verrouiller</span>
+        </button>
+
         <div className="relative">
           <button 
             onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-            className="p-2.5 rounded-xl bg-industrial-800 border border-industrial-700 text-industrial-400 hover:text-indigo-400 hover:border-indigo-500/30 transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
-            title="Changer de langue / تغيير اللغة"
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-industrial-800 border border-slate-200 dark:border-industrial-700 text-slate-700 dark:text-industrial-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/30 transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
+            title="Changer de langue"
           >
-            <Languages size={18} className="group-hover:scale-110 transition-transform text-indigo-400" />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline">
-              {language === 'fr' ? 'FR' : 'العربية'}
+            <Languages size={18} className="group-hover:scale-110 transition-transform text-indigo-600 dark:text-indigo-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+              {language.toUpperCase()}
             </span>
             <ChevronDown size={14} className={cn("transition-transform", isLangMenuOpen && "rotate-180")} />
           </button>
@@ -146,8 +199,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 className="fixed inset-0 z-40" 
                 onClick={() => setIsLangMenuOpen(false)}
               />
-              <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-48 rounded-2xl bg-industrial-900 border border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <p className="text-[9px] font-black tracking-widest uppercase text-white/40 px-3 py-1.5 border-b border-white/5 mb-1.5">MOTEUR MULTILINGUE</p>
+              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-56 rounded-2xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <p className="text-[9px] font-black tracking-widest uppercase text-slate-400 dark:text-white/40 px-3 py-1.5 border-b border-slate-100 dark:border-white/5 mb-1.5">CHOIX DE LA LANGUE</p>
                 
                 <button
                   type="button"
@@ -157,16 +210,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     toast.success("Langue : Français");
                   }}
                   className={cn(
-                    "w-full text-left rtl:text-right p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-white/5 group relative",
-                    language === 'fr' && "bg-white/5 border border-white/10"
+                    "w-full text-left rtl:text-right p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-slate-100 dark:hover:bg-white/5 group relative cursor-pointer",
+                    language === 'fr' && "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
                   )}
                 >
                   <div className="text-sm shrink-0">🇫🇷</div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white uppercase tracking-tight">Français</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">Français</p>
                   </div>
                   {language === 'fr' && (
-                    <span className="absolute right-2 rtl:left-2 text-[8px] bg-indigo-500/10 text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">Actif</span>
+                    <span className="absolute right-2 rtl:left-2 text-[8px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">Actif</span>
                   )}
                 </button>
 
@@ -178,16 +231,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     toast.success("اللغة الحالية: العربية");
                   }}
                   className={cn(
-                    "w-full text-left rtl:text-right p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-white/5 group relative",
-                    language === 'ar' && "bg-white/5 border border-white/10"
+                    "w-full text-left rtl:text-right p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-slate-100 dark:hover:bg-white/5 group relative cursor-pointer",
+                    language === 'ar' && "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
                   )}
                 >
                   <div className="text-sm shrink-0">🇩🇿</div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white uppercase tracking-tight font-sans-arabic">العربية</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight font-sans-arabic">العربية</p>
                   </div>
                   {language === 'ar' && (
-                    <span className="absolute right-2 rtl:left-2 text-[8px] bg-indigo-500/10 text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">نشط</span>
+                    <span className="absolute right-2 rtl:left-2 text-[8px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">نشط</span>
                   )}
                 </button>
               </div>
@@ -195,15 +248,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           )}
         </div>
 
+        {/* Quick Light/Dark Mode Switch */}
+        <button
+          type="button"
+          onClick={() => {
+            const nextTheme = theme === 'light' ? 'dark' : 'light';
+            setTheme(nextTheme);
+          }}
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-industrial-800 border border-slate-200 dark:border-industrial-700 text-amber-500 dark:text-indigo-400 hover:scale-105 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+          title={theme === 'light' ? 'Passer en Mode Sombre (Onyx)' : 'Passer en Mode Clair (Albâtre)'}
+        >
+          {theme === 'light' ? <Moon size={18} className="text-indigo-600" /> : <Sun size={18} className="text-amber-400" />}
+        </button>
+
         <div className="relative">
           <button 
             onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
-            className="p-2.5 rounded-xl bg-industrial-800 border border-industrial-700 text-industrial-400 hover:text-indigo-400 hover:border-indigo-500/30 transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-industrial-800 border border-slate-200 dark:border-industrial-700 text-slate-700 dark:text-industrial-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-500/30 transition-all shadow-sm flex items-center gap-2 group cursor-pointer"
             title="Changer le style visuel de l'application"
           >
-            <Palette size={18} className="group-hover:scale-110 transition-transform text-indigo-400" />
+            <Palette size={18} className="group-hover:scale-110 transition-transform text-indigo-600 dark:text-indigo-400" />
             <span className="text-[10px] font-black uppercase tracking-widest hidden lg:inline">
-              Thème: {theme === 'dark' ? 'Onyx' : theme === 'light' ? 'Albâtre' : theme === 'emerald' ? 'Émeraude' : theme === 'gold' ? 'Or Luxe' : 'Nardo'}
+              Thème: {theme === 'dark' ? 'Onyx' : theme === 'light' ? 'Clair' : theme === 'emerald' ? 'Émeraude' : theme === 'gold' ? 'Or Luxe' : 'Nardo'}
             </span>
             <ChevronDown size={14} className={cn("transition-transform", isThemeMenuOpen && "rotate-180")} />
           </button>
@@ -214,12 +280,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 className="fixed inset-0 z-40" 
                 onClick={() => setIsThemeMenuOpen(false)}
               />
-              <div className="absolute right-0 rtl:right-auto rtl:left-0 mt-2 w-64 rounded-2xl bg-industrial-900 border border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <p className="text-[9px] font-black tracking-widest uppercase text-white/40 px-3 py-1.5 border-b border-white/5 mb-1.5">MOTEUR DE THÈMES NEXUS</p>
+              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <p className="text-[9px] font-black tracking-widest uppercase text-slate-400 dark:text-white/40 px-3 py-1.5 border-b border-slate-100 dark:border-white/5 mb-1.5">MOTEUR DE THÈMES NEXUS</p>
                 
                 {[
                   { id: 'dark', name: 'Onyx Carbon', desc: 'Sensation haut de gamme carbone & indigo', color: 'bg-slate-900' },
-                  { id: 'light', name: 'Alabaster Puro', desc: 'Clarté clinique et contrastes doux', color: 'bg-amber-50' },
+                  { id: 'light', name: 'Mode Clair', desc: 'Clarté lumineuse, blanc pur et contrastes nets', color: 'bg-white' },
                   { id: 'emerald', name: 'Cyber Émeraude', desc: 'Vert néon sci-fi d\'inspiration Matrix', color: 'bg-emerald-950' },
                   { id: 'gold', name: 'Obsidienne Or Luxe', desc: 'Noir d\'ancre poli et dorures chaleureuses', color: 'bg-amber-950' },
                   { id: 'nardo', name: 'Nardo Motorsport', desc: 'Gris gris piste et orange course pure', color: 'bg-[#1b1c21]' }
@@ -233,22 +299,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       toast.success(`Atmosphère visuelle : ${t.name}`);
                     }}
                     className={cn(
-                      "w-full text-left p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-white/5 group relative",
-                      theme === t.id && "bg-white/5 border border-white/10"
+                      "w-full text-left p-2 rounded-xl flex items-center gap-3 transition-all hover:bg-slate-100 dark:hover:bg-white/5 group relative cursor-pointer",
+                      theme === t.id && "bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10"
                     )}
                   >
-                    <div className={cn("w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center shrink-0", t.color)}>
-                      {theme === t.id && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                    <div className={cn("w-3.5 h-3.5 rounded-full border border-slate-300 dark:border-white/20 flex items-center justify-center shrink-0", t.color)}>
+                      {theme === t.id && <div className="w-1.5 h-1.5 bg-indigo-600 dark:bg-white rounded-full" />}
                     </div>
                     
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white uppercase tracking-tight flex items-center gap-1.5 justify-between">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-1.5 justify-between">
                         {t.name}
                         {theme === t.id && (
-                          <span className="text-[8px] bg-indigo-500/10 text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">Actif</span>
+                          <span className="text-[8px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-extrabold px-1.5 py-0.2 rounded uppercase">Actif</span>
                         )}
                       </p>
-                      <p className="text-[10px] text-white/40 truncate mt-0.5">{t.desc}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-white/40 truncate mt-0.5">{t.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -258,10 +324,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
 
         <div className="text-right hidden sm:block">
-          <p className="text-xs text-white/40">{formatSafe(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
+          <p className="text-xs text-slate-500 dark:text-white/40">{formatSafe(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}</p>
           <div className="flex items-center gap-2 justify-end">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            <p className="text-sm font-medium text-white">
+            <p className="text-sm font-medium text-slate-800 dark:text-white">
               {activeStaffId 
                 ? `Opéré par: ${employees.find(e => e.id === activeStaffId)?.name}`
                 : `Caisse: ${profile?.displayName || user?.displayName || 'Principal'}`
@@ -270,6 +336,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
         </div>
       </div>
+      <PinLockModal 
+        isOpen={isPinLockOpen} 
+        onUnlock={() => setIsPinLockOpen(false)} 
+        currentEmployeeName={currentEmployee?.name || profile?.displayName || 'Caissier'} 
+      />
     </header>
   );
 };

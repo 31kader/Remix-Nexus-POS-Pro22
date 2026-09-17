@@ -59,6 +59,7 @@ export function ProfitsReportFilters({
         >
           <option value="all">Toutes périodes</option>
           <option value="today">Aujourd'hui</option>
+          <option value="yesterday">Hier</option>
           <option value="week">Cette semaine</option>
           <option value="month">Ce mois-ci</option>
           <option value="year">Cette année</option>

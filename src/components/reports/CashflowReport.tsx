@@ -42,7 +42,7 @@ export const CashflowReport = React.memo(function CashflowReport({
     const timeline = [
       ...activeTx.map(t => ({
         type: 'in' as const,
-        title: `Vente #${t.id.slice(-8)}`,
+        title: `Vente #${String(t.id || "").slice(-8)}`,
         category: t.paymentMethod || 'Vente',
         amount: t.total,
         timestamp: t.timestamp,

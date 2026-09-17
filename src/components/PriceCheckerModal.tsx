@@ -5,6 +5,7 @@ import { BrowserMultiFormatReader } from '@zxing/library';
 import { Product, CompanySettings, Category, Brand } from '../types';
 import { cn, playScanSound, announcePrice } from '../lib/utils';
 import { Modal, Button } from './ui';
+import { SafeImage } from './ui/SafeImage';
 import { fr } from 'date-fns/locale';
 
 interface PriceCheckerModalProps {
@@ -205,24 +206,29 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
 
   useEffect(() => {
     if (searchTerm) {
-      const product = products.find(p => 
-        (p.sku && p.sku.toLowerCase() === searchTerm.toLowerCase()) ||
-        p.name.toLowerCase() === searchTerm.toLowerCase()
-      );
+      const cleanTerm = searchTerm.trim().toLowerCase();
+      const product = (products || []).find(p => p && (
+        (p.barcode && p.barcode.trim().toLowerCase() === cleanTerm) ||
+        (p.sku && p.sku.toLowerCase() === cleanTerm) ||
+        (p.name && p.name.toLowerCase() === cleanTerm)
+      ));
       if (product) {
         setFoundProduct(product);
         setSearchTerm('');
-        announcePrice(product.name, product.price, settings.currency);
+        announcePrice(product.name, product.price, settings?.currency || 'DA');
       }
     }
-  }, [searchTerm, products, settings.currency]);
+  }, [searchTerm, products, settings?.currency]);
 
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const product = products.find(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const cleanTerm = searchTerm.trim().toLowerCase();
+    if (!cleanTerm) return;
+    const product = (products || []).find(p => p && (
+      (p.barcode && p.barcode.trim().toLowerCase() === cleanTerm) ||
+      (p.sku && p.sku.toLowerCase().includes(cleanTerm)) ||
+      (p.name && p.name.toLowerCase().includes(cleanTerm))
+    ));
     setFoundProduct(product || null);
   };
 
@@ -287,11 +293,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             >
               {/* Image Section */}
               <div className="aspect-square bg-slate-50 flex items-center justify-center p-8 relative">
-                {foundProduct.imageUrl ? (
-                  <img src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain drop-shadow-lg" referrerPolicy="no-referrer" />
-                ) : (
-                  <Package size={100} className="text-slate-200" />
-                )}
+                <SafeImage src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain drop-shadow-lg" fallback={<Package size={100} className="text-slate-200" />} />
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     {categories.find(c => c.id === foundProduct.categoryId)?.name || 'Général'}

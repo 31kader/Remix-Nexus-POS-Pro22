@@ -35,57 +35,55 @@ export const CartItemsList: React.FC<Props> = (props) => {
   return (
     <>
       {cart.length > 0 && (
-        <div className="px-5 py-3 bg-slate-900/60 border-b border-slate-800/40 flex justify-between items-center text-[11px] font-black uppercase tracking-widest text-slate-400">
+        <div className="px-5 py-2.5 bg-slate-200/80 dark:bg-slate-900/80 border-b border-slate-300 dark:border-slate-800/60 flex justify-between items-center text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 select-none">
           <span className="flex items-center gap-2">
-            <LayoutList size={14} className="opacity-50"/> 
-            Produits uniques : <span className="text-white">{cart.length}</span>
+            <LayoutList size={14} className="opacity-70 text-indigo-600 dark:text-indigo-400"/> 
+            Articles distincts : <span className="text-slate-900 dark:text-white font-extrabold">{cart.length}</span>
           </span>
           <span>
-            Total articles : <span className="text-white">{cart.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</span>
+            Total pièces : <span className="text-slate-900 dark:text-white font-extrabold">{cart.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</span>
           </span>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar bg-workspace/10">
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-[#07090e]">
         {cart.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-white/40 p-12 text-center max-w-sm mx-auto">
-            <div className="w-24 h-24 bg-slate-900/40 rounded-[2.5rem] flex items-center justify-center mb-6 shadow-2xl border border-slate-800/60 group">
-              <ShoppingBag size={48} strokeWidth={1} className="text-white/10 group-hover:text-indigo-500/40 transition-colors duration-500" />
+          <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-12 text-center max-w-sm mx-auto select-none">
+            <div className="w-24 h-24 bg-white dark:bg-slate-900/60 rounded-3xl flex items-center justify-center mb-5 shadow-sm dark:shadow-xl border border-slate-200 dark:border-slate-800/80">
+              <ShoppingBag size={44} strokeWidth={1.5} className="text-slate-400 dark:text-slate-600" />
             </div>
-            <h4 className="text-lg font-black text-white/40 uppercase tracking-[0.2em] mb-2">Panier Vide</h4>
-            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest leading-relaxed">Prêt pour une nouvelle vente futuriste.</p>
+            <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Panier Vide</h4>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Scannez un code-barres ou choisissez un article</p>
           </div>
         ) : (
-          <div className="p-4 space-y-3">
-            <AnimatePresence initial={false}>
-              {cart.map((item: CartItem, idx: number) => (
-                <motion.div
-                  key={item.cartItemId || item.id}
-                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 50, scale: 0.9, transition: { duration: 0.2 } }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <CartItemRow 
-                    item={item}
-                    idx={idx}
-                    isSelected={selectedItemId === item.id}
-                    isLast={idx === cart.length - 1}
-                    onSelect={setSelectedItemId}
-                    onRemove={removeFromCart}
-                    onSetQuantity={setQuantity}
-                    onOpenProductModal={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }}
-                    onOpenDiscountModal={setDiscountingItemId}
-                    onSetPrice={setPrice}
-                    isWholesale={isWholesale}
-                    permissions={permissions}
-                    settings={settings}
-                    products={products}
-                    inputRef={(el) => { if (el) quantityInputRefs.current[item.cartItemId || ''] = el; }}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="p-3 space-y-2">
+            {cart.map((item: CartItem, idx: number) => (
+              <CartItemRow 
+                key={item.cartItemId || item.id}
+                item={item}
+                idx={idx}
+                isSelected={selectedItemId === item.id}
+                isLast={idx === cart.length - 1}
+                onSelect={setSelectedItemId}
+                onRemove={removeFromCart}
+                onSetQuantity={setQuantity}
+                onOpenProductModal={(p) => { setEditingProduct(p); setIsProductModalOpen(true); }}
+                onOpenDiscountModal={setDiscountingItemId}
+                onSetPrice={setPrice}
+                isWholesale={isWholesale}
+                permissions={permissions}
+                settings={settings}
+                products={products}
+                inputRef={(el) => {
+                  const key = item.cartItemId || '';
+                  if (el) {
+                    quantityInputRefs.current[key] = el;
+                  } else {
+                    delete quantityInputRefs.current[key];
+                  }
+                }}
+              />
+            ))}
             <div ref={cartEndRef} />
           </div>
         )}

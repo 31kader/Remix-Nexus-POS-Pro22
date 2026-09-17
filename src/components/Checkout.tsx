@@ -1,42 +1,24 @@
-
-import { supabase } from '../supabase';
-import { convertKeysToSnake, convertKeysToCamel, enqueueStockAdjustment, localDb } from '../database';
-import { toast } from 'sonner';
-import { DEFAULT_PERMISSIONS } from '../constants';
-import { QuickAddProductModal } from './QuickAddProductModal';
-import { DeliveryRequestModal } from './DeliveryRequestModal';
-import { CustomerProfile } from './CustomerProfile';
-import React, { useState, useMemo, memo, useEffect, useRef, useDeferredValue, useCallback } from 'react';
-import { Package, Tag, RefreshCw, LayoutGrid, Plus, FileSpreadsheet, Upload, ShoppingBag, AlertTriangle, Zap, Info, Search, Filter, Scan, LayoutList, Layers, Truck, ArrowUpDown, Award, Calendar, FolderTree, AlertCircle, TrendingDown, ShieldCheck, RotateCcw, Check, Printer, Copy, PackageOpen, Trash2, ChevronUp, BarcodeIcon, ShoppingCart, Eye, X, MessageCircle, Phone, MapPin, Navigation, Edit, Clock, Mail, Percent, DollarSign, Star, Palette, FileText, AlignLeft, Shield, UserCog, Link2, MapIcon, Brain, Database, ArrowRight, CreditCard, Banknote, Minus, UserPlus, ChevronDown, Users, ArrowUpRight, ArrowDownRight, LogOut, Bell, TrendingUp, History, EyeOff, LogIn, Store, Gift, Wallet, Edit2, MessageSquare, CheckCircle2 } from 'lucide-react';
-import { Button, Card, Modal, ConfirmDialog, BlurCard, SortableHeader, SafeImage } from './ui';
-import { Product, Category, Brand, StockAdjustment, CompanySettings, SupplierSync, Supplier, Purchase, Transaction, OnlineOrder, Employee, Customer, CartItem, ProductReturn, RolePermissions, Promotion, Voucher, PurchaseOrder, POSSession, CashShift } from '../types';
-import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked, formatProductStock, calculateItemPrice, playScanSound, announcePrice, sanitizeProductForSupabase, mapDoc } from '../lib/utils';
-import { printReceipt, printPurchaseOrder } from '../services/printService';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, subDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import Papa from 'papaparse';
+import React, { useState, memo, useEffect } from 'react';
+import { CreditCard, ShoppingCart, LayoutGrid, ArrowRight, Edit3, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { CartItemRow } from './checkout/CartItemRow';
+import { Product, Customer } from '../types';
+import { cn } from '../lib/utils';
+import { printReceipt } from '../services/printService';
+
+import { QuickAddProductModal } from './QuickAddProductModal';
+import { DeliveryRequestModal } from './DeliveryRequestModal';
 import { SessionTabs } from './checkout/SessionTabs';
-import { CustomerSelection } from './checkout/CustomerSelection';
-import { PaymentOrderSummary } from './checkout/PaymentOrderSummary';
-import { SearchOverlay } from './checkout/SearchOverlay';
 import { SessionInitialCard } from './checkout/SessionInitialCard';
-import { PriceCheckerModal } from './checkout/PriceCheckerModal';
-import { ItemDiscountModal } from './checkout/ItemDiscountModal';
 import { BarcodeScanner } from './BarcodeScanner';
-import { Categories } from './Categories';
-import { Brands } from './Brands';
-import { QuickSelect } from './QuickSelect';
 import { CheckoutSuccessModal } from './checkout/CheckoutSuccessModal';
-import { useCheckoutProcess } from '../hooks/useCheckoutProcess';
-import { useCheckoutCalculations } from '../hooks/useCheckoutCalculations';
-import { useCheckoutLogic } from './checkout/useCheckoutLogic';
 import { QuickSelectPanel } from './checkout/QuickSelectPanel';
 import { CheckoutHeader } from './checkout/CheckoutHeader';
 import { CheckoutControlsPanel } from './checkout/CheckoutControlsPanel';
 import { CartItemsList } from './checkout/CartItemsList';
+import { useCheckoutLogic } from './checkout/useCheckoutLogic';
+import { CustomerDisplayModal } from './checkout/CustomerDisplayModal';
+import { broadcastCustomerDisplay } from '../services/customerDisplayService';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
@@ -52,6 +34,7 @@ interface CheckoutProps {
   setIsProductModalOpen: (open: boolean) => void;
   setEditingProduct: (product: Product | null) => void;
   activeStaffId: string;
+  isSidebarOpen?: boolean;
 }
 
 export const Checkout = memo(function Checkout(props: CheckoutProps) {
@@ -175,11 +158,15 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
     discountAmount,
     pointsDiscount,
     voucherDiscount,
-    total
+    total,
+    editingTransaction,
+    handleCancelEditTransaction
   } = logic;
 
   // Use values from logic
   const displayTotal = total;
+
+  // F10 est réservé uniquement à la barre de saisie Code-Barres Direct (CheckoutHeader)
 
   const {
     setActiveTab,
@@ -191,9 +178,57 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
   const [mobileTab, setMobileTab] = useState<'cart' | 'catalog'>('cart');
   const [isPaymentSheetOpen, setIsPaymentSheetOpen] = useState(false);
+  const [isCustomerDisplayModalOpen, setIsCustomerDisplayModalOpen] = useState(false);
+
+  // 🟢 Diffusion en direct vers l'Afficheur Client (Realtime Broadcast + BroadcastChannel)
+  useEffect(() => {
+    const numReceived = parseFloat(receivedAmount) || 0;
+    const changeDue = numReceived > displayTotal ? numReceived - displayTotal : 0;
+    broadcastCustomerDisplay({
+      items: (cart || []).map((i: any) => ({
+        id: i.id,
+        name: i.name,
+        price: i.overriddenPrice ?? i.price ?? 0,
+        quantity: i.quantity || 1,
+        barcode: i.barcode || i.sku || ''
+      })),
+      subtotal: subtotal || 0,
+      discountAmount: discountAmount || 0,
+      total: displayTotal || 0,
+      amountPaid: numReceived,
+      changeDue: changeDue,
+      customerName: props.selectedCustomer?.name,
+      isPaid: showSuccess
+    });
+  }, [cart, displayTotal, discountAmount, subtotal, receivedAmount, props.selectedCustomer, showSuccess]);
+
+  const [showControlsPanel, setShowControlsPanel] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('nexus_pos_show_controls_panel');
+      if (saved !== null) return JSON.parse(saved);
+    } catch {}
+    return true;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexus_pos_show_controls_panel', JSON.stringify(showControlsPanel));
+    } catch {}
+  }, [showControlsPanel]);
+
+  // When left sidebar opens (isSidebarOpen = true), automatically close right panel to avoid squishing
+  useEffect(() => {
+    if (props.isSidebarOpen) {
+      setShowControlsPanel(false);
+    }
+  }, [props.isSidebarOpen]);
 
   return (
-    <div className="relative h-full flex flex-col w-full bg-[#05070a] overflow-hidden">
+    <div className="relative h-full flex flex-col w-full bg-slate-100 dark:bg-[#05070a] overflow-hidden">
+      <CustomerDisplayModal 
+        isOpen={isCustomerDisplayModalOpen}
+        onClose={() => setIsCustomerDisplayModalOpen(false)}
+      />
       <QuickAddProductModal 
         isOpen={isQuickAddModalOpen}
         onClose={() => setIsQuickAddModalOpen(false)}
@@ -218,6 +253,9 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
           setIsReturnMode={setIsReturnMode}
           showQuickSelect={showQuickSelect}
           setShowQuickSelect={setShowQuickSelect}
+          showControlsPanel={showControlsPanel}
+          setShowControlsPanel={setShowControlsPanel}
+          onOpenCustomerDisplay={() => setIsCustomerDisplayModalOpen(true)}
         />
       )}
 
@@ -252,7 +290,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
         {/* Main Cart View */}
         <div className={cn(
-          "flex-1 flex flex-col bg-white/[0.02] border-r border-white/5 relative z-0",
+          "flex-1 flex flex-col bg-slate-100 dark:bg-[#07090e] border-r border-slate-200 dark:border-white/5 relative z-0",
           isMobile && mobileTab !== 'cart' && "hidden"
         )}>
           <CheckoutHeader
@@ -265,6 +303,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
             addToCart={addToCart}
             isReturnMode={isReturnMode}
             settings={settings}
+            total={total}
           />
 
           <AnimatePresence>
@@ -277,6 +316,38 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
               </div>
             )}
           </AnimatePresence>
+
+          {editingTransaction && (
+            <div className="mx-3 mt-2.5 p-3 bg-amber-500/15 dark:bg-amber-950/40 border-2 border-amber-500/40 dark:border-amber-500/50 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
+                  <Edit3 className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-[11px] uppercase tracking-wider bg-amber-500/30 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-md">
+                      Mode Modification Vente
+                    </span>
+                    <span className="font-mono font-bold text-xs">
+                      #{String(editingTransaction.id || '').slice(-8).toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                    Ticket original du {editingTransaction.timestamp ? new Date(editingTransaction.timestamp).toLocaleString('fr-FR') : ''} • Total initial : <span className="font-bold">{Number(editingTransaction.originalTotal || editingTransaction.total || 0).toFixed(2)} {settings?.currency || 'DA'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelEditTransaction}
+                className="px-3 py-1.5 text-xs font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-700 dark:text-rose-300 border border-rose-500/30 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                title="Annuler l'édition de cette vente et réinitialiser le panier"
+              >
+                <X size={14} />
+                Annuler la modification
+              </button>
+            </div>
+          )}
 
           <CartItemsList 
             cart={cart}
@@ -297,7 +368,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
           />
         </div>
 
-        {/* Payment Panel: Sidebar on Desktop, Bottom Sheet on Mobile */}
+        {/* Payment Panel: Sidebar on Desktop (collapsible), Bottom Sheet on Mobile */}
         {isMobile ? (
           <AnimatePresence>
             {isPaymentSheetOpen && (
@@ -351,12 +422,15 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
                     cart={cart}
                     isProcessing={isProcessing}
                     setIsDeliveryModalOpen={setIsDeliveryModalOpen}
+                    globalDiscount={logic.globalDiscount}
+                    setGlobalDiscount={logic.setGlobalDiscount}
+                    editingTransaction={editingTransaction}
                   />
                 </motion.div>
               </>
             )}
           </AnimatePresence>
-        ) : (
+        ) : showControlsPanel ? (
           <CheckoutControlsPanel
             selectedCustomer={selectedCustomer}
             setSelectedCustomer={setSelectedCustomer}
@@ -391,7 +465,27 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
             cart={cart}
             isProcessing={isProcessing}
             setIsDeliveryModalOpen={setIsDeliveryModalOpen}
+            globalDiscount={logic.globalDiscount}
+            setGlobalDiscount={logic.setGlobalDiscount}
+            editingTransaction={editingTransaction}
+            onClose={() => setShowControlsPanel(false)}
           />
+        ) : (
+          <button
+            onClick={() => setShowControlsPanel(true)}
+            className="hidden lg:flex flex-col items-center justify-between py-6 px-3 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all cursor-pointer select-none group w-12 shrink-0 shadow-sm"
+            title="Ouvrir le panneau de paiement (Caisse)"
+          >
+            <div className="p-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+              <CreditCard size={18} />
+            </div>
+            <span className="[writing-mode:vertical-lr] text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+              Caisse • {total.toFixed(0)} {settings.currency}
+            </span>
+            <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+              {cart.length} art.
+            </span>
+          </button>
         )}
       </div>
 
@@ -435,11 +529,15 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
       {/* Success Notification */}
       <CheckoutSuccessModal
         isOpen={showSuccess}
-        onClose={() => setShowSuccess(false)}
+        onClose={() => {
+          setShowSuccess(false);
+        }}
         lastTransaction={lastTransaction}
         settings={settings}
         customers={customers}
-        printReceipt={printReceipt}
+        printReceipt={(tx, st) => {
+          printReceipt(tx, st);
+        }}
       />
     </div>
   );

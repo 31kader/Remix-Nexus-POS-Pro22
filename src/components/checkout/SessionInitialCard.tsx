@@ -7,7 +7,7 @@ interface SessionInitialCardProps {
   initialCashInput: string;
   setInitialCashInput: (v: string) => void;
   isOpeningSession: boolean;
-  handleDirectOpenShift: () => void;
+  handleDirectOpenShift: (e?: React.FormEvent | React.MouseEvent) => void;
   settings: any;
   role: string;
   setActiveTab: (tab: string) => void;

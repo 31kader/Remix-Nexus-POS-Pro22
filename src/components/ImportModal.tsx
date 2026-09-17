@@ -17,7 +17,7 @@ const FIELD_LABELS: Record<string, { label: string; required: boolean }> = {
   sku: { label: 'SKU (Référence)', required: false },
   barcode: { label: 'Code-barres (EAN/UPC)', required: false },
   stock: { label: 'Stock Initial', required: false },
-  costPrice: { label: 'Prix d\'Achat (Coût)', required: false },
+  costPrice: { label: 'Prix d\'Achat (-10% si absent)', required: false },
   category: { label: 'Catégorie', required: false },
   unit: { label: 'Unité (Ex: kg, litre)', required: false },
 };
@@ -25,9 +25,9 @@ const FIELD_LABELS: Record<string, { label: string; required: boolean }> = {
 export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, headers, data, onConfirm, isProcessing, progress, errors }) => {
   const [mapping, setMapping] = useState<Record<string, string>>({});
 
-  // Auto-map headers and reset when file opens
+    // Auto-map headers and reset when file opens
   React.useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !headers || headers.length === 0) {
       setMapping({});
       return;
     }
@@ -36,22 +36,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
     
     // Auto map candidates
     const matches: Record<string, string[]> = {
-      name: ['nom', 'name', 'désignation', 'designation', 'article', 'produit', 'product', 'libellé', 'libelle'],
-      price: ['prix de vente', 'prix public', 'prix_vente', 'prix vt', 'prix_v', 'prix', 'price', 'vente', 'rate', 'tarif', 'sell'],
-      sku: ['sku', 'ref', 'référence', 'reference', 'code table'],
-      barcode: ['code-barres', 'code barres', 'code_barre', 'code_barres', 'code', 'barcode', 'barres', 'ean', 'upc'],
-      stock: ['stock', 'quantité', 'quantite', 'qty', 'quantity', 'qte', 'qté', 'dispo', 'en_stock'],
-      costPrice: ['prix d\'achat', 'prix_achat', 'achat', 'coût', 'cout', 'cost', 'buying', 'price_cost', 'prix_c'],
-      category: ['catégorie', 'categorie', 'category', 'rayon', 'famille', 'groupe', 'group'],
-      unit: ['unité', 'unite', 'unit', 'mesure', 'type', 'uom']
+      name: ['nom', 'name', 'désignation', 'designation', 'article', 'produit', 'product', 'libellé', 'libelle', 'colonne 2'],
+      price: ['prix de vente', 'prix public', 'prix_vente', 'prix vt', 'prix_v', 'prix', 'price', 'vente', 'rate', 'tarif', 'sell', 'colonne 4'],
+      sku: ['sku', 'ref', 'référence', 'reference', 'code table', 'colonne 1'],
+      barcode: ['code-barres', 'code barres', 'code_barre', 'code_barres', 'code', 'barcode', 'barres', 'ean', 'upc', 'colonne 1'],
+      costPrice: ['prix d\'achat', 'prix_achat', 'achat', 'coût', 'cout', 'cost', 'buying', 'price_cost', 'prix_c', 'colonne 3'],
+      stock: ['stock', 'quantité', 'quantite', 'qty', 'quantity', 'qte', 'qté', 'dispo', 'en_stock', 'colonne 3'],
+      category: ['catégorie', 'categorie', 'category', 'rayon', 'famille', 'groupe', 'group', 'colonne 5'],
+      unit: ['unité', 'unite', 'unit', 'mesure', 'type', 'uom', 'colonne 6']
     };
 
     Object.entries(matches).forEach(([field, keywords]) => {
       const foundHeader = headers.find(h => {
         const lowerH = h.toLowerCase().trim();
-        return keywords.some(kw => lowerH.includes(kw) || kw.includes(lowerH));
+        return keywords.some(kw => lowerH === kw || lowerH.includes(kw) || kw.includes(lowerH));
       });
-      if (foundHeader) {
+      if (foundHeader && !tempMapping[field]) {
         tempMapping[field] = foundHeader;
       }
     });

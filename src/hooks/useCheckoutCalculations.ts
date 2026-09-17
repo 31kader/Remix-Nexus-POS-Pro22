@@ -11,6 +11,7 @@ interface UseCheckoutCalculationsProps {
   useLoyaltyPoints: boolean;
   appliedVoucher: Voucher | null;
   settings: CompanySettings;
+  globalDiscount?: { type: 'percentage' | 'fixed'; value: number } | null;
 }
 
 export function useCheckoutCalculations({
@@ -22,6 +23,7 @@ export function useCheckoutCalculations({
   useLoyaltyPoints,
   appliedVoucher,
   settings,
+  globalDiscount
 }: UseCheckoutCalculationsProps) {
   return useMemo(() => {
     // 1. Calculate subtotal
@@ -46,6 +48,15 @@ export function useCheckoutCalculations({
 
     let total = subtotal;
     let discountAmount = 0;
+
+    // Apply global discount if specified
+    if (globalDiscount && globalDiscount.value > 0) {
+      if (globalDiscount.type === 'percentage') {
+        discountAmount += subtotal * (globalDiscount.value / 100);
+      } else {
+        discountAmount += globalDiscount.value;
+      }
+    }
 
     // 3. Apply promotional discounts
     if (promotionToApply) {

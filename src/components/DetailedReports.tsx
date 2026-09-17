@@ -28,6 +28,8 @@ interface DetailedReportsProps {
   categories: Category[];
   customers: Customer[];
   stockAdjustments: StockAdjustment[];
+  setEditingProduct?: (product: Product | null) => void;
+  setIsProductModalOpen?: (open: boolean) => void;
 }
 
 export const DetailedReports = memo(function DetailedReports({ 
@@ -40,10 +42,12 @@ export const DetailedReports = memo(function DetailedReports({
   settings, 
   categories, 
   customers,
-  stockAdjustments
+  stockAdjustments,
+  setEditingProduct,
+  setIsProductModalOpen
 }: DetailedReportsProps) {
   const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'cashflow' | 'fidelity_stats' | 'stock_value' | 'ai_assistant' | 'losses'>('charts');
-  const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all');
+  const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
 
   const exportAccountingCSV = () => {
     const headers = ['Date', 'Transaction ID', 'Total', 'Tax', 'Payment Method', 'Status'];
@@ -131,6 +135,12 @@ export const DetailedReports = memo(function DetailedReports({
           settings={settings}
           categories={categories}
           customers={customers}
+          onEditProduct={(product) => {
+            if (setEditingProduct && setIsProductModalOpen) {
+              setEditingProduct(product);
+              setIsProductModalOpen(true);
+            }
+          }}
         />
       ) : reportsTab === 'fidelity_stats' ? (
         <FidelityStatsReport 

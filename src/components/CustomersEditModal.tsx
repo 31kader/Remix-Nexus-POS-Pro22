@@ -1,5 +1,8 @@
-import React from 'react';
-import { Smartphone, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Smartphone, Eye, EyeOff, User, Phone, Mail, MapPin, 
+  Award, ShieldCheck, Briefcase, Sparkles 
+} from 'lucide-react';
 import { Button, Modal } from './ui';
 
 interface CustomersEditModalProps {
@@ -23,134 +26,297 @@ export function CustomersEditModal({
   setShowPassword,
   handleSubmit
 }: CustomersEditModalProps) {
+  const [modalTab, setModalTab] = useState<'general' | 'commercial' | 'app'>('general');
+
+  const generateFidelityCard = () => {
+    let digits = "";
+    for (let i = 0; i < 12; i++) digits += Math.floor(Math.random() * 10).toString();
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(digits[i]) * (i % 2 === 0 ? 1 : 3);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    setFormData({ ...formData, loyaltyCardNumber: digits + checkDigit });
+  };
+
+  const generateRandomPassword = () => {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+    let retVal = "";
+    for (let i = 0; i < 8; ++i) {
+      retVal += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    setFormData({ ...formData, password: retVal });
+    setShowPassword(true);
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingCustomer ? "Modifier le client" : "Nouveau client"}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase">Nom Complet *</label>
-          <input 
-            required 
-            className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" 
-            value={formData.name} 
-            onChange={e => setFormData({ ...formData, name: e.target.value })} 
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase">Téléphone</label>
-            <input 
-              className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" 
-              value={formData.phone} 
-              onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
-            <input 
-              type="email" 
-              className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500" 
-              value={formData.email} 
-              onChange={e => setFormData({ ...formData, email: e.target.value })} 
-            />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase">Numéro de Carte de Fidélité</label>
-          <div className="relative">
-            <input 
-              className="w-full p-2 pr-24 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono" 
-              value={formData.loyaltyCardNumber} 
-              onChange={e => setFormData({ ...formData, loyaltyCardNumber: e.target.value })} 
-            />
-            <button
-              type="button"
-              onClick={() => {
-                let digits = "";
-                for (let i = 0; i < 12; i++) digits += Math.floor(Math.random() * 10).toString();
-                let sum = 0;
-                for (let i = 0; i < 12; i++) {
-                  sum += parseInt(digits[i]) * (i % 2 === 0 ? 1 : 3);
-                }
-                const checkDigit = (10 - (sum % 10)) % 10;
-                setFormData({ ...formData, loyaltyCardNumber: digits + checkDigit });
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded"
-            >
-              Générer
-            </button>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
-          <textarea 
-            className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 h-24" 
-            value={formData.notes} 
-            onChange={e => setFormData({ ...formData, notes: e.target.value })} 
-          />
-        </div>
-        <div className="flex flex-col gap-3 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
-              <Smartphone size={20} />
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title={editingCustomer ? "Modifier la Fiche Client" : "Nouveau Client"}
+    >
+      <div className="flex border-b border-slate-200 dark:border-slate-800 mb-5">
+        <button
+          type="button"
+          onClick={() => setModalTab('general')}
+          className={`pb-2.5 px-4 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+            modalTab === 'general'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <User size={14} /> Identité & Contact
+        </button>
+        <button
+          type="button"
+          onClick={() => setModalTab('commercial')}
+          className={`pb-2.5 px-4 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+            modalTab === 'commercial'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Briefcase size={14} /> Conditions & Fidélité
+        </button>
+        <button
+          type="button"
+          onClick={() => setModalTab('app')}
+          className={`pb-2.5 px-4 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+            modalTab === 'app'
+              ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          <Smartphone size={14} /> Accès Mobile
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 text-slate-900 dark:text-white">
+        {modalTab === 'general' && (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <User size={13} className="text-indigo-500" />
+                Nom Complet *
+              </label>
+              <input 
+                required 
+                placeholder="Ex: Mohamed Benali"
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-900 dark:text-white transition-all" 
+                value={formData.name} 
+                onChange={e => setFormData({ ...formData, name: e.target.value })} 
+              />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-slate-800">Accès Application Client</p>
-              <p className="text-xs text-slate-500">Permet au client de voir ses points et l'historique en ligne</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Phone size={13} className="text-indigo-500" />
+                  Téléphone
+                </label>
+                <input 
+                  placeholder="0550 00 00 00"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-900 dark:text-white transition-all" 
+                  value={formData.phone} 
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Mail size={13} className="text-indigo-500" />
+                  Email
+                </label>
+                <input 
+                  type="email" 
+                  placeholder="client@exemple.com"
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-900 dark:text-white transition-all" 
+                  value={formData.email} 
+                  onChange={e => setFormData({ ...formData, email: e.target.value })} 
+                />
+              </div>
             </div>
-            <input 
-              type="checkbox" 
-              className="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-              checked={formData.isAppUser}
-              onChange={e => setFormData({ ...formData, isAppUser: e.target.checked })}
-            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin size={13} className="text-indigo-500" />
+                  Adresse de Livraison
+                </label>
+                <input 
+                  placeholder="Rue, N°, Bâtiment..."
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-slate-900 dark:text-white transition-all" 
+                  value={formData.address || ''} 
+                  onChange={e => setFormData({ ...formData, address: e.target.value })} 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Ville / Wilaya
+                </label>
+                <input 
+                  placeholder="Ex: Alger, Oran..."
+                  className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-slate-900 dark:text-white transition-all" 
+                  value={formData.city || ''} 
+                  onChange={e => setFormData({ ...formData, city: e.target.value })} 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Notes & Remarques Internes
+              </label>
+              <textarea 
+                placeholder="Préférences de commande, instructions spécifiques..."
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm text-slate-900 dark:text-white transition-all h-20" 
+                value={formData.notes} 
+                onChange={e => setFormData({ ...formData, notes: e.target.value })} 
+              />
+            </div>
           </div>
-          
-          {formData.isAppUser && (
-            <div className="mt-2 pt-3 border-t border-indigo-100/50">
-              <label className="text-[10px] font-bold text-slate-600 uppercase block mb-1">Mot de passe pour l'accès App</label>
+        )}
+
+        {modalTab === 'commercial' && (
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Award size={14} className="text-amber-500" />
+                Numéro de Carte de Fidélité
+              </label>
               <div className="relative">
                 <input 
-                  type={showPassword ? "text" : "password"}
-                  placeholder={editingCustomer ? "Laisser vide pour ne pas changer..." : "Définir un mot de passe..."}
-                  className="w-full p-2.5 pr-24 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium"
-                  value={formData.password || ''}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Code barre ou identifiant de carte..."
+                  className="w-full p-3 pr-28 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm text-slate-900 dark:text-white tracking-wider" 
+                  value={formData.loyaltyCardNumber} 
+                  onChange={e => setFormData({ ...formData, loyaltyCardNumber: e.target.value })} 
                 />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-                      let retVal = "";
-                      for (let i = 0, n = charset.length; i < 8; ++i) {
-                        retVal += charset.charAt(Math.floor(Math.random() * n));
-                      }
-                      setFormData({ ...formData, password: retVal });
-                      setShowPassword(true);
-                    }}
-                    className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md hover:bg-slate-200 font-bold uppercase transition-colors"
-                  >
-                    Générer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                <button
+                  type="button"
+                  onClick={generateFidelityCard}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 rounded-lg transition-all flex items-center gap-1 border border-indigo-200 dark:border-indigo-800"
+                >
+                  <Sparkles size={12} /> Auto
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Tarif Client Grossiste
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Appliquer automatiquement les prix de gros lors des ventes en caisse
+                  </p>
+                </div>
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer"
+                  checked={!!formData.isWholesale}
+                  onChange={e => setFormData({ ...formData, isWholesale: e.target.checked })}
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60">
+                <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                  Plafond de Crédit Autorisé (DA)
+                </label>
+                <input 
+                  type="number" 
+                  min="0"
+                  step="100"
+                  placeholder="0 = Pas de limite"
+                  className="w-full p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm text-slate-900 dark:text-white"
+                  value={formData.creditLimit || ''}
+                  onChange={e => setFormData({ ...formData, creditLimit: parseFloat(e.target.value) || 0 })}
+                />
+                <p className="text-[10px] text-slate-400 mt-1 font-medium">
+                  Alerte en caisse si la dette du client dépasse ce seuil.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {modalTab === 'app' && (
+          <div className="flex flex-col gap-4 p-5 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Smartphone size={24} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">
+                  Accès Application Client
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Permet au client de consulter son solde, ses points et son historique en ligne
+                </p>
+              </div>
+              <input 
+                type="checkbox" 
+                className="w-5 h-5 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer"
+                checked={formData.isAppUser}
+                onChange={e => setFormData({ ...formData, isAppUser: e.target.checked })}
+              />
+            </div>
+            
+            {formData.isAppUser && (
+              <div className="mt-2 pt-4 border-t border-indigo-100 dark:border-indigo-900/40 space-y-3">
+                <div>
+                  <label className="text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider block mb-1">
+                    Mot de passe de Connexion
+                  </label>
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      placeholder={editingCustomer ? "Laisser vide pour conserver le mot de passe..." : "Définir un mot de passe..."}
+                      className="w-full p-3 pr-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono font-bold text-slate-900 dark:text-white"
+                      value={formData.password || ''}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={generateRandomPassword}
+                        className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2.5 py-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 font-bold uppercase transition-colors"
+                      >
+                        Générer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1.5"
+                      >
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-[11px] text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
+                  L'adresse email <strong className="font-bold">{formData.email || '(non renseignée)'}</strong> servira d'identifiant de connexion pour le client sur l'application.
                 </div>
               </div>
-              <p className="text-[10px] text-indigo-500 font-medium mt-1.5 flex items-start gap-1">
-                <span className="text-lg leading-none">&bull;</span>
-                L'email ci-dessus servira d'identifiant de connexion.
-              </p>
-            </div>
-          )}
+            )}
+          </div>
+        )}
+
+        <div className="pt-2 flex gap-3">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            onClick={onClose} 
+            className="w-1/3 py-3"
+          >
+            Annuler
+          </Button>
+          <Button 
+            type="submit" 
+            className="w-2/3 py-3 font-black uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            {editingCustomer ? "Enregistrer les modifications" : "Créer le client"}
+          </Button>
         </div>
-        <Button type="submit" className="w-full py-3">
-          {editingCustomer ? "Enregistrer les modifications" : "Créer le client"}
-        </Button>
       </form>
     </Modal>
   );

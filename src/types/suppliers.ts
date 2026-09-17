@@ -31,6 +31,7 @@ export interface Supplier {
   ratingQuality?: number;
   ratingDelivery?: number;
   ratingPrice?: number;
+  updatedAt?: string;
 }
 
 export interface PurchaseOrder {

@@ -9,38 +9,61 @@ export function useInventoryMetrics(
   categories: Category[],
   selectedCategories: string[]
 ) {
-  const duplicateSKUGroups = useMemo(() => {
-    const groups: Record<string, Product[]> = {};
-    products.forEach(p => {
-      if (p.sku && p.sku.trim() !== '') {
-        const sku = p.sku.trim();
-        if (!groups[sku]) groups[sku] = [];
-        groups[sku].push(p);
-      }
+  // Fast map of pre-computed category descendants
+  const categoryDescendantsMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    categories.forEach(c => {
+      map.set(c.id, getCategoryDescendants(categories, c.id));
     });
-    return Object.entries(groups)
-      .filter(([_, group]) => group.length > 1)
-      .map(([sku, group]) => ({ sku, products: group }));
+    return map;
+  }, [categories]);
+
+  const duplicateSKUGroups = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    const skuMap = new Map<string, Product[]>();
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (p && p.sku) {
+        const sku = p.sku.trim();
+        if (sku) {
+          const list = skuMap.get(sku);
+          if (list) {
+            list.push(p);
+          } else {
+            skuMap.set(sku, [p]);
+          }
+        }
+      }
+    }
+    const result: { sku: string; products: Product[] }[] = [];
+    for (const [sku, group] of skuMap.entries()) {
+      if (group.length > 1) {
+        result.push({ sku, products: group });
+      }
+    }
+    return result;
   }, [products]);
 
   const productsBySupplier = useMemo(() => {
     const grouped: Record<string, Product[]> = {};
-    sortedProducts.forEach((p: Product) => {
+    for (let i = 0; i < sortedProducts.length; i++) {
+      const p = sortedProducts[i];
       const s = p.supplier || 'Sans fournisseur';
       if (!grouped[s]) grouped[s] = [];
       grouped[s].push(p);
-    });
+    }
     return grouped;
   }, [sortedProducts]);
 
   const marginExtremes = useMemo(() => {
-    if (paginatedProducts.length < 2) return { maxId: null, minId: null };
+    if (!paginatedProducts || paginatedProducts.length < 2) return { maxId: null, minId: null };
     let maxMargin = -Infinity;
     let minMargin = Infinity;
     let maxId: string | null = null;
     let minId: string | null = null;
 
-    paginatedProducts.forEach((p: Product) => {
+    for (let i = 0; i < paginatedProducts.length; i++) {
+      const p = paginatedProducts[i];
       const m = p.price - (p.costPrice || 0);
       if (m > maxMargin) {
         maxMargin = m;
@@ -50,7 +73,7 @@ export function useInventoryMetrics(
         minMargin = m;
         minId = p.id;
       }
-    });
+    }
 
     if (maxMargin === minMargin) {
       return { maxId: null, minId: null };
@@ -60,50 +83,57 @@ export function useInventoryMetrics(
   }, [paginatedProducts]);
 
   const categoryProductCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    categories.forEach(c => {
-      counts[c.id] = 0;
-    });
-    counts['uncategorized'] = 0;
+    const counts = new Map<string, number>();
+    categories.forEach(c => counts.set(c.id, 0));
+    counts.set('uncategorized', 0);
 
-    products.forEach(p => {
-      const cid = p.categoryId || 'uncategorized';
-      if (counts[cid] !== undefined) {
-        counts[cid]++;
-      } else {
-        counts['uncategorized']++;
+    if (products) {
+      for (let i = 0; i < products.length; i++) {
+        const cid = products[i].categoryId || 'uncategorized';
+        counts.set(cid, (counts.get(cid) || 0) + 1);
       }
-    });
+    }
 
     const aggregated: Record<string, number> = {};
     categories.forEach(c => {
-      const descendants = getCategoryDescendants(categories, c.id);
-      let total = counts[c.id] || 0;
-      descendants.forEach(dId => {
-        total += counts[dId] || 0;
-      });
+      const descendants = categoryDescendantsMap.get(c.id) || [];
+      let total = counts.get(c.id) || 0;
+      for (let j = 0; j < descendants.length; j++) {
+        total += counts.get(descendants[j]) || 0;
+      }
       aggregated[c.id] = total;
     });
-    aggregated['uncategorized'] = counts['uncategorized'] || 0;
+    aggregated['uncategorized'] = counts.get('uncategorized') || 0;
     return aggregated;
-  }, [categories, products]);
+  }, [categories, products, categoryDescendantsMap]);
 
   const expandedSelectedCategories = useMemo(() => {
-    if (selectedCategories.length === 0) return [];
+    if (!selectedCategories || selectedCategories.length === 0) return [];
     const all = new Set<string>();
-    selectedCategories.forEach(cid => {
+    for (let i = 0; i < selectedCategories.length; i++) {
+      const cid = selectedCategories[i];
       if (cid === 'uncategorized') {
         all.add('uncategorized');
-        return;
+        continue;
       }
       all.add(cid);
-      getCategoryDescendants(categories, cid).forEach(d => all.add(d));
-    });
+      const descendants = categoryDescendantsMap.get(cid) || [];
+      for (let j = 0; j < descendants.length; j++) {
+        all.add(descendants[j]);
+      }
+    }
     return Array.from(all);
-  }, [selectedCategories, categories]);
+  }, [selectedCategories, categoryDescendantsMap]);
 
   const productSuppliers = useMemo(() => {
-    return Array.from(new Set(products.map((p: Product) => p.supplier))).filter(Boolean) as string[];
+    if (!products) return [];
+    const suppliers = new Set<string>();
+    for (let i = 0; i < products.length; i++) {
+      if (products[i].supplier) {
+        suppliers.add(products[i].supplier!);
+      }
+    }
+    return Array.from(suppliers);
   }, [products]);
 
   return {

@@ -81,7 +81,7 @@ export function SearchableBrandSelect({
                   {b.logoUrl ? (
                     <SafeImage src={b.logoUrl} alt={b.name} className="w-full h-full object-contain p-1" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/20 font-bold text-xs">{b.name.substring(0, 2).toUpperCase()}</div>
+                    <div className="w-full h-full flex items-center justify-center text-white/20 font-bold text-xs">{String(b.name || 'B').substring(0, 2).toUpperCase()}</div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">

@@ -1,6 +1,5 @@
 import { localDb } from '../../services/LocalDatabase';
 import { logAction } from '../../lib/utils';
-import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { Product, Purchase, CompanySettings } from '../../types';
 import { toast } from 'sonner';
@@ -105,42 +104,133 @@ export function useInventoryHandlers({
     }
   };
 
-  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.name.endsWith('.csv')) {
+    if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
       Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
+        header: false,
+        skipEmptyLines: 'greedy',
         complete: (results: any) => {
-          const data = results.data as any[];
-          if (data.length > 0) {
-            setCsvHeaders(Object.keys(data[0]));
-            setImportPreviewData(data);
+          const rawRows = results.data as any[][];
+          if (!rawRows || rawRows.length === 0) {
+            toast.error("Le fichier CSV est vide.");
+            return;
+          }
+
+          const firstRow = rawRows[0] || [];
+          const knownHeaderTerms = ['nom', 'name', 'désignation', 'designation', 'article', 'produit', 'product', 'prix', 'price', 'sku', 'code', 'barcode', 'stock', 'qte', 'quantite', 'categorie', 'category', 'achat', 'cout', 'cost'];
+          
+          const isHeaderRow = firstRow.some((col: any) => {
+            if (typeof col !== 'string') return false;
+            const lower = col.toLowerCase().trim();
+            return knownHeaderTerms.includes(lower);
+          });
+
+          let headers: string[] = [];
+          let dataObjects: any[] = [];
+
+          if (isHeaderRow) {
+            headers = firstRow.map((h: any, idx: number) => (h && h.toString().trim()) || `Colonne ${idx + 1}`);
+            const dataRows = rawRows.slice(1);
+            dataObjects = dataRows
+              .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
+              .map((row: any[]) => {
+                const obj: Record<string, any> = {};
+                headers.forEach((h, idx) => {
+                  obj[h] = row[idx] !== undefined ? row[idx] : '';
+                });
+                return obj;
+              });
+          } else {
+            // No header row: first row is data!
+            headers = firstRow.map((_, idx: number) => `Colonne ${idx + 1}`);
+            dataObjects = rawRows
+              .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
+              .map((row: any[]) => {
+                const obj: Record<string, any> = {};
+                headers.forEach((h, idx) => {
+                  obj[h] = row[idx] !== undefined ? row[idx] : '';
+                });
+                return obj;
+              });
+          }
+
+          if (dataObjects.length > 0) {
+            setCsvHeaders(headers);
+            setImportPreviewData(dataObjects);
             setIsImportModalOpen(true);
+          } else {
+            toast.error("Aucune ligne de produit valide trouvée dans le fichier.");
           }
         },
         error: (error: any) => {
           console.error('Error parsing CSV:', error);
-          alert('Erreur lors de la lecture du fichier CSV.');
+          toast.error('Erreur lors de la lecture du fichier CSV: ' + error.message);
         }
       });
-    } else if (file.name.endsWith('.xlsx')) {
+    } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
       try {
+        const XLSX = await import('xlsx');
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data);
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-        if (jsonData.length > 0) {
-          setCsvHeaders(Object.keys(jsonData[0] as object));
-          setImportPreviewData(jsonData);
-          setIsImportModalOpen(true);
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+        
+        if (!rawJson || rawJson.length === 0) {
+          toast.error("Le fichier Excel est vide.");
+          return;
         }
-      } catch (error) {
+
+        const firstRow = rawJson[0] || [];
+        const knownHeaderTerms = ['nom', 'name', 'désignation', 'designation', 'article', 'produit', 'product', 'prix', 'price', 'sku', 'code', 'barcode', 'stock', 'qte', 'quantite', 'categorie', 'category', 'achat', 'cout', 'cost'];
+        
+        const isHeaderRow = firstRow.some((col: any) => {
+          if (typeof col !== 'string') return false;
+          const lower = col.toLowerCase().trim();
+          return knownHeaderTerms.includes(lower);
+        });
+
+        let headers: string[] = [];
+        let dataObjects: any[] = [];
+
+        if (isHeaderRow) {
+          headers = firstRow.map((h: any, idx: number) => (h && h.toString().trim()) || `Colonne ${idx + 1}`);
+          const dataRows = rawJson.slice(1);
+          dataObjects = dataRows
+            .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
+            .map((row: any[]) => {
+              const obj: Record<string, any> = {};
+              headers.forEach((h, idx) => {
+                obj[h] = row[idx] !== undefined ? row[idx] : '';
+              });
+              return obj;
+            });
+        } else {
+          headers = firstRow.map((_, idx: number) => `Colonne ${idx + 1}`);
+          dataObjects = rawJson
+            .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
+            .map((row: any[]) => {
+              const obj: Record<string, any> = {};
+              headers.forEach((h, idx) => {
+                obj[h] = row[idx] !== undefined ? row[idx] : '';
+              });
+              return obj;
+            });
+        }
+
+        if (dataObjects.length > 0) {
+          setCsvHeaders(headers);
+          setImportPreviewData(dataObjects);
+          setIsImportModalOpen(true);
+        } else {
+          toast.error("Aucune ligne de produit valide trouvée dans le fichier.");
+        }
+      } catch (error: any) {
         console.error('Error parsing XLSX:', error);
-        alert('Erreur lors de la lecture du fichier Excel.');
+        toast.error('Erreur lors de la lecture du fichier Excel: ' + error.message);
       }
     }
   };

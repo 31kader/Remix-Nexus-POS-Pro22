@@ -69,7 +69,7 @@ export function PayrollReportModal({
                   setPenaltyReason('');
                 }}
               >
-                {employees.map(e => <option key={e.id} value={e.id}>{e.name.toUpperCase()}</option>)}
+                {(employees || []).filter(Boolean).map(e => <option key={e.id} value={e.id}>{String(e.name || 'EMPLOYÉ').toUpperCase()}</option>)}
               </select>
             </div>
             

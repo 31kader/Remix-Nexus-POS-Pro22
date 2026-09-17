@@ -1,20 +1,14 @@
+# Variables d'environnement locales et secrets
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Dépendances et builds
 node_modules/
 dist/
-dist_electron/
-out/
+build/
 .cache/
-.playwright/
-coverage/
-android/
-ios/
-public/NEXUS_EXPORT.*
-*.zip
-*.tar.gz
-*.tgz
-*.sql
-.DS_Store
-*.log
-.env*
-!.env.example
-release/release/ 
-release/ 
+release/
+*.exe

@@ -36,7 +36,7 @@ export function ExpiryStats({ stats }: ExpiryStatsProps) {
           <TrendingDown className="text-indigo-500" size={24} />
           <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded-full">PV à risque</span>
         </div>
-        <p className="text-2xl font-black text-white">{stats.valueAtRisk.toLocaleString()} CFA</p>
+        <p className="text-2xl font-black text-white">{stats.valueAtRisk.toLocaleString()} DA</p>
         <p className="text-xs text-white/40 font-bold uppercase tracking-wider">Valeur (PV) à risque</p>
       </div>
 
@@ -45,7 +45,7 @@ export function ExpiryStats({ stats }: ExpiryStatsProps) {
           <History className="text-slate-400" size={24} />
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-500/10 px-2 py-0.5 rounded-full">Coût</span>
         </div>
-        <p className="text-2xl font-black text-white">{stats.costAtRisk.toLocaleString()} CFA</p>
+        <p className="text-2xl font-black text-white">{stats.costAtRisk.toLocaleString()} DA</p>
         <p className="text-xs text-white/40 font-bold uppercase tracking-wider">Coût d'achat à risque</p>
       </div>
     </div>

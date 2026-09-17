@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { X, UserPlus } from 'lucide-react';
 import { Button } from './ui';
 import { cn } from '../lib/utils';
@@ -22,20 +21,18 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+      <div
         className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 my-10"
       >
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <UserPlus size={20} />
+              <UserPlus size={20}   />
             </div>
             <h3 className="text-lg font-bold text-slate-800">Ajouter un membre</h3>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-50 rounded-xl transition-all">
-            <X size={20} />
+            <X size={20}   />
           </button>
         </div>
         
@@ -56,7 +53,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                />
+                  />
               </div>
               <div className="space-y-1">
                 <span className="text-xs font-bold text-slate-600">Téléphone (Identifiant)</span>
@@ -66,7 +63,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                />
+                  />
               </div>
             </div>
           </div>
@@ -82,7 +79,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                />
+                  />
               </div>
               <div className="space-y-1">
                 <span className="text-xs font-bold text-slate-600">Mot de Passe</span>
@@ -92,7 +89,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                />
+                  />
               </div>
             </div>
           </div>
@@ -151,7 +148,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
             Ajouter
           </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

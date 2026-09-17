@@ -8,6 +8,7 @@ import { Product, CompanySettings } from '../types';
 import { Button, Modal } from './ui';
 import { toast } from 'sonner';
 import { sanitizeProductForSupabase, cn } from '../lib/utils';
+import { useCoreStore } from '../store/useCoreStore';
 
 export function StockAdjustmentModal({ 
   isOpen, onClose, product, user, settings 
@@ -82,11 +83,13 @@ export function StockAdjustmentModal({
 
       // Optimistic cache update for immediate local reflection
       window.dispatchEvent(new CustomEvent('product-cache-update', { detail: updatedProduct }));
+      useCoreStore.getState().setProducts(prev => (prev || []).map(p => p.id === product.id ? (updatedProduct as Product) : p));
 
       // Cleaned update for Supabase schema safety via sync queue
       enqueueStockAdjustment(product.id, delta);
       
       localDb.update(`products/${product.id}`, {
+        stock: updatedProduct.stock,
         damagedStock: updatedProduct.damagedStock,
         batches: updatedProduct.batches,
         expirationDate: updatedProduct.expirationDate,

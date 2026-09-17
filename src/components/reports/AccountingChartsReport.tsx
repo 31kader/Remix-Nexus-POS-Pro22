@@ -36,28 +36,44 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
     const periodMap: Record<string, number> = {};
     const productMap: Record<string, { name: string, quantity: number, revenue: number }> = {};
 
-    transactions.forEach(t => {
-      if (t.status === 'returned') return;
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+    const safeProducts = Array.isArray(products) ? products : [];
+    const safeExpenses = Array.isArray(expenses) ? expenses : [];
+
+    const getSafeItems = (t: any): any[] => {
+      if (!t) return [];
+      let items = t.items;
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch (_) { items = []; }
+      }
+      return Array.isArray(items) ? items : [];
+    };
+
+    safeTransactions.forEach(t => {
+      if (!t || t.status === 'returned') return;
       
-      t.items.forEach(item => {
+      const items = getSafeItems(t);
+      items.forEach(item => {
+        if (!item) return;
         const cat = item.categoryId || 'Non classé';
-        categoryMap[cat] = (categoryMap[cat] || 0) + (calculateItemPrice(item, t.isWholesale) * item.quantity);
+        const qty = Number(item.quantity) || 1;
+        categoryMap[cat] = (categoryMap[cat] || 0) + (calculateItemPrice(item, t.isWholesale) * qty);
         
-        const prodId = item.id;
+        const prodId = item.id || item.name || 'unknown';
         if (!productMap[prodId]) {
-          productMap[prodId] = { name: item.name, quantity: 0, revenue: 0 };
+          productMap[prodId] = { name: item.name || 'Article inconnu', quantity: 0, revenue: 0 };
         }
-        productMap[prodId].quantity += item.quantity;
-        productMap[prodId].revenue += (calculateItemPrice(item, t.isWholesale) * item.quantity);
+        productMap[prodId].quantity += qty;
+        productMap[prodId].revenue += (calculateItemPrice(item, t.isWholesale) * qty);
       });
 
       const emp = t.employeeName || 'Système';
-      employeeMap[emp] = (employeeMap[emp] || 0) + t.total;
+      employeeMap[emp] = (employeeMap[emp] || 0) + (Number(t.total) || 0);
 
       const key = period === 'monthly' 
         ? formatSafe(t.timestamp, 'MMM yyyy', { locale: fr })
         : formatSafe(t.timestamp, 'yyyy', { locale: fr });
-      periodMap[key] = (periodMap[key] || 0) + t.total;
+      periodMap[key] = (periodMap[key] || 0) + (Number(t.total) || 0);
     });
 
     const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
@@ -70,10 +86,10 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       });
     
     // Revenue by source
-    const revenueBySource = transactions.reduce((acc, t) => {
-        if (t.status === 'returned') return acc;
+    const revenueBySource = safeTransactions.reduce((acc, t) => {
+        if (!t || t.status === 'returned') return acc;
         const source = t.onlineOrderId ? 'Application' : 'Magasin';
-        acc[source] = (acc[source] || 0) + t.total;
+        acc[source] = (acc[source] || 0) + (Number(t.total) || 0);
         return acc;
     }, { Magasin: 0, Application: 0 } as Record<string, number>);
 
@@ -81,25 +97,30 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       .sort((a, b) => b.revenue - a.revenue);
     const topProducts = productSalesData.slice(0, 10);
 
-    const totalRevenue = transactions.reduce((sum, t) => sum + (t.status === 'returned' ? 0 : t.total), 0);
-    const totalCost = transactions.reduce((sum, t) => {
-      if (t.status === 'returned') return sum;
-      return sum + t.items.reduce((itemSum, item) => {
-        const product = products.find(p => p.id === item.id);
-        const costPrice = product?.costPrice || 0;
+    const totalRevenue = safeTransactions.reduce((sum, t) => sum + (!t || t.status === 'returned' ? 0 : (Number(t.total) || 0)), 0);
+    const totalCost = safeTransactions.reduce((sum, t) => {
+      if (!t || t.status === 'returned') return sum;
+      const items = getSafeItems(t);
+      return sum + items.reduce((itemSum, item) => {
+        if (!item) return itemSum;
+        const targetId = (item as any).productId || item.id;
+        const product = safeProducts.find(p => p.id === targetId || (item.name && p.name && p.name.toLowerCase() === item.name.toLowerCase()));
+        const costPrice = (item as any).costPrice !== undefined && (item as any).costPrice > 0 
+          ? Number((item as any).costPrice) 
+          : Number(product?.costPrice || 0);
         
         // Add operational costs (packaging, shipping, other)
         const opCosts = product?.operationalCosts || {};
-        const packaging = opCosts.packaging ?? (t.onlineOrderId ? (settings.operationalCosts?.basePackaging || 0) : 0);
-        const shipping = opCosts.shipping ?? (t.onlineOrderId ? (settings.operationalCosts?.baseShipping || 0) : 0);
+        const packaging = opCosts.packaging ?? (t.onlineOrderId ? (settings?.operationalCosts?.basePackaging || 0) : 0);
+        const shipping = opCosts.shipping ?? (t.onlineOrderId ? (settings?.operationalCosts?.baseShipping || 0) : 0);
         const other = opCosts.other || 0;
         
         const totalUnitCost = costPrice + packaging + shipping + other;
-        
-        return itemSum + (totalUnitCost * item.quantity);
+        const qty = Number(item.quantity) || 1;
+        return itemSum + (totalUnitCost * qty);
       }, 0);
     }, 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = safeExpenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - totalExpenses;
 

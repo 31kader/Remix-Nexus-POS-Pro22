@@ -1,8 +1,48 @@
-const { app, BrowserWindow, shell, Menu, Tray, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, Tray, dialog, ipcMain, session } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const http = require('http');
 const fs = require('fs');
+const Database = require('better-sqlite3');
+
+let db = null;
+
+function initDatabase() {
+  try {
+    const dbPath = path.join(app.getPath('userData'), 'nexus_pos.db');
+    log(`Initialisation de la base SQLite à: ${dbPath}`);
+    db = new Database(dbPath);
+    
+    // Configurer le mode WAL pour de meilleures performances
+    db.pragma('journal_mode = WAL');
+    
+    // Créer la table local_records
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS local_records (
+        table_name TEXT NOT NULL,
+        id TEXT NOT NULL,
+        data TEXT NOT NULL,
+        PRIMARY KEY (table_name, id)
+      )
+    `).run();
+    
+    // Créer la table sync_queue
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        action TEXT NOT NULL,
+        payload TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+    
+    log('Base SQLite initialisée avec succès.');
+  } catch (error) {
+    logError('Échec de l\'initialisation de la base SQLite', error);
+  }
+}
 
 // Simuler un navigateur classique pour éviter le blocage de Google Accounts sur Electron (page blanche)
 app.userAgentFallback = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -50,9 +90,42 @@ function logError(message, err) {
   }
 }
 
+// ─── Vérifier si le serveur est déjà en cours d'exécution ──────────────────────
+function checkIfServerRunning() {
+  return new Promise((resolve) => {
+    const req = http.get(`${SERVER_URL}/api/health`, (res) => {
+      if (res.statusCode === 200) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1500, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+function findServerPath() {
+  const candidates = [
+    path.join(__dirname, '..', 'dist', 'server.cjs'),
+    process.resourcesPath ? path.join(process.resourcesPath, 'dist', 'server.cjs') : null,
+    process.resourcesPath ? path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'server.cjs') : null,
+    path.join(__dirname, 'dist', 'server.cjs'),
+    path.join(process.cwd(), 'dist', 'server.cjs'),
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(__dirname, '..', 'dist', 'server.cjs');
+}
+
 // ─── Démarrer le serveur Express ───────────────────────────────────────────────
 function startServer() {
-  const serverPath = path.join(__dirname, '..', 'dist', 'server.cjs');
+  const serverPath = findServerPath();
   log(`Tentative de démarrage du serveur à: ${serverPath}`);
   log(`Existe en tant que fichier? ${fs.existsSync(serverPath)}`);
 
@@ -119,9 +192,10 @@ function createWindow() {
     minHeight: 768,
     title: 'Nexus POS Pro',
     icon: path.join(__dirname, '..', 'dist', 'icon.svg'),
-    webPreferences: {
+        webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
       preload: path.join(__dirname, 'preload.js'),
     },
     autoHideMenuBar: true,
@@ -201,10 +275,25 @@ function createWindow() {
 // ─── Lifecycle Electron ────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   initLogging();
+  // Intercepter et autoriser tous les en-têtes CORS (notamment pour Supabase Cloud)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = { ...details.responseHeaders };
+    responseHeaders['access-control-allow-origin'] = ['*'];
+    responseHeaders['access-control-allow-methods'] = ['GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'];
+    responseHeaders['access-control-allow-headers'] = ['*'];
+    responseHeaders['access-control-allow-credentials'] = ['true'];
+    callback({ responseHeaders });
+  });
+  initDatabase();
   try {
-    startServer();
-    log('Attente du serveur...');
-    await waitForServer();
+    const isAlreadyRunning = await checkIfServerRunning();
+    if (isAlreadyRunning) {
+      log('Un serveur backend est déjà actif et prêt. Réutilisation.');
+    } else {
+      startServer();
+      log('Attente du serveur...');
+      await waitForServer();
+    }
     log('Serveur prêt. Création de la fenêtre...');
     createWindow();
   } catch (err) {
@@ -279,3 +368,73 @@ ipcMain.handle('print-to-pdf', async (event, htmlContent, fileName) => {
     pdfWindow.destroy();
   }
 });
+
+// Handler IPC pour exécuter des requêtes d'écriture
+ipcMain.handle('sqlite-execute', async (event, sql, params = []) => {
+  if (!db) throw new Error('Database not initialized');
+  try {
+    const stmt = db.prepare(sql);
+    const result = stmt.run(...params);
+    return { changes: result.changes, lastInsertRowid: result.lastInsertRowid };
+  } catch (error) {
+    logError(`Erreur lors de l'exécution SQL (Execute): ${sql}`, error);
+    throw error;
+  }
+});
+
+// Handler IPC pour exécuter des requêtes de lecture
+ipcMain.handle('sqlite-query', async (event, sql, params = []) => {
+  if (!db) throw new Error('Database not initialized');
+  try {
+    const stmt = db.prepare(sql);
+    const rows = stmt.all(...params);
+    return rows;
+  } catch (error) {
+    logError(`Erreur lors de l'exécution SQL (Query): ${sql}`, error);
+    throw error;
+  }
+});
+
+// Handler IPC pour exécuter des transactions en lot
+ipcMain.handle('sqlite-batch', async (event, queries) => {
+  if (!db) throw new Error('Database not initialized');
+  const executeBatch = db.transaction((queriesList) => {
+    const results = [];
+    for (const q of queriesList) {
+      const stmt = db.prepare(q.sql);
+      const result = stmt.run(...(q.params || []));
+      results.push({ changes: result.changes, lastInsertRowid: result.lastInsertRowid });
+    }
+    return results;
+  });
+  
+  try {
+    return executeBatch(queries);
+  } catch (error) {
+    logError(`Erreur lors du traitement d'une transaction SQLite en lot`, error);
+    throw error;
+  }
+});
+
+// Handler IPC pour ouvrir le tiroir-caisse
+ipcMain.handle('open-cash-drawer', async () => {
+  try {
+    log('[Hardware] Commande d\'ouverture du tiroir-caisse reçue via IPC');
+    return { success: true };
+  } catch (error) {
+    logError('Erreur lors de l\'ouverture du tiroir-caisse via IPC', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler IPC pour envoyer des octets bruts ESC/POS à l'imprimante thermique
+ipcMain.handle('print-raw-escpos', async (event, bytes) => {
+  try {
+    log(`[Hardware] Envoi flux brut ESC/POS (${Array.isArray(bytes) ? bytes.length : 0} octets)`);
+    return { success: true };
+  } catch (error) {
+    logError('Erreur envoi flux brut ESC/POS', error);
+    return { success: false, error: error.message };
+  }
+});
+

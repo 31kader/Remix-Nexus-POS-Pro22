@@ -2,9 +2,27 @@ import bcrypt from 'bcryptjs';
 import { dbState } from './local-db';
 
 // Helper for generating standard matching IDs
-export function generateLocalId() {
-  return Math.random().toString(36).substring(2, 10);
+export function generateLocalId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 12)}`;
 }
+
+export const TABLE_NAME_MAPPINGS: Record<string, string> = {
+  'onlineOrders': 'online_orders',
+  'goodsReceiptNotes': 'goods_receipt_notes',
+  'stockAdjustments': 'stock_adjustments',
+  'supplierPayments': 'supplier_payments',
+  'supplierSyncs': 'supplier_syncs',
+  'damagedItems': 'damaged_items',
+  'auditLogs': 'audit_logs',
+  'invoicePatterns': 'invoice_patterns',
+  'purchaseOrders': 'purchase_orders',
+  'shifts': 'cash_shifts',
+  'cartDrafts': 'cart_drafts',
+  'externalDeliveryRequests': 'external_delivery_requests'
+};
 
 // Convert camelCase keys to snake_case for Supabase PostgreSQL
 export function camelToSnakeCase(str: string): string {
@@ -71,6 +89,17 @@ export function convertKeysToCamel(obj: any): any {
     if (newObj.totalAmount !== undefined && newObj.total === undefined) {
       newObj.total = newObj.totalAmount;
     }
+
+    // Safe auto-parse for cashierNotes if received as JSON string from Supabase
+    if (newObj.cashierNotes && typeof newObj.cashierNotes === 'string') {
+      const trimmed = newObj.cashierNotes.trim();
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          newObj.cashierNotes = Array.isArray(parsed) ? parsed : [parsed];
+        } catch (_) {}
+      }
+    }
     
     return newObj;
   }
@@ -93,14 +122,17 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   customers: [
     'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 
     'total_spent', 'last_visit', 'notes', 'is_app_user', 'join_date', 
-    'favorite_items', 'alerts', 'cashier_notes', 'updated_at'
+    'favorite_items', 'alerts', 'cashier_notes', 'updated_at',
+    'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash'
   ],
   transactions: [
-    'id', 'total', 'payment_method', 'delivery_method', 'timestamp', 'user_id', 
-    'customer_id', 'customer_name', 'status', 'promotion_id', 'points_earned', 
+    'id', 'total', 'payment_method', 'delivery_method', 'timestamp', 'created_at', 'updated_at', 'user_id', 
+    'customer_id', 'customer_name', 'cashier_id', 'cashier_name', 'employee_id', 'employee_name', 'amount_received', 'amount_returned',
+    'status', 'promotion_id', 'points_earned', 
     'discount_amount', 'points_discount', 'balance_used', 'voucher_discount', 
     'is_wholesale', 'online_order_id', 'items',
-    'audit_status', 'audited_by', 'audited_at', 'audit_duration', 'audit_note'
+    'audit_status', 'audited_by', 'audited_at', 'audit_duration', 'audit_note',
+    'is_edited', 'edited_at', 'edited_by', 'original_total', 'terminal_id', 'terminal_name'
   ],
   employees: [
     'id', 'name', 'role', 'phone', 'email', 'hire_date', 'status', 'is_clocked_in', 
@@ -114,7 +146,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   cash_shifts: [
     'id', 'opened_at', 'closed_at', 'opened_by', 'closed_by', 'initial_cash', 
     'final_cash', 'expected_cash', 'total_sales', 'total_cash_sales', 
-    'total_card_sales', 'total_expenses', 'status', 'notes'
+    'total_card_sales', 'total_expenses', 'status', 'notes', 'terminal_id', 'terminal_name'
   ],
   vouchers: [
     'id', 'code', 'type', 'value', 'current_balance', 'min_purchase', 'expiry_date', 
@@ -153,7 +185,9 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'enable_camera_portal', 'favorite_category_ids', 'quick_select_groups'
   ],
   promotions: [
-    'id', 'name', 'type', 'value', 'start_date', 'end_date', 'applicable_categories', 'code', 'buy_quantity', 'get_quantity', 'applicable_products', 'updated_at'
+    'id', 'name', 'description', 'type', 'value', 'min_purchase', 'start_date', 'end_date', 
+    'conditions', 'active', 'is_active', 'applicable_categories', 'code', 'buy_quantity', 
+    'get_quantity', 'applicable_products', 'updated_at'
   ],
   returns: [
     'id', 'transaction_id', 'product_id', 'quantity', 'reason', 'condition', 'refund_amount', 'date', 'status', 'notes',
@@ -161,9 +195,9 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   ],
   online_orders: [
     'id', 'external_order_id', 'customer_id', 'customer_name', 'customer_phone', 'customer_email',
-    'items', 'total', 'status', 'payment_status', 'payment_method', 'source', 'delivery_method', 
-    'pickup_time', 'shipping_address', 'synced_to_pos', 'assigned_employee_id', 
-    'assigned_employee_name', 'assigned_picker_id', 'assigned_picker_name', 'status_history', 'timestamp'
+    'items', 'subtotal', 'total', 'status', 'payment_status', 'payment_method', 'source', 'delivery_method', 
+    'pickup_time', 'shipping_address', 'delivery_notes', 'notes', 'loyalty_points', 'synced_to_pos', 'assigned_employee_id', 
+    'assigned_employee_name', 'assigned_picker_id', 'assigned_picker_name', 'status_history', 'timestamp', 'updated_at', 'created_at'
   ],
   purchases: [
     'id', 'supplier_id', 'supplier_name', 'items', 'total_amount', 'status', 'invoice_number', 'date', 'payment_status', 'paid_amount', 'global_discount', 'global_tax', 'notes', 'updated_at', 'documents'
@@ -175,7 +209,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'product_id', 'new_quantity', 'adjustment', 'reason', 'timestamp', 'user_id', 'user_name', 'is_loss'
   ],
   supplier_payments: [
-    'id', 'supplier_id', 'amount', 'method', 'date', 'reference', 'notes'
+    'id', 'supplier_id', 'supplier_name', 'amount', 'method', 'date', 'reference', 'note', 'notes'
   ],
   audits: [
     'id', 'date', 'auditor_id', 'status', 'discrepancies', 'notes', 'completed_at'
@@ -187,7 +221,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'supplier_id', 'last_sync', 'status', 'items_updated', 'errors'
   ],
   damaged_items: [
-    'id', 'product_id', 'quantity', 'date', 'reported_by', 'user_name', 'reason', 'cost_price', 'claim_status', 'status'
+    'id', 'product_id', 'product_name', 'quantity', 'date', 'reported_by', 'user_id', 'user_name', 'reason', 'cost_price', 'claim_status', 'status', 'supplier_id'
   ],
   advances: [
     'id', 'employee_id', 'amount', 'date', 'reason', 'status', 'approved_by', 'repayment_date'
@@ -198,7 +232,24 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   ]
 };
 
-export const CONFLICT_MAPS: Record<string, string[][]> = {};
+export const CONFLICT_MAPS: Record<string, string[][]> = {
+  customers: [
+    ['loyalty_points', 'loyaltyPoints'],
+    ['total_spent', 'totalSpent'],
+    ['cashier_notes', 'cashierNotes'],
+    ['is_app_user', 'isAppUser'],
+    ['loyalty_card_number', 'loyaltyCardNumber'],
+    ['updated_at', 'updatedAt'],
+    ['created_at', 'createdAt'],
+    ['last_purchase_date', 'lastPurchaseDate'],
+    ['purchase_count', 'purchaseCount']
+  ],
+  users: [
+    ['display_name', 'displayName', 'name'],
+    ['join_date', 'joinDate', 'createdAt', 'created_at'],
+    ['password_hash', 'passwordHash']
+  ]
+};
 
 export function preparePayload(table: string, id: string, data: any) {
   let combined = { ...data };
@@ -207,10 +258,33 @@ export function preparePayload(table: string, id: string, data: any) {
     if (cached) {
       combined = { ...cached, ...data };
     }
+  } else if (table === 'customers') {
+    const cached = dbState?.customers?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'users') {
+    const cached = dbState?.users?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'online_orders' || table === 'onlineOrders') {
+    const cached = dbState?.online_orders?.[id] || dbState?.onlineOrders?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
   }
   // Map total to totalAmount for purchases/purchase_orders to align with Supabase schema
   if ((table === 'purchases' || table === 'purchase_orders') && combined.total !== undefined && combined.totalAmount === undefined) {
     combined.totalAmount = combined.total;
+  }
+  if (table === 'supplier_payments') {
+    if (combined.note && !combined.notes) combined.notes = combined.note;
+    if (combined.notes && !combined.note) combined.note = combined.notes;
+  }
+  if (table === 'damaged_items') {
+    if (combined.userId && !combined.reported_by) combined.reported_by = combined.userId;
+    if (combined.reported_by && !combined.userId) combined.userId = combined.reported_by;
   }
   const payload = { id, ...combined };
   
@@ -308,6 +382,11 @@ export function preparePayload(table: string, id: string, data: any) {
       return null;
     }
 
+    if (key === 'cashier_notes') {
+      if (typeof val === 'string') return val;
+      return JSON.stringify(val || []);
+    }
+
     const jsonKeys = [
       'bundle_items', 'quantity_discounts', 'usage_logs', 'items', 'alerts', 
       'favorite_items', 'usage_logs', 'batches', 'status_history', 'conditions',
@@ -334,9 +413,6 @@ export function preparePayload(table: string, id: string, data: any) {
 
     // Safety checks for product non-nullable fields to prevent PostgreSQL 23502 NOT NULL constraints violations on partial upserts
     if (table === 'products') {
-      if (filtered.name === undefined || filtered.name === null || filtered.name === '') {
-        filtered.name = 'Sans nom';
-      }
       if (filtered.category_id === undefined || filtered.category_id === null) {
         filtered.category_id = 'uncategorized';
       }
@@ -345,6 +421,31 @@ export function preparePayload(table: string, id: string, data: any) {
       }
       if (filtered.status === undefined || filtered.status === null) {
         filtered.status = 'active';
+      }
+    }
+
+    // Safety checks for customer non-nullable fields (e.g. name) on partial upserts
+    if (table === 'customers') {
+      if (!filtered.name) {
+        const cached = dbState?.customers?.[id];
+        filtered.name = cleanValueForPostgres('name', cached?.name || snakePayload.name || 'Client');
+      }
+    }
+
+    // Safety checks for users table fields (guarantee non-null id/uid/display_name/role)
+    if (table === 'users') {
+      if (!filtered.id && filtered.uid) {
+        filtered.id = filtered.uid;
+      }
+      if (!filtered.uid && filtered.id) {
+        filtered.uid = filtered.id;
+      }
+      if (!filtered.display_name) {
+        const cached = dbState?.users?.[id];
+        filtered.display_name = cleanValueForPostgres('display_name', cached?.displayName || cached?.name || snakePayload.displayName || snakePayload.name || 'Utilisateur');
+      }
+      if (!filtered.role) {
+        filtered.role = 'staff';
       }
     }
 

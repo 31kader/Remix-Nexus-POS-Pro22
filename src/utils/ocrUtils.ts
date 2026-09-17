@@ -195,12 +195,18 @@ export const isFuzzyNameMatch = (productName: string, lineText: string): boolean
   
   if (normProg.length < 3) return false;
   
+  // Exact substring match is always valid
   if (normLine.includes(normProg)) return true;
   
   const progWords = normProg.split(" ").filter(w => w.length >= 3);
   const lineWords = normLine.split(" ").filter(w => w.length >= 2);
   
   if (progWords.length === 0) return false;
+  
+  // STRICT RULE: Single-word product names CANNOT fuzzy match.
+  // They are too short and too likely to collide with random OCR text.
+  // They can only match via exact barcode/SKU (handled elsewhere).
+  if (progWords.length <= 1) return false;
   
   let matchedCount = 0;
   for (const pW of progWords) {
@@ -214,8 +220,11 @@ export const isFuzzyNameMatch = (productName: string, lineText: string): boolean
     }
   }
   
+  // Require at least 2 words to match AND 90%+ ratio
+  if (matchedCount < 2) return false;
+  
   const matchRatio = matchedCount / progWords.length;
-  return matchRatio >= 0.75;
+  return matchRatio >= 0.90;
 };
 
 export const preprocessImageForOcr = (file: File): Promise<string | File> => {
@@ -272,12 +281,14 @@ export const preprocessImageForOcr = (file: File): Promise<string | File> => {
         for (let i = 0; i < data.length; i += 4) {
           const idx = i / 4;
           const origLuma = lumaArray[idx];
-          const stretched = Math.round(((origLuma - minLuma) / range) * 255);
-          const finalVal = stretched < 140 ? 0 : 255;
+          // Gentle contrast stretch preserving anti-aliasing and font gradients
+          let stretched = Math.round(((origLuma - minLuma) / range) * 255);
+          if (stretched < 40) stretched = 0;
+          else if (stretched > 220) stretched = 255;
 
-          data[i] = finalVal;
-          data[i + 1] = finalVal;
-          data[i + 2] = finalVal;
+          data[i] = stretched;
+          data[i + 1] = stretched;
+          data[i + 2] = stretched;
         }
 
         ctx.putImageData(imgData, 0, 0);

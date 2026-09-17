@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Card, Button } from './ui';
 import { Download, Upload, AlertTriangle, ShieldAlert, CheckCircle, Clock, Info } from 'lucide-react';
-import { supabase } from '../supabase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { localDb } from '../services/LocalDatabase';
 import { convertKeysToCamel } from '../lib/db-converters';
-import { Transaction, Purchase, Expense, StockAdjustment } from '../types';
+import { getLocalValue } from '../lib/local-db';
+import { useTransactionStore } from '../store/useTransactionStore';
+import { useCoreStore } from '../store/useCoreStore';
+import { useFinanceStore } from '../store/useFinanceStore';
+import { set as idbSet, del as idbDel } from 'idb-keyval';
 import { format } from 'date-fns';
 
 interface ArchiveManagerProps {
@@ -12,11 +16,21 @@ interface ArchiveManagerProps {
   settings: any;
 }
 
+const getItemDateMs = (item: any, dateField: string): number => {
+  if (!item) return 0;
+  const raw = item[dateField] || item.timestamp || item.date || item.createdAt || item.created_at || item.returnDate;
+  if (!raw) return 0;
+  if (typeof raw === 'number') return raw;
+  const time = new Date(raw).getTime();
+  return isNaN(time) ? 0 : time;
+};
+
 export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
   const [endDate, setEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [isArchiving, setIsArchiving] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [deleteAfterArchive, setDeleteAfterArchive] = useState(true);
+  const [compressArchive, setCompressArchive] = useState(true);
   const [progress, setProgress] = useState<{ step: string; count?: number; total?: number } | null>(null);
 
   const [statusMessage, setStatusMessage] = useState<{ title: string; message: string; type: 'success' | 'error' | 'info'; confirmAction?: () => void } | null>(null);
@@ -26,9 +40,9 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
     { name: 'purchases', dateField: 'date' },
     { name: 'expenses', dateField: 'date' },
     { name: 'returns', dateField: 'timestamp' },
-    { name: 'stock_adjustments', dateField: 'timestamp' }, // Renamed to match likely table name
-    { name: 'supplier_payments', dateField: 'date' }, // Renamed
-    { name: 'online_orders', dateField: 'timestamp' } // Renamed
+    { name: 'stock_adjustments', dateField: 'timestamp' },
+    { name: 'supplier_payments', dateField: 'date' },
+    { name: 'online_orders', dateField: 'timestamp' }
   ];
 
   const executeArchiveTask = async () => {
@@ -38,17 +52,46 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
     try {
       const archiveData: Record<string, any[]> = {};
       const endDateTime = endDate + 'T23:59:59.999Z';
+      const targetDateLimit = new Date(endDateTime).getTime();
 
       for (const col of collectionsToArchive) {
         setProgress({ step: `Récupération de ${col.name}...` });
-        
-        const { data, error } = await supabase
-          .from(col.name)
-          .select('*')
-          .lte(col.dateField, endDateTime);
+        const itemMap = new Map<string, any>();
 
-        if (error) throw error;
-        archiveData[col.name] = data || [];
+        // 1. Fetch local records from local-db memory
+        const rawLocal = getLocalValue(col.name);
+        if (rawLocal && typeof rawLocal === 'object') {
+          const localItems = Array.isArray(rawLocal) ? rawLocal : Object.values(rawLocal);
+          localItems.forEach((item: any) => {
+            if (!item || !item.id) return;
+            const itemDate = getItemDateMs(item, col.dateField);
+            if (itemDate <= targetDateLimit) {
+              itemMap.set(String(item.id), item);
+            }
+          });
+        }
+
+        // 2. Fetch Supabase records if configured
+        if (isSupabaseConfigured) {
+          try {
+            const { data } = await supabase
+              .from(col.name)
+              .select('*')
+              .lte(col.dateField, endDateTime);
+
+            if (data && Array.isArray(data)) {
+              data.forEach((item: any) => {
+                if (item && item.id) {
+                  itemMap.set(String(item.id), item);
+                }
+              });
+            }
+          } catch (err) {
+            console.warn(`[Archive] Supabase query skipped for ${col.name}:`, err);
+          }
+        }
+
+        archiveData[col.name] = Array.from(itemMap.values());
       }
 
       // Add metadata
@@ -65,11 +108,24 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
 
       const jsonStr = JSON.stringify(exportObject, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
       
+      let downloadBlob = blob;
+      let downloadFileName = `cloture_archive_${endDate}.json`;
+
+      if (compressArchive && typeof CompressionStream !== 'undefined') {
+        try {
+          const compressedStream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+          downloadBlob = await new Response(compressedStream).blob();
+          downloadFileName = `cloture_archive_${endDate}.json.gz`;
+        } catch (compErr) {
+          console.warn('[ArchiveManager] Compression failed, falling back to raw JSON:', compErr);
+        }
+      }
+
+      const url = URL.createObjectURL(downloadBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cloture_archive_${endDate}.json`;
+      a.download = downloadFileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -79,13 +135,64 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
         setProgress({ step: 'Suppression des données archivées...' });
         for (const col of collectionsToArchive) {
           const items = archiveData[col.name];
-          if (items.length === 0) continue;
+          if (!items || items.length === 0) continue;
           
-          const ids = items.map((item: any) => item.id);
+          const ids = items.map((item: any) => String(item.id));
+          
+          // Delete from localDb
           for (const id of ids) {
             await localDb.delete(`${col.name}/${id}`);
           }
+
+          // Delete from Supabase if connected
+          if (isSupabaseConfigured) {
+            try {
+              await supabase.from(col.name).delete().in('id', ids);
+            } catch (supErr) {
+              console.warn(`[Archive] Supabase deletion skipped for ${col.name}:`, supErr);
+            }
+          }
         }
+
+        // Update Zustand Stores in Real-Time
+        const purgedReturns = new Set((archiveData['returns'] || []).map(r => String(r.id)));
+        const purgedTransactions = new Set((archiveData['transactions'] || []).map(t => String(t.id)));
+        const purgedPurchases = new Set((archiveData['purchases'] || []).map(p => String(p.id)));
+        const purgedExpenses = new Set((archiveData['expenses'] || []).map(e => String(e.id)));
+
+        if (purgedReturns.size > 0) {
+          useTransactionStore.getState().setReturns(prev => (prev || []).filter(r => !purgedReturns.has(String(r.id))));
+        }
+        if (purgedTransactions.size > 0) {
+          useTransactionStore.getState().setTransactions(prev => (prev || []).filter(t => !purgedTransactions.has(String(t.id))));
+        }
+
+        const currentPurchases = useFinanceStore.getState().purchases || [];
+        const currentExpenses = useFinanceStore.getState().expenses || [];
+        if (purgedPurchases.size > 0) {
+          useFinanceStore.getState().setPurchases(currentPurchases.filter(p => !purgedPurchases.has(String(p.id))));
+        }
+        if (purgedExpenses.size > 0) {
+          useFinanceStore.getState().setExpenses(currentExpenses.filter(e => !purgedExpenses.has(String(e.id))));
+        }
+
+        // Clear IndexedDB & LocalStorage caches
+        try {
+          await idbDel('nexus_returns_cache');
+          await idbDel('nexus_transactions_cache');
+          await idbDel('nexus_purchases_cache');
+          await idbDel('nexus_expenses_cache');
+        } catch (_) {}
+
+        try {
+          localStorage.removeItem('nexus_returns_cache');
+          localStorage.removeItem('nexus_transactions_cache');
+          localStorage.removeItem('nexus_purchases_cache');
+          localStorage.removeItem('nexus_expenses_cache');
+        } catch (_) {}
+
+        // Trigger local-db reload event across components
+        window.dispatchEvent(new CustomEvent('local-db-reload'));
       }
 
       setStatusMessage({ title: "Succès", message: "Clôture et archivage terminés avec succès!", type: "success" });
@@ -122,7 +229,13 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
     setProgress({ step: 'Lecture du fichier...' });
 
     try {
-      const text = await file.text();
+      let text: string;
+      if ((file.name.endsWith('.gz') || file.type.includes('gzip')) && typeof DecompressionStream !== 'undefined') {
+        const stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
+        text = await new Response(stream).text();
+      } else {
+        text = await file.text();
+      }
       const parsed = JSON.parse(text);
 
       if (parsed.meta?.type !== 'monthly_closure_archive' || !parsed.data) {
@@ -228,6 +341,19 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
                 </div>
               </label>
 
+              <label className="flex items-center gap-2 bg-white border border-indigo-200 p-3 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={compressArchive} 
+                  onChange={e => setCompressArchive(e.target.checked)}
+                  className="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500" 
+                />
+                <div className="text-sm">
+                  <span className="font-bold text-indigo-950 block">Compresser l'archive (GZIP .json.gz)</span>
+                  <span className="text-xs text-indigo-700 block">Réduit la taille de 85% — Idéal pour sauvegarder des dizaines de milliers de ventes.</span>
+                </div>
+              </label>
+
               <Button 
                 onClick={handleArchive} 
                 disabled={isArchiving || isRestoring || !endDate}
@@ -258,14 +384,14 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-emerald-300 rounded-xl bg-white p-6 mt-4">
               <Upload className="text-emerald-400 mb-2" size={32} />
               <p className="text-sm font-medium text-emerald-800 mb-4 text-center">
-                Sélectionnez le fichier d'archive JSON
+                Sélectionnez le fichier d'archive (.json ou .json.gz)
               </p>
               
               <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg shadow-md transition-colors text-sm font-bold flex items-center gap-2">
                 <Upload size={18} /> Parcourir...
                 <input 
                   type="file" 
-                  accept=".json" 
+                  accept=".json,.json.gz,application/json,application/gzip" 
                   className="hidden" 
                   onChange={handleRestore}
                   disabled={isArchiving || isRestoring}

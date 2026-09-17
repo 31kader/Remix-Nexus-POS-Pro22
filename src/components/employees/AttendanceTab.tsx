@@ -13,6 +13,8 @@ import { printPayslip, generateWhatsAppMessage } from './payrollHelpers';
 import { ExpressClockIn } from './ExpressClockIn';
 import { PayrollReportModal } from './PayrollReportModal';
 
+import { useInventoryStore } from '../../store/useInventoryStore';
+
 export const AttendanceTab = memo(function AttendanceTab({ 
   attendance, 
   employees, 
@@ -43,11 +45,31 @@ export const AttendanceTab = memo(function AttendanceTab({
     }
   }, [employees, salaryEmployeeId]);
 
+  useEffect(() => {
+    const loadAttendance = async () => {
+      try {
+        const snap = await localDb.get('attendance');
+        if (snap.exists()) {
+          const val = snap.val();
+          const list = Object.keys(val).map(k => ({ id: k, ...val[k] }));
+          useInventoryStore.getState().setAttendance(list);
+        }
+      } catch (e) {
+        console.warn("Failed to load attendance:", e);
+      }
+    };
+    loadAttendance();
+  }, []);
+
   const handleClockOut = async (id: string) => {
     try {
+      const nowIso = new Date().toISOString();
       await localDb.update(`attendance/${id}`, {
-        clockOut: new Date().toISOString()
+        clockOut: nowIso
       });
+      useInventoryStore.getState().setAttendance(prev => 
+        (Array.isArray(prev) ? prev : []).map(r => r.id === id ? { ...r, clockOut: nowIso } : r)
+      );
     } catch (error: any) {
       alert("Erreur: " + error.message);
     }
@@ -59,15 +81,17 @@ export const AttendanceTab = memo(function AttendanceTab({
       const targetEmp = employees.find(e => e.id === employeeId);
       const now = new Date();
       const newId = Math.random().toString(36).substring(2, 10);
-      await localDb.insert(`attendance/${newId}`, {
+      const newRecord = {
         id: newId,
         userId: targetUser?.uid || null,
         employeeId: employeeId,
         employeeName: targetEmp?.name || 'Inconnu',
         date: format(now, 'yyyy-MM-dd'),
         clockIn: now.toISOString(),
-        status: 'present'
-      });
+        status: 'present' as const
+      };
+      await localDb.insert(`attendance/${newId}`, newRecord);
+      useInventoryStore.getState().setAttendance(prev => [newRecord, ...(Array.isArray(prev) ? prev : [])]);
     } catch (error: any) {
       alert("Erreur: " + error.message);
     }
@@ -245,7 +269,7 @@ export const AttendanceTab = memo(function AttendanceTab({
               onChange={e => setSelectedEmployeeFilter(e.target.value)}
             >
               <option value="all">TOUS LES EMPLOYÉS</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.name.toUpperCase()}</option>)}
+              {(employees || []).filter(Boolean).map(e => <option key={e.id} value={e.id}>{String(e.name || 'EMPLOYÉ').toUpperCase()}</option>)}
             </select>
           </div>
 

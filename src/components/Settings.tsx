@@ -1,3 +1,5 @@
+import { createBackupArchive, restoreBackupArchive } from '../services/backupRestoreService';
+import { Download, UploadCloud, ShieldCheck, FileCheck } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { 
   Store, 
@@ -9,8 +11,9 @@ import {
   Save, 
   ChevronRight,
   Settings as SettingsIcon,
-  Shield
-} from 'lucide-react';
+  Shield,
+  Printer,
+  MessageSquare} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from '../translations';
 import { localDb } from '../services/LocalDatabase';
@@ -24,14 +27,16 @@ import {
   AccountingSection, 
   StaffSection, 
   LoyaltySection, 
-  SecuritySection 
+  SecuritySection,
+  ReceiptSection,
+  WhatsAppSection
 } from './SettingsSections';
 
 interface SettingsProps {
   settings: CompanySettings;
 }
 
-type SettingsSection = 'store' | 'pos' | 'accounting' | 'staff' | 'loyalty' | 'security';
+type SettingsSection = 'store' | 'receipt' | 'whatsapp' | 'pos' | 'accounting' | 'staff' | 'loyalty' | 'security';
 
 
 
@@ -120,19 +125,25 @@ const { t } = useTranslation();
     }
   };
 
-  const menuItems: { id: SettingsSection; label: string; icon: any; color: string }[] = [
+      const menuItems: { id: SettingsSection; label: string; icon: any; color: string }[] = [
     { id: 'store', label: 'Magasin & Infos', icon: Store, color: 'text-blue-500' },
-    { id: 'pos', label: 'Caisse & POS', icon: ShoppingCart, color: 'text-amber-500' },
-    { id: 'accounting', label: 'Tarifs, Taxes & Devises', icon: DollarSign, color: 'text-emerald-500' },
+    { id: 'receipt', label: 'Ticket & Impression', icon: Printer, color: 'text-purple-500' },
+    { id: 'whatsapp', label: 'Modèles WhatsApp', icon: MessageSquare, color: 'text-emerald-500' },
+    { id: 'pos', label: 'Caisse & Stock', icon: ShoppingCart, color: 'text-rose-500' },
+    { id: 'accounting', label: 'Tarifs & Taxes', icon: DollarSign, color: 'text-emerald-500' },
     { id: 'staff', label: 'Personnel & Droits', icon: Users, color: 'text-indigo-500' },
     { id: 'loyalty', label: 'Fidélité & Promos', icon: Gift, color: 'text-rose-500' },
-    { id: 'security', label: 'Sécurité & API', icon: Lock, color: 'text-slate-500' },
+    { id: 'security', label: 'Sécurité & Sauvegardes', icon: Lock, color: 'text-slate-500' },
   ];
 
-  const renderSection = () => {
+      const renderSection = () => {
     switch (activeSection) {
       case 'store':
         return <StoreSection formData={formData} setFormData={setFormData} />;
+      case 'receipt':
+        return <ReceiptSection formData={formData} setFormData={setFormData} />;
+      case 'whatsapp':
+        return <WhatsAppSection formData={formData} setFormData={setFormData} />;
       case 'pos':
         return <PosSection formData={formData} setFormData={setFormData} />;
       case 'accounting':
@@ -156,7 +167,7 @@ const { t } = useTranslation();
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400">System Admin v1.2.6</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400">System Admin v1.2.8</span>
             </div>
             <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none italic">NEXUS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">CONFIG</span></h1>
             <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] ml-1">Terminal de Contrôle Centralisé</p>

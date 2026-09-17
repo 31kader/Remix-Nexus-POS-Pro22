@@ -3,6 +3,7 @@ import { AlertTriangle, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from './ui';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { get as getIDB, set as setIDB } from 'idb-keyval';
 
 interface Props {
   children: ReactNode;
@@ -32,6 +33,20 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
     this.setState({ errorInfo });
+    try {
+      getIDB<any[]>('nexus_system_crashes').then((existing = []) => {
+        const updated = [
+          {
+            timestamp: new Date().toISOString(),
+            message: error?.message || String(error),
+            stack: error?.stack,
+            componentStack: errorInfo?.componentStack
+          },
+          ...(existing || [])
+        ].slice(0, 20);
+        setIDB('nexus_system_crashes', updated).catch(() => {});
+      }).catch(() => {});
+    } catch (_) {}
   }
 
   private handleReload = () => {
@@ -96,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <p className="text-[8px] font-black text-white/5 uppercase tracking-[0.3em]">Nexus POS Alpha v1.2.6 Safety Layer</p>
+            <p className="text-[8px] font-black text-white/5 uppercase tracking-[0.3em]">Nexus POS Pro v1.2.8 Safety Layer</p>
           </div>
         </div>
       );

@@ -13,10 +13,18 @@ interface EditOrderItemsProps {
 }
 
 export function EditOrderItems({ order, onSave, onCancel, settings }: EditOrderItemsProps) {
-  const [items, setItems] = useState<OnlineOrder['items']>(order.items);
+  const parseItems = (raw: any) => {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch (_) { return []; }
+    }
+    return [];
+  };
+
+  const [items, setItems] = useState<OnlineOrder['items']>(parseItems(order?.items));
 
   const updateQuantity = (productId: string, delta: number) => {
-    setItems(items.map(item => {
+    setItems((items || []).map(item => {
       if (item.productId === productId) {
         const newQuantity = Math.max(0, item.quantity + delta);
         return { ...item, quantity: newQuantity };
@@ -29,11 +37,11 @@ export function EditOrderItems({ order, onSave, onCancel, settings }: EditOrderI
     <div className="space-y-4">
       <h4 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Modifier les articles</h4>
       <div className="space-y-2">
-        {items.map((item, idx) => (
+        {(items || []).map((item, idx) => (
           <div key={`order-item-${idx}`} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl backdrop-blur-md">
             <div className="flex-1 text-left">
               <p className="text-sm font-bold text-white tracking-tight">{item.name}</p>
-              <p className="text-xs text-white/40 font-mono mt-0.5">{(item.price || 0).toFixed(2)} {settings.currency} x {item.quantity}</p>
+              <p className="text-xs text-white/40 font-mono mt-0.5">{(item.price || 0).toFixed(2)} {settings?.currency || 'DA'} x {item.quantity}</p>
             </div>
             <div className="flex items-center gap-3">
               <Button 
@@ -85,7 +93,7 @@ export function OrderDetailModal({
   setIsEditingItems,
   saveOrderItems,
   settings,
-  products,
+  products = [],
   setEnlargedImage,
   handlePrintOrder,
   updateOrderStatus,
@@ -94,78 +102,84 @@ export function OrderDetailModal({
 }: OrderDetailModalProps) {
   if (!selectedOrder) return null;
 
+  const orderItems: any[] = Array.isArray(selectedOrder.items)
+    ? selectedOrder.items
+    : (typeof selectedOrder.items === 'string'
+        ? (() => { try { return JSON.parse(selectedOrder.items); } catch (_) { return []; } })()
+        : []);
+
+  const displayId = selectedOrder.externalOrderId || String(selectedOrder.id || '').slice(0, 8);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Détails Commandes #${selectedOrder.externalOrderId || selectedOrder.id.slice(0, 8)}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`Détails Commandes #${displayId}`}>
       <div className="space-y-8">
         {isEditingItems ? (
-          <EditOrderItems order={selectedOrder} onSave={saveOrderItems} onCancel={() => setIsEditingItems(false)} settings={settings} />
+          <EditOrderItems 
+            order={selectedOrder}
+            onSave={saveOrderItems}
+            onCancel={() => setIsEditingItems(false)}
+            settings={settings}
+          />
         ) : (
           <>
-            <div className="bg-white/5 border text-center border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6 backdrop-blur-md">
-              <div className="flex-1 text-center items-center justify-center space-y-1 w-full">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Client</p>
-                <p className="text-xl font-bold text-white tracking-tight">{selectedOrder.customerName || 'Client Inconnu'}</p>
-                <div className="flex items-center justify-center gap-3">
-                  {selectedOrder.customerPhone && (
-                    <a href={`tel:${selectedOrder.customerPhone}`} className="text-sm text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-mono">
-                      <Phone size={14} /> {selectedOrder.customerPhone}
-                    </a>
-                  )}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-6 backdrop-blur-md">
+              <div>
+                <p className="text-sm font-bold text-white tracking-tight">{selectedOrder.customerName || 'Client Inconnu'}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xs text-white/40 font-mono">{selectedOrder.customerPhone || 'N/A'}</p>
                   {selectedOrder.customerPhone && (
                     <a 
                       href={`https://wa.me/${selectedOrder.customerPhone.replace(/\D/g, '')}`} 
                       target="_blank" 
                       rel="noreferrer"
-                      className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1 hover:bg-emerald-500/30 transition-all shadow-sm border border-emerald-500/20"
+                      className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 text-xs font-bold"
                     >
-                      <MessageCircle size={12} /> WhatsApp
+                      <MessageCircle size={14} /> WhatsApp
+                    </a>
+                  )}
+                  {selectedOrder.customerPhone && (
+                    <a 
+                      href={`tel:${selectedOrder.customerPhone}`}
+                      className="text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 text-xs font-bold"
+                    >
+                      <Phone size={14} /> Appeler
                     </a>
                   )}
                 </div>
-                {selectedOrder.customerEmail && <p className="text-xs text-white/40 font-mono italic">{selectedOrder.customerEmail}</p>}
               </div>
-
-              <div className="hidden md:block w-px h-16 bg-white/10" />
-
-              <div className="flex-1 text-center items-center justify-center space-y-3 w-full">
-                <div className="flex flex-col items-center gap-2 justify-center">
-                  <span className={cn(
-                    "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg",
-                    selectedOrder.deliveryMethod === 'delivery' ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/20" : "bg-amber-500/20 text-amber-300 border border-amber-500/20"
-                  )}>
-                    {selectedOrder.deliveryMethod === 'delivery' ? (
-                      <><Truck size={14} /> Livraison</>
-                    ) : (
-                      <><ShoppingBag size={14} /> Retrait Magasin</>
-                    )}
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg flex items-center gap-1.5",
+                  selectedOrder.deliveryMethod === 'delivery' ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/20" : "bg-amber-500/20 text-amber-300 border border-amber-500/20"
+                )}>
+                  {selectedOrder.deliveryMethod === 'delivery' ? <Truck size={14} /> : <ShoppingBag size={14} />}
+                  {selectedOrder.deliveryMethod === 'delivery' ? 'Livraison à Domicile' : 'Retrait en Magasin'}
+                </span>
+                {selectedOrder.deliveryMethod === 'pickup' && selectedOrder.pickupTime && (
+                  <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-widest bg-white/5 border border-white/10 text-white/60">
+                    Heure : {selectedOrder.pickupTime}
                   </span>
-                  {selectedOrder.deliveryMethod === 'pickup' && selectedOrder.pickupTime && (
-                    <p className="text-[10px] font-black text-amber-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20 animate-pulse uppercase tracking-widest">
-                      Heure de retrait: {selectedOrder.pickupTime}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Date de création</p>
-                  <p className="text-sm font-bold text-white/80 font-mono">{formatSafe(selectedOrder.timestamp, 'dd MMMM yyyy à HH:mm')}</p>
-                  <span className="inline-block px-2 py-0.5 bg-white/5 text-white/40 text-[9px] font-black uppercase tracking-widest rounded-lg mt-1 border border-white/5">Source: {selectedOrder.source}</span>
-                </div>
+                )}
               </div>
             </div>
 
-            {selectedOrder.shippingAddress && selectedOrder.deliveryMethod === 'delivery' && (
-              <div className="bg-white/5 p-4 rounded-2xl border border-white/10 backdrop-blur-sm text-left">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 flex items-center gap-2">
-                   <MapPin size={12} className="text-rose-500" /> Adresse de Livraison
+            {selectedOrder.deliveryMethod === 'delivery' && (
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6 backdrop-blur-md text-left">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <MapPin size={12} className="text-indigo-400" /> Adresse de livraison
                 </p>
-                <div className="flex justify-between items-start gap-4">
-                  <p className="text-sm text-white/80 font-medium leading-relaxed flex-1 italic">{selectedOrder.shippingAddress}</p>
-                  <a 
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.shippingAddress)}`}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-white/90">{selectedOrder.shippingAddress || 'N/A'}</p>
+                    {selectedOrder.deliveryNotes && (
+                      <p className="text-xs text-amber-400/80 mt-1 italic">Note: {selectedOrder.deliveryNotes}</p>
+                    )}
+                  </div>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.shippingAddress || '')}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 bg-white/10 text-white rounded-xl shadow-lg border border-white/10 hover:bg-white/20 transition-all flex items-center gap-1 text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                    className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400 text-xs px-3 py-2 rounded-xl transition-all font-bold shrink-0 shadow-lg shadow-indigo-500/5"
                   >
                      <Navigation size={12} /> Itinéraire
                   </a>
@@ -179,18 +193,18 @@ export function OrderDetailModal({
                 <span className="text-[10px] font-black text-white/20">Vérifier avant emballage</span>
               </p>
               <div className="space-y-2">
-                {selectedOrder.items
+                {orderItems
                   .slice()
                   .sort((a, b) => {
-                    const prodA = products.find(p => p.id === (a.productId || (a as any).id));
-                    const prodB = products.find(p => p.id === (b.productId || (b as any).id));
+                    const prodA = (products || []).find(p => p.id === (a.productId || (a as any).id));
+                    const prodB = (products || []).find(p => p.id === (b.productId || (b as any).id));
                     const locA = prodA?.location || 'ZZZ';
                     const locB = prodB?.location || 'ZZZ';
                     return locA.localeCompare(locB);
                   })
                   .map((item, idx) => {
                     const itemKey = item.lineId || `pick-item-${idx}`;
-                    const productRef = products.find(p => p.id === (item.productId || (item as any).id));
+                    const productRef = (products || []).find(p => p.id === (item.productId || (item as any).id));
                     return (
                       <div key={itemKey} className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group">
                         <div className="flex items-center justify-center">
@@ -236,7 +250,7 @@ export function OrderDetailModal({
                               )}
                               <p className="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors truncate">{item.name}</p>
                             </div>
-                            <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-0.5">{(item.price || 0).toFixed(2)} {settings.currency} x {item.quantity}</p>
+                            <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-0.5">{(item.price || 0).toFixed(2)} {settings?.currency || 'DA'} x {item.quantity}</p>
                           </div>
                           <p className="text-lg font-black text-white font-mono tracking-tighter">{((item.price || 0) * (item.quantity || 0)).toFixed(2)}</p>
                         </label>
@@ -252,32 +266,50 @@ export function OrderDetailModal({
                 </div>
                 <div className="text-right">
                   <p className="text-4xl font-black text-white tracking-tighter">
-                    {(selectedOrder.total || 0).toFixed(2)} <span className="text-xl text-white/40">{settings.currency}</span>
+                    {(selectedOrder.total || 0).toFixed(2)} <span className="text-xl text-white/40">{settings?.currency || 'DA'}</span>
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-3 pt-4">
-              <Button onClick={() => handlePrintOrder(selectedOrder)} className="flex-1 flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border-white/10 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto">
-                <Printer size={18} /> Imprimer Ticket
+            <div className="flex flex-wrap gap-2 pt-4">
+              <Button onClick={() => handlePrintOrder(selectedOrder)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border-white/10 text-white font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+                <Printer size={16} /> Imprimer Ticket
               </Button>
-              
+
               {selectedOrder.status === 'pending' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'confirmed')} className="flex-1 bg-indigo-500 text-white hover:bg-indigo-600 border-none font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto shadow-lg shadow-indigo-500/20">
-                  Confirmer la Cde
+                <Button onClick={() => setIsEditingItems(true)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-white border border-amber-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+                  <Edit size={16} /> Modifier Articles
                 </Button>
               )}
               
               {selectedOrder.status === 'pending' && (
-                <Button onClick={() => setIsEditingItems(true)} className="flex-1 flex items-center justify-center gap-2 bg-amber-500 text-white hover:bg-amber-600 border-none font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto shadow-lg shadow-amber-500/20">
-                  <Edit size={18} /> Modifier Articles
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'confirmed')} className="flex-1 min-w-[130px] bg-blue-600 text-white hover:bg-blue-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-blue-500/20">
+                  Confirmer
                 </Button>
               )}
               
-              {selectedOrder.status === 'confirmed' && selectedOrder.deliveryMethod === 'delivery' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'shipped')} className="flex-1 bg-indigo-500 text-white hover:bg-indigo-600 border-none font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto shadow-lg shadow-indigo-500/20">
-                  Marquer Expédié
+              {['confirmed', 'pending'].includes(selectedOrder.status) && (
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'processing')} className="flex-1 min-w-[130px] bg-indigo-600 text-white hover:bg-indigo-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-indigo-500/20">
+                  En Préparation
+                </Button>
+              )}
+
+              {['confirmed', 'processing'].includes(selectedOrder.status) && selectedOrder.deliveryMethod === 'delivery' && (
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'shipped')} className="flex-1 min-w-[130px] bg-purple-600 text-white hover:bg-purple-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-purple-500/20">
+                  Expédier
+                </Button>
+              )}
+
+              {selectedOrder.status !== 'delivered' && selectedOrder.status !== 'cancelled' && (
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'delivered')} className="flex-1 min-w-[130px] bg-emerald-600 text-white hover:bg-emerald-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-emerald-500/20">
+                  Marquer Livré
+                </Button>
+              )}
+
+              {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'cancelled')} className="flex-1 min-w-[130px] bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+                  Annuler Cde
                 </Button>
               )}
             </div>
@@ -298,3 +330,5 @@ export function OrderDetailModal({
     </Modal>
   );
 }
+
+export default OrderDetailModal;

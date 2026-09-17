@@ -77,7 +77,7 @@ export function BulkUpdateModal({
                 >
                   <option value="" className="bg-slate-900 text-white">Aucune (Non classé)</option>
                   {categories.filter(c => !c.parentId).map((c: any) => (
-                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">{c.name.toUpperCase()}</option>
+                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">{String(c.name || 'CATÉGORIE').toUpperCase()}</option>
                   ))}
                 </select>
               </div>
@@ -95,7 +95,7 @@ export function BulkUpdateModal({
                 >
                   <option value="" className="bg-slate-900 text-white">Aucune sous-catégorie</option>
                   {categories.filter(c => c.parentId === bulkParentCatId).map((c: any) => (
-                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">{c.name.toUpperCase()}</option>
+                    <option key={c.id} value={c.id} className="bg-slate-900 text-white">{String(c.name || 'CATÉGORIE').toUpperCase()}</option>
                   ))}
                 </select>
               </div>
@@ -124,8 +124,8 @@ export function BulkUpdateModal({
                 className="w-full px-4 py-2.5 bg-black/45 hover:bg-black/60 text-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-xs border border-white/10 cursor-pointer"
               >
                 <option value="" className="bg-slate-900 text-white">Aucune marque</option>
-                {brands.map(b => (
-                  <option key={b.id} value={b.id} className="bg-slate-900 text-white">{b.name.toUpperCase()}</option>
+                {(brands || []).filter(Boolean).map(b => (
+                  <option key={b.id} value={b.id} className="bg-slate-900 text-white">{String(b.name || 'MARQUE').toUpperCase()}</option>
                 ))}
               </select>
             </div>

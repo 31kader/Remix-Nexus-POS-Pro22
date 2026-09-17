@@ -462,7 +462,7 @@ export async function handleQuickSupplierSubmitDb({
     return;
   }
 
-  const duplicate = suppliers.find(s => s.name.toLowerCase() === trimmedName.toLowerCase());
+  const duplicate = suppliers.find(s => (s?.name || '').toLowerCase() === trimmedName.toLowerCase());
   if (duplicate) {
     alert(`Un fournisseur nommé "${duplicate.name}" existe déjà.`);
     setSelectedSupplierId(duplicate.id);

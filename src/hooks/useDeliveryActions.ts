@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { localDb } from '../services/LocalDatabase';
 import { Customer } from '../types';
+import { useCoreStore } from '../store/useCoreStore';
 
 interface UseDeliveryActionsParams {
   user: any;
@@ -50,7 +51,7 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
     try {
       const historyEntry = {
         status: newStatus,
-        changedBy: profile?.employeeId || user.email,
+        changedBy: profile?.employeeId || user?.email || 'system',
         timestamp: new Date().toISOString()
       };
       
@@ -64,7 +65,7 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
       if (!finalCustomerId && customers) {
         const found = customers.find((c: Customer) => 
           (order.customerPhone && c.phone && c.phone.replace(/\D/g, '') === order.customerPhone.replace(/\D/g, '')) || 
-          (c.name.toLowerCase() === order.customerName?.toLowerCase())
+          (c.name && order.customerName && c.name.toLowerCase() === order.customerName.toLowerCase())
         );
         if (found) {
           finalCustomerId = found.id;
@@ -76,19 +77,34 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
       if (newStatus === 'delivered' && order.status !== 'delivered') {
         if (!order.syncedToPos) {
           const txRef = localDb.push('transactions');
+          const allProducts = useCoreStore.getState().products || [];
+          const enrichedItems = (order.items || []).map((item: any) => {
+            const currentProduct = allProducts.find((p: any) => p.id === (item.productId || item.id) || (item.name && p.name.toLowerCase() === item.name.toLowerCase()));
+            return {
+              ...item,
+              id: item.productId || item.id,
+              productId: item.productId || item.id,
+              costPrice: currentProduct?.costPrice || item.costPrice || 0,
+              price: item.price || 0,
+              quantity: item.quantity || 1,
+              name: item.name || currentProduct?.name || 'Produit',
+            };
+          });
+
           const transaction: any = {
             id: txRef.key,
-            items: order.items,
+            items: enrichedItems,
             total: order.total,
             timestamp: order.timestamp || new Date().toISOString(),
             paymentMethod: order.paymentMethod || 'cash',
+            deliveryMethod: order.deliveryMethod || 'delivery',
             status: 'completed',
-            employeeName: profile?.displayName || user.email,
-            userId: user.uid,
+            employeeName: profile?.displayName || user?.email || 'Livreur',
+            userId: user?.uid || 'system',
             onlineOrderId: order.id,
             customerId: finalCustomerId || null,
             customerName: order.customerName || null,
-            pointsEarned: finalCustomerId ? Math.floor(order.total * (settings.loyaltyPointsPerCurrencyUnit || 1)) : 0
+            pointsEarned: finalCustomerId ? Math.floor(order.total * (settings?.loyaltyPointsPerCurrencyUnit || 1)) : 0
           };
           await localDb.insert(txRef, transaction);
           updates.syncedToPos = true;
@@ -100,7 +116,7 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
             const customerSnap = await localDb.get(`customers/${finalCustomerId}`);
             if (customerSnap.exists()) {
               const customerData = customerSnap.val();
-              const pointsEarned = Math.floor(order.total * (settings.loyaltyPointsPerCurrencyUnit || 1));
+              const pointsEarned = Math.floor(order.total * (settings?.loyaltyPointsPerCurrencyUnit || 1));
               await localDb.update(`customers/${finalCustomerId}`, {
                 loyaltyPoints: (customerData.loyaltyPoints || 0) + pointsEarned,
                 totalSpent: (customerData.totalSpent || 0) + order.total,

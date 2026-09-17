@@ -39,7 +39,6 @@ export function SupplierDamageModal({
           <input 
             type="number" 
             min="1" 
-            max={selectedProductForDamage?.stock}
             className="w-full p-2 bg-black/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm" 
             value={damageData.quantity} 
             onChange={e => setDamageData({ ...damageData, quantity: parseInt(e.target.value) || 0 })} 
@@ -50,7 +49,7 @@ export function SupplierDamageModal({
           <label className="text-xs font-bold text-slate-500 uppercase">Raison / Motif</label>
           <textarea 
             className="w-full p-2 bg-black/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px] text-sm dark:text-white" 
-            placeholder="Ex: Cassé pendant le transport, Date périmée, Defectueux..."
+            placeholder="Ex: Cassé pendant le transport, Date périmée, Défectueux..."
             value={damageData.reason} 
             onChange={e => setDamageData({ ...damageData, reason: e.target.value })} 
           />
@@ -61,7 +60,7 @@ export function SupplierDamageModal({
           <Button 
             className="flex-1 bg-rose-600 hover:bg-rose-700 cursor-pointer" 
             onClick={handleDamageSubmit} 
-            disabled={damageData.quantity <= 0 || damageData.quantity > (selectedProductForDamage?.stock || 0) || !damageData.reason || isProcessingDamage}
+            disabled={damageData.quantity <= 0 || !damageData.reason || isProcessingDamage}
           >
             {isProcessingDamage ? 'Traitement...' : 'Déduire du stock'}
           </Button>

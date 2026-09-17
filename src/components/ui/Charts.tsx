@@ -41,7 +41,7 @@ export function CustomLineChart({
   xKey,
   yKey,
   height = 300,
-  currency = '€',
+  currency = 'DA',
   strokeColor = '#818cf8',
 }: LineChartProps) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -230,7 +230,7 @@ export function CustomBarChart({
   yKeys = [],
   layout = 'horizontal',
   height = 300,
-  currency = '€',
+  currency = 'DA',
   colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444'],
   yAxisWidth = 60,
 }: BarChartProps) {
@@ -464,7 +464,7 @@ export function CustomPieChart({
   nameKey,
   valueKey,
   height = 300,
-  currency = '€',
+  currency = 'DA',
   colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
   innerRadius = 60,
   outerRadius = 100,

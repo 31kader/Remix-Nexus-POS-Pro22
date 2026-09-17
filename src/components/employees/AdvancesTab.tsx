@@ -149,7 +149,7 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Employé Bénéficiaire *</label>
             <select required className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})}>
               <option value="">Sélectionner un employé</option>
-              {employees.map(e => <option key={e.id} value={e.id} className="text-black">{e.name.toUpperCase()}</option>)}
+              {(employees || []).filter(Boolean).map(e => <option key={e.id} value={e.id} className="text-black">{String(e.name || 'EMPLOYÉ').toUpperCase()}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-6">

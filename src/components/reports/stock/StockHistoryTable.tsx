@@ -53,7 +53,9 @@ export function StockHistoryTable({
                     {formatSafe(adj.timestamp, 'dd/MM/yyyy HH:mm')}
                   </td>
                   <td className="p-4">
-                    <p className="text-sm font-semibold text-white">{adj.productName}</p>
+                    <p className="text-sm font-semibold text-white">
+                      {adj.productName || (adj as any).product_name || (adj as any).name || ('Article #' + String(adj.productId || adj.id || '').slice(-6))}
+                    </p>
                   </td>
                   <td className="p-4 text-sm text-slate-400">{adj.oldQuantity}</td>
                   <td className="p-4 text-sm text-slate-200 font-bold">{adj.newQuantity}</td>

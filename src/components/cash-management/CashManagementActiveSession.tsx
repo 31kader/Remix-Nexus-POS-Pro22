@@ -39,19 +39,19 @@ export function CashManagementActiveSession({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Fonds de départ</p>
-            <p className="text-lg font-bold text-slate-800">{activeShift.initialCash.toFixed(2)} {settings.currency}</p>
+            <p className="text-lg font-bold text-slate-800">{Number(activeShift.initialCash || 0).toFixed(2)} {settings.currency}</p>
           </div>
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Ventes Espèces</p>
-            <p className="text-lg font-bold text-emerald-600">+{currentShiftStats?.totalCashSales.toFixed(2)} {settings.currency}</p>
+            <p className="text-lg font-bold text-emerald-600">+{Number(currentShiftStats?.totalCashSales || 0).toFixed(2)} {settings.currency}</p>
           </div>
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Dépenses</p>
-            <p className="text-lg font-bold text-rose-600">-{currentShiftStats?.totalExpenses.toFixed(2)} {settings.currency}</p>
+            <p className="text-lg font-bold text-rose-600">-{Number(currentShiftStats?.totalExpenses || 0).toFixed(2)} {settings.currency}</p>
           </div>
           <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
             <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">Attendu en caisse</p>
-            <p className="text-lg font-bold text-indigo-700">{currentShiftStats?.expectedCash.toFixed(2)} {settings.currency}</p>
+            <p className="text-lg font-bold text-indigo-700">{Number(currentShiftStats?.expectedCash || 0).toFixed(2)} {settings.currency}</p>
           </div>
         </div>
 
@@ -70,15 +70,15 @@ export function CashManagementActiveSession({
         <div className="space-y-3">
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500">Total Ventes</span>
-            <span className="font-bold text-slate-800">{currentShiftStats?.totalSales.toFixed(2)} {settings.currency}</span>
+            <span className="font-bold text-slate-800">{Number(currentShiftStats?.totalSales || 0).toFixed(2)} {settings.currency}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500">Paiements Carte</span>
-            <span className="font-bold text-slate-800">{currentShiftStats?.totalCardSales.toFixed(2)} {settings.currency}</span>
+            <span className="font-bold text-slate-800">{Number(currentShiftStats?.totalCardSales || 0).toFixed(2)} {settings.currency}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-slate-500">Paiements Espèces</span>
-            <span className="font-bold text-slate-800">{currentShiftStats?.totalCashSales.toFixed(2)} {settings.currency}</span>
+            <span className="font-bold text-slate-800">{Number(currentShiftStats?.totalCashSales || 0).toFixed(2)} {settings.currency}</span>
           </div>
         </div>
       </Card>

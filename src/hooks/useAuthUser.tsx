@@ -6,9 +6,7 @@ import bcrypt from 'bcryptjs';
 import { getSecureItem } from '../lib/security';
 
 import { useAuthStore } from '../store/useAuthStore';
-
-const OWNER_EMAIL = (import.meta as any).env?.VITE_OWNER_EMAIL || 'hrskader305@gmail.com';
-const OWNER_UID = (import.meta as any).env?.VITE_OWNER_UID || 'FaQiBWkg8uTxZ2np7BQjDINTyQc2';
+import { checkIsOwner, PRIMARY_OWNER_EMAIL, PRIMARY_OWNER_UID } from '../config/ownerConfig';
 
 export function useAuthUser(appMode: string, setLoading: (loading: boolean) => void) {
   const { user, setUser, profile, setProfile, authError, setAuthError, isLoggingIn, setIsLoggingIn, isUnauthorized, setIsUnauthorized } = useAuthStore();
@@ -69,7 +67,6 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
     const unsubscribe = onAuthStateChanged(auth, async (currentUser: any) => {
       try {
         if (!currentUser) {
-          // If we have an active offline session, preserve it and skip setting to null
           const session = getSecureItem('nexus_active_offline_session');
           if (session) {
             try {
@@ -93,6 +90,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           }
           setUser(null);
           setProfile(null);
+          setIsUnauthorized(false);
           setLoading(false);
           return;
         }
@@ -102,7 +100,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
         const mainEmail = currentUser.email?.toLowerCase();
         const providerEmail = currentUser.providerData?.[0]?.email?.toLowerCase();
         const matchEmail = (mainEmail || providerEmail || '').trim();
-        const isOwnerLocally = matchEmail === OWNER_EMAIL || currentUser.uid === OWNER_UID;
+        const isOwnerLocally = checkIsOwner(matchEmail, currentUser.uid);
 
         if (isOwnerLocally) {
           setIsUnauthorized(false);
@@ -113,7 +111,6 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           matchPhone = matchEmail.replace('@nexus-pos.internal', '');
         }
 
-        // Define variables needed in both paths
         let employee: Employee | undefined;
         let employeeId: string | undefined;
 
@@ -262,7 +259,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
             });
          }
        } else {
-         const isOwner = matchEmail === OWNER_EMAIL;
+         const isOwner = checkIsOwner(matchEmail, currentUser.uid);
          let defaultRole = isOwner ? 'admin' : 'cashier';
          if (appMode === 'customer') defaultRole = 'customer';
          if (appMode === 'supplier') defaultRole = 'supplier';
@@ -290,7 +287,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
         console.warn("Auth state change error (possibly offline or quota):", e.message);
         // Fallback for quota limit exceeded when owner logs in
         if (currentUser && (e?.message?.includes("Quota") || e?.code === 'resource-exhausted')) {
-           const isOwner = currentUser.email?.toLowerCase().trim() === OWNER_EMAIL || currentUser.uid === OWNER_UID;
+           const isOwner = checkIsOwner(currentUser.email, currentUser.uid);
            if (isOwner) setIsUnauthorized(false);
            setProfile({
              uid: currentUser.uid,

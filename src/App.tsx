@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'motion/react';
+import { CustomerDisplayWindow } from './components/CustomerDisplayWindow';
 import React, { useState, useCallback, Suspense, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
 
@@ -52,6 +52,24 @@ const CustomerDashboard = React.lazy(() => import('./components/CustomerDashboar
 const DeliveryDashboard = React.lazy(() => import('./components/DeliveryDashboard').then(m => ({ default: m.DeliveryDashboard })));
 
 export default function App() {
+  const [isCustomerDisplay, setIsCustomerDisplay] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.hash === '#customer-display' || window.location.pathname.startsWith('/customer-display');
+  });
+
+  useEffect(() => {
+    const checkDisplay = () => {
+      const isDisplay = window.location.hash === '#customer-display' || window.location.pathname.startsWith('/customer-display');
+      setIsCustomerDisplay(isDisplay);
+    };
+    window.addEventListener('hashchange', checkDisplay);
+    window.addEventListener('popstate', checkDisplay);
+    return () => {
+      window.removeEventListener('hashchange', checkDisplay);
+      window.removeEventListener('popstate', checkDisplay);
+    };
+  }, []);
+
   const { language, setLanguage, t } = useTranslation();
 
   const {
@@ -82,6 +100,27 @@ export default function App() {
 
   const settings = useCoreStore(s => s.settings);
   const isDataLoading = useCoreStore(s => s.isDataLoading);
+
+  // 🛡️ NEXUS GUARD : Intercepteur global d'erreurs (Traque le bug ".active")
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      if (event.message?.includes("reading 'active'")) {
+        console.error('🚨 [NEXUS GUARD] CRASH .active INTERCEPTÉ ! 🚨');
+        console.error('Ouvre ce lien pour voir le composant coupable 👉', event.error);
+      }
+    };
+    window.addEventListener('error', handleGlobalError);
+    return () => window.removeEventListener('error', handleGlobalError);
+  }, []);
+
+  // 🛡️ NETTOYAGE AUTOMATIQUE DU HASH OAUTH SUPABASE (#access_token=...)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && (hash.includes('access_token') || hash.includes('error_description'))) {
+      // Nettoie l'URL proprement sans recharger la page
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const EMPTY_ARRAY = React.useRef<any[]>([]);
 
@@ -157,7 +196,6 @@ export default function App() {
   useEffect(() => {
     if (needRefresh) {
       console.log("[PWA] Update detected, skipping auto-reload for stability");
-      // setNeedRefresh(false); // Optionally clear it
     }
   }, [needRefresh]);
 
@@ -175,6 +213,18 @@ export default function App() {
     setActiveTabState(tab);
   }, []);
 
+  // Synchronisation dynamique avec la barre d'adresse pour support multi-fenêtres & multi-onglets
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && !hash.includes('=') && !hash.includes('&')) {
+        setActiveTabState(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // --- Panier ---
   const {
     posSessions, setPosSessions,
@@ -189,7 +239,7 @@ export default function App() {
   const cart = getCart();
   const selectedCustomer = getSelectedCustomer();
 
-  // --- États des modales (IMPORTANT: DOIT ÊTRE DÉFINI AVANT LES HANDLERS) ---
+  // --- États des modales ---
   const {
     isReturnModalOpen, setIsReturnModalOpen,
     isEditTransactionModalOpen, setIsEditTransactionModalOpen,
@@ -208,7 +258,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileOverlayOpen, setIsMobileOverlayOpen] = useState(false);
 
-  // --- Handlers (centralisés via useAppHandlers) ---
+  // --- Handlers ---
   const {
     handleInstallApp,
     handleCreatePurchaseOrder,
@@ -224,12 +274,15 @@ export default function App() {
   );
 
   // ─── Rendu conditionnel par mode ───────────────────────────────────────────
+  if (isCustomerDisplay) {
+    return <CustomerDisplayWindow />;
+  }
 
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#05070a]">
         <div className="flex flex-col items-center gap-6">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"   />
           <p className="text-indigo-400 font-bold uppercase tracking-widest text-[10px]">Initializing Systems...</p>
         </div>
       </div>
@@ -237,7 +290,7 @@ export default function App() {
   }
 
   if (isUnauthorized && !isOwner) {
-    return <UnauthorizedView user={user} profile={profile} isOwner={isOwner} handleLogout={() => handleLogout(user)} />;
+    return <UnauthorizedView user={user} profile={profile} isOwner={isOwner} handleLogout={() => handleLogout(user)}   />;
   }
 
   if (!user && appMode === 'pos') {
@@ -252,13 +305,13 @@ export default function App() {
         language={language} setLanguage={setLanguage as any}
         isLangMenuOpen={isLangMenuOpen} setIsLangMenuOpen={setIsLangMenuOpen}
         t={t}
-      />
+        />
     );
   }
 
   const loadingFallback = (
     <div className="h-screen w-full flex items-center justify-center bg-[#05070a]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"   />
     </div>
   );
 
@@ -266,21 +319,21 @@ export default function App() {
     if (appMode === 'customer') {
       return (
         <Suspense fallback={loadingFallback}>
-          <CustomerLogin onLogin={setCurrentCustomer} />
+          <CustomerLogin onLogin={setCurrentCustomer}   />
         </Suspense>
       );
     }
     if (appMode === 'supplier') {
       return (
         <Suspense fallback={loadingFallback}>
-          <SupplierLogin onLogin={setCurrentSupplier} />
+          <SupplierLogin onLogin={setCurrentSupplier}   />
         </Suspense>
       );
     }
     if (appMode === 'camera') {
       return (
         <Suspense fallback={loadingFallback}>
-          <CameraLogin onLogin={setProfile} />
+          <CameraLogin onLogin={setProfile}   />
         </Suspense>
       );
     }
@@ -294,7 +347,7 @@ export default function App() {
           transactions={transactions}
           settings={settings}
           onLogout={() => handleLogout(user)}
-        />
+          />
       </Suspense>
     );
   }
@@ -320,7 +373,7 @@ export default function App() {
           purchases={purchases}
           supplierPayments={supplierPayments}
           setViewingPurchaseVoucher={setViewingPurchaseVoucher}
-        />
+          />
       </Suspense>
     );
   }
@@ -328,7 +381,7 @@ export default function App() {
   if (user && appMode === 'delivery') {
     return (
       <Suspense fallback={loadingFallback}>
-        <DeliveryDashboard user={user} orders={onlineOrders} settings={settings} />
+        <DeliveryDashboard user={user} orders={onlineOrders} settings={settings}   />
       </Suspense>
     );
   }
@@ -340,8 +393,8 @@ export default function App() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
       </div>
     }>
-      <Toaster position="top-right" richColors closeButton theme={theme === 'light' ? 'light' : 'dark'} />
-      <SyncIndicator isOnline={isOnline} syncInfo={syncInfo} bgSyncActive={bgSyncActive} bgPendingChanges={bgPendingChanges} />
+      <Toaster position="top-right" richColors closeButton theme={theme === 'light' ? 'light' : 'dark'}   />
+      <SyncIndicator isOnline={isOnline} syncInfo={syncInfo} bgSyncActive={bgSyncActive} bgPendingChanges={bgPendingChanges}   />
 
       <MainAppContent
         activeTab={activeTab} setActiveTab={setActiveTab}
@@ -395,7 +448,7 @@ export default function App() {
           setViewingPurchaseVoucher={setViewingPurchaseVoucher}
           editingProduct={editingProduct}
           isProductModalOpen={isProductModalOpen}
-        />
+          />
       </MainAppContent>
 
       <AppModals
@@ -428,7 +481,7 @@ export default function App() {
         isLowStockModalOpen={isLowStockModalOpen} setIsLowStockModalOpen={setIsLowStockModalOpen}
         isExpirationModalOpen={isExpirationModalOpen} setIsExpirationModalOpen={setIsExpirationModalOpen}
         isStockAdjustmentModalOpen={isStockAdjustmentModalOpen} setIsStockAdjustmentModalOpen={setIsStockAdjustmentModalOpen}
-      />
+        />
     </Suspense>
   );
 }

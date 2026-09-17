@@ -129,7 +129,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             customers={p.customers}
             settings={p.settings}
             allReturns={p.returns}
-          />
+            />
         </Suspense>
       )}
 
@@ -141,7 +141,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             transaction={p.selectedTransactionForEdit}
             products={p.products}
             settings={p.settings}
-          />
+            />
         </Suspense>
       )}
 
@@ -168,7 +168,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             setImageUrl={p.setCategoryImageUrl}
             categories={p.categories}
             editingCategory={p.editingCategory}
-          />
+            />
         </Suspense>
       )}
 
@@ -191,7 +191,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             description={p.newBrandDesc}
             setDescription={p.setNewBrandDesc}
             editingBrand={p.editingBrand}
-          />
+            />
         </Suspense>
       )}
 
@@ -204,7 +204,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             settings={p.settings}
             categories={p.categories}
             brands={p.brands}
-          />
+            />
         </Suspense>
       )}
 
@@ -214,7 +214,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isPOSCustomerModalOpen}
             onClose={() => p.setIsPOSCustomerModalOpen(false)}
             onCreated={p.handlePOSCustomerCreated}
-          />
+            />
         </Suspense>
       )}
       
@@ -230,7 +230,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             user={p.user}
             brands={p.brands}
             setActiveTab={p.setActiveTab}
-          />
+            />
         </Suspense>
       )}
 
@@ -240,7 +240,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isAddUserModalOpen} 
             onClose={() => p.setIsAddUserModalOpen(false)} 
             onSave={p.handleAddStaffManual} 
-          />
+            />
         </Suspense>
       )}
 
@@ -248,7 +248,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
         <Modal 
           isOpen={!!p.viewingPurchaseVoucher} 
           onClose={() => p.setViewingPurchaseVoucher(null)} 
-          title={`Bon de Réception - ${p.viewingPurchaseVoucher.invoiceNumber || p.viewingPurchaseVoucher.id.slice(-6).toUpperCase()}`}
+          title={`Bon de Réception - ${p.viewingPurchaseVoucher.invoiceNumber || String(p.viewingPurchaseVoucher.id || "").slice(-6).toUpperCase()}`}
         >
           <div className="space-y-6 print:p-0">
             <div className="flex justify-between items-start border-b border-slate-100 pb-6">
@@ -259,7 +259,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
               </div>
               <div className="text-right">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">N° Document</p>
-                <p className="text-lg font-mono font-bold text-indigo-600">{p.viewingPurchaseVoucher.invoiceNumber || 'REC-' + p.viewingPurchaseVoucher.id.slice(-6).toUpperCase()}</p>
+                <p className="text-lg font-mono font-bold text-indigo-600">{p.viewingPurchaseVoucher.invoiceNumber || 'REC-' + String(p.viewingPurchaseVoucher.id || "").slice(-6).toUpperCase()}</p>
                 <span className={`inline-block mt-2 px-2 py-1 rounded-full text-[10px] font-black uppercase ${p.viewingPurchaseVoucher.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                   {p.viewingPurchaseVoucher.status === 'completed' ? 'Réceptionné' : 'En attente'}
                 </span>
@@ -300,7 +300,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
 
             <div className="flex gap-3 pt-6 border-t border-slate-100">
               <Button onClick={() => printPurchaseVoucher(p.viewingPurchaseVoucher, p.settings)} variant="secondary" className="flex-1 gap-2">
-                <Printer size={16} /> Imprimer
+                <Printer size={16}   /> Imprimer
               </Button>
               <Button onClick={() => p.setViewingPurchaseVoucher(null)} className="flex-1">
                 Fermer
@@ -317,7 +317,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             onClose={() => p.setIsLowStockModalOpen(false)}
             products={p.lowStockProducts}
             settings={p.settings}
-          />
+            />
         </Suspense>
       )}
 
@@ -327,7 +327,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isExpirationModalOpen}
             onClose={() => p.setIsExpirationModalOpen(false)}
             products={p.expiringProducts}
-          />
+            />
         </Suspense>
       )}
 
@@ -339,6 +339,16 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             product={p.editingProduct}
             user={p.user}
             settings={p.settings}
+            />
+        </Suspense>
+      )}
+
+      {p.isAddUserModalOpen && (
+        <Suspense fallback={null}>
+          <AddStaffModal
+            isOpen={p.isAddUserModalOpen}
+            onClose={() => p.setIsAddUserModalOpen(false)}
+            onSave={p.handleAddStaffManual}
           />
         </Suspense>
       )}

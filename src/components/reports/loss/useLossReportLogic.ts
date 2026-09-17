@@ -11,8 +11,8 @@ interface UseLossReportLogicProps {
 export function useLossReportLogic({ damagedRecords, products }: UseLossReportLogicProps) {
   const [search, setSearch] = useState('');
   const [dateRange, setDateRange] = useState({ 
-    start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-    end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    start: format(new Date(), 'yyyy-MM-dd'),
+    end: format(new Date(), 'yyyy-MM-dd')
   });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 

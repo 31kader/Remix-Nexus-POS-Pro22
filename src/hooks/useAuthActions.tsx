@@ -5,7 +5,7 @@ import { logAction } from '../lib/utils';
 import { toast } from 'sonner';
 import bcrypt from 'bcryptjs';
 import { useAuthStore } from '../store/useAuthStore';
-import { getSecureItem, setSecureItem } from '../lib/security';
+import { getSecureItem, setSecureItem, removeSecureItem } from '../lib/security';
 
 export function useAuthActions(
   t: (key: string) => string
@@ -24,8 +24,8 @@ export function useAuthActions(
     const inputIdentifier = loginIdentifier.trim();
     const cleanPassword = loginPassword;
 
-    // Rate Limiting Check
-    const lockUntil = Number(localStorage.getItem('nexus_login_lock_until') || '0');
+    // Rate Limiting Check (Chiffré S10)
+    const lockUntil = Number(getSecureItem<string>('nexus_login_lock_until') || '0');
     if (Date.now() < lockUntil) {
       const remainingSeconds = Math.ceil((lockUntil - Date.now()) / 1000);
       setAuthError(t(`Trop de tentatives de connexion. Veuillez patienter ${remainingSeconds} secondes.`));
@@ -47,19 +47,19 @@ export function useAuthActions(
     }
 
     const recordFailure = () => {
-      const currentFailures = Number(localStorage.getItem('nexus_login_failures') || '0') + 1;
+      const currentFailures = Number(getSecureItem<string>('nexus_login_failures') || '0') + 1;
       if (currentFailures >= 5) {
-        localStorage.setItem('nexus_login_lock_until', (Date.now() + 60000).toString());
-        localStorage.setItem('nexus_login_failures', '0');
+        setSecureItem('nexus_login_lock_until', (Date.now() + 60000).toString());
+        setSecureItem('nexus_login_failures', '0');
         setAuthError(t("Trop d'échecs de connexion. Connexion verrouillée pendant 60 secondes."));
       } else {
-        localStorage.setItem('nexus_login_failures', currentFailures.toString());
+        setSecureItem('nexus_login_failures', currentFailures.toString());
       }
     };
 
     const resetFailureCount = () => {
-      localStorage.removeItem('nexus_login_failures');
-      localStorage.removeItem('nexus_login_lock_until');
+      removeSecureItem('nexus_login_failures');
+      removeSecureItem('nexus_login_lock_until');
     };
 
     const tryOfflineLogin = () => {
@@ -194,8 +194,10 @@ export function useAuthActions(
   };
 
   const handleLogout = async (user: any) => {
-    localStorage.removeItem('nexus_active_offline_session');
-    localStorage.removeItem('nexus_active_online_session');
+    removeSecureItem('nexus_active_offline_session');
+    removeSecureItem('nexus_active_online_session');
+    sessionStorage.removeItem('nexus_auth_user');
+    localStorage.removeItem('nexus_auth_user');
     if (user && !(user as any).isOffline) {
       try {
         await logAction(user.uid, user.displayName || 'Utilisateur', 'Déconnexion', 'Auth', 'Utilisateur déconnecté');
@@ -204,8 +206,10 @@ export function useAuthActions(
     try {
       await signOut();
     } catch (e) {}
+    auth.trigger(null);
     setUser(null);
     setProfile(null);
+    setIsUnauthorized(false);
   };
 
   return { handleIdentifierLogin, handleLogout };

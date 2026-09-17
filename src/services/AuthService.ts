@@ -28,11 +28,26 @@ class AuthEmulator {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('nexus_auth_user');
+      const stored = sessionStorage.getItem('nexus_auth_user') || localStorage.getItem('nexus_auth_user');
       if (stored) {
         try {
           const data = JSON.parse(stored);
-          this.currentUser = { ...data, getIdToken: async () => btoa(JSON.stringify({ uid: data.uid || "anon", exp: Date.now() + 3600 * 1000 })) };
+          this.currentUser = {
+            ...data,
+            getIdToken: async () => {
+              if (isSupabaseConfigured) {
+                try {
+                  const { data: sessData } = await supabase.auth.getSession();
+                  if (sessData?.session?.access_token) {
+                    return sessData.session.access_token;
+                  }
+                } catch (_) {}
+              }
+              return data.uid ? `offline_token_${data.uid}` : '';
+            }
+          };
+          // Nettoyage legacy de localStorage
+          localStorage.removeItem('nexus_auth_user');
         } catch (e) {}
       }
     }
@@ -48,13 +63,33 @@ class AuthEmulator {
 
   trigger(user: any) {
     if (user) {
-      this.currentUser = { ...user, getIdToken: async () => btoa(JSON.stringify({ uid: user.uid || "anon", exp: Date.now() + 3600 * 1000 })) };
+      const safeUserData = {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null
+      };
+      this.currentUser = {
+        ...safeUserData,
+        getIdToken: async () => {
+          if (isSupabaseConfigured) {
+            try {
+              const { data: sessData } = await supabase.auth.getSession();
+              if (sessData?.session?.access_token) {
+                return sessData.session.access_token;
+              }
+            } catch (_) {}
+          }
+          return safeUserData.uid ? `offline_token_${safeUserData.uid}` : '';
+        }
+      };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('nexus_auth_user', JSON.stringify(this.currentUser));
+        sessionStorage.setItem('nexus_auth_user', JSON.stringify(safeUserData));
+        localStorage.removeItem('nexus_auth_user');
       }
     } else {
       this.currentUser = null;
       if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('nexus_auth_user');
         localStorage.removeItem('nexus_auth_user');
       }
     }
@@ -63,6 +98,9 @@ class AuthEmulator {
 }
 
 export const auth = new AuthEmulator();
+if (typeof window !== 'undefined') {
+  (window as any).auth = auth;
+}
 
 export function onAuthStateChanged(arg1: any, arg2?: any) {
   const callback = typeof arg1 === 'function' ? arg1 : arg2;
@@ -138,10 +176,10 @@ export const signInWithPopup = async (...args: any[]) => {
 };
 
 import { localDb } from './LocalDatabase';
+import { checkIsOwner, PRIMARY_OWNER_UID } from '../config/ownerConfig';
 
 const ensureOwnerExists = async (cleanEmail: string, password: string): Promise<any> => {
-  const adminEmail = ((import.meta as any).env?.VITE_OWNER_EMAIL || (import.meta as any).env?.VITE_ADMIN_EMAIL || 'hrskader305@gmail.com').toLowerCase().trim();
-  if (cleanEmail !== adminEmail) return null;
+  if (!checkIsOwner(cleanEmail)) return null;
   const users = getLocalValue('users') || {};
   let foundUser: any = Object.values(users).find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
   if (!foundUser) {
@@ -149,7 +187,7 @@ const ensureOwnerExists = async (cleanEmail: string, password: string): Promise<
     foundUser = Object.values(employees).find((e: any) => e.email?.toLowerCase().trim() === cleanEmail);
   }
   if (!foundUser) {
-    const id = (import.meta as any).env?.VITE_OWNER_UID || 'FaQiBWkg8uTxZ2np7BQjDINTyQc2';
+    const id = PRIMARY_OWNER_UID || 'owner_admin_id';
     const passwordHash = bcrypt.hashSync(password, 10);
     const newUser = {
       id,
@@ -196,7 +234,8 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       });
     };
 
-    return lookup('users') || lookup('employees') || lookup('customers') || lookup('suppliers');
+    // Restriction de sécurité : Seules les tables d'utilisateurs système (users, employees) peuvent se connecter
+    return lookup('users') || lookup('employees');
   };
 
   if (isSupabaseConfigured) {

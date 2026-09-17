@@ -1,30 +1,10 @@
-import { DEFAULT_PERMISSIONS } from '../constants';
 import React, { useState, useMemo, memo, useEffect, useRef } from 'react';
-import { Package, Tag, RefreshCw, LayoutGrid, Plus, FileSpreadsheet, History, Upload, ShoppingBag, AlertTriangle, Zap, Info, Search, Filter, Scan, LayoutList, Layers, Truck, ArrowUpDown, Award, Calendar, FolderTree, AlertCircle, TrendingDown, ShieldCheck, RotateCcw, Check, Printer, Copy, PackageOpen, Trash2, ChevronUp, BarcodeIcon, ShoppingCart, Eye, X, MessageCircle, Phone, MapPin, Navigation, Edit, Clock, Mail, Percent, DollarSign, Star, Palette, FileText, AlignLeft, Shield, UserCog, Link2, MapIcon, Brain, Database, ArrowRight, CreditCard, Banknote, Minus, UserPlus, ChevronDown, Users, ArrowUpRight, ArrowDownRight, Camera } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabase';
-import { Button, Card, Modal, ConfirmDialog, BlurCard, SortableHeader } from './ui';
 import { Product, Category, Brand, StockAdjustment, CompanySettings, SupplierSync, Supplier, Purchase, Transaction, OnlineOrder, Employee, Customer, CartItem, ProductReturn, RolePermissions, UserProfile } from '../types';
 import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked } from '../lib/utils';
-import { printReceipt } from '../services/printService';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, subDays } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import Papa from 'papaparse';
-import { motion, AnimatePresence } from 'motion/react';
 import { convertKeysToCamel } from '../lib/db-converters';
-
-import { StockAdjustmentModal } from './StockAdjustmentModal';
-import { DuplicateSKUModal } from './DuplicateSKUModal';
-import { ImportModal } from './ImportModal';
-import { ProductFormModal } from './ProductFormModal';
-import { LabelPrinter } from './LabelPrinter';
-import { SupplierSyncManager } from './SupplierSyncManager';
-import { StockHistory } from './StockHistory';
-import { BarcodeScanner } from './BarcodeScanner';
-import { ManualQRCodeGenerator } from './ManualQRCodeGenerator';
-
-
- // TODO: fix missing imports 
-
+import { printReceipt } from '../services/printService';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, isYesterday, subDays } from 'date-fns';
 export interface TransactionHistoryProps {
   transactions: Transaction[];
   onReturn: (t: Transaction) => void;
@@ -38,7 +18,7 @@ export interface TransactionHistoryProps {
 
 export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
   const { transactions, onReturn, onMarkAsDelivered, onEdit, onRestore, settings, canAccess, profile } = props;
-const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, last30days
+  const [dateFilter, setDateFilter] = useState('today');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState('all');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
@@ -46,7 +26,7 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
   const [amountSearch, setAmountSearch] = useState('');
 
   // Temporary filter states for explicit apply action
-  const [tempDateFilter, setTempDateFilter] = useState('all');
+  const [tempDateFilter, setTempDateFilter] = useState('today');
   const [tempPaymentMethodFilter, setTempPaymentMethodFilter] = useState('all');
   const [tempDeliveryMethodFilter, setTempDeliveryMethodFilter] = useState('all');
   const [tempCustomRange, setTempCustomRange] = useState({ start: '', end: '' });
@@ -76,6 +56,9 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
       const now = new Date();
       if (filters.dateFilter === 'today') {
         query = query.gte('timestamp', startOfDay(now).toISOString()).lte('timestamp', endOfDay(now).toISOString());
+      } else if (filters.dateFilter === 'yesterday') {
+        const yesterday = subDays(now, 1);
+        query = query.gte('timestamp', startOfDay(yesterday).toISOString()).lte('timestamp', endOfDay(yesterday).toISOString());
       } else if (filters.dateFilter === 'last7days') {
         query = query.gte('timestamp', startOfDay(subDays(now, 7)).toISOString()).lte('timestamp', endOfDay(now).toISOString());
       } else if (filters.dateFilter === 'last30days') {
@@ -91,7 +74,15 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
 
       // Delivery method
       if (filters.deliveryMethod !== 'all') {
-        query = query.eq('delivery_method', filters.deliveryMethod);
+        if (filters.deliveryMethod === 'online') {
+          query = query.not('online_order_id', 'is', null);
+        } else if (filters.deliveryMethod === 'pickup') {
+          query = query.in('delivery_method', ['pickup', 'retrait', 'takeaway']);
+        } else if (filters.deliveryMethod === 'in_store') {
+          query = query.in('delivery_method', ['in_store', 'direct']);
+        } else {
+          query = query.eq('delivery_method', filters.deliveryMethod);
+        }
       }
 
       // Customer name search
@@ -287,37 +278,63 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
   const filteredTransactions = useMemo(() => {
     const raw = allCombinedTransactions.filter((t: Transaction) => {
       if (!t || !t.timestamp) return false;
-      const date = parseISO(t.timestamp);
+      let date: Date;
+      try {
+        date = typeof t.timestamp === 'string' ? parseISO(t.timestamp) : new Date(t.timestamp);
+        if (isNaN(date.getTime())) return false;
+      } catch (_) {
+        return false;
+      }
       const now = new Date();
 
       // Date filter
       let dateMatch = true;
-      if (dateFilter === 'custom') {
-        if (customRange.start && customRange.end) {
+      try {
+        if (dateFilter === 'custom') {
+          if (customRange.start && customRange.end) {
+            dateMatch = isWithinInterval(date, {
+              start: startOfDay(parseISO(customRange.start)),
+              end: endOfDay(parseISO(customRange.end))
+            });
+          }
+        } else if (dateFilter === 'today') {
+          dateMatch = isToday(date);
+        } else if (dateFilter === 'yesterday') {
+          dateMatch = isYesterday(date);
+        } else if (dateFilter === 'last7days') {
           dateMatch = isWithinInterval(date, {
-            start: startOfDay(parseISO(customRange.start)),
-            end: endOfDay(parseISO(customRange.end))
+            start: startOfDay(subDays(now, 7)),
+            end: endOfDay(now)
+          });
+        } else if (dateFilter === 'last30days') {
+          dateMatch = isWithinInterval(date, {
+            start: startOfDay(subDays(now, 30)),
+            end: endOfDay(now)
           });
         }
-      } else if (dateFilter === 'today') dateMatch = isToday(date);
-      else if (dateFilter === 'last7days') {
-        dateMatch = isWithinInterval(date, {
-          start: startOfDay(subDays(now, 7)),
-          end: endOfDay(now)
-        });
-      }
-      else if (dateFilter === 'last30days') {
-        dateMatch = isWithinInterval(date, {
-          start: startOfDay(subDays(now, 30)),
-          end: endOfDay(now)
-        });
+      } catch (_) {
+        dateMatch = false;
       }
 
       // Payment method filter
       const paymentMatch = paymentMethodFilter === 'all' || t.paymentMethod === paymentMethodFilter;
 
       // Delivery method filter
-      const deliveryMatch = deliveryMethodFilter === 'all' || t.deliveryMethod === deliveryMethodFilter;
+      let deliveryMatch = true;
+      if (deliveryMethodFilter !== 'all') {
+        const dm = (t.deliveryMethod as string) || '';
+        if (deliveryMethodFilter === 'in_store') {
+          deliveryMatch = dm === 'in_store' || dm === 'direct' || (!t.deliveryMethod && !t.onlineOrderId);
+        } else if (deliveryMethodFilter === 'delivery') {
+          deliveryMatch = dm === 'delivery' || dm === 'shipping';
+        } else if (deliveryMethodFilter === 'pickup') {
+          deliveryMatch = dm === 'pickup' || dm === 'retrait' || dm === 'takeaway';
+        } else if (deliveryMethodFilter === 'online') {
+          deliveryMatch = !!t.onlineOrderId || dm === 'delivery' || dm === 'pickup' || dm === 'online';
+        } else {
+          deliveryMatch = dm === deliveryMethodFilter;
+        }
+      }
 
       // Customer name search
       const customerMatch = customerNameSearch === '' || (t.customerName && t.customerName.toLowerCase().includes(customerNameSearch.toLowerCase()));
@@ -334,8 +351,8 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
         let bValue = b[sortConfig.key];
         
         if (sortConfig.key === 'id_display') {
-          aValue = a.id?.slice(-8).toUpperCase();
-          bValue = b.id?.slice(-8).toUpperCase();
+          aValue = String(a.id || '').slice(-8).toUpperCase();
+          bValue = String(b.id || '').slice(-8).toUpperCase();
         }
 
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -379,7 +396,7 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
     printWindow.document.write(`
       <html>
         <head>
-          <title>Facture #${t.id?.slice(-8).toUpperCase()}</title>
+          <title>Facture #${String(t.id || '').slice(-8).toUpperCase()}</title>
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5; padding: 40px; }
             .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
@@ -404,7 +421,7 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
             </div>
             <div class="invoice-details">
               <h2>Facture ${t.status === 'returned' ? '(RETOURNÉ)' : t.status === 'partially_returned' ? '(RETOUR PARTIEL)' : ''}</h2>
-              <p>#${t.id?.slice(-8).toUpperCase()}<br>Date: ${formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
+              <p>#${String(t.id || '').slice(-8).toUpperCase()}<br>Date: ${formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
             </div>
           </div>
 
@@ -415,9 +432,9 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
             </div>
             <div style="text-align: right;">
               <div class="section-title">Mode de Paiement</div>
-              <p>${t.paymentMethod.toUpperCase()}</p>
+              <p>${String(t.paymentMethod || 'Espèces').toUpperCase()}</p>
               <div class="section-title" style="margin-top: 10px;">Type de Commande</div>
-              <p>${(t.deliveryMethod || 'in_store').toUpperCase().replace('_', ' ')}</p>
+              <p>${String(t.deliveryMethod || 'in_store').toUpperCase().replace('_', ' ')}</p>
             </div>
           </div>
 
@@ -474,7 +491,7 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
     const rowsHtml = filteredTransactions.map((t: Transaction) => `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">${formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">#${t.id?.slice(-8).toUpperCase()}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">#${String(t.id || '').slice(-8).toUpperCase()}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee;">
           <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; ${
             t.status === 'returned' ? 'background: #fee2e2; color: #b91c1c;' :
@@ -534,8 +551,6 @@ const [dateFilter, setDateFilter] = useState('all'); // all, today, last7days, l
     `);
     printWindow.document.close();
   };
-
-  
 
   return {
     dateFilter,

@@ -20,14 +20,45 @@ export function useProductBarcodeLookup({
 
   useEffect(() => {
     const lookupBarcode = async (barcode: string) => {
-      if (!barcode || barcode.length < 8) return;
-      
-      // Don't lookup if we already have a name or if it's already in the DB
-      if (name && products.find(p => p.sku === barcode)) return;
+      const cleanBc = (barcode || '').trim().toLowerCase();
+      if (!cleanBc || cleanBc.length < 3) return;
 
+      // 1. Recherche locale 0ms (RAM) si le produit existe déjà localement
+      const existingProduct = products.find(p => 
+        p && (
+          (p.barcode && String(p.barcode).trim().toLowerCase() === cleanBc) ||
+          (p.sku && String(p.sku).trim().toLowerCase() === cleanBc)
+        )
+      );
+
+      if (existingProduct) {
+        setFormData((prev: any) => ({
+          ...prev,
+          name: prev.name || existingProduct.name || '',
+          price: prev.price || (existingProduct.price ?? '').toString(),
+          costPrice: prev.costPrice || (existingProduct.costPrice ?? '').toString(),
+          wholesalePrice: prev.wholesalePrice || (existingProduct.wholesalePrice ?? '').toString(),
+          categoryId: prev.categoryId || existingProduct.categoryId || '',
+          brandId: prev.brandId || existingProduct.brandId || '',
+          unit: prev.unit || existingProduct.unit || 'unité',
+          imageUrl: prev.imageUrl || existingProduct.imageUrl || '',
+          description: prev.description || existingProduct.description || ''
+        }));
+        return;
+      }
+
+      if (cleanBc.length < 8 || name) return;
+
+      // 2. Recherche externe OpenFoodFacts avec timeout strict de 1.2s
       setIsGlobalLoading(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+
       try {
-        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${cleanBc}.json`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (data.status === 1 && data.product) {
@@ -39,11 +70,11 @@ export function useProductBarcodeLookup({
             description: prev.description || product.generic_name || product.generic_name_fr || '',
             imageUrl: prev.imageUrl || product.image_url || product.image_front_url || '',
             imageUrls: (product.image_url || product.image_front_url) 
-              ? [product.image_url || product.image_front_url, ...prev.imageUrls].slice(0, 5) 
+              ? [product.image_url || product.image_front_url, ...(prev.imageUrls || [])].slice(0, 5) 
               : prev.imageUrls
           }));
 
-          // Try to find matching category
+          // Trouve la catégorie correspondante si possible
           if (product.categories) {
             const worldCategories = product.categories.split(',');
             for (const worldCat of worldCategories) {
@@ -59,15 +90,16 @@ export function useProductBarcodeLookup({
           }
         }
       } catch (error) {
-        console.warn("[Barcode Lookup Info] External API lookup bypassed or offline:", error);
+        // Ignorer les erreurs d'API externe ou de timeout
       } finally {
+        clearTimeout(timeoutId);
         setIsGlobalLoading(false);
       }
     };
 
     const timer = setTimeout(() => {
       lookupBarcode(sku);
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [sku, categories, products]);

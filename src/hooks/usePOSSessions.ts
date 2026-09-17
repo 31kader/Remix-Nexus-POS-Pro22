@@ -100,11 +100,6 @@ export function usePOSSessions(
     }
 
     setActiveTab('checkout');
-    
-    setTimeout(() => {
-      const searchInput = document.querySelector('input[placeholder*="Rechercher"]') as HTMLInputElement;
-      if (searchInput) searchInput.focus();
-    }, 100);
   }, [customers, setActiveTab, setCart, setSelectedCustomer, setIsWholesale, setDeliveryMethod]);
 
   // LE RETURN COMPLET AVEC TOUTES TES VARIABLES ET FONCTIONS

@@ -58,6 +58,8 @@ export interface CashShift {
   totalExpenses?: number;
   status: 'open' | 'closed';
   notes?: string;
+  terminalId?: string;
+  terminalName?: string;
 }
 
 export interface Expense {
@@ -181,4 +183,31 @@ export interface CompanySettings {
     twilioNumber?: string;
     googleMapsKey?: string;
   };
+  // 🧾 Nouveaux Paramètres Avancés
+  showLogoOnReceipt?: boolean;
+  showSavingsOnReceipt?: boolean;
+  customReceiptMessage?: string;
+  receiptSocialQrUrl?: string;
+  receiptFontSize?: 'compact' | 'normal' | 'large';
+
+  // 📱 Modèles WhatsApp & SMS
+  whatsappDebtReminderTemplate?: string;
+  whatsappReceiptTemplate?: string;
+
+  // 🔔 Sons & Synthèse Vocale
+  scannerSoundType?: 'modern' | 'classic' | 'soft' | 'silent';
+  enableVoiceAnnouncement?: boolean;
+  voiceLanguage?: 'fr' | 'ar';
+
+  // ⌨️ Raccourcis Clavier & Ergonomie
+  enableKeyboardShortcuts?: boolean;
+
+  // ⏳ Péremption & Arrondis
+  expiryCriticalDaysThreshold?: number;
+  expiryWarningDaysThreshold?: number;
+  cashRoundingStep?: number; // 0, 5, 10
+
+  // 💾 Sauvegarde Automatique
+  enableAutoBackupOnShiftClose?: boolean;
+  autoBackupFrequency?: 'shift_close' | 'daily' | 'manual';
 }

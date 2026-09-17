@@ -51,8 +51,8 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
 
   const width = `${widthVal}mm`;
   const height = `${heightVal}mm`;
-  // Force rotation as requested or use settings, respecting '0' if defined
-  const rot = (settings.labelRotation !== undefined && settings.labelRotation !== null && settings.labelRotation !== '') ? settings.labelRotation : '90';
+  // Default to '0' (no rotation) unless explicitly configured by user
+  const rot = (settings.labelRotation !== undefined && settings.labelRotation !== null && settings.labelRotation !== '') ? settings.labelRotation : '0';
 
   // Custom template configs
   const showBarcode = settings.customShowBarcode !== false;
@@ -156,7 +156,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
           <div class="main-price">${p.price.toFixed(2)} <span class="currency">${settings.currency}</span></div>
           <div class="footer-meta">
             <div class="qr-box-inlined">${qrHtml}</div>
-            <div class="ref">REF: ${p.sku || p.id.slice(-6).toUpperCase()}</div>
+            <div class="ref">REF: ${p.sku || String(p.id || "").slice(-6).toUpperCase()}</div>
           </div>
         </div>
       `;
@@ -217,7 +217,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
       const nameLineClamp = settings.nameLineClamp !== undefined ? settings.nameLineClamp : 1;
       const customLetterSpacing = settings.customLetterSpacing !== undefined ? settings.customLetterSpacing : 0;
 
-      const imageHtml = showImage && (p.imageUrl || p.image) ? `<img src="${p.imageUrl || p.image}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;" referrerpolicy="no-referrer" />` : '';
+      const imageHtml = showImage && (p.imageUrl || p.image) ? `<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : '';
 
       if (struct === 'split') {
         // Two-Column Layout organization: left side details, right side code
@@ -468,7 +468,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
         <div class="label-standard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
           <div class="name" style="font-weight: bold; font-size: 11px; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0;">
-            ${(p.imageUrl || p.image) ? `<img src="${p.imageUrl || p.image}" style="width: 28px; height: 28px; object-fit: cover; border-radius: 4px; border: 1.5px solid #ddd;" referrerpolicy="no-referrer" />` : ''}
+            ${(p.imageUrl || p.image) ? `<div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1.5px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : ''}
             <div class="price" style="font-size: 16px; font-weight: 900; margin: 0;">${p.price.toFixed(2)} ${settings.currency}</div>
           </div>
           ${barcodeHtml}
@@ -494,7 +494,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
         <style>
           @page { 
             size: ${width} ${height}; 
-            margin: 0 !important; 
+            margin: 0mm !important; 
           }
           * { 
             box-sizing: border-box; 
@@ -507,8 +507,9 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             background: white !important;
             font-family: sans-serif;
             width: ${width} !important;
-            height: auto !important;
-            overflow: visible !important;
+            height: ${height} !important;
+            max-height: ${height} !important;
+            overflow: hidden !important;
             font-size: 0 !important;
             line-height: 0 !important;
           }
@@ -521,23 +522,26 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
           .label-container {
             width: ${width} !important; 
             height: ${height} !important;
+            max-height: ${height} !important;
             padding: 0;
             margin: 0;
             box-sizing: border-box;
             background: white;
             position: relative !important;
-            overflow: hidden;
-            page-break-inside: avoid;
-            break-inside: avoid;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 12px !important;
             line-height: normal !important;
           }
-          .label-container:not(:last-child) {
-            page-break-after: always;
-            break-after: page;
+          .label-container:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .label-wrapper {
             box-sizing: border-box;

@@ -3,9 +3,10 @@ import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
-import { CompanySettings, Employee, InvoicePattern, SupplierSync } from '../../types';
+import { CompanySettings, Employee, InvoicePattern, SupplierSync, UserProfile } from '../../types';
 import { safeOptionalQuery } from '../../lib/supabase/safeOptional';
 import { setLocalState, saveStateToStorage } from '../../lib/local-db';
+import { usePeopleStore } from '../../store/usePeopleStore';
 
 interface useAdminStaticDataParams {
   loading: boolean;
@@ -61,7 +62,6 @@ export function useAdminStaticData({
 
             const settingsPromise = supabase.from('settings').select(settingsCols).then(async (res: any) => {
               if (res.error) {
-                console.warn('[settings fetch] Static load failed, falling back to select("*"):', res.error);
                 return supabase.from('settings').select('*');
               }
               return res;
@@ -77,15 +77,17 @@ export function useAdminStaticData({
             ]);
             
             if (isSubscribed) {
-              if (employeesRes.data) {
+              if (employeesRes.data && Array.isArray(employeesRes.data)) {
                 const updatedEmployees = employeesRes.data.map((item: any) => convertKeysToCamel(item) as Employee);
-                setEmployees(updatedEmployees);
-                idbSet('nexus_employees_cache', updatedEmployees);
+                if (updatedEmployees.length > 0) {
+                  setEmployees(updatedEmployees);
+                  idbSet('nexus_employees_cache', updatedEmployees);
+                }
               }
-              if (patternsData) {
+              if (patternsData && Array.isArray(patternsData)) {
                 setPatterns(patternsData.map((item: any) => convertKeysToCamel(item) as InvoicePattern));
               }
-              if (syncsRes.data) {
+              if (syncsRes.data && Array.isArray(syncsRes.data)) {
                 setSupplierSyncs(syncsRes.data.map((item: any) => convertKeysToCamel(item) as SupplierSync));
               }
               if (settingsRes.data && settingsRes.data.length > 0) {
@@ -98,21 +100,23 @@ export function useAdminStaticData({
                     }
                   });
                   const camelSettings = convertKeysToCamel(companyRow) as CompanySettings;
-                  setSettings(camelSettings);
+                  setSettings(prev => ({ ...prev, ...camelSettings }));
                   setLocalState('settings/company', camelSettings);
-                  saveStateToStorage();
+                  saveStateToStorage('settings');
                 }
               }
             }
           } catch (e) {
-            console.warn('[useDataFetching] Failed direct static Supabase fetch:', e);
+            console.warn('[useDataFetching] Static Supabase fetch handled:', e);
           }
         }
 
+        // Always merge local ground truth from localDb
         const [
-          employeesSnap, patternsSnap, syncsSnap, settingsSnap
+          employeesSnap, usersSnap, patternsSnap, syncsSnap, settingsSnap
         ] = await Promise.all([
           localDb.get('employees'),
+          localDb.get('users'),
           userRole === 'admin' ? localDb.get('invoicePatterns') : Promise.resolve({ exists: () => false } as any),
           userRole === 'admin' ? localDb.get('supplierSyncs') : Promise.resolve({ exists: () => false } as any),
           localDb.get('settings/company')
@@ -124,18 +128,36 @@ export function useAdminStaticData({
 
         const employeesData = employeesSnap.val();
         const employeesDocs = employeesData ? Object.keys(employeesData).map(id => ({ id, ...employeesData[id] } as Employee)) : [];
-        if (employeesDocs.length > 0 && !isSupabaseConfigured) {
-          setEmployees(employeesDocs);
+        if (employeesDocs.length > 0) {
+          setEmployees(prev => {
+            const map = new Map<string, Employee>();
+            (Array.isArray(prev) ? prev : []).forEach(e => map.set(e.id, e));
+            employeesDocs.forEach(e => map.set(e.id, e));
+            return Array.from(map.values());
+          });
           idbSet('nexus_employees_cache', employeesDocs);
         }
 
+        const usersData = usersSnap?.val?.();
+        if (usersData && typeof usersData === 'object') {
+          const usersDocs = Object.keys(usersData).map(id => ({ id, ...usersData[id] } as UserProfile));
+          if (usersDocs.length > 0) {
+            usePeopleStore.getState().setUsers(prev => {
+              const map = new Map<string, UserProfile>();
+              (Array.isArray(prev) ? prev : []).forEach(u => map.set(u.id || u.uid, u));
+              usersDocs.forEach(u => map.set(u.id || u.uid, u));
+              return Array.from(map.values());
+            });
+          }
+        }
+
         if (patternsSnap.exists() && !isSupabaseConfigured) {
-             const patternsData = patternsSnap.val();
-             setPatterns(Object.keys(patternsData).map(id => ({ id, ...patternsData[id] } as InvoicePattern)));
+          const patternsData = patternsSnap.val();
+          setPatterns(Object.keys(patternsData).map(id => ({ id, ...patternsData[id] } as InvoicePattern)));
         }
         if (syncsSnap.exists() && !isSupabaseConfigured) {
-             const syncsData = syncsSnap.val();
-             setSupplierSyncs(Object.keys(syncsData).map(id => ({ id, ...syncsData[id] } as SupplierSync)));
+          const syncsData = syncsSnap.val();
+          setSupplierSyncs(Object.keys(syncsData).map(id => ({ id, ...syncsData[id] } as SupplierSync)));
         }
       } catch (err) {
         console.warn("Static data fetch failed:", err);

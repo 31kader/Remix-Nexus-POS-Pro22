@@ -17,7 +17,7 @@ export function ReturnModalItemsList({
 }: ReturnModalItemsListProps) {
   return (
     <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800/50">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Transaction #{transaction?.id?.slice(-8).toUpperCase()}</p>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Transaction #{String(transaction?.id || '').slice(-8).toUpperCase()}</p>
       <div className="space-y-3">
         {returnItems.map((item, idx) => (
           <div key={`return-item-${item.productId}-${idx}`} className={`flex items-center justify-between gap-4 p-2 rounded-lg ${item.availableToReturn === 0 ? 'opacity-40 grayscale bg-slate-950/40' : ''}`}>

@@ -60,7 +60,7 @@ export function UndoLogModal({
               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                 Transaction Associée Trouvée
               </span>
-              <span className="font-mono text-xs font-black text-white">#{undoTransactionDetails.id.slice(-8).toUpperCase()}</span>
+              <span className="font-mono text-xs font-black text-white">#{String(undoTransactionDetails.id || "").slice(-8).toUpperCase()}</span>
             </div>
             <p className="text-xs text-industrial-400">
               Une transaction de <strong className="text-white">{undoTransactionDetails.total.toFixed(2)} {settings.currency}</strong> émise le {formatSafe(undoTransactionDetails.timestamp || (undoTransactionDetails as any).date, 'dd/MM/yyyy HH:mm')} correspond à cette action.

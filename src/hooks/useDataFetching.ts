@@ -32,37 +32,52 @@ export function useDataFetching(
   const { setStockAdjustments, setAudits, setDamagedItems, setSupplierSyncs, setAttendance } = useInventoryStore();
   const { setPurchases, setExpenses, setSupplierPayments, setAdvances, setAuditLogs } = useFinanceStore();
 
-  // 🛡️ SÉCURISATION DES STORES : On intercepte les données pour s'assurer que ce sont toujours des Tableaux (Arrays)
-  const safeSetProducts = (data: any) => setProducts(Array.isArray(data) ? data : []);
-  const safeSetCategories = (data: any) => setCategories(Array.isArray(data) ? data : []);
-  const safeSetBrands = (data: any) => setBrands(Array.isArray(data) ? data : []);
-  const safeSetPromotions = (data: any) => setPromotions(Array.isArray(data) ? data : []);
-  
-  const safeSetTransactions = (data: any) => setTransactions(Array.isArray(data) ? data : []);
-  const safeSetReturns = (data: any) => setReturns(Array.isArray(data) ? data : []);
-  const safeSetExpenses = (data: any) => setExpenses(Array.isArray(data) ? data : []);
-  const safeSetPurchases = (data: any) => setPurchases(Array.isArray(data) ? data : []);
-  
-  const safeSetCustomers = (data: any) => setCustomers(Array.isArray(data) ? data : []);
-  const safeSetSuppliers = (data: any) => setSuppliers(Array.isArray(data) ? data : []);
-  const safeSetUsers = (data: any) => setUsers(Array.isArray(data) ? data : []);
-  const safeSetEmployees = (data: any) => setEmployees(Array.isArray(data) ? data : []);
+  // 🛡️ SÉCURISATION DES STORES : Supporte à la fois les Tableaux directs ET les fonctions de mise à jour (prev => next)
+  const safeSetter = (setter: (val: any) => void) => (update: any) => {
+    if (typeof update === 'function') {
+      setter((prev: any) => {
+        const res = update(prev);
+        return Array.isArray(res) ? res : [];
+      });
+    } else {
+      setter(Array.isArray(update) ? update : []);
+    }
+  };
 
-  const safeSetStockAdjustments = (data: any) => setStockAdjustments(Array.isArray(data) ? data : []);
-  const safeSetSupplierPayments = (data: any) => setSupplierPayments(Array.isArray(data) ? data : []);
-  const safeSetDamagedItems = (data: any) => setDamagedItems(Array.isArray(data) ? data : []);
-  const safeSetAuditLogs = (data: any) => setAuditLogs(Array.isArray(data) ? data : []);
-  const safeSetPurchaseOrders = (data: any) => setPurchaseOrders(Array.isArray(data) ? data : []);
-  const safeSetPatterns = (data: any) => setPatterns(Array.isArray(data) ? data : []);
-  const safeSetSupplierSyncs = (data: any) => setSupplierSyncs(Array.isArray(data) ? data : []);
-  const safeSetOnlineOrders = (data: any) => setOnlineOrders(Array.isArray(data) ? data : []);
-  const safeSetShifts = (data: any) => setShifts(Array.isArray(data) ? data : []);
+  const safeSetProducts = safeSetter(setProducts);
+  const safeSetCategories = safeSetter(setCategories);
+  const safeSetBrands = safeSetter(setBrands);
+  const safeSetPromotions = safeSetter(setPromotions);
+  
+  const safeSetTransactions = safeSetter(setTransactions);
+  const safeSetReturns = safeSetter(setReturns);
+  const safeSetExpenses = safeSetter(setExpenses);
+  const safeSetPurchases = safeSetter(setPurchases);
+  
+  const safeSetCustomers = safeSetter(setCustomers);
+  const safeSetSuppliers = safeSetter(setSuppliers);
+  const safeSetUsers = safeSetter(setUsers);
+  const safeSetEmployees = safeSetter(setEmployees);
+
+  const safeSetStockAdjustments = safeSetter(setStockAdjustments);
+  const safeSetSupplierPayments = safeSetter(setSupplierPayments);
+  const safeSetDamagedItems = safeSetter(setDamagedItems);
+  const safeSetAuditLogs = safeSetter(setAuditLogs);
+  const safeSetPurchaseOrders = safeSetter(setPurchaseOrders);
+  const safeSetPatterns = safeSetter(setPatterns);
+  const safeSetSupplierSyncs = safeSetter(setSupplierSyncs);
+  const safeSetOnlineOrders = safeSetter(setOnlineOrders);
+  const safeSetShifts = safeSetter(setShifts);
+
+  const activeUserId = user?.uid || user?.id || profile?.uid || profile?.id || 'active_user';
 
   // Hook 1: Core real-time subscriptions with caching and syncing
   useProductsAndCoreData({
-    loading, appMode, userId: user?.uid,
-    setProducts: safeSetProducts,       // 👈 Utilise la version sécurisée
-    setCategories: safeSetCategories,   // 👈 Utilise la version sécurisée
+    loading, 
+    appMode, 
+    userId: activeUserId,
+    setProducts: safeSetProducts,
+    setCategories: safeSetCategories,
     setBrands: safeSetBrands, 
     setTransactions: safeSetTransactions, 
     setPromotions: safeSetPromotions, 
@@ -81,16 +96,20 @@ export function useDataFetching(
 
   // Hook 2: Loading static admin configurations
   useAdminStaticData({
-    loading, appMode, userId: user?.uid, userRole: profile?.role,
+    loading, 
+    appMode, 
+    userId: activeUserId, 
+    userRole: profile?.role,
     setSettings, 
-    setEmployees: safeSetEmployees,    // 👈 Utilise la version sécurisée
+    setEmployees: safeSetEmployees,
     setPatterns: safeSetPatterns, 
     setSupplierSyncs: safeSetSupplierSyncs
   });
 
   // Hook 3: Subscribing to fast-updating real-time shifts, online orders and live settings
   useFastChangingData({
-    loading, userId: user?.uid,
+    loading, 
+    userId: activeUserId,
     setOnlineOrders: safeSetOnlineOrders, 
     setShifts: safeSetShifts, 
     setActiveShift, 
@@ -99,11 +118,12 @@ export function useDataFetching(
 
   // Hook 4: Loading context-specific purchase orders or client orders depending on current supplier/customer selects
   useSupplierAndCustomerData({
-    loading, appMode,
+    loading, 
+    appMode,
     currentSupplierId: currentSupplier?.id,
     currentCustomerId: currentCustomer?.id,
-    setPurchaseOrders: safeSetPurchaseOrders, // 👈 Utilise la version sécurisée
-    setTransactions: safeSetTransactions,     // 👈 Utilise la version sécurisée
+    setPurchaseOrders: safeSetPurchaseOrders,
+    setTransactions: safeSetTransactions,
     setSettings
   });
 }

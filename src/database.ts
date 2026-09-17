@@ -1,6 +1,16 @@
 import bcrypt from 'bcryptjs';
 import { dbState } from './lib/local-db';
 
+// 🟢 Ré-exports des utilitaires et services
+export { convertKeysToSnake, convertKeysToCamel } from './lib/db-converters';
+export { enqueueStockAdjustment } from './services/SyncService';
+
+// 🟢 Ré-export de l'instance complète de localDb (résout toutes les erreurs de méthodes manquantes)
+export { localDb } from './services/LocalDatabase';
+
+/**
+ * 👤 Interface Utilisateur
+ */
 export interface UserAccount {
   id: string;
   username: string;
@@ -10,48 +20,35 @@ export interface UserAccount {
 }
 
 /**
- * Vérifie l'authentification d'un utilisateur en mode hors ligne.
- * Utilise une promesse asynchrone pour ne pas bloquer l'interface React durant le calcul de l'empreinte bcrypt.
+ * 🛡️ Authentification Hors-Ligne
+ * Vérifie les identifiants d'un utilisateur par rapport aux données locales.
  */
-export async function verifyOfflineAuth(usernameInput: string, passwordInput: string): Promise<UserAccount | null> {
+export async function verifyOfflineAuth(
+  usernameInput: string,
+  passwordInput: string
+): Promise<UserAccount | null> {
   try {
-    const usersTable = dbState['users'] || {};
-    const userList = Object.values(usersTable) as any[];
-
-    // Recherche de l'utilisateur par nom d'utilisateur
-    const matchingUser = userList.find(
-      (u) => u.username && u.username.toLowerCase() === usernameInput.trim().toLowerCase()
+    const users = Object.values(dbState['users'] || {}) as UserAccount[];
+    const user = users.find(
+      (u) => u.username?.toLowerCase() === usernameInput.trim().toLowerCase()
     );
 
-    if (!matchingUser || !matchingUser.passwordHash) {
+    if (!user || !user.passwordHash) {
       return null;
     }
 
-    // Comparaison asynchrone (non-bloquante pour le thread React)
-    const isPasswordValid = await new Promise<boolean>((resolve) => {
-      bcrypt.compare(passwordInput, matchingUser.passwordHash, (err, isMatch) => {
-        if (err) {
-          console.error('[Auth] Erreur lors du contrôle du mot de passe hors ligne:', err);
-          resolve(false);
-        } else {
-          resolve(Boolean(isMatch));
-        }
-      });
-    });
+    const isPasswordValid = await bcrypt.compare(
+      passwordInput,
+      user.passwordHash
+    );
 
     if (isPasswordValid) {
-      return {
-        id: matchingUser.id,
-        username: matchingUser.username,
-        passwordHash: matchingUser.passwordHash,
-        role: matchingUser.role || 'cashier',
-        fullName: matchingUser.fullName || matchingUser.name || matchingUser.username
-      };
+      return user;
     }
 
     return null;
   } catch (error) {
-    console.error('[Auth] Échec de la vérification hors ligne:', error);
+    console.error('Erreur lors de la vérification auth hors-ligne :', error);
     return null;
   }
 }

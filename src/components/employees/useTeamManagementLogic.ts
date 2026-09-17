@@ -4,7 +4,7 @@ import { CompanySettings, UserProfile, RolePermissions } from '../../types';
 import { DEFAULT_PERMISSIONS } from '../../constants';
 import { localDb } from '../../services/LocalDatabase';
 
-const OWNER_EMAIL = (import.meta as any).env?.VITE_OWNER_EMAIL || 'hrskader305@gmail.com';
+import { checkIsOwner } from '../../config/ownerConfig';
 
 export const permissionKeys: (keyof RolePermissions)[] = [
   'canAccessInventory',
@@ -189,9 +189,8 @@ export function useTeamManagementLogic({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserUid = user?.id;
-      const ownerEmail = OWNER_EMAIL;
 
-      const userVictims = users.filter(u => u.uid !== currentUserUid && u.email !== ownerEmail);
+      const userVictims = users.filter(u => u.uid !== currentUserUid && !checkIsOwner(u.email, u.uid));
       if (userVictims.length === 0) {
         alert("Aucun compte a purger.");
         return;

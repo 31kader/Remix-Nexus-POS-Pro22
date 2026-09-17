@@ -38,9 +38,10 @@ export const TransactionFilters: React.FC<Props> = ({
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Période</label>
           <div className="flex flex-col gap-1.5">
-            <div className="grid grid-cols-2 gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/60">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800/60">
               <button onClick={() => setTempDateFilter('all')} className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${tempDateFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>Tous</button>
               <button onClick={() => setTempDateFilter('today')} className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${tempDateFilter === 'today' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>Aujourd'hui</button>
+              <button onClick={() => setTempDateFilter('yesterday')} className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${tempDateFilter === 'yesterday' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>Hier</button>
               <button onClick={() => setTempDateFilter('last7days')} className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${tempDateFilter === 'last7days' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>7 jrs</button>
               <button onClick={() => setTempDateFilter('custom')} className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all ${tempDateFilter === 'custom' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}>Perso.</button>
             </div>
@@ -65,8 +66,10 @@ export const TransactionFilters: React.FC<Props> = ({
             </select>
             <select value={tempDeliveryMethodFilter} onChange={(e) => setTempDeliveryMethodFilter(e.target.value)} className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 outline-none">
               <option value="all">Tous les modes</option>
-              <option value="in_store">En magasin</option>
+              <option value="in_store">En magasin direct</option>
               <option value="delivery">Livraison</option>
+              <option value="pickup">Retrait magasin (Click & Collect)</option>
+              <option value="online">Toutes commandes en ligne</option>
             </select>
           </div>
         </div>

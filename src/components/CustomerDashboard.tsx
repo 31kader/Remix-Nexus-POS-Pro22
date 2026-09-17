@@ -3,9 +3,9 @@ import React, { useState, useMemo } from 'react';
 import { ShoppingBag, LogOut, Award } from 'lucide-react';
 import { motion } from 'motion/react';
 import { CompanySettings, Transaction, Customer } from '../types';
-import { CustomerTransactionHistory } from './customer/CustomerTransactionHistory';
-import { CustomerInfoSidebar } from './customer/CustomerInfoSidebar';
-import { RewardLogicCard } from './customer/RewardLogicCard';
+import { CustomerTransactionHistory } from './customers/CustomerTransactionHistory';
+import { CustomerInfoSidebar } from './customers/CustomerInfoSidebar';
+import { RewardLogicCard } from './customers/RewardLogicCard';
 
 export function CustomerDashboard({ 
   customer, 

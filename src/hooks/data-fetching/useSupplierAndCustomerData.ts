@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { PurchaseOrder, Transaction, CompanySettings } from '../../types';
 
@@ -21,46 +21,26 @@ export function useSupplierAndCustomerData({
   currentCustomerId,
   setPurchaseOrders,
   setTransactions,
-  setSettings
+  setSettings,
 }: useSupplierAndCustomerDataParams) {
   // Supplier POs
   useEffect(() => {
-    if (loading || !currentSupplierId) return;
-
+    if (appMode !== 'supplier' || !currentSupplierId) return;
+    
     let isSubscribed = true;
     let unsubPos: (() => void) | undefined;
     let channel: any;
-
+    
     const loadSupplierPOs = async () => {
       try {
-        const poCols = TABLE_COLUMNS['purchase_orders'] ? TABLE_COLUMNS['purchase_orders'].join(',') : '*';
-        let result = await supabase
+        const poCols = TABLE_COLUMNS['purchase_orders'] 
+          ? TABLE_COLUMNS['purchase_orders'].filter((c: string) => !['audited_by', 'audited_at', 'audit_duration', 'audit_note'].includes(c)).join(',')
+          : '*';
+        const { data, error } = await supabase
           .from('purchase_orders')
           .select(poCols)
-          .eq('supplier_id', currentSupplierId);
-          
-        if (result.error) {
-          console.warn("[Supplier PO Fetch] Retrying without potentially un-migrated columns...");
-          const columnsToRemove = ['is_active', 'old_quantity', 'order_number', 'user_id'];
-          const safeCols = (TABLE_COLUMNS['purchase_orders'] || [])
-            .filter(c => !columnsToRemove.includes(c))
-            .join(',');
-          
-          result = await supabase
-            .from('purchase_orders')
-            .select(safeCols || '*')
-            .eq('supplier_id', currentSupplierId);
-            
-          if (result.error) {
-            console.warn("[Supplier PO Fetch Override] Safe columns failed too, retrying with raw * select...");
-            result = await supabase
-              .from('purchase_orders')
-              .select('*')
-              .eq('supplier_id', currentSupplierId);
-          }
-        }
-        
-        const { data, error } = result;
+          .eq('supplier_id', currentSupplierId)
+          .limit(100);
         if (!error && data && isSubscribed) {
           const poDocs = data.map((item: any) => {
             if (item.items && typeof item.items === 'string') {
@@ -88,13 +68,13 @@ export function useSupplierAndCustomerData({
     } else {
       unsubPos = localDb.subscribe('purchaseOrders', (snapshot) => {
           if (isSubscribed) {
-            if (snapshot.exists()) {
-               const data = snapshot.val();
-               const pos = Object.keys(data).map(id => ({ id, ...data[id] } as PurchaseOrder));
-               setPurchaseOrders(pos.filter(po => po.supplierId === currentSupplierId));
-            } else {
-               setPurchaseOrders([]);
-            }
+             if (snapshot.exists()) {
+                const data = snapshot.val();
+                const pos = Object.keys(data).map(id => ({ id, ...data[id] } as PurchaseOrder));
+                setPurchaseOrders(pos.filter(po => po.supplierId === currentSupplierId));
+             } else {
+                setPurchaseOrders([]);
+             }
           }
       });
     }
@@ -102,7 +82,7 @@ export function useSupplierAndCustomerData({
     return () => {
       isSubscribed = false;
       if (unsubPos) unsubPos();
-      if (channel) supabase.removeChannel(channel);
+      if (channel) safeRemoveChannel(channel);
     };
   }, [loading, currentSupplierId]);
 
@@ -122,7 +102,8 @@ export function useSupplierAndCustomerData({
         const { data, error } = await supabase
           .from('transactions')
           .select(txCols)
-          .eq('customer_id', currentCustomerId);
+          .eq('customer_id', currentCustomerId)
+          .limit(100);
         if (!error && data && isSubscribed) {
           const txDocs = data.map((item: any) => {
             if (item.items && typeof item.items === 'string') {
@@ -150,13 +131,13 @@ export function useSupplierAndCustomerData({
     } else {
       unsubTxs = localDb.subscribe('transactions', (snapshot) => {
           if (isSubscribed) {
-            if (snapshot.exists()) {
-               const data = snapshot.val();
-               const txs = Object.keys(data).map(id => ({ id, ...data[id] } as Transaction));
-               setTransactions(txs.filter(t => t.customerId === currentCustomerId));
-            } else {
-               setTransactions([]);
-            }
+             if (snapshot.exists()) {
+                const data = snapshot.val();
+                const txs = Object.keys(data).map(id => ({ id, ...data[id] } as Transaction));
+                setTransactions(txs.filter(t => t.customerId === currentCustomerId));
+             } else {
+                setTransactions([]);
+             }
           }
       });
           
@@ -175,7 +156,7 @@ export function useSupplierAndCustomerData({
     return () => {
         isSubscribed = false;
         if (unsubTxs) unsubTxs();
-        if (channel) supabase.removeChannel(channel);
+        if (channel) safeRemoveChannel(channel);
     };
   }, [appMode, currentCustomerId]);
 }

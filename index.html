@@ -12,8 +12,24 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Nexus POS" />
+    <script>
+      (function() {
+        try {
+          var t = localStorage.getItem('nexus-pos-theme') || 'dark';
+          if (t === 'light') {
+            document.documentElement.classList.add('light');
+          } else {
+            document.documentElement.classList.add('dark');
+            if (t === 'emerald') document.documentElement.classList.add('emerald');
+            else if (t === 'gold') document.documentElement.classList.add('gold');
+            else if (t === 'nardo') document.documentElement.classList.add('nardo-grey-racing');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root" class="notranslate"></div>

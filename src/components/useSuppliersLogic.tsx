@@ -130,7 +130,7 @@ export function useSuppliersLogic(props: SuppliersProps) {
     setIsProcessingDamage,
     handleDamageSubmit,
     handleUpdateClaimStatus
-  } = useSupplierDamaged({ user });
+  } = useSupplierDamaged({ user, viewingDetailsSupplier });
 
   // Hook 4: Supplier planning, schedulers and reminders
   const {

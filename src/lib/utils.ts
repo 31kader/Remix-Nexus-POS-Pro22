@@ -28,6 +28,15 @@ export const logAction = async (userId: string, userName: string, action: string
   }
 };
 
+export function normalizeSearchText(str: string): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
 export const generateUniqueId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9).toUpperCase();
 };
@@ -92,11 +101,30 @@ export const calculateItemPrice = (item: any, isWholesale: boolean = false) => {
 };
 
 export const exportToExcel = async (data: any[], fileName: string) => {
-  const XLSX = await import('xlsx');
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-  XLSX.writeFile(workbook, `${fileName}.xlsx`);
+  try {
+    const XLSX = await import('xlsx');
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Catalogue");
+
+    // Write binary buffer and trigger browser/electron blob download
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${fileName}.xlsx`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 200);
+  } catch (err: any) {
+    console.warn("XLSX direct export failed, using CSV fallback:", err);
+    await exportToCSV(data, fileName);
+  }
 };
 
 export const exportToCSV = async (data: any[], fileName: string) => {
@@ -163,36 +191,7 @@ export const getCategoryPath = (categoryId: string, categories: Category[]): str
 
 // --- Audio Utilities ---
 export const playScanSound = () => {
-  if (typeof window === 'undefined') return;
-  try {
-    const AudioContextCls = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (typeof AudioContextCls === 'function') {
-      try {
-        const canUseNew = AudioContextCls.prototype && typeof AudioContextCls.prototype === 'object';
-        const audioCtx = canUseNew ? new AudioContextCls() : (typeof AudioContextCls === 'function' ? AudioContextCls() : null);
-        if (!audioCtx) return;
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note (standard pos beep)
-        
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-      } catch (innerErr) {
-        console.warn("AudioContext failed:", innerErr);
-      }
-    }
-  } catch (e) {
-    console.error("Audio error:", e);
-  }
+  // Désactivé : Le lecteur de code-barres physique bipe déjà naturellement
 };
 
 export const announcePrice = (name: string, price: number, currency: string) => {
@@ -210,7 +209,7 @@ export const announcePrice = (name: string, price: number, currency: string) => 
     const canUseNew = Utterance.prototype && typeof Utterance.prototype === 'object';
     const msg = canUseNew ? new Utterance() : (typeof Utterance === 'function' ? Utterance() : null);
     if (!msg) return;
-    msg.text = `${name}. ${price.toFixed(2)} ${currency === '€' ? 'Euros' : currency}`;
+    msg.text = `${name}. ${price.toFixed(2)} ${currency || 'DA'}`;
     msg.lang = 'fr-FR';
     msg.rate = 1.1;
     msg.pitch = 1;
@@ -322,11 +321,11 @@ export function sanitizeProductForSupabase(data: any): any {
       }
       
       if (col === 'date' || col.endsWith('_date') || col === 'last_visit' || col === 'hire_date') {
-        if (!val || val === '') {
+        if (!val || typeof val !== 'string' || !val.trim()) {
           val = null;
         } else {
           try {
-            const d = new Date(val);
+            const d = new Date(val.trim());
             if (!isNaN(d.getTime())) {
               val = d.toISOString().split('T')[0];
             } else {
@@ -343,7 +342,7 @@ export function sanitizeProductForSupabase(data: any): any {
   }
 
   // Safety fallbacks to satisfy NOT NULL constraints in PostgreSQL
-  if (clean.name === undefined || clean.name === null || clean.name === '') {
+  if (!clean.name || (typeof clean.name === 'string' && !clean.name.trim())) {
     clean.name = 'Sans nom';
   }
   if (clean.category_id === undefined || clean.category_id === null || clean.category_id === '') {
@@ -359,3 +358,73 @@ export function sanitizeProductForSupabase(data: any): any {
   return clean;
 }
 
+export interface CashierNoteItem {
+  note: string;
+  timestamp: string;
+  author: string;
+}
+
+/**
+ * Normalise et extrait de manière sécurisée les notes du caissier (cashierNotes),
+ * quel que soit leur format d'origine (Array, JSON stringifié, texte brut, ou null/undefined).
+ */
+export function parseCashierNotes(raw: any): CashierNoteItem[] {
+  if (!raw) return [];
+
+  if (Array.isArray(raw)) {
+    const result: CashierNoteItem[] = [];
+    for (const item of raw) {
+      if (!item) continue;
+      if (typeof item === 'object') {
+        const noteText = String(item.note || item.text || item.content || '').trim();
+        if (noteText) {
+          result.push({
+            note: noteText,
+            timestamp: String(item.timestamp || item.created_at || item.date || new Date().toISOString()),
+            author: String(item.author || item.userName || item.created_by || 'Direction')
+          });
+        }
+      } else if (typeof item === 'string') {
+        const str = item.trim();
+        if (str && !(str.length === 1 && /^[\[\]{}",\\:]$/.test(str))) {
+          result.push({
+            note: str,
+            timestamp: new Date().toISOString(),
+            author: 'Direction'
+          });
+        }
+      }
+    }
+    return result;
+  }
+
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return parseCashierNotes(parsed);
+      } catch (_) {
+        // En cas d'erreur de parsing JSON, traiter comme note texte brute
+      }
+    }
+    return [{
+      note: trimmed,
+      timestamp: new Date().toISOString(),
+      author: 'Direction'
+    }];
+  }
+
+  if (typeof raw === 'object') {
+    const noteText = String(raw.note || raw.text || raw.content || '').trim();
+    if (!noteText) return [];
+    return [{
+      note: noteText,
+      timestamp: String(raw.timestamp || raw.created_at || raw.date || new Date().toISOString()),
+      author: String(raw.author || raw.userName || raw.created_by || 'Direction')
+    }];
+  }
+
+  return [];
+}

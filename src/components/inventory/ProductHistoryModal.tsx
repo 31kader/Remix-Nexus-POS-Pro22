@@ -85,7 +85,7 @@ export function ProductHistoryModal({
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Vente #{t.id.slice(-8).toUpperCase()}</p>
+                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
                              </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(t.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
@@ -129,7 +129,7 @@ export function ProductHistoryModal({
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Retour #{r.id.slice(-8).toUpperCase()}</p>
+                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
                                <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded border border-red-500/20">Retourné</span>
                              </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(returnDate), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
