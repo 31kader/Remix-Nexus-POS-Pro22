@@ -1,9 +1,10 @@
 import { Employee, CompanySettings } from '../../types';
+import { toast } from 'sonner';
 
 export function handlePrintDossier(employee: Employee, settings: CompanySettings) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert("Veuillez autoriser les fenêtres contextuelles pour imprimer le dossier.");
+    toast.error("Veuillez autoriser les fenêtres contextuelles pour imprimer le dossier.");
     return;
   }
   const contractText = `CONTRAT DE TRAVAIL INDIVIDUEL (NEXUS POS PRO)

@@ -4,6 +4,7 @@ import { Brand } from '../types';
 import { Card, Button } from './ui';
 import { exportToCSV } from '../lib/utils';
 import Papa from 'papaparse';
+import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
 
 interface BrandsProps {
@@ -75,7 +76,7 @@ export function Brands({ brands, onEdit, onDelete, onAdd }: BrandsProps) {
           setImportSummary(successCount + ' marque(s) importée(s) avec succès. ' + (failCount > 0 ? failCount + ' ignorée(s).' : ''));
         } catch (error) {
           console.error("Erreur d'importation:", error);
-          alert("Une erreur s'est produite lors de l'importation.");
+          toast.error("Une erreur s'est produite lors de l'importation.");
         } finally {
           setIsImporting(false);
           if (fileInputRef.current) {
@@ -85,7 +86,7 @@ export function Brands({ brands, onEdit, onDelete, onAdd }: BrandsProps) {
       },
       error: (error: any) => {
         setIsImporting(false);
-        alert("Erreur de lecture du fichier CSV: " + error.message);
+        toast.error("Erreur de lecture du fichier CSV: " + error.message);
       }
     });
   };

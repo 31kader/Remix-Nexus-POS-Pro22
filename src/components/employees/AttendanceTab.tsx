@@ -8,7 +8,8 @@ import { fr } from 'date-fns/locale';
 import { localDb } from '../../services/LocalDatabase';
 import { Employee, AttendanceRecord, AdvanceRecord, CompanySettings, UserProfile } from '../../types';
 import { Card } from '../ui';
-import { cn, formatSafe } from '../../lib/utils';
+import { cn, formatSafe, generateUniqueId } from '../../lib/utils';
+import { toast } from 'sonner';
 import { printPayslip, generateWhatsAppMessage } from './payrollHelpers';
 import { ExpressClockIn } from './ExpressClockIn';
 import { PayrollReportModal } from './PayrollReportModal';
@@ -70,8 +71,9 @@ export const AttendanceTab = memo(function AttendanceTab({
       useInventoryStore.getState().setAttendance(prev => 
         (Array.isArray(prev) ? prev : []).map(r => r.id === id ? { ...r, clockOut: nowIso } : r)
       );
+      toast.success("Pointage de départ enregistré avec succès !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 
@@ -80,7 +82,7 @@ export const AttendanceTab = memo(function AttendanceTab({
       const targetUser = users.find(u => u.employeeId === employeeId);
       const targetEmp = employees.find(e => e.id === employeeId);
       const now = new Date();
-      const newId = Math.random().toString(36).substring(2, 10);
+      const newId = generateUniqueId();
       const newRecord = {
         id: newId,
         userId: targetUser?.uid || null,
@@ -92,8 +94,9 @@ export const AttendanceTab = memo(function AttendanceTab({
       };
       await localDb.insert(`attendance/${newId}`, newRecord);
       useInventoryStore.getState().setAttendance(prev => [newRecord, ...(Array.isArray(prev) ? prev : [])]);
+      toast.success("Pointage d'arrivée express enregistré !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 
@@ -166,7 +169,7 @@ export const AttendanceTab = memo(function AttendanceTab({
 
   const handleExportCSV = () => {
     if (filteredAttendance.length === 0) {
-      alert("Aucune donnée à exporter.");
+      toast.info("Aucune donnée à exporter.");
       return;
     }
 

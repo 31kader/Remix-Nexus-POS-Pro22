@@ -4,8 +4,9 @@ import { InventoryAudit as InventoryAuditType, Product, CompanySettings } from '
 import { supabase } from '../supabase';
 import { convertKeysToSnake } from '../lib/db-converters';
 import { localDb } from '../services/LocalDatabase';
-import { formatSafe, cn } from '../lib/utils';
+import { formatSafe, cn, generateUniqueId } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog } from './ui';
+import { toast } from 'sonner';
 
 interface InventoryAuditProps {
   audits: InventoryAuditType[];
@@ -23,7 +24,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
 
   const startNewAudit = async () => {
     const newAudit = {
-      id: Math.random().toString(36).substring(2, 10),
+      id: generateUniqueId(),
       startDate: new Date().toISOString(),
       status: 'in_progress' as const,
       auditorId: user.uid,
@@ -34,9 +35,10 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
       setActiveAudit(newAudit as InventoryAuditType);
       setAuditItems([]);
       setIsModalOpen(true);
+      toast.success("Nouvel audit d'inventaire démarré !");
     } catch (error: any) {
       console.error("Error creating audit:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 
@@ -94,7 +96,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
           });
 
           const adjData = {
-            id: Math.random().toString(36).substring(2, 10),
+            id: generateUniqueId(),
             productId: item.productId,
             productName: item.productName,
             oldQuantity: item.expectedStock,
@@ -111,9 +113,10 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
       setIsModalOpen(false);
       setActiveAudit(null);
       setIsConfirmModalOpen(false);
+      toast.success("Audit d'inventaire validé et stocks mis à jour avec succès !");
     } catch (error: any) {
       console.error("Error confirming audit:", error);
-      alert("Erreur lors de la validation: " + error.message);
+      toast.error("Erreur lors de la validation: " + (error?.message || "Erreur inconnue"));
     }
   };
 

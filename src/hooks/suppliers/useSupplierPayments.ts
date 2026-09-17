@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { usePeopleStore } from '../../store/usePeopleStore';
 import { useFinanceStore } from '../../store/useFinanceStore';
@@ -134,12 +135,13 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
         }
       }
 
+      toast.success("Paiement fournisseur enregistré avec succès !");
       setIsPaymentModalOpen(false);
       setEditingPayment(null);
       setPaymentData({ amount: 0, method: 'cash', note: '', date: new Date().toISOString(), opType: 'decaissement' });
     } catch (error: any) {
       console.error("Error submitting supplier payment:", error);
-      alert("Erreur de paiement : " + error.message);
+      toast.error("Erreur de paiement : " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessingPayment(false);
     }
@@ -163,7 +165,7 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
           prev.map(s => s.id === payment.supplierId ? updatedSupplier : s)
         );
         try {
-          await localDb.update('suppliers', payment.supplierId, updatedSupplier);
+          await localDb.update(`suppliers/${payment.supplierId}`, updatedSupplier);
         } catch (e) {}
       }
 
@@ -187,9 +189,10 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
             .eq('id', payment.supplierId);
         }
       }
+      toast.success("Versement supprimé avec succès.");
     } catch (error: any) {
       console.error("Error deleting payment:", error);
-      alert("Erreur : " + error.message);
+      toast.error("Erreur : " + (error?.message || "Erreur inconnue"));
     }
   };
 

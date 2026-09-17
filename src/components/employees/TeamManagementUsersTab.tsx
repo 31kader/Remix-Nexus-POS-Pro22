@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils';
 import { roles } from './useTeamManagementLogic';
 import { auth } from '../../services/AuthService';
 import { localDb } from '../../services/LocalDatabase';
+import { toast } from 'sonner';
 
 interface TeamManagementUsersTabProps {
   users: UserProfile[];
@@ -112,9 +113,10 @@ export function TeamManagementUsersTab({
 
       setPinEditorUser(null);
       setPinValue('');
-      alert("Mot de passe / PIN mis à jour avec succès !");
+      toast.success("Mot de passe / PIN mis à jour avec succès !");
     } catch (e: any) {
       setPinError(`Erreur : ${e.message}`);
+      toast.error(`Erreur : ${e.message}`);
     } finally {
       setIsSavingPin(false);
     }

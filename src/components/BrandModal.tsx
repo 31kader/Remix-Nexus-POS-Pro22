@@ -4,6 +4,7 @@ import { Sparkles, Upload, AlignLeft } from 'lucide-react';
 import { callGeminiAI } from '../services/geminiService';
 import { uploadImageBlobToStorage } from '../supabase';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 
 interface BrandModalProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export function BrandModal({
 
   const generateAIInfo = async () => {
     if (!name) {
-      alert("Veuillez d'abord saisir le nom de la marque.");
+      toast.error("Veuillez d'abord saisir le nom de la marque.");
       return;
     }
     setIsGenerating(true);
@@ -49,9 +50,9 @@ export function BrandModal({
       console.error("AI Generation failed:", error);
       const errorMessage = error.message || String(error);
       if (errorMessage.includes("Quota atteint") || errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("credits")) {
-        alert("Génération IA impossible : Votre quota d'utilisation de l'IA (ou vos crédits Google AI Studio) est épuisé.");
+        toast.error("Génération IA impossible : Votre quota d'utilisation de l'IA (ou vos crédits Google AI Studio) est épuisé.");
       } else {
-        alert(`La génération IA a échoué : ${errorMessage}`);
+        toast.error(`La génération IA a échoué : ${errorMessage}`);
       }
     } finally {
       setIsGenerating(false);

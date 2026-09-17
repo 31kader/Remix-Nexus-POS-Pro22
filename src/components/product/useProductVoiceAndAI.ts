@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { callGeminiAI } from '../../services/geminiService';
 import { Brand } from '../../types';
+import { toast } from 'sonner';
 
 interface UseProductVoiceAndAIProps {
   formData: any;
@@ -20,7 +21,7 @@ export function useProductVoiceAndAI({
   const startVoiceEntry = () => {
     const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!Recognition) {
-      alert("La reconnaissance vocale n'est pas supportée par votre navigateur.");
+      toast.error("La reconnaissance vocale n'est pas supportée par votre navigateur.");
       return;
     }
 
@@ -75,7 +76,7 @@ export function useProductVoiceAndAI({
 
   const generateAiDescription = async () => {
     if (!formData.name) {
-      alert("Veuillez d'abord saisir le nom du produit.");
+      toast.warning("Veuillez d'abord saisir le nom du produit.");
       return;
     }
     setIsGeneratingDescription(true);
@@ -86,14 +87,15 @@ export function useProductVoiceAndAI({
       const responseText = await callGeminiAI({}, userPrompt);
       if (responseText) {
         setFormData((prev: any) => ({ ...prev, description: responseText.trim() }));
+        toast.success("Description générée par l'IA avec succès !");
       }
     } catch (error: any) {
       console.error("Error generating description:", error);
       const errorMessage = error.message || String(error);
       if (errorMessage.includes("Quota atteint") || errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("credits")) {
-        alert("Impossible de générer la description : Votre quota d'utilisation de l'IA (ou vos crédits Google AI Studio) est épuisé.");
+        toast.error("Impossible de générer la description : Votre quota d'utilisation de l'IA (ou vos crédits Google AI Studio) est épuisé.");
       } else {
-        alert(`Erreur lors de la génération de la description : ${errorMessage}`);
+        toast.error(`Erreur lors de la génération de la description : ${errorMessage}`);
       }
     } finally {
       setIsGeneratingDescription(false);

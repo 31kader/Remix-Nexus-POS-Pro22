@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '../../supabase';
 import { Supplier } from '../../types';
 
@@ -54,7 +55,7 @@ export function useSupplierReminders({ suppliers }: UseSupplierRemindersParams) 
       }));
     } catch (error: any) {
       console.error("Error adding reminder:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 
@@ -83,7 +84,7 @@ export function useSupplierReminders({ suppliers }: UseSupplierRemindersParams) 
       }
     } catch (error: any) {
       console.error("Error toggling reminder:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 
@@ -109,7 +110,7 @@ export function useSupplierReminders({ suppliers }: UseSupplierRemindersParams) 
       }
     } catch (error: any) {
       console.error("Error deleting reminder:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 

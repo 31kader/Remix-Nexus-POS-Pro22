@@ -149,17 +149,17 @@ export function useSuppliersLogic(props: SuppliersProps) {
       const existingHash = (editingSupplier as any)?.passwordHash || (editingSupplier as any)?.password_hash || '';
 
       if (formData.isAppUser && !cleanEmail) {
-        alert("L'email est obligatoire pour un compte fournisseur connecté.");
+        toast.error("L'email est obligatoire pour un compte fournisseur connecté.");
         return;
       }
 
       if (newPassword && newPassword.length < 4) {
-        alert("Le mot de passe doit contenir au moins 4 caractères.");
+        toast.error("Le mot de passe doit contenir au moins 4 caractères.");
         return;
       }
 
       if (formData.isAppUser && !editingSupplier && !newPassword) {
-        alert("Le mot de passe est obligatoire pour créer un compte fournisseur connecté.");
+        toast.error("Le mot de passe est obligatoire pour créer un compte fournisseur connecté.");
         return;
       }
 
@@ -191,7 +191,7 @@ export function useSuppliersLogic(props: SuppliersProps) {
       setEditingSupplier(null);
     } catch (error: any) {
       console.error("Error creating/editing supplier:", error);
-      alert("Erreur d'enregistrement: " + error.message);
+      toast.error("Erreur d'enregistrement: " + error.message);
     }
   };
 
@@ -218,7 +218,7 @@ export function useSuppliersLogic(props: SuppliersProps) {
       toast.success("Fournisseur supprimé avec succès.");
     } catch (error: any) {
       console.error("Error deleting supplier:", error);
-      alert("Erreur de suppression: " + error.message);
+      toast.error("Erreur de suppression: " + error.message);
     }
   };
 
@@ -247,12 +247,12 @@ export function useSuppliersLogic(props: SuppliersProps) {
       };
 
       await localDb.insert(`purchaseOrders/${newOrderId}`, orderData);
-      alert(`Bon de Commande ${orderNumber} enregistré avec succès !`);
+      toast.success(`Bon de Commande ${orderNumber} enregistré avec succès !`);
       setIsPODraftOpen(false);
       setPoDraftItems([]);
     } catch (error: any) {
       console.error("Error saving purchase order draft:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     } finally {
       setIsSavingPurchaseOrder(false);
     }

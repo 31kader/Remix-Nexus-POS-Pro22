@@ -153,7 +153,7 @@ export function useEmployeesLogic(props: EmployeesProps) {
     const trimmedPhone = formData.phone.trim();
 
     if (!trimmedName || !trimmedEmail || !trimmedPhone) {
-      alert("Tous les champs marqués d'une étoile (*) sont obligatoires.");
+      toast.error("Tous les champs marqués d'une étoile (*) sont obligatoires.");
       return;
     }
 
@@ -205,7 +205,7 @@ export function useEmployeesLogic(props: EmployeesProps) {
           setIsDeleteConfirmOpen(false);
           setEmployeeToDelete(null);
         } catch (error: any) {
-          alert("Erreur lors de la désactivation: " + error.message);
+          toast.error("Erreur lors de la désactivation: " + error.message);
         }
       } else {
         setIsDeleteConfirmOpen(false);
@@ -219,7 +219,7 @@ export function useEmployeesLogic(props: EmployeesProps) {
       setIsDeleteConfirmOpen(false);
       setEmployeeToDelete(null);
     } catch (error: any) {
-      alert("Erreur lors de la suppression: " + error.message);
+      toast.error("Erreur lors de la suppression: " + error.message);
     }
   };
 

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Customer } from '../types';
 import { Modal, Button } from './ui';
 import { localDb } from '../services/LocalDatabase';
+import { generateUniqueId } from '../lib/utils';
+import { toast } from 'sonner';
 
 interface POSCustomerModalProps {
   isOpen: boolean;
@@ -30,13 +32,14 @@ export function POSCustomerModal({ isOpen, onClose, onCreated }: POSCustomerModa
         totalSpent: 0,
         updatedAt: new Date().toISOString()
       };
-      const customerId = Math.random().toString(36).substring(2, 11);
+      const customerId = generateUniqueId();
       await localDb.insert(`customers/${customerId}`, { id: customerId, ...data });
       onCreated({ id: customerId, ...data } as Customer);
       setFormData({ name: '', phone: '', email: '', loyaltyCardNumber: '', notes: '' });
+      toast.success("Client créé avec succès !");
     } catch (error: any) {
       console.error("Error creating customer:", error);
-      alert("Erreur lors de la création du client: " + error.message);
+      toast.error("Erreur lors de la création du client: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsSubmitting(false);
     }

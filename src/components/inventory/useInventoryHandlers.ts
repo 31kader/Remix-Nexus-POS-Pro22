@@ -21,7 +21,7 @@ export function useInventoryHandlers({
   const generateLowStockOrder = async () => {
     const lowStockItems = products.filter((p: Product) => p.stock <= (p.minStock || 5));
     if (lowStockItems.length === 0) {
-      alert("Aucun produit en stock faible.");
+      toast.info("Aucun produit en stock faible.");
       return;
     }
     
@@ -46,11 +46,11 @@ export function useInventoryHandlers({
       };
       const newId = Math.random().toString(36).substring(2, 10);
       await localDb.insert(`purchases/${newId}`, purchaseData);
-      alert("Commande automatique générée dans les achats (Brouillon).");
+      toast.success("Commande automatique générée dans les achats (Brouillon).");
       setActiveTab('purchases');
     } catch (error: any) {
       console.error("Error creating purchase:", error);
-      alert("Erreur lors de la création de la commande: " + error.message);
+      toast.error("Erreur lors de la création de la commande: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessing(false);
     }
@@ -99,7 +99,7 @@ export function useInventoryHandlers({
         toast.success("Produit supprimé avec succès.");
       } catch (error: any) {
         console.error("Error deleting product:", error);
-        alert("Erreur lors de la suppression: " + error.message);
+        toast.error("Erreur lors de la suppression: " + (error?.message || "Erreur inconnue"));
       }
     }
   };

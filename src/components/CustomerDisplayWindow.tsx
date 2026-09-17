@@ -18,7 +18,7 @@ interface CustomerDisplayState {
 }
 
 export const CustomerDisplayWindow: React.FC = () => {
-  const { settings } = useCoreStore();
+  const settings = useCoreStore(s => s.settings);
   const [displayState, setDisplayState] = useState<CustomerDisplayState>({
     items: [],
     subtotal: 0,

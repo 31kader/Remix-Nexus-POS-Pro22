@@ -1,4 +1,4 @@
-import React, { useState, memo, useEffect } from 'react';
+import React, { useState, memo, useEffect, useMemo } from 'react';
 import { CreditCard, ShoppingCart, LayoutGrid, ArrowRight, Edit3, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -64,14 +64,21 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
   const cart = activeSession?.cart || [];
   const selectedCustomer = activeSession?.selectedCustomer || null;
 
-  const mergedProps = {
+  const mergedProps = useMemo(() => ({
     ...props,
     user, profile, products, categories, settings, promotions,
     customers, employees, transactions, activeShift, setActiveShift,
     cart, setCart, posSessions, setPosSessions, activeSessionId, setActiveSessionId,
     isWholesale, setIsWholesale, deliveryMethod, setDeliveryMethod,
     selectedCustomer, setSelectedCustomer
-  };
+  }), [
+    props,
+    user, profile, products, categories, settings, promotions,
+    customers, employees, transactions, activeShift, setActiveShift,
+    cart, setCart, posSessions, setPosSessions, activeSessionId, setActiveSessionId,
+    isWholesale, setIsWholesale, deliveryMethod, setDeliveryMethod,
+    selectedCustomer, setSelectedCustomer
+  ]);
 
   const logic = useCheckoutLogic(mergedProps as any);
 

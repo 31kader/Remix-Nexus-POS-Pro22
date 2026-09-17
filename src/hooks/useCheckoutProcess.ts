@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { enqueueStockAdjustment } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { logAction, generateUniqueId } from '../lib/utils';
@@ -79,11 +80,11 @@ export function useCheckoutProcess({
     
     if (method === 'balance') {
       if (!selectedCustomer) {
-        alert("Veuillez sélectionner un client pour payer par solde.");
+        toast.error("Veuillez sélectionner un client pour payer par solde.");
         return;
       }
       if ((selectedCustomer.balance || 0) < total) {
-        alert("Solde insuffisant.");
+        toast.error("Solde insuffisant.");
         return;
       }
     }
@@ -475,7 +476,7 @@ export function useCheckoutProcess({
       
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Erreur lors de la validation');
+      toast.error('Erreur lors de la validation');
     } finally {
       setIsProcessing(false);
     }

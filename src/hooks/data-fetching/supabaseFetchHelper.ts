@@ -172,14 +172,14 @@ export async function fetchTableFromSupabase<T>(
     let hasMore = true;
 
     // Si limit est spécifié (ex: transactions 500, expenses 50), on le respecte
-    // Pour customers et suppliers sans limit : téléchargement intégral sans limite arbitraire !
+    // Pour customers et suppliers sans limit : plafond de sécurité à 2000 pour éviter OOM
     const smallStaticTables = ['categories', 'brands', 'settings', 'promotions', 'users', 'employees', 'vouchers', 'invoice_patterns'];
     const maxTarget = limit !== undefined 
       ? limit 
-      : (smallStaticTables.includes(collectionName) ? 500 : (collectionName === 'customers' || collectionName === 'suppliers' ? Infinity : 100));
+      : (smallStaticTables.includes(collectionName) ? 500 : (collectionName === 'customers' || collectionName === 'suppliers' ? 2000 : 100));
 
     while (hasMore) {
-      const currentBatchSize = maxTarget !== Infinity ? Math.min(PAGE_SIZE, maxTarget - allRecords.length) : PAGE_SIZE;
+      const currentBatchSize = Math.min(PAGE_SIZE, maxTarget - allRecords.length);
       if (currentBatchSize <= 0) break;
 
       const to = from + currentBatchSize - 1;

@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -73,7 +74,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
         read: false,
         from: user.displayName
       });
-      alert(`Alerte envoyée au caissier : "${message}"`);
+      toast.info(`Alerte envoyée au caissier : "${message}"`);
     } catch (e) {
       console.error("Error sending alert:", e);
     }
@@ -226,7 +227,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
         `AGENT CAMERA ${user.displayName} demande une intervention urgente sur la vente ${selectedTransaction.id}.`,
         'critical'
       );
-      alert("Manager appelé ! Son écran va vibrer.");
+      toast.info("Manager appelé ! Son écran va vibrer.");
     } catch (e) {
       console.error("Error calling manager:", e);
     }

@@ -4,6 +4,7 @@ import { Category } from '../types';
 import { cn, exportToCSV } from '../lib/utils';
 import { Button, Card, Modal, SafeImage } from './ui';
 import Papa from 'papaparse';
+import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
 
 interface CategoriesProps {
@@ -95,7 +96,7 @@ export function Categories({ categories, onEdit, onDelete, onAdd }: CategoriesPr
           setImportSummary(successCount + ' catégorie(s) importée(s) avec succès. ' + (failCount > 0 ? failCount + ' ignorée(s) (doublons ou erreurs).' : ''));
         } catch (error) {
           console.error("Erreur d'importation:", error);
-          alert("Une erreur s'est produite lors de l'importation.");
+          toast.error("Une erreur s'est produite lors de l'importation.");
         } finally {
           setIsImporting(false);
           if (fileInputRef.current) {
@@ -105,7 +106,7 @@ export function Categories({ categories, onEdit, onDelete, onAdd }: CategoriesPr
       },
       error: (error: any) => {
         setIsImporting(false);
-        alert("Erreur de lecture du fichier CSV: " + error.message);
+        toast.error("Erreur de lecture du fichier CSV: " + error.message);
       }
     });
   };

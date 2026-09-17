@@ -3,6 +3,7 @@ import { Plus, Minus, Trash2 } from 'lucide-react';
 import { supabase } from '../supabase';
 import { Product, CompanySettings, Transaction } from '../types';
 import { Modal, Button } from './ui';
+import { toast } from 'sonner';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -87,9 +88,10 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
       
       if (txError) throw txError;
 
+      toast.success("Commande mise à jour avec succès !");
       onClose();
     } catch (error: any) {
-      alert("Erreur lors de la mise à jour: " + error.message);
+      toast.error("Erreur lors de la mise à jour: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessing(false);
     }

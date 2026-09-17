@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { localDb } from '../services/LocalDatabase';
-import { cn, formatSafe } from '../lib/utils';
+import { cn, formatSafe, generateUniqueId } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog, SortableHeader } from './ui';
 import { Expense, CompanySettings } from '../types';
 import { toast } from 'sonner';
@@ -81,14 +81,16 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
     try {
       if (editingExpense) {
         await localDb.update(`expenses/${editingExpense.id}`, expenseData);
+        toast.success("Dépense mise à jour avec succès !");
       } else {
-        const newId = Math.random().toString(36).substring(2, 10);
+        const newId = generateUniqueId();
         await localDb.insert(`expenses/${newId}`, { id: newId, ...expenseData });
+        toast.success("Dépense enregistrée avec succès !");
       }
       setIsModalOpen(false);
       setEditingExpense(null);
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 
@@ -103,8 +105,9 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
       await localDb.delete(`expenses/${expenseToDelete}`);
       setExpenseToDelete(null);
       setIsDeleteConfirmOpen(false);
+      toast.success("Dépense supprimée avec succès !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 

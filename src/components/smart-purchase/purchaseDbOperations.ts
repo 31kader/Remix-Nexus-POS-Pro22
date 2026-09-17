@@ -306,11 +306,12 @@ export async function handleSupplierPaymentDb({
       balance: (supplier.balance || 0) - amount
     });
 
+    toast.success("Paiement fournisseur enregistré avec succès !");
     setIsPaymentModalOpen(false);
     setPaymentData({ supplierId: '', amount: 0, method: 'cash', note: '', date: new Date().toISOString() });
   } catch (error: any) {
      console.error("Error submitting supplier payment:", error);
-     alert("Erreur: " + error.message);
+     toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
   } finally {
     setIsProcessing(false);
   }
@@ -458,13 +459,13 @@ export async function handleQuickSupplierSubmitDb({
 }: QuickSupplierParams) {
   const trimmedName = quickSupplierData.name.trim();
   if (!trimmedName) {
-    alert("Le nom du fournisseur est obligatoire.");
+    toast.error("Le nom du fournisseur est obligatoire.");
     return;
   }
 
   const duplicate = suppliers.find(s => (s?.name || '').toLowerCase() === trimmedName.toLowerCase());
   if (duplicate) {
-    alert(`Un fournisseur nommé "${duplicate.name}" existe déjà.`);
+    toast.warning(`Un fournisseur nommé "${duplicate.name}" existe déjà.`);
     setSelectedSupplierId(duplicate.id);
     setIsQuickSupplierModalOpen(false);
     setQuickSupplierData({ name: '', phone: '', email: '' });
@@ -472,7 +473,7 @@ export async function handleQuickSupplierSubmitDb({
   }
 
   try {
-    const supplierId = Math.random().toString(36).substring(2, 11);
+    const supplierId = generateUniqueId();
     const newSupplier = {
       ...quickSupplierData,
       id: supplierId,
@@ -489,6 +490,6 @@ export async function handleQuickSupplierSubmitDb({
     toast.success("Fournisseur créé avec succès.");
   } catch (error: any) {
      console.error("Error creating supplier:", error);
-     alert("Erreur de création: " + error.message);
+     toast.error("Erreur de création: " + (error?.message || "Erreur inconnue"));
   }
 }

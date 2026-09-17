@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import React, { useState, memo } from 'react';
 import { 
   Plus, RefreshCw, Trash2, X, AlertTriangle, FileText, CheckCircle2 
@@ -93,7 +94,7 @@ export const SupplierSyncManager = memo(function SupplierSyncManager({
       setIsModalOpen(false);
     } catch (error: any) {
       console.error("Error saving supplier sync:", error);
-      alert("Erreur lors de la sauvegarde du flux: " + error.message);
+      toast.error("Erreur lors de la sauvegarde du flux: " + error.message);
     }
   };
 
@@ -110,7 +111,7 @@ export const SupplierSyncManager = memo(function SupplierSyncManager({
       setSyncToDelete(null);
     } catch (error: any) {
       console.error("Error deleting supplier sync:", error);
-      alert("Erreur lors de la suppression: " + error.message);
+      toast.error("Erreur lors de la suppression: " + error.message);
     }
   };
 
@@ -124,10 +125,10 @@ export const SupplierSyncManager = memo(function SupplierSyncManager({
       });
       if (!response.ok) throw new Error('Sync failed');
       const result = await response.json();
-      alert(`Synchronisation terminée : ${result.updated} mis à jour, ${result.created} créés.`);
+      toast.success(`Synchronisation terminée : ${result.updated} mis à jour, ${result.created} créés.`);
     } catch (error) {
       console.error(error);
-      alert('Erreur lors de la synchronisation.');
+      toast.error('Erreur lors de la synchronisation.');
     } finally {
       setActiveSyncing(null);
     }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { localDb } from '../database';
 import { Category, Brand, Product } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
@@ -54,7 +55,7 @@ export function useCategoryBrand() {
   const handleSaveCategory = async () => {
     const trimmedName = newCategoryName.trim();
     if (!trimmedName) {
-      alert("Le nom de la catégorie est obligatoire.");
+      toast.error("Le nom de la catégorie est obligatoire.");
       return;
     }
 
@@ -66,7 +67,7 @@ export function useCategoryBrand() {
     );
 
     if (duplicate) {
-      alert(`Une catégorie nommée "${duplicate.name}" existe déjà à ce niveau.`);
+      toast.error(`Une catégorie nommée "${duplicate.name}" existe déjà à ce niveau.`);
       return;
     }
 
@@ -93,7 +94,7 @@ export function useCategoryBrand() {
       setCategoryImageUrl('');
       setEditingCategory(null);
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 
@@ -102,12 +103,12 @@ export function useCategoryBrand() {
     if (!targetCategory) return;
     const hasProducts = products.some(p => p.categoryId === targetCategory.id);
     if (hasProducts) {
-      alert("Impossible de supprimer une catégorie contenant des produits.");
+      toast.error("Impossible de supprimer une catégorie contenant des produits.");
       return;
     }
     const hasSubcategories = categories.some(c => c.parentId === targetCategory.id);
     if (hasSubcategories) {
-      alert("Impossible de supprimer une catégorie contenant des sous-catégories.");
+      toast.error("Impossible de supprimer une catégorie contenant des sous-catégories.");
       return;
     }
     try {
@@ -119,7 +120,7 @@ export function useCategoryBrand() {
       setCategoryImageUrl('');
       setEditingCategory(null);
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 
@@ -147,21 +148,21 @@ export function useCategoryBrand() {
       setNewBrandLogo('');
       setNewBrandDesc('');
     } catch (err: any) {
-      alert("Erreur: " + err.message);
+      toast.error("Erreur: " + err.message);
     }
   };
 
   const handleDeleteBrand = async (brand: Brand) => {
     const hasProducts = products.some(p => p.brandId === brand.id);
     if (hasProducts) {
-      alert("Impossible de supprimer une marque contenant des produits.");
+      toast.error("Impossible de supprimer une marque contenant des produits.");
       return;
     }
     if (!window.confirm(`Supprimer la marque "${brand.name}" ?`)) return;
     try {
       await localDb.delete(`brands/${brand.id}`);
     } catch (err: any) {
-      alert("Erreur: " + err.message);
+      toast.error("Erreur: " + err.message);
     }
   };
 

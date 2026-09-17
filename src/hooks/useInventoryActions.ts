@@ -186,7 +186,7 @@ export function useInventoryActions({
           setSelectedProductIds([]);
           toast.success("Produits supprimés de l'inventaire avec succès.");
         } catch (error: any) {
-          alert("Erreur lors de la suppression: " + error.message);
+          toast.error("Erreur lors de la suppression: " + error.message);
         } finally {
           setIsMassDeleting(false);
         }

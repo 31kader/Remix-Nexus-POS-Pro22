@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { CompanySettings, Employee, AdvanceRecord } from '../../types';
 import { formatSafe } from '../../lib/utils';
+import { toast } from 'sonner';
 
 export interface ComputedPayrollData {
   employee: Employee;
@@ -26,7 +27,7 @@ export function printPayslip(
 ) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert("Veuillez autoriser les fenêtres contextuelles pour imprimer la fiche de paie.");
+    toast.error("Veuillez autoriser les fenêtres contextuelles pour imprimer la fiche de paie.");
     return;
   }
   const empName = computedPayroll.employee.name;

@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Save, Search, Package, Check, Edit, Camera, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { SafeImage } from '../ui';
+import { toast } from 'sonner';
 
 interface GRNCreateFormProps {
   suppliers: any[];
@@ -200,7 +201,7 @@ export function GRNCreateForm({
                             setEditingProduct(product);
                             setIsProductModalOpen(true);
                           } else {
-                            alert('Produit non trouvé. Il ne peut être modifié.');
+                            toast.error('Produit non trouvé. Il ne peut être modifié.');
                           }
                         }}
                         className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all p-1.5 rounded-lg"

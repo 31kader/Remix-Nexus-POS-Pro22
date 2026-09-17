@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
 import { Customer } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
@@ -153,7 +154,7 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
       }
     } catch (error) {
       console.error('Error updating order:', error);
-      alert('Erreur: impossible de mettre à jour la commande');
+      toast.error('Erreur: impossible de mettre à jour la commande');
     } finally {
       setIsProcessing(null);
     }

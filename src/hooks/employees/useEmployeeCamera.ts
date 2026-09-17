@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface UseEmployeeCameraParams {
   setFormData: React.Dispatch<React.SetStateAction<any>>;
@@ -37,7 +38,7 @@ export function useEmployeeCamera({ setFormData, isModalOpen }: UseEmployeeCamer
         }
       } catch (err) {
         console.error("Camera access failed", err);
-        alert("Impossible d'activer la caméra. Veuillez sélectionner une image manuellement.");
+        toast.error("Impossible d'activer la caméra. Veuillez sélectionner une image manuellement.");
         setCameraActiveSection(null);
       }
     }, 120);

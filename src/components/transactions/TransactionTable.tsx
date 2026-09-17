@@ -21,11 +21,10 @@ interface Props {
 export const TransactionTable: React.FC<Props> = ({
   transactions, settings, onReturn, onMarkAsDelivered, onEdit, onRestore, canAccess, requestSort, sortConfig, generateInvoicePDF, handlePrint
 }) => {
-  const [pageSize, setPageSize] = useState<number | 'all'>(50);
+  const [pageSize, setPageSize] = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const effectivePageSize = pageSize === 'all' ? (transactions?.length || 1) : pageSize;
-  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil((transactions?.length || 0) / effectivePageSize));
+  const totalPages = Math.max(1, Math.ceil((transactions?.length || 0) / pageSize));
   const validPage = Math.min(currentPage, totalPages);
 
   const displayedTransactions = useMemo(() => {
@@ -163,10 +162,10 @@ export const TransactionTable: React.FC<Props> = ({
           </button>
           <button
             type="button"
-            onClick={() => { setPageSize('all'); setCurrentPage(1); }}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${pageSize === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+            onClick={() => { setPageSize(200); setCurrentPage(1); }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${pageSize === 200 ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
           >
-            Tout ({transactions.length})
+            200
           </button>
         </div>
 

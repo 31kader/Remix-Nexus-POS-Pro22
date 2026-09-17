@@ -7,7 +7,8 @@ import { format } from 'date-fns';
 import { localDb } from '../../services/LocalDatabase';
 import { Employee, AdvanceRecord, CompanySettings } from '../../types';
 import { Card, Modal } from '../ui';
-import { cn } from '../../lib/utils';
+import { cn, generateUniqueId } from '../../lib/utils';
+import { toast } from 'sonner';
 
 export const AdvancesTab = memo(function AdvancesTab({ advances, employees, settings }: { advances: AdvanceRecord[], employees: Employee[], settings: CompanySettings }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,7 +22,7 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const newId = Math.random().toString(36).substring(2, 10);
+      const newId = generateUniqueId();
       await localDb.insert(`advances/${newId}`, {
         id: newId,
         employeeId: formData.employeeId,
@@ -32,16 +33,18 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
       });
       setIsModalOpen(false);
       setFormData({ employeeId: '', amount: 0, date: format(new Date(), 'yyyy-MM-dd'), reason: '' });
+      toast.success("Demande d'acompte enregistrée avec succès !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 
   const updateStatus = async (id: string, status: 'approved' | 'paid' | 'rejected') => {
     try {
       await localDb.update(`advances/${id}`, { status });
+      toast.success(`Statut de l'acompte mis à jour (${status}) !`);
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
   };
 

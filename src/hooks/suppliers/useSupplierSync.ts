@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { supabase } from '../../supabase';
 import { convertKeysToSnake } from '../../lib/db-converters';
 import { Supplier, Product } from '../../types';
@@ -84,10 +85,10 @@ export function useSupplierSync({ products }: UseSupplierSyncParams) {
         .eq('id', supplier.id);
       if (syncError) throw syncError;
 
-      alert(`Synchronisation terminée pour ${supplier.name}. ${updatedCount} produits mis à jour.`);
+      toast.success(`Synchronisation terminée pour ${supplier.name}. ${updatedCount} produits mis à jour.`);
     } catch (error: any) {
       console.error('Sync failed:', error);
-      alert(`La synchronisation a échoué: ${error.message}`);
+      toast.error(`La synchronisation a échoué: ${error.message}`);
     } finally {
       setIsSyncing(null);
     }

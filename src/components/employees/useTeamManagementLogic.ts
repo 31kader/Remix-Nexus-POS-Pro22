@@ -3,6 +3,7 @@ import { supabase } from '../../supabase';
 import { CompanySettings, UserProfile, RolePermissions } from '../../types';
 import { DEFAULT_PERMISSIONS } from '../../constants';
 import { localDb } from '../../services/LocalDatabase';
+import { toast } from 'sonner';
 
 import { checkIsOwner } from '../../config/ownerConfig';
 
@@ -99,8 +100,9 @@ export function useTeamManagementLogic({
 
       const settingsId = settings.id || 'company';
       await localDb.update(`settings/${settingsId}`, { rolePermissions: updatedRolePermissions });
+      toast.success("Permissions du rôle mises à jour !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessing(false);
     }
@@ -110,8 +112,9 @@ export function useTeamManagementLogic({
     setIsProcessing(true);
     try {
       await localDb.update(`users/${userId}`, { role: newRole });
+      toast.success("Rôle utilisateur mis à jour !");
     } catch (error: any) {
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessing(false);
     }
@@ -158,7 +161,7 @@ export function useTeamManagementLogic({
           await deactivateUserAccount(key, userRecord);
         }
 
-        alert("Compte lie a des historiques detecte. Le compte a ete archive et desactive (acces coupe), sans supprimer l'historique des ventes.");
+        toast.info("Compte lié à des historiques détecté. Le compte a été archivé et désactivé (accès coupé), sans supprimer l'historique des ventes.");
         setIsUserDeleteConfirmOpen(false);
         setUserToDelete(null);
         return;
@@ -171,11 +174,12 @@ export function useTeamManagementLogic({
           await localDb.delete(`users/${key}`);
         }
       }
+      toast.success("Compte supprimé avec succès.");
       setIsUserDeleteConfirmOpen(false);
       setUserToDelete(null);
     } catch (error: any) {
       console.error("Delete user error:", error);
-      alert(`Erreur lors de la suppression: ${error.message || 'Erreur inconnue'}`);
+      toast.error(`Erreur lors de la suppression: ${error?.message || 'Erreur inconnue'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -192,7 +196,7 @@ export function useTeamManagementLogic({
 
       const userVictims = users.filter(u => u.uid !== currentUserUid && !checkIsOwner(u.email, u.uid));
       if (userVictims.length === 0) {
-        alert("Aucun compte a purger.");
+        toast.info("Aucun compte à purger.");
         return;
       }
 
@@ -223,12 +227,12 @@ export function useTeamManagementLogic({
       }
 
       if (blockedCount > 0) {
-        alert(`Purge terminee. ${deletedCount} compte(s) supprime(s), ${blockedCount} compte(s) conserve(s) car lies a des transactions.`);
+        toast.info(`Purge terminée. ${deletedCount} compte(s) supprimé(s), ${blockedCount} compte(s) conservé(s) car liés à des transactions.`);
       } else {
-        alert(`Purge terminee avec succes. ${deletedCount} compte(s) supprime(s).`);
+        toast.success(`Purge terminée avec succès. ${deletedCount} compte(s) supprimé(s).`);
       }
     } catch (error: any) {
-      alert("Erreur lors de la purge: " + error.message);
+      toast.error("Erreur lors de la purge: " + (error?.message || "Erreur inconnue"));
     } finally {
       setIsProcessing(false);
     }

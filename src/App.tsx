@@ -1,6 +1,6 @@
-import { CustomerDisplayWindow } from './components/CustomerDisplayWindow';
 import React, { useState, useCallback, Suspense, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
+const CustomerDisplayWindow = React.lazy(() => import('./components/CustomerDisplayWindow').then(m => ({ default: m.CustomerDisplayWindow })));
 
 // Hooks d'initialisation & authentification
 import { useDataFetching } from './hooks/useDataFetching';
@@ -184,6 +184,10 @@ export default function App() {
   } = useRegisterSW({
     onRegistered(r: any) {
       if (r) {
+        // Clear any previous interval to prevent duplication on remount
+        if ((window as any).__swUpdateIntervalId) {
+          clearInterval((window as any).__swUpdateIntervalId);
+        }
         const intervalId = setInterval(() => r.update(), 60 * 60 * 1000);
         (window as any).__swUpdateIntervalId = intervalId;
       }
@@ -192,12 +196,6 @@ export default function App() {
       console.warn('SW registration error', error);
     },
   });
-
-  useEffect(() => {
-    if (needRefresh) {
-      console.log("[PWA] Update detected, skipping auto-reload for stability");
-    }
-  }, [needRefresh]);
 
   // --- Navigation ---
   const getInitialTab = useCallback(() => {
@@ -275,7 +273,11 @@ export default function App() {
 
   // ─── Rendu conditionnel par mode ───────────────────────────────────────────
   if (isCustomerDisplay) {
-    return <CustomerDisplayWindow />;
+    return (
+      <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[#05070a]"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>}>
+        <CustomerDisplayWindow />
+      </Suspense>
+    );
   }
 
   if (loading) {

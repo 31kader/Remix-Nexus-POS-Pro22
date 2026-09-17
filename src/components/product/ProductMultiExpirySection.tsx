@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { cn, generateUniqueId } from '../../lib/utils';
+import { toast } from 'sonner';
 
 interface Batch {
   id?: string;
@@ -127,18 +128,18 @@ export function ProductMultiExpirySection({
               type="button"
               onClick={() => {
                 if (!newBatchExpiry) {
-                  alert("Veuillez sélectionner une date de péremption.");
+                  toast.warning("Veuillez sélectionner une date de péremption.");
                   return;
                 }
                 const stockVal = parseFloat(newBatchStock || '0');
                 if (isNaN(stockVal) || stockVal <= 0) {
-                  alert("Veuillez indiquer un stock positif à ce lot.");
+                  toast.warning("Veuillez indiquer un stock positif à ce lot.");
                   return;
                 }
 
                 const generatedLot = newBatchNumber.trim().toUpperCase() || `LOT-${generateUniqueId().toUpperCase().substring(0, 5)}`;
                 const newBatch = {
-                  id: Math.random().toString(36).substring(2, 9),
+                  id: generateUniqueId(),
                   batchNumber: generatedLot,
                   expirationDate: newBatchExpiry,
                   stock: stockVal

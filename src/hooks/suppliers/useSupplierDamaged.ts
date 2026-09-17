@@ -84,7 +84,7 @@ export function useSupplierDamaged({ user, viewingDetailsSupplier }: UseSupplier
       setDamageData({ quantity: 1, reason: '' });
     } catch (error: any) {
       console.error("Error submitting damage record:", error);
-      alert("Erreur de signalement : " + error.message);
+      toast.error("Erreur de signalement : " + error.message);
     } finally {
       setIsProcessingDamage(false);
     }
@@ -110,7 +110,7 @@ export function useSupplierDamaged({ user, viewingDetailsSupplier }: UseSupplier
       toast.success("Statut de la réclamation mis à jour.");
     } catch (error: any) {
       console.error("Error updating claim status:", error);
-      alert("Erreur: " + error.message);
+      toast.error("Erreur: " + error.message);
     }
   };
 

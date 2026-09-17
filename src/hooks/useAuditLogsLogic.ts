@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { enqueueStockAdjustment } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { AuditLog, Product, Transaction } from '../types';
@@ -179,7 +180,7 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
       setCancellingLog(null);
     } catch (e: any) {
       console.error("Action cancellation failed:", e);
-      alert("Erreur lors de l'annulation: " + e.message);
+      toast.error("Erreur lors de l'annulation: " + e.message);
     } finally {
       setIsProcessingUndo(false);
     }
