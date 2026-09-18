@@ -121,7 +121,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
             };
           });
           // Filter drafts with active items in cart so we only display ongoing non-empty client sessions
-          setLiveSessions(mapped.filter((s: any) => s.items && s.items.length > 0));
+          setLiveSessions(mapped.filter((s: any) => Array.isArray(s?.items) && s.items.length > 0));
         }
       };
       

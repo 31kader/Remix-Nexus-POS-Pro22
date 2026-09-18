@@ -7,7 +7,7 @@ import { useCoreStore } from '../store/useCoreStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { generateLocalId } from '../lib/db-converters';
-import { formatSafe } from '../lib/utils';
+import { formatSafe, safeGetItems } from '../lib/utils';
 import { localDb, enqueueStockAdjustment } from '../database';
 import { toast } from 'sonner';
 import bcrypt from 'bcryptjs';
@@ -70,12 +70,12 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
   };
 
   const calculateTotalRefund = () => {
-    if (!selectedTx || !selectedTx.items) return 0;
-    return selectedTx.items.reduce((sum, item: any) => {
+    if (!selectedTx) return 0;
+    return safeGetItems(selectedTx).reduce((sum, item: any) => {
       const itemId = item.productId || item.id;
       const sel = selectedItems[itemId];
       if (!sel) return sum;
-      return sum + (item.price * sel.quantity);
+      return sum + ((Number(item.price) || 0) * (Number(sel.quantity) || 0));
     }, 0);
   };
 
@@ -117,7 +117,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
       const totalRefund = calculateTotalRefund();
 
       // 1. Préparer les articles retournés
-      selectedTx.items.forEach((item: any) => {
+      safeGetItems(selectedTx).forEach((item: any) => {
         const itemId = item.productId || item.id;
         const sel = selectedItems[itemId];
         if (sel) {
@@ -258,7 +258,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
               <p className="text-[10px] font-black text-industrial-500 uppercase tracking-widest">
                 Sélectionnez les articles à retourner
               </p>
-              {selectedTx.items.map((item: any, idx: number) => {
+              {safeGetItems(selectedTx).map((item: any, idx: number) => {
                 const itemId = item.productId || item.id;
                 const isSelected = !!selectedItems[itemId];
                 const selectedData = selectedItems[itemId];

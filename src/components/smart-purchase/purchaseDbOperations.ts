@@ -2,7 +2,7 @@ import { convertKeysToSnake } from '../../lib/db-converters';
 import { enqueueStockAdjustment } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
 import { supabase } from '../../supabase';
-import { generateUniqueId } from '../../lib/utils';
+import { generateUniqueId, safeGetItems } from '../../lib/utils';
 import { Product, Supplier, InvoicePattern, Purchase, PurchaseOrder, CompanySettings } from '../../types';
 import { PurchaseCartItem } from '../usePurchaseCart';
 import { toast } from 'sonner';
@@ -191,8 +191,8 @@ export async function savePurchaseDb({
 
     const stockDeltas: Record<string, number> = {};
     if (oldPurchase && oldPurchase.status === 'completed') {
-       oldPurchase.items.forEach(item => {
-         if (item.productId) {
+       safeGetItems(oldPurchase).forEach((item: any) => {
+         if (item && item.productId) {
            const product = products.find(p => p.id === item.productId);
            if (product?.isBundle && product.bundleItems) {
              product.bundleItems.forEach(bi => {
@@ -338,11 +338,11 @@ export async function handleReceiveOrderDb({
     const purchaseData: any = {
       supplierId: order.supplierId || '',
       supplierName: suppliers.find(s => s.id === order.supplierId)?.name || 'Unknown',
-      items: order.items.map(item => ({
+      items: safeGetItems(order).map((item: any) => ({
         productId: item.productId || '',
-        name: item.productName || 'Unknown Product',
-        quantity: item.quantity || 0,
-        costPrice: item.price || 0
+        name: item.productName || item.name || 'Unknown Product',
+        quantity: Number(item.quantity) || 0,
+        costPrice: Number(item.price || item.costPrice) || 0
       })),
       total: order.total || 0,
       invoiceNumber: order.orderNumber || '',

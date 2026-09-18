@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Printer } from 'lucide-react';
 import { printPurchaseVoucher } from '../services/printService';
 import { fr } from 'date-fns/locale';
-import { formatSafe } from '../lib/utils';
+import { formatSafe, safeGetItems } from '../lib/utils';
 import { Button, Modal } from './ui';
 
 const ReturnModal = lazy(() => import('./ReturnModal').then(m => ({ default: m.ReturnModal })));
@@ -277,7 +277,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {p.viewingPurchaseVoucher.items.map((item: any, idx: number) => (
+                  {safeGetItems(p.viewingPurchaseVoucher).map((item: any, idx: number) => (
                     <tr key={`purchase-item-${idx}`} className="hover:bg-slate-50 transition-colors">
                       <td className="p-3">
                         <p className="text-sm font-bold text-slate-800">{item.name}</p>

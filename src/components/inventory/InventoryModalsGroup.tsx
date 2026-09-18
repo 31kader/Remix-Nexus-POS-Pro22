@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { supabase } from '../../supabase';
 import { enqueueStockAdjustment } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
-import { logAction } from '../../lib/utils';
+import { logAction, safeGetItems } from '../../lib/utils';
 import { Button, Modal, ConfirmDialog } from '../ui';
 import { InventoryConfirmModal } from './InventoryConfirmModal';
 import { ImageZoomModal } from './ImageZoomModal';
@@ -183,7 +183,7 @@ export function InventoryModalsGroup(props: any) {
       {isPurchaseHistoryModalOpen && (
         <Modal isOpen={isPurchaseHistoryModalOpen} onClose={() => setIsPurchaseHistoryModalOpen(false)} title="Historique des Achats">
           <div className="space-y-4">
-            {purchases.filter((p: any) => p.items.some((item: any) => item.productId === editingProduct?.id)).map((p: any) => (
+            {(purchases || []).filter((p: any) => safeGetItems(p).some((item: any) => (item.productId || item.id) === editingProduct?.id)).map((p: any) => (
               <div key={p.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
                 <div>
                   <p className="font-bold">{format(new Date(p.date), 'dd/MM/yyyy')}</p>
@@ -202,7 +202,7 @@ export function InventoryModalsGroup(props: any) {
       {isSalesHistoryModalOpen && (
         <Modal isOpen={isSalesHistoryModalOpen} onClose={() => setIsSalesHistoryModalOpen(false)} title="Historique des Ventes">
           <div className="space-y-4">
-            {transactions.filter((t: any) => t.items.some((item: any) => item.id === editingProduct?.id)).map((t: any) => (
+            {(transactions || []).filter((t: any) => safeGetItems(t).some((item: any) => (item.id || item.productId) === editingProduct?.id)).map((t: any) => (
               <div key={t.id} className="p-4 border border-slate-200 rounded-lg flex justify-between items-center">
                 <div>
                   <p className="font-bold">{format(new Date(t.timestamp), 'dd/MM/yyyy')}</p>

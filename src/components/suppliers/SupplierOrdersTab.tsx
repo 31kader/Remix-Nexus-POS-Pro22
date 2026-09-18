@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatSafe, cn } from '../../lib/utils';
+import { formatSafe, cn, safeGetItems } from '../../lib/utils';
 import { PurchaseOrder, CompanySettings } from '../../types';
 
 interface Props {
@@ -32,7 +32,7 @@ export const SupplierOrdersTab: React.FC<Props> = ({ myOrders, settings }) => {
                 <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4 text-sm text-slate-600">{formatSafe(order.createdAt, 'dd/MM/yyyy HH:mm')}</td>
                   <td className="p-4 text-sm font-mono text-slate-500">{order.orderNumber}</td>
-                  <td className="p-4 text-sm text-slate-600">{order.items.length} articles</td>
+                  <td className="p-4 text-sm text-slate-600">{safeGetItems(order).length} articles</td>
                   <td className="p-4 text-sm font-bold text-slate-900 text-right">{order.total.toFixed(2)} {settings.currency}</td>
                   <td className="p-4 text-center">
                     <span className={cn(

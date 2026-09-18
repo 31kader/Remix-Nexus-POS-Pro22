@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { localDb } from '../../services/LocalDatabase';
 import { Button, Modal } from '../ui';
 import { Product, Transaction, Purchase, CompanySettings } from '../../types';
-import { cn } from '../../lib/utils';
+import { cn, safeGetItems } from '../../lib/utils';
 import { useTransactionStore } from '../../store/useTransactionStore';
 
 export interface ProductHistoryModalProps {
@@ -35,8 +35,26 @@ export function ProductHistoryModal({
 
   if (!viewingHistoryProduct) return null;
 
-  // Filter returns containing this product
-  const productReturns = returns.filter(r => r.items && r.items.some(i => i.productId === viewingHistoryProduct.id));
+  // Helper ultra-sécurisé pour extraire les items d'une transaction, achat ou retour (Array ou JSON string)
+  const getRecordItems = (record: any): any[] => safeGetItems(record);
+
+  // Filtrer les retours concernant ce produit
+  const productReturns = (returns || []).filter(r => {
+    const items = getRecordItems(r);
+    return items.some(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
+  });
+
+  // Filtrer les ventes concernant ce produit
+  const productSales = (transactions || []).filter(t => {
+    const items = getRecordItems(t);
+    return items.some(i => i && (i.id === viewingHistoryProduct.id || i.productId === viewingHistoryProduct.id));
+  });
+
+  // Filtrer les achats concernant ce produit
+  const productPurchases = (purchases || []).filter(p => {
+    const items = getRecordItems(p);
+    return items.some(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
+  });
 
   return (
     <Modal 
@@ -72,11 +90,12 @@ export function ProductHistoryModal({
         <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
           {historyTab === 'sales' && (
             <div className="space-y-3">
-              {transactions.filter(t => t.items.some(i => i.id === viewingHistoryProduct.id)).length > 0 ? (
-                transactions.filter(t => t.items.some(i => i.id === viewingHistoryProduct.id))
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              {productSales.length > 0 ? (
+                productSales
+                  .sort((a, b) => new Date(b.timestamp || (b as any).created_at || 0).getTime() - new Date(a.timestamp || (a as any).created_at || 0).getTime())
                   .map((t) => {
-                    const item = t.items.find(i => i.id === viewingHistoryProduct.id);
+                    const items = getRecordItems(t);
+                    const item = items.find(i => i && (i.id === viewingHistoryProduct.id || i.productId === viewingHistoryProduct.id));
                     return (
                       <div key={t.id} className="p-6 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all group shadow-xl">
                         <div className="flex items-center gap-5">
@@ -85,17 +104,17 @@ export function ProductHistoryModal({
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
-                               <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
+                                <p className="font-black text-white italic uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
+                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
                              </div>
-                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(t.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
+                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(t.timestamp || (t as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
                             <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Client: {t.customerName || 'Client anonyme'}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-black text-white tabular-nums">{item?.quantity} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
+                          <p className="text-lg font-black text-white tabular-nums">{item?.quantity || 1} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
                           <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">P.U: {(item?.price || 0).toFixed(2)} {settings.currency}</p>
-                          <p className="text-sm font-black text-emerald-400 mt-2 tracking-tighter shadow-emerald-500/20 shadow-sm px-3 py-1 bg-emerald-500/10 rounded-full inline-block">Total: {((item?.quantity || 0) * (item?.price || 0)).toFixed(2)} {settings.currency}</p>
+                          <p className="text-sm font-black text-emerald-400 mt-2 tracking-tighter shadow-emerald-500/20 shadow-sm px-3 py-1 bg-emerald-500/10 rounded-full inline-block">Total: {((item?.quantity || 1) * (item?.price || 0)).toFixed(2)} {settings.currency}</p>
                         </div>
                       </div>
                     );
@@ -117,7 +136,8 @@ export function ProductHistoryModal({
                 productReturns
                   .sort((a, b) => new Date(b.timestamp || b.date || 0).getTime() - new Date(a.timestamp || a.date || 0).getTime())
                   .map((r) => {
-                    const item = r.items.find(i => i.productId === viewingHistoryProduct.id);
+                    const items = getRecordItems(r);
+                    const item = items.find(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
                     const itemPrice = item?.price || 0;
                     const itemQty = item?.quantity || 0;
                     const returnDate = r.timestamp || r.date || new Date().toISOString();
@@ -129,8 +149,8 @@ export function ProductHistoryModal({
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
-                               <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded border border-red-500/20">Retourné</span>
+                                <p className="font-black text-white italic uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
+                                <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded border border-red-500/20">Retourné</span>
                              </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(returnDate), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
                             {r.reason && <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-2 bg-red-500/5 px-2 py-0.5 rounded-full inline-block">Raison: {r.reason}</p>}
@@ -157,11 +177,12 @@ export function ProductHistoryModal({
 
           {historyTab === 'purchases' && (
             <div className="space-y-3">
-              {purchases.filter(p => p.items.some(i => i.productId === viewingHistoryProduct.id)).length > 0 ? (
-                purchases.filter(p => p.items.some(i => i.productId === viewingHistoryProduct.id))
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              {productPurchases.length > 0 ? (
+                productPurchases
+                  .sort((a, b) => new Date(b.date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).created_at || 0).getTime())
                   .map((p) => {
-                    const item = p.items.find(i => i.productId === viewingHistoryProduct.id);
+                    const items = getRecordItems(p);
+                    const item = items.find(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
                     return (
                       <div 
                         key={p.id} 
@@ -177,14 +198,14 @@ export function ProductHistoryModal({
                               <p className="font-black text-white italic uppercase text-xs tracking-widest">Achat - {p.supplierName}</p>
                               <Eye size={14} className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(p.date), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
+                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(p.date || (p as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
                             {p.invoiceNumber && <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Fiche: {p.invoiceNumber}</p>}
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-black text-white tabular-nums">+{item?.quantity} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
+                          <p className="text-lg font-black text-white tabular-nums">+{item?.quantity || 1} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
                           <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">Coût: {(item?.costPrice || 0).toFixed(2)} {settings.currency}</p>
-                          <p className="text-sm font-black text-amber-400 mt-2 tracking-tighter shadow-amber-500/20 shadow-sm px-3 py-1 bg-amber-500/10 rounded-full inline-block">Total: {((item?.quantity || 0) * (item?.costPrice || 0)).toFixed(2)} {settings.currency}</p>
+                          <p className="text-sm font-black text-amber-400 mt-2 tracking-tighter shadow-amber-500/20 shadow-sm px-3 py-1 bg-amber-500/10 rounded-full inline-block">Total: {((item?.quantity || 1) * (item?.costPrice || 0)).toFixed(2)} {settings.currency}</p>
                         </div>
                       </div>
                     );

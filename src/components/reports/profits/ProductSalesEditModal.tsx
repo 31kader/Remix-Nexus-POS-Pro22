@@ -9,7 +9,7 @@ import { useTransactionStore } from '../../../store/useTransactionStore';
 import { useCoreStore } from '../../../store/useCoreStore';
 import { localDb } from '../../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../../../supabase';
-import { calculateItemPrice, formatSafe } from '../../../lib/utils';
+import { calculateItemPrice, formatSafe, safeGetItems } from '../../../lib/utils';
 import { toast } from 'sonner';
 
 interface ProductSalesEditModalProps {
@@ -235,7 +235,7 @@ export function ProductSalesEditModal({
     setProcessingTxId(row.transactionId);
     try {
       const origTx = row.transaction;
-      const updatedItems = origTx.items.filter((_, idx) => idx !== row.itemIndex);
+      const updatedItems = safeGetItems(origTx).filter((_, idx) => idx !== row.itemIndex);
 
       if (updatedItems.length === 0) {
         // If ticket becomes completely empty, delete transaction

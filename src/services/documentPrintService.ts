@@ -1,4 +1,4 @@
-import { formatSafe, parseCashierNotes } from '../lib/utils';
+import { formatSafe, parseCashierNotes, safeGetItems } from '../lib/utils';
 import { CompanySettings, Purchase, ProductReturn, Customer, Transaction } from '../types';
 
 const executePrint = (html: string) => {
@@ -33,7 +33,7 @@ const executePrint = (html: string) => {
 };
 
 export const printPurchaseOrder = (purchase: any, settings: CompanySettings) => {
-  const itemsHtml = purchase.items.map((item: any) => `
+  const itemsHtml = safeGetItems(purchase).map((item: any) => `
     <tr>
       <td style="padding: 12px 8px; border-bottom: 2px solid #000;">
         <div style="font-weight: 900; color: #000;">${item.name || item.productName}</div>
@@ -120,14 +120,14 @@ export const printPurchaseOrder = (purchase: any, settings: CompanySettings) => 
 };
 
 export const printReturn = (r: ProductReturn, settings: CompanySettings) => {
-  const itemsHtml = r.items.map((item: any) => `
+  const itemsHtml = safeGetItems(r).map((item: any) => `
     <tr>
       <td style="padding: 12px 8px; border-bottom: 2px solid #000; font-family: 'Inter', sans-serif;">
         <div style="font-weight: 900; color: #000;">${item.name}</div>
       </td>
       <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: center; font-weight: 900; color: #000;">${item.quantity}</td>
-      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; color: #000; font-weight: 700;">${item.price.toFixed(2)} ${settings.currency}</td>
-      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; font-weight: 900; color: #000;">${(item.quantity * item.price).toFixed(2)} ${settings.currency}</td>
+      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; color: #000; font-weight: 700;">${(Number(item.price) || 0).toFixed(2)} ${settings.currency}</td>
+      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; font-weight: 900; color: #000;">${((Number(item.quantity) || 0) * (Number(item.price) || 0)).toFixed(2)} ${settings.currency}</td>
     </tr>
   `).join('');
 
@@ -141,7 +141,6 @@ export const printReturn = (r: ProductReturn, settings: CompanySettings) => {
           body { font-family: 'Inter', sans-serif; padding: 40px; color: #000; }
           .header { text-align: center; margin-bottom: 30px; border-bottom: 4px solid #000; padding-bottom: 20px; }
           .title { font-size: 32px; font-weight: 900; text-transform: uppercase; margin: 0; }
-          .subtitle { font-size: 16px; font-weight: 700; margin-top: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th { text-align: left; padding: 12px 8px; border-bottom: 3px solid #000; font-size: 12px; font-weight: 900; text-transform: uppercase; }
           .grand-total { font-size: 24px; font-weight: 900; margin-top: 20px; text-align: right; padding-top: 15px; border-top: 2px solid #000; }
@@ -150,10 +149,9 @@ export const printReturn = (r: ProductReturn, settings: CompanySettings) => {
       <body>
         <div class="header">
           <h1 class="title">REÇU DE RETOUR</h1>
-          <div class="subtitle">${settings.name}</div>
+          <p style="margin: 5px 0 0 0; font-weight: 700;">Date: ${formatSafe(r.date, 'dd/MM/yyyy HH:mm')}</p>
+          <p style="margin: 5px 0 0 0; font-weight: 700;">Type: ${r.type === 'refund' ? 'Remboursement Espèces' : 'Avoir'}</p>
         </div>
-        <p><strong>Date:</strong> ${formatSafe(r.timestamp, 'dd/MM/yyyy HH:mm')}</p>
-        <p><strong>Transaction originale:</strong> #${r.transactionId.slice(-8).toUpperCase()}</p>
         <table>
           <thead>
             <tr>
@@ -168,7 +166,7 @@ export const printReturn = (r: ProductReturn, settings: CompanySettings) => {
           </tbody>
         </table>
         <div class="grand-total">
-          TOTAL RETOURNÉ: ${r.totalRefund.toFixed(2)} ${settings.currency}
+          TOTAL RETOURNÉ: ${Number(r.totalRefund || 0).toFixed(2)} ${settings.currency}
         </div>
       </body>
     </html>
@@ -177,7 +175,7 @@ export const printReturn = (r: ProductReturn, settings: CompanySettings) => {
 };
 
 export const printPurchaseVoucher = (purchase: any, settings: CompanySettings) => {
-  const itemsHtml = purchase.items.map((item: any) => `
+  const itemsHtml = safeGetItems(purchase).map((item: any) => `
     <tr>
       <td style="padding: 12px 8px; border-bottom: 2px solid #000; font-family: 'Inter', sans-serif;">
         <div style="font-weight: 900; color: #000;">${item.name}</div>
@@ -237,7 +235,7 @@ export const printHistory = (filteredPurchases: Purchase[], settings: CompanySet
         <div style="font-weight: 900; text-transform: uppercase;">${p.supplierName}</div>
         <div style="font-size: 11px; font-weight: 700;">Facture: ${p.invoiceNumber || '-'}</div>
       </td>
-      <td style="padding: 10px 8px; border-bottom: 2px solid #000; text-align: center; font-weight: 900;">${p.items.length}</td>
+      <td style="padding: 10px 8px; border-bottom: 2px solid #000; text-align: center; font-weight: 900;">${safeGetItems(p).length}</td>
       <td style="padding: 10px 8px; border-bottom: 2px solid #000; text-align: right; font-weight: 900; font-size: 13px;">${Number(p.total ?? (p as any).totalAmount ?? 0).toFixed(2)} ${settings.currency}</td>
     </tr>
   `).join('');

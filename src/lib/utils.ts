@@ -163,6 +163,32 @@ export const formatSafe = (val: any, formatStr: string, options?: any) => {
   return format(d, formatStr, options);
 };
 
+/**
+ * Safely extracts items array from any transaction, purchase, voucher, or audit record.
+ * Handles undefined, null, raw arrays, and stringified JSON (common in Postgres JSONB fields).
+ */
+export const safeGetItems = <T = any>(record: any): T[] => {
+  if (!record || record.items == null) return [];
+  if (Array.isArray(record.items)) return record.items;
+  if (typeof record.items === 'string') {
+    try {
+      const parsed = JSON.parse(record.items);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+/**
+ * Safely returns an array, or an empty array if null/undefined/invalid.
+ */
+export const safeArray = <T = any>(val: any): T[] => {
+  if (Array.isArray(val)) return val;
+  return [];
+};
+
 export const getHierarchicalCategories = (categories: Category[], parentId: string | null = null, level: number = 0): (Category & { level: number })[] => {
   let result: (Category & { level: number })[] = [];
   const children = categories.filter(c => (c.parentId || null) === parentId);

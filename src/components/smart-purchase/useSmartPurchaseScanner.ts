@@ -164,7 +164,7 @@ export function useSmartPurchaseScanner({
         setIsOfflineScanning(false);
 
         const source = results.importSource === 'excel' ? 'Excel' : 'CSV';
-        toast.success(`Fichier ${source} importé : ${results.items.length} articles extraits !`, { icon: '📂' });
+        toast.success(`Fichier ${source} importé : ${(results.items || []).length} articles extraits !`, { icon: '📂' });
       } else if (ext === 'pdf') {
         setOfflineScanProgress("Extraction du texte PDF...");
         const results = await parseImportedFile(selectedFile, suppliers, products);
@@ -173,7 +173,7 @@ export function useSmartPurchaseScanner({
         applyExtractedInvoice(results);
         setIsOfflineScanning(false);
         
-        toast.success(`PDF importé : ${results.items.length} articles extraits !`, { icon: '📄' });
+        toast.success(`PDF importé : ${(results.items || []).length} articles extraits !`, { icon: '📄' });
       } else {
         throw new Error("Format non supporté. Utilisez CSV, Excel (.xlsx) ou PDF.");
       }

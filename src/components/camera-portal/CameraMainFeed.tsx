@@ -1,6 +1,6 @@
 import React from 'react';
 import { Camera, Activity, ShieldCheck, ShieldAlert, History } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, safeGetItems } from '../../lib/utils';
 import { Button } from '../ui';
 import { Transaction } from '../../types';
 
@@ -94,7 +94,7 @@ export function CameraMainFeed({
 
       {/* Horizontal Items Reel */}
       <div className="h-40 flex gap-6 mt-2 overflow-x-auto custom-scrollbar pb-4 pr-10">
-         {selectedTransaction.items.map((item, i) => (
+         {safeGetItems(selectedTransaction).map((item, i) => (
             <div key={i} className="flex-none w-72 bg-workspace border border-white/5 rounded-3xl p-4 flex items-center gap-4 hover:border-indigo-500/30 transition-all group">
                <div className="w-16 h-16 bg-black/40 rounded-2xl flex items-center justify-center text-indigo-500 font-black text-xl border border-white/5 shadow-inner">
                   {i + 1}

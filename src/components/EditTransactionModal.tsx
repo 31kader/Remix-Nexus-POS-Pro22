@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { Product, CompanySettings, Transaction } from '../types';
 import { Modal, Button } from './ui';
 import { toast } from 'sonner';
+import { safeGetItems } from '../lib/utils';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
@@ -19,11 +20,11 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
 
   useEffect(() => {
     if (transaction) {
-      setItems(transaction.items.map((item: any) => ({ ...item })));
+      setItems(safeGetItems(transaction).map((item: any) => ({ ...item })));
     }
   }, [transaction]);
 
-  const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = items.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0);
 
   const handleUpdate = async () => {
     if (!transaction) return;
@@ -31,7 +32,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
 
     try {
       // 1. Process stock changes
-      const originalItems = transaction.items;
+      const originalItems = safeGetItems(transaction);
       
       for (const originalItem of originalItems) {
         const newItem = items.find(i => i.id === originalItem.id);

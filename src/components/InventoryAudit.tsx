@@ -4,7 +4,7 @@ import { InventoryAudit as InventoryAuditType, Product, CompanySettings } from '
 import { supabase } from '../supabase';
 import { convertKeysToSnake } from '../lib/db-converters';
 import { localDb } from '../services/LocalDatabase';
-import { formatSafe, cn, generateUniqueId } from '../lib/utils';
+import { formatSafe, cn, generateUniqueId, safeGetItems } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog } from './ui';
 import { toast } from 'sonner';
 
@@ -179,7 +179,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                   <Button 
                     variant="secondary" 
                     className="w-full bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
-                    onClick={() => { setActiveAudit(audit); setAuditItems(audit.items || []); setIsModalOpen(true); }}
+                    onClick={() => { setActiveAudit(audit); setAuditItems(safeGetItems(audit)); setIsModalOpen(true); }}
                   >
                     Reprendre l'audit
                   </Button>
@@ -187,16 +187,20 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
               )}
             </div>
 
-            {audit.status === 'completed' && (
-              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                <span className="text-slate-500">{audit.items.length} Refs</span>
-                <span className={cn(
-                  audit.items.filter(i => i.discrepancy !== 0).length > 0 ? "text-rose-400" : "text-emerald-400"
-                )}>
-                  {audit.items.filter(i => i.discrepancy !== 0).length} Écarts
-                </span>
-              </div>
-            )}
+            {audit.status === 'completed' && (() => {
+              const auditRecords = safeGetItems(audit);
+              const discrepanciesCount = auditRecords.filter(i => i.discrepancy !== 0).length;
+              return (
+                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-slate-500">{auditRecords.length} Refs</span>
+                  <span className={cn(
+                    discrepanciesCount > 0 ? "text-rose-400" : "text-emerald-400"
+                  )}>
+                    {discrepanciesCount} Écarts
+                  </span>
+                </div>
+              );
+            })()}
           </Card>
         ))}
       </div>

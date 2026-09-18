@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Search, User } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, safeGetItems } from '../../lib/utils';
 import { format } from 'date-fns';
 import { Transaction, CompanySettings } from '../../types';
 
@@ -81,7 +81,7 @@ export function CameraSidebar({
                    <span className="text-[10px] font-black text-white uppercase">{session.employeeName}</span>
                 </div>
                 <div className="space-y-1">
-                   {session.items.slice(0, 2).map((it: any, i: number) => (
+                   {safeGetItems(session).slice(0, 2).map((it: any, i: number) => (
                       <div key={i} className="flex justify-between text-[9px] font-bold text-slate-400">
                          <span className="truncate">{it.name}</span>
                          <span className="text-emerald-500">×{it.quantity}</span>

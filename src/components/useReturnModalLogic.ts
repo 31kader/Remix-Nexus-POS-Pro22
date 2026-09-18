@@ -1,11 +1,11 @@
-﻿import { useTransactionStore } from '../store/useTransactionStore';
+import { useTransactionStore } from '../store/useTransactionStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { enqueueStockAdjustment } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { Product, CompanySettings, Transaction, ProductReturn, Customer } from '../types';
-import { generateUniqueId, logAction } from '../lib/utils';
+import { generateUniqueId, logAction, safeGetItems } from '../lib/utils';
 import { toast } from 'sonner';
 
 interface UseReturnModalLogicProps {
@@ -34,7 +34,7 @@ export function useReturnModalLogic({
     if (isOpen && transaction) {
       const transactionReturns = (allReturns || []).filter((r: any) => r.transactionId === transaction.id);
       
-      setReturnItems(transaction.items.map((item: any) => {
+      setReturnItems(safeGetItems(transaction).map((item: any) => {
         const alreadyReturned = transactionReturns.reduce((sum: number, r: any) => {
           const itemsList = Array.isArray(r.items) ? r.items : (
             (r.productId || r.product_id) ? [{
@@ -170,8 +170,8 @@ export function useReturnModalLogic({
         }
       }
 
-      const totalInitiallySold = transaction.items.reduce((sum: number, i: any) => sum + i.quantity, 0);
-      const totalReturnedSoFar = returnItems.reduce((sum: number, i: any) => sum + i.alreadyReturned + i.returnQuantity, 0);
+      const totalInitiallySold = safeGetItems(transaction).reduce((sum: number, i: any) => sum + (Number(i?.quantity) || 0), 0);
+      const totalReturnedSoFar = returnItems.reduce((sum: number, i: any) => sum + (Number(i?.alreadyReturned) || 0) + (Number(i?.returnQuantity) || 0), 0);
       
       const allItemsReturned = totalReturnedSoFar >= totalInitiallySold;
       await localDb.insert(`transactions/${transaction.id}`, {

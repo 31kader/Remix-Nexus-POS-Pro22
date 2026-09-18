@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, RefreshCw, Check, Printer } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, safeGetItems } from '../lib/utils';
 import { GoodsReceiptNote, CompanySettings, Product } from '../types';
 import { printPurchaseVoucher } from '../services/documentPrintService';
 
@@ -81,16 +81,17 @@ export function GRNHistoryTable({
                     <div className="flex gap-2 justify-end items-center">
                       <button
                         onClick={() => {
-                          const total = grn.items.reduce((sum, item) => {
-                            const subtotal = item.quantity * item.newCostPrice;
-                            const discounted = subtotal * (1 - item.discount / 100);
-                            const totalWithVat = discounted * (1 + item.vatRate / 100);
+                          const grnItems = safeGetItems(grn);
+                          const total = grnItems.reduce((sum, item) => {
+                            const subtotal = (Number(item.quantity) || 0) * (Number(item.newCostPrice) || 0);
+                            const discounted = subtotal * (1 - (Number(item.discount) || 0) / 100);
+                            const totalWithVat = discounted * (1 + (Number(item.vatRate) || 0) / 100);
                             return sum + totalWithVat;
-                          }, 0) * (1 - (grn.globalDiscount || 0) / 100) * (1 + (grn.globalVat || 0) / 100);
+                          }, 0) * (1 - (Number(grn.globalDiscount) || 0) / 100) * (1 + (Number(grn.globalVat) || 0) / 100);
 
                           printPurchaseVoucher({
                             id: grn.id,
-                            items: grn.items.map(item => ({
+                            items: grnItems.map(item => ({
                               name: products.find(p => p.id === item.productId)?.name || 'Article',
                               quantity: item.quantity,
                               costPrice: item.newCostPrice
