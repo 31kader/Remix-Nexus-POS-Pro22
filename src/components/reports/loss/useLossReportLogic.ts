@@ -16,10 +16,17 @@ export function useLossReportLogic({ damagedRecords, products }: UseLossReportLo
   });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
+  // Indexation O(1) des produits pour éviter les .find() répétés sur 10k+ articles
+  const productsById = useMemo(() => {
+    const map = new Map<string, Product>();
+    (products || []).forEach(p => { if (p?.id) map.set(p.id, p); });
+    return map;
+  }, [products]);
+
   const filteredRecords = useMemo(() => {
     return damagedRecords
       .filter(r => {
-        const product = products.find(p => p.id === r.productId);
+        const product = productsById.get(r.productId);
         const matchesSearch = r.productName.toLowerCase().includes(search.toLowerCase()) || 
                              r.reason.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || (product && product.categoryId === selectedCategory);
@@ -28,16 +35,16 @@ export function useLossReportLogic({ damagedRecords, products }: UseLossReportLo
         return matchesSearch && matchesCategory && matchesDate;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [damagedRecords, search, selectedCategory, dateRange, products]);
+  }, [damagedRecords, search, selectedCategory, dateRange, productsById]);
 
   const stats = useMemo(() => {
     const totalValue = filteredRecords.reduce((sum, r) => {
-      const product = products.find(p => p.id === r.productId);
+      const product = productsById.get(r.productId);
       return sum + (Number(r.quantity) * (product?.price || 0));
     }, 0);
 
     const totalCost = filteredRecords.reduce((sum, r) => {
-      const product = products.find(p => p.id === r.productId);
+      const product = productsById.get(r.productId);
       return sum + (Number(r.quantity) * (product?.costPrice || 0));
     }, 0);
 
@@ -45,7 +52,7 @@ export function useLossReportLogic({ damagedRecords, products }: UseLossReportLo
     const itemsCount = filteredRecords.reduce((sum, r) => sum + Number(r.quantity), 0);
 
     return { totalValue, totalCost, count, itemsCount };
-  }, [filteredRecords, products]);
+  }, [filteredRecords, productsById]);
 
   const handleExportCSV = () => {
     const headers = [
@@ -54,15 +61,15 @@ export function useLossReportLogic({ damagedRecords, products }: UseLossReportLo
       'Quantite',
       'Unite',
       'Raison / Notes',
-      'Prix de Vente Unitaire (CFA)',
-      'Prix de Cout Unitaire (CFA)',
-      'Valeur de Vente Perdue (CFA)',
-      'Cout dAchat Perdu (CFA)',
+      'Prix de Vente Unitaire (DA)',
+      'Prix de Cout Unitaire (DA)',
+      'Valeur de Vente Perdue (DA)',
+      'Cout dAchat Perdu (DA)',
       'Operateur'
     ];
 
     const rows = filteredRecords.map(r => {
-      const product = products.find(p => p.id === r.productId);
+      const product = productsById.get(r.productId);
       const salePrice = product?.price || 0;
       const costPrice = product?.costPrice || 0;
       return [

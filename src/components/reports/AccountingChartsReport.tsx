@@ -30,14 +30,26 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
     setIsMounted(true);
   }, []);
 
-  const data = useMemo(() => {
+  // 1. Indexation O(1) isolée des produits : recalculée UNIQUEMENT quand products change
+  const { productsById, productsByName } = useMemo(() => {
+    const byId = new Map<string, any>();
+    const byName = new Map<string, any>();
+    const safeProducts = Array.isArray(products) ? products : [];
+    safeProducts.forEach(p => {
+      if (p?.id) byId.set(p.id, p);
+      if (p?.name) byName.set(p.name.toLowerCase().trim(), p);
+    });
+    return { productsById: byId, productsByName: byName };
+  }, [products]);
+
+  // 2. Calculs lourds de base : catégorie, employé, top produits, coûts et marges
+  // Découplés de 'period' pour que le toggle mensuel/annuel soit instantané (0ms)
+  const baseData = useMemo(() => {
     const categoryMap: Record<string, number> = {};
     const employeeMap: Record<string, number> = {};
-    const periodMap: Record<string, number> = {};
     const productMap: Record<string, { name: string, quantity: number, revenue: number }> = {};
 
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    const safeProducts = Array.isArray(products) ? products : [];
     const safeExpenses = Array.isArray(expenses) ? expenses : [];
 
     const getSafeItems = (t: any): any[] => {
@@ -69,22 +81,11 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
 
       const emp = t.employeeName || 'Système';
       employeeMap[emp] = (employeeMap[emp] || 0) + (Number(t.total) || 0);
-
-      const key = period === 'monthly' 
-        ? formatSafe(t.timestamp, 'MMM yyyy', { locale: fr })
-        : formatSafe(t.timestamp, 'yyyy', { locale: fr });
-      periodMap[key] = (periodMap[key] || 0) + (Number(t.total) || 0);
     });
 
     const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
     const employeeData = Object.entries(employeeMap).map(([name, value]) => ({ name, value }));
-    const periodData = Object.entries(periodMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => {
-        if (period === 'yearly') return parseInt(a.name) - parseInt(b.name);
-        return 0; 
-      });
-    
+
     // Revenue by source
     const revenueBySource = safeTransactions.reduce((acc, t) => {
         if (!t || t.status === 'returned') return acc;
@@ -92,14 +93,6 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         acc[source] = (acc[source] || 0) + (Number(t.total) || 0);
         return acc;
     }, { Magasin: 0, Application: 0 } as Record<string, number>);
-
-    // Indexation O(1) des produits par ID et par nom normalisé (évite le scan O(T×I×P) catastrophique)
-    const productsById = new Map<string, any>();
-    const productsByName = new Map<string, any>();
-    safeProducts.forEach(p => {
-      if (p?.id) productsById.set(p.id, p);
-      if (p?.name) productsByName.set(p.name.toLowerCase().trim(), p);
-    });
 
     const productSalesData = Object.values(productMap)
       .sort((a, b) => b.revenue - a.revenue);
@@ -129,16 +122,15 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         return itemSum + (totalUnitCost * qty);
       }, 0);
     }, 0);
+
     const totalExpenses = safeExpenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - totalExpenses;
-
     const revenueBySourceData = Object.entries(revenueBySource).map(([name, value]) => ({ name, value }));
 
     return { 
       categoryData, 
       employeeData, 
-      periodData, 
       revenueBySource,
       revenueBySourceData,
       topProducts, 
@@ -149,7 +141,33 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       grossProfit, 
       netProfit 
     };
-  }, [transactions, products, expenses, period, settings]);
+  }, [transactions, productsById, productsByName, expenses, settings]);
+
+  // 3. Données temporelles : calculées ultra-légèrement uniquement au changement de période
+  const periodData = useMemo(() => {
+    const periodMap: Record<string, number> = {};
+    const safeTransactions = Array.isArray(transactions) ? transactions : [];
+
+    safeTransactions.forEach(t => {
+      if (!t || t.status === 'returned') return;
+      const key = period === 'monthly' 
+        ? formatSafe(t.timestamp, 'MMM yyyy', { locale: fr })
+        : formatSafe(t.timestamp, 'yyyy', { locale: fr });
+      periodMap[key] = (periodMap[key] || 0) + (Number(t.total) || 0);
+    });
+
+    return Object.entries(periodMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => {
+        if (period === 'yearly') return parseInt(a.name) - parseInt(b.name);
+        return 0; 
+      });
+  }, [transactions, period]);
+
+  const data = useMemo(() => ({
+    ...baseData,
+    periodData,
+  }), [baseData, periodData]);
 
   return (
     <>

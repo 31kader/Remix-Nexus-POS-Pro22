@@ -27,15 +27,21 @@ export const LossesReport = React.memo(function LossesReport({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  const productsById = useMemo(() => {
+    const map = new Map<string, Product>();
+    (products || []).forEach(p => { if (p?.id) map.set(p.id, p); });
+    return map;
+  }, [products]);
+
+  const categoriesById = useMemo(() => {
+    const map = new Map<string, string>();
+    (categories || []).forEach(c => { if (c?.id) map.set(c.id, c.name); });
+    return map;
+  }, [categories]);
+
   const lossData = useMemo(() => {
     const losses = stockAdjustments.filter(adj => adj.adjustment < 0 && adj.isLoss === true);
     
-    // Indexation O(1) pour éviter les .find() répétitifs
-    const productsById = new Map<string, Product>();
-    products.forEach(p => { if (p?.id) productsById.set(p.id, p); });
-    const categoriesById = new Map<string, string>();
-    categories.forEach(c => { if (c?.id) categoriesById.set(c.id, c.name); });
-
     let totalLossValue = 0;
     const lossByCategory: Record<string, number> = {};
     const lossByReason: Record<string, number> = {};
@@ -68,7 +74,7 @@ export const LossesReport = React.memo(function LossesReport({
       lossByReason: Object.entries(lossByReason).map(([name, value]) => ({ name, value })),
       formattedLosses
     };
-  }, [stockAdjustments, products, categories]);
+  }, [stockAdjustments, productsById, categoriesById]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 50;

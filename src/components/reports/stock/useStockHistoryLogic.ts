@@ -25,21 +25,28 @@ export function useStockHistoryLogic({ adjustments, products }: UseStockHistoryL
   const [revertProductStock, setRevertProductStock] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Indexation O(1) des produits
+  const productsById = useMemo(() => {
+    const map = new Map<string, Product>();
+    (products || []).forEach(p => { if (p?.id) map.set(p.id, p); });
+    return map;
+  }, [products]);
+
   const getProductForAdjustment = (adj: StockAdjustment | null) => {
     if (!adj) return null;
-    return products.find(p => p.id === adj.productId || p.id === (adj as any).product_id) || null;
+    return productsById.get(adj.productId) || productsById.get((adj as any).product_id) || null;
   };
 
   const enrichedAdjustments = useMemo(() => {
     return (adjustments || []).map(adj => {
-      const matchedProd = products.find(p => p.id === adj.productId || p.id === (adj as any).product_id);
+      const matchedProd = productsById.get(adj.productId) || productsById.get((adj as any).product_id);
       const name = adj.productName || (adj as any).product_name || (adj as any).name || matchedProd?.name || ('Produit #' + String(adj.productId || adj.id || '').slice(-6));
       return {
         ...adj,
         productName: name
       };
     });
-  }, [adjustments, products]);
+  }, [adjustments, productsById]);
 
   const sortedAdjustments = useMemo(() => {
     let sortableItems = [...enrichedAdjustments];

@@ -9,7 +9,7 @@
 ## Conventions de Code
 - Devise : **DA** (Dinars Algériens), code ISO : `DZD`
 - Taux TVA par défaut : **19%** (Algérie)
-- Version actuelle : **v1.2.10**
+- Version actuelle : **v1.2.11**
 - Tous les emails/UIDs sensibles sont dans `.env` (jamais hardcodés)
 - Les PINs utilisent **bcrypt** (`$2a$` / `$2b$`)
 - La session utilisateur est en **sessionStorage** (pas localStorage)

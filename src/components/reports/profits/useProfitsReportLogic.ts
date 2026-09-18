@@ -39,6 +39,32 @@ export function useProfitsReportLogic({
   const [profitFilterMinTotal, setProfitFilterMinTotal] = useState<string>('');
   const [profitFilterMaxTotal, setProfitFilterMaxTotal] = useState<string>('');
 
+  // Indexation O(1) isolée des produits : recalculée UNIQUEMENT quand le catalogue products change
+  const { productsById, productsBySku, productsByBarcode, productsByName } = useMemo(() => {
+    const byId = new Map<string, Product>();
+    const bySku = new Map<string, Product>();
+    const byBarcode = new Map<string, Product>();
+    const byName = new Map<string, Product>();
+
+    (products || []).forEach(p => {
+      if (p.id) byId.set(p.id, p);
+      if (p.sku) bySku.set(p.sku.toLowerCase().trim(), p);
+      if (p.barcode) byBarcode.set(p.barcode.toLowerCase().trim(), p);
+      if (p.name) byName.set(p.name.toLowerCase().trim(), p);
+    });
+
+    return { productsById: byId, productsBySku: bySku, productsByBarcode: byBarcode, productsByName: byName };
+  }, [products]);
+
+  // Indexation O(1) isolée des transactions : recalculée UNIQUEMENT quand transactions change
+  const transactionsById = useMemo(() => {
+    const map = new Map<string, any>();
+    (transactions || []).forEach(t => {
+      if (t?.id) map.set(t.id, t);
+    });
+    return map;
+  }, [transactions]);
+
   // 1. Accumulate stats from transactions (Depends ONLY on transaction-level filters)
   const productStats = useMemo(() => {
     let filteredTransactions = transactions;
@@ -89,24 +115,6 @@ export function useProfitsReportLogic({
     });
 
     const stats: Record<string, { qty: number, revenue: number, cost: number }> = {};
-    
-    // O(1) Speed optimization : indexation complète ID, SKU, Code-barres, Nom
-    const productsById = new Map<string, Product>();
-    const productsBySku = new Map<string, Product>();
-    const productsByBarcode = new Map<string, Product>();
-    const productsByName = new Map<string, Product>();
-    const transactionsById = new Map<string, any>();
-
-    products.forEach(p => {
-      if (p.id) productsById.set(p.id, p);
-      if (p.sku) productsBySku.set(p.sku.toLowerCase().trim(), p);
-      if (p.barcode) productsByBarcode.set(p.barcode.toLowerCase().trim(), p);
-      if (p.name) productsByName.set(p.name.toLowerCase().trim(), p);
-    });
-
-    transactions.forEach(t => {
-      if (t?.id) transactionsById.set(t.id, t);
-    });
 
     filteredTransactions.forEach(t => {
       if (!t) return;
@@ -244,7 +252,7 @@ export function useProfitsReportLogic({
     });
 
     return stats;
-  }, [transactions, products, employees, returns, settings, profitFilterCustomer, profitFilterEmployee, profitFilterSource, profitFilterTimeStart, profitFilterTimeEnd, profitFilterDate, profitFilterMinTotal, profitFilterMaxTotal]);
+  }, [transactions, transactionsById, productsById, productsBySku, productsByBarcode, productsByName, employees, returns, settings, profitFilterCustomer, profitFilterEmployee, profitFilterSource, profitFilterTimeStart, profitFilterTimeEnd, profitFilterDate, profitFilterMinTotal, profitFilterMaxTotal]);
 
   // 2. Map, filter, and sort products (Depends on productStats, search, category, sort)
   const productProfitData = useMemo(() => {
