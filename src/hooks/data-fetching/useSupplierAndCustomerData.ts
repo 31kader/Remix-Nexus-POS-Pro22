@@ -64,7 +64,9 @@ export function useSupplierAndCustomerData({
         .on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_orders', filter: `supplier_id=eq.${currentSupplierId}` }, () => {
           loadSupplierPOs();
         })
-        .subscribe();
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        channel.subscribe();
+      }
     } else {
       unsubPos = localDb.subscribe('purchaseOrders', (snapshot) => {
           if (isSubscribed) {
@@ -127,7 +129,9 @@ export function useSupplierAndCustomerData({
         .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `customer_id=eq.${currentCustomerId}` }, () => {
           loadCustomerTxs();
         })
-        .subscribe();
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        channel.subscribe();
+      }
     } else {
       unsubTxs = localDb.subscribe('transactions', (snapshot) => {
           if (isSubscribed) {

@@ -279,11 +279,22 @@ export function useFastChangingData({
           }
         );
 
-      fastChannel.subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
-        }
-      });
+      const connectFastChannel = () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        fastChannel.subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
+          }
+        });
+      };
+
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        connectFastChannel();
+      }
+
+      const handleOnlineFast = () => connectFastChannel();
+      window.addEventListener('online', handleOnlineFast);
+      listeners.push(() => window.removeEventListener('online', handleOnlineFast));
 
       listeners.push(() => safeRemoveChannel(fastChannel));
     }

@@ -105,6 +105,10 @@ export async function cacheImage(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return null;
+  }
+  
   if (objectUrlMap.has(url)) {
     const cached = objectUrlMap.get(url)!;
     objectUrlMap.delete(url);

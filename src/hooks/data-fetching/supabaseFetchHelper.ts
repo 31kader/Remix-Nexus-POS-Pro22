@@ -8,6 +8,7 @@ let consecutiveFailures = 0;
 
 export async function fetchProductsFromSupabase(limit?: number, isLightweight: boolean = true, sinceUpdatedAt?: string): Promise<Product[] | null> {
   if (!isSupabaseConfigured) return null;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
 
   const PAGE_SIZE = 500;
   const allProducts: any[] = [];
@@ -127,6 +128,7 @@ export async function fetchTableFromSupabase<T>(
   timestampColumn?: string // Use undefined to disable incremental sync
 ): Promise<T[] | null> {
   if (!isSupabaseConfigured) return null;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
   try {
     const TABLE_TO_KEY: Record<string, string> = {
       'shifts': 'cash_shifts',

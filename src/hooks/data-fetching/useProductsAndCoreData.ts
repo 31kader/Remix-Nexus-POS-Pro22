@@ -524,31 +524,46 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
       let wasDisconnected = false;
 
-      multiplexedChannel.subscribe(async (status: string, err?: Error) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] ✅ Canal unique multiplexé nexus-pos-realtime connecté avec succès.');
-          window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'connected' } }));
-          
-          try {
-            await multiplexedChannel.track({
-              userId: userId || 'pos-terminal',
-              onlineAt: new Date().toISOString()
-            });
-          } catch (e) {}
+      const connectRealtime = () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        multiplexedChannel.subscribe(async (status: string, err?: Error) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] ✅ Canal unique multiplexé nexus-pos-realtime connecté avec succès.');
+            window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'connected' } }));
+            
+            try {
+              await multiplexedChannel.track({
+                userId: userId || 'pos-terminal',
+                onlineAt: new Date().toISOString()
+              });
+            } catch (e) {}
 
-          // Rattrapage d'événements (Event Backfill) après coupure réseau
-          if (wasDisconnected) {
-            console.log('[Realtime] 🔄 Reconnexion détectée : rattrapage automatique des données...');
-            syncProducts(false);
-            window.dispatchEvent(new CustomEvent('force-full-sync'));
-            wasDisconnected = false;
+            // Rattrapage d'événements (Event Backfill) après coupure réseau
+            if (wasDisconnected) {
+              console.log('[Realtime] 🔄 Reconnexion détectée : rattrapage automatique des données...');
+              syncProducts(false);
+              window.dispatchEvent(new CustomEvent('force-full-sync'));
+              wasDisconnected = false;
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            wasDisconnected = true;
+            window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'reconnecting' } }));
+            if (typeof navigator === 'undefined' || navigator.onLine) {
+              console.warn(`[Realtime] Canal nexus-pos-realtime état: ${status}`, err?.message || '');
+            }
           }
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          wasDisconnected = true;
-          window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'reconnecting' } }));
-          console.warn(`[Realtime] Canal nexus-pos-realtime état: ${status}`, err?.message || '');
-        }
-      });
+        });
+      };
+
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        connectRealtime();
+      }
+
+      const handleOnlineRealtime = () => {
+        connectRealtime();
+      };
+      window.addEventListener('online', handleOnlineRealtime);
+      unsubscribes.push(() => window.removeEventListener('online', handleOnlineRealtime));
 
       unsubscribes.push(() => {
         if (productUpdateTimeout) clearTimeout(productUpdateTimeout);

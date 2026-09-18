@@ -29,11 +29,19 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   ...props
 }) => {
   const [error, setError] = useState(false);
-  const [displaySrc, setDisplaySrc] = useState<string | undefined>(src);
+  const isRemote = typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'));
+  const [displaySrc, setDisplaySrc] = useState<string | undefined>(isRemote ? undefined : src);
 
   useEffect(() => {
     let active = true;
+    setError(false);
+
     if (src && !isBadUrl(src)) {
+      if (!isRemote) {
+        setDisplaySrc(src);
+        return;
+      }
+
       // Prioritize optimized URL for mobile/smaller thumbnails
       const finalSrc = getOptimizedImageUrl(src, optimizeWidth);
 
@@ -42,21 +50,30 @@ export const SafeImage: React.FC<SafeImageProps> = ({
         if (cachedUrl) {
           setDisplaySrc(cachedUrl);
         } else {
+          // Si hors-ligne et pas en cache local, afficher directement le fallback sans polluer la console réseau
+          if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setError(true);
+            return;
+          }
+
           setDisplaySrc(finalSrc);
-          cacheImage(finalSrc).then(cachedUrl => {
-            if (active && cachedUrl) {
-              setDisplaySrc(cachedUrl);
+          cacheImage(finalSrc).then(cachedBlobUrl => {
+            if (active && cachedBlobUrl) {
+              setDisplaySrc(cachedBlobUrl);
             }
-          });
+          }).catch(() => {});
         }
+      }).catch(() => {
+        if (active) setError(true);
       });
     } else {
       setDisplaySrc(src);
     }
+
     return () => {
       active = false;
     };
-  }, [src, optimizeWidth]);
+  }, [src, optimizeWidth, isRemote]);
 
   if (!displaySrc || isBadUrl(displaySrc) || error) {
     return (
