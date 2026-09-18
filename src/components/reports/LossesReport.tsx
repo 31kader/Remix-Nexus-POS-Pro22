@@ -30,18 +30,24 @@ export const LossesReport = React.memo(function LossesReport({
   const lossData = useMemo(() => {
     const losses = stockAdjustments.filter(adj => adj.adjustment < 0 && adj.isLoss === true);
     
+    // Indexation O(1) pour éviter les .find() répétitifs
+    const productsById = new Map<string, Product>();
+    products.forEach(p => { if (p?.id) productsById.set(p.id, p); });
+    const categoriesById = new Map<string, string>();
+    categories.forEach(c => { if (c?.id) categoriesById.set(c.id, c.name); });
+
     let totalLossValue = 0;
     const lossByCategory: Record<string, number> = {};
     const lossByReason: Record<string, number> = {};
     
     const formattedLosses = losses.map(adj => {
-      const product = products.find(p => p.id === adj.productId);
+      const product = productsById.get(adj.productId);
       const costPrice = product?.costPrice || 0;
       const lossValue = Math.abs(adj.adjustment) * costPrice;
       
       totalLossValue += lossValue;
       
-      const category = categories.find(c => c.id === product?.categoryId)?.name || 'Non classé';
+      const category = (product?.categoryId ? categoriesById.get(product.categoryId) : null) || 'Non classé';
       lossByCategory[category] = (lossByCategory[category] || 0) + lossValue;
       
       const reason = adj.reason || 'Autre';
@@ -52,15 +58,25 @@ export const LossesReport = React.memo(function LossesReport({
         product,
         lossValue
       };
-    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }).sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0));
 
     return {
       totalLossValue,
-      lossByCategory: Object.entries(lossByCategory).map(([name, value]) => ({ name, value })),
+      lossByCategory: Object.entries(lossByCategory)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value),
       lossByReason: Object.entries(lossByReason).map(([name, value]) => ({ name, value })),
       formattedLosses
     };
   }, [stockAdjustments, products, categories]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+  const totalPages = Math.max(1, Math.ceil(lossData.formattedLosses.length / ITEMS_PER_PAGE));
+  const paginatedLosses = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return lossData.formattedLosses.slice(start, start + ITEMS_PER_PAGE);
+  }, [lossData.formattedLosses, currentPage]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -98,7 +114,7 @@ export const LossesReport = React.memo(function LossesReport({
           </h4>
           <div className="h-[300px]">
             {isMounted && (
-              <ResponsiveContainer width="100%" height={300} minWidth={0}>
+              <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
                 <PieChart>
                   <Pie
                     data={lossData.lossByReason}
@@ -130,8 +146,8 @@ export const LossesReport = React.memo(function LossesReport({
             <RotateCcw size={18} className="text-indigo-500" /> Répartition par Catégorie
           </h4>
           <div className="space-y-6 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
-            {lossData.lossByCategory.sort((a,b) => b.value - a.value).map((cat, idx) => {
-              const percent = (cat.value / lossData.totalLossValue) * 100;
+            {lossData.lossByCategory.map((cat, idx) => {
+              const percent = lossData.totalLossValue > 0 ? (cat.value / lossData.totalLossValue) * 100 : 0;
               return (
                 <div key={`cat-loss-rep-${idx}`}>
                   <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest mb-2">
@@ -171,7 +187,7 @@ export const LossesReport = React.memo(function LossesReport({
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {lossData.formattedLosses.map((adj, idx) => (
+              {paginatedLosses.map((adj, idx) => (
                 <tr key={`loss-item-${idx}`} className="hover:bg-white/5 transition-colors group">
                   <td className="p-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-white/60 text-xs">
@@ -210,6 +226,34 @@ export const LossesReport = React.memo(function LossesReport({
             </tbody>
           </table>
         </div>
+
+        {/* Contrôles de pagination (50 items/page) */}
+        {lossData.formattedLosses.length > ITEMS_PER_PAGE && (
+          <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">
+              Affichage {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, lossData.formattedLosses.length)} sur {lossData.formattedLosses.length} pertes
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-all"
+              >
+                Précédent
+              </button>
+              <span className="px-3 py-1 bg-white/10 text-white rounded-lg text-xs font-black">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-all"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

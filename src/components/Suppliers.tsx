@@ -87,7 +87,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     handleDeleteReminder,
     handleSavePurchaseOrderDraft,
     handleSync,
-    togglePoDraftItem,
     selectedSupplierPurchases,
     handleSubmit
   } = useSuppliersLogic(props);
@@ -196,7 +195,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
         damagedItems={damagedItems}
         setIsDamageModalOpen={setIsDamageModalOpen}
         handleUpdateClaimStatus={handleUpdateClaimStatus}
-        togglePoDraftItem={togglePoDraftItem}
         poDraftItems={poDraftItems}
         isPODraftOpen={isPODraftOpen}
         setIsPODraftOpen={setIsPODraftOpen}

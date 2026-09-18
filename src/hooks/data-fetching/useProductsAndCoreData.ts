@@ -306,14 +306,14 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
     if (appMode !== 'customer') {
       queueConfig.push(
         { cacheKey: 'nexus_transactions_cache', collectionName: 'transactions', setState: setTransactions as any, limit: 500, startDate: ninetyDaysAgo, timestampColumn: 'timestamp' },
-        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 50, timestampColumn: 'date' },
-        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments, limit: 50 },
-        { cacheKey: 'nexus_purchases_cache', collectionName: 'purchases', setState: setPurchases, limit: 50, timestampColumn: 'date' },
-        { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, limit: 50, timestampColumn: 'date' },
-        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 50, timestampColumn: 'date' },
-        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 50 },
-        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 50, timestampColumn: 'updated_at', enableRealtime: false },
-        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 50 },
+        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments, limit: 500 },
+        { cacheKey: 'nexus_purchases_cache', collectionName: 'purchases', setState: setPurchases, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
+        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'updated_at', enableRealtime: false },
+        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 },
         { 
           cacheKey: 'nexus_online_orders_cache', 
           collectionName: 'onlineOrders', 
@@ -324,7 +324,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             arr.forEach(o => { if (o && o.id) map[o.id] = o; });
             localDb.insertBatch('onlineOrders', map).catch(() => {});
           }, 
-          limit: 100, 
+          limit: 500, 
           timestampColumn: 'timestamp' 
         }
       );

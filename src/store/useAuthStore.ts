@@ -1,16 +1,17 @@
+import React from 'react';
 import { create } from 'zustand';
-import { UserProfile, RolePermissions } from '../types';
+import { UserProfile } from '../types';
 
 interface AuthState {
-  user: any;
+  user: UserProfile | any | null;
   profile: UserProfile | null;
-  authError: any;
+  authError: React.ReactNode;
   isLoggingIn: boolean;
   isUnauthorized: boolean;
   
-  setUser: (user: any) => void;
+  setUser: (user: UserProfile | any | null) => void;
   setProfile: (profile: UserProfile | null) => void;
-  setAuthError: (error: any) => void;
+  setAuthError: (error: React.ReactNode) => void;
   setIsLoggingIn: (isLoggingIn: boolean) => void;
   setIsUnauthorized: (isUnauthorized: boolean) => void;
 }

@@ -371,10 +371,25 @@ export function ProductSalesEditModal({
     }
   };
 
-  const totalQtySold = salesRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-  const totalRevenue = salesRows.reduce((sum, r) => sum + ((Number(r.price) || 0) * (Number(r.quantity) || 0)), 0);
-  const totalCost = salesRows.reduce((sum, r) => sum + ((Number(r.costPrice) || 0) * (Number(r.quantity) || 0)), 0);
-  const totalProfit = totalRevenue - totalCost;
+  const { totalQtySold, totalRevenue, totalCost, totalProfit } = useMemo(() => {
+    const qty = salesRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
+    const rev = salesRows.reduce((sum, r) => sum + ((Number(r.price) || 0) * (Number(r.quantity) || 0)), 0);
+    const cost = salesRows.reduce((sum, r) => sum + ((Number(r.costPrice) || 0) * (Number(r.quantity) || 0)), 0);
+    return {
+      totalQtySold: qty,
+      totalRevenue: rev,
+      totalCost: cost,
+      totalProfit: rev - cost,
+    };
+  }, [salesRows]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+  const totalPages = Math.max(1, Math.ceil(salesRows.length / ITEMS_PER_PAGE));
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return salesRows.slice(start, start + ITEMS_PER_PAGE);
+  }, [salesRows, currentPage]);
 
   return (
     <Modal
@@ -478,7 +493,7 @@ export function ProductSalesEditModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-mono">
-                  {salesRows.map((row, idx) => {
+                  {paginatedRows.map((row, idx) => {
                     const isRowProcessing = processingTxId === row.transactionId;
                     const safePrice = Number(row.price) || 0;
                     const safeCost = Number(row.costPrice) || 0;
@@ -631,6 +646,34 @@ export function ProductSalesEditModal({
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination 50 ventes par page */}
+              {salesRows.length > ITEMS_PER_PAGE && (
+                <div className="p-3 bg-white/5 border-t border-white/5 flex items-center justify-between text-xs">
+                  <span className="text-white/40 font-bold uppercase tracking-wider text-[10px]">
+                    Ventes {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, salesRows.length)} sur {salesRows.length}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-[10px] font-bold transition-all"
+                    >
+                      Précédent
+                    </button>
+                    <span className="px-2.5 py-1 bg-white/10 text-white rounded-lg text-[10px] font-black">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-[10px] font-bold transition-all"
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

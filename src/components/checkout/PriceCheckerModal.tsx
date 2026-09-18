@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Button } from '../ui';
+import { Modal, Button, SafeImage } from '../ui';
 import { Package } from 'lucide-react';
 import { formatProductStock } from '../../lib/utils';
 import { Product } from '../../types';
@@ -31,7 +31,12 @@ export function PriceCheckerModal({
         <div className="flex items-center gap-4 p-4 bg-slate-900/60 rounded-[2rem] border border-slate-800/40 shadow-inner">
           <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700/50 overflow-hidden shadow-2xl">
             {priceCheckResult.imageUrl ? (
-              <img src={priceCheckResult.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <SafeImage 
+                src={priceCheckResult.imageUrl} 
+                alt={priceCheckResult.name} 
+                className="w-full h-full object-cover" 
+                fallback={<Package className="text-slate-600" size={32} />}
+              />
             ) : (
               <Package className="text-slate-600" size={32} />
             )}

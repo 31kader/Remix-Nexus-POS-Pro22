@@ -29,8 +29,8 @@ import { useCartStore } from '../store/useCartStore';
 interface CheckoutProps {
   setActiveTab: (tab: string) => void;
   setIsPOSCustomerModalOpen: (open: boolean) => void;
-  selectedCustomer: Customer | null;
-  setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | null>>;
+  selectedCustomer?: Customer | null;
+  setSelectedCustomer?: React.Dispatch<React.SetStateAction<Customer | null>> | ((customer: Customer | null | ((prev: Customer | null) => Customer | null)) => void);
   setIsProductModalOpen: (open: boolean) => void;
   setEditingProduct: (product: Product | null) => void;
   activeStaffId: string;

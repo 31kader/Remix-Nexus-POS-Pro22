@@ -135,26 +135,27 @@ return () => window.removeEventListener('resize', checkMobile);
   
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
-  const toggleSelectAll = () => {
-    if (selectedProductIds.length === paginatedProducts.length) {
-      setSelectedProductIds([]);
-    } else {
-      setSelectedProductIds(paginatedProducts.map(p => p.id));
-    }
-  };
+  const toggleSelectAll = React.useCallback(() => {
+    setSelectedProductIds(prev => {
+      if (prev.length === paginatedProducts.length) {
+        return [];
+      } else {
+        return paginatedProducts.map(p => p.id);
+      }
+    });
+  }, [paginatedProducts]);
 
   const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
 
-  const toggleSelectProduct = (id: string) => {
+  const toggleSelectProduct = React.useCallback((id: string) => {
     setSelectedProductIds(prev => 
       prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
     );
-  };
+  }, []);
 
-  const handleBulkPrintLabels = () => {
-    const selected = products.filter(p => selectedProductIds.includes(p.id));
+  const handleBulkPrintLabels = React.useCallback(() => {
     setInventoryTab('labels');
-  };
+  }, []);
 
   const {
     duplicateSKUGroups,

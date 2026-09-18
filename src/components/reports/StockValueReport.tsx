@@ -42,6 +42,46 @@ export const StockValueReport = React.memo(function StockValueReport({
     });
   }, [products, stockFilterCategory, stockFilterStatus, stockFilterSearch]);
 
+  // Calcul agrégé unique en une seule passe O(N) pour éliminer les 200+ .reduce() dans le JSX
+  const stockSummary = useMemo(() => {
+    let totalSaleVal = 0;
+    let totalCostVal = 0;
+    let totalWholesaleVal = 0;
+    let totalQty = 0;
+    const byCategory: Record<string, { qty: number; cost: number; wholesale: number; retail: number; profit: number }> = {};
+
+    filteredStockProducts.forEach(p => {
+      const stock = Math.max(0, p.stock || 0);
+      const price = p.price || 0;
+      const cost = p.costPrice || 0;
+      const wholesale = p.wholesalePrice || price;
+      const catId = p.categoryId && p.categoryId !== 'none' ? p.categoryId : 'uncategorized';
+
+      totalQty += stock;
+      totalCostVal += stock * cost;
+      totalWholesaleVal += stock * wholesale;
+      totalSaleVal += stock * price;
+
+      if (!byCategory[catId]) {
+        byCategory[catId] = { qty: 0, cost: 0, wholesale: 0, retail: 0, profit: 0 };
+      }
+      byCategory[catId].qty += stock;
+      byCategory[catId].cost += stock * cost;
+      byCategory[catId].wholesale += stock * wholesale;
+      byCategory[catId].retail += stock * price;
+      byCategory[catId].profit += stock * (price - cost);
+    });
+
+    return {
+      totalSaleVal,
+      totalCostVal,
+      totalWholesaleVal,
+      totalProfitVal: totalSaleVal - totalCostVal,
+      totalQty,
+      byCategory,
+    };
+  }, [filteredStockProducts]);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Stock Valuation Filters */}
@@ -91,21 +131,21 @@ export const StockValueReport = React.memo(function StockValueReport({
         <Card id="card-stock-total-sale-val" className="p-6 bg-gradient-to-br from-indigo-50 to-white border-indigo-100">
           <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Valeur de Vente Totale (Public)</p>
           <h4 className="text-3xl font-black text-indigo-600">
-            {filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.price || 0)), 0).toLocaleString()} {settings.currency}
+            {stockSummary.totalSaleVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {settings.currency}
           </h4>
           <p className="text-xs text-indigo-400 mt-2 font-medium">Potentiel de chiffre d'affaires en stock</p>
         </Card>
         <Card id="card-stock-total-cost-val" className="p-6 bg-gradient-to-br from-slate-50 to-white border-slate-100">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Valeur d'Achat Totale (Gros/Coût)</p>
           <h4 className="text-3xl font-black text-slate-800">
-            {filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.costPrice || 0)), 0).toLocaleString()} {settings.currency}
+            {stockSummary.totalCostVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {settings.currency}
           </h4>
           <p className="text-xs text-slate-400 mt-2 font-medium">Capital immobilisé dans le stock</p>
         </Card>
         <Card id="card-stock-total-profit-val" className="p-6 bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
           <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Marge Brute Potentielle</p>
           <h4 className="text-3xl font-black text-emerald-600">
-            {filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * ((p.price || 0) - (p.costPrice || 0))), 0).toLocaleString()} {settings.currency}
+            {stockSummary.totalProfitVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {settings.currency}
           </h4>
           <p className="text-xs text-emerald-400 mt-2 font-medium">Bénéfice estimé après vente totale</p>
         </Card>
@@ -135,43 +175,32 @@ export const StockValueReport = React.memo(function StockValueReport({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {categories.map(cat => {
-                const catProducts = filteredStockProducts.filter(p => p.categoryId === cat.id);
-                if (catProducts.length === 0) return null;
-                
-                const totalQty = catProducts.reduce((sum, p) => sum + Math.max(0, p.stock || 0), 0);
-                const totalCost = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.costPrice || 0)), 0);
-                const totalWholesale = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.wholesalePrice || p.price)), 0);
-                const totalRetail = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.price || 0)), 0);
-                const potentialProfit = totalRetail - totalCost;
+                const catData = stockSummary.byCategory[cat.id];
+                if (!catData || catData.qty === 0) return null;
 
                 return (
                   <tr key={cat.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4 font-bold text-slate-700 text-sm">{cat.name}</td>
-                    <td className="p-4 text-center text-sm font-medium text-slate-600">{totalQty}</td>
-                    <td className="p-4 text-right text-sm font-mono text-slate-500">{totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-bold text-indigo-400">{totalWholesale.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-black text-indigo-600">{totalRetail.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-bold text-emerald-600">+{potentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-center text-sm font-medium text-slate-600">{catData.qty}</td>
+                    <td className="p-4 text-right text-sm font-mono text-slate-500">{catData.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-bold text-indigo-400">{catData.wholesale.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-black text-indigo-600">{catData.retail.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-bold text-emerald-600">+{catData.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
                   </tr>
                 );
               })}
               {/* Uncategorized */}
               {(() => {
-                const catProducts = filteredStockProducts.filter(p => !p.categoryId || p.categoryId === 'none');
-                if (catProducts.length === 0) return null;
-                const totalQty = catProducts.reduce((sum, p) => sum + Math.max(0, p.stock || 0), 0);
-                const totalCost = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.costPrice || 0)), 0);
-                const totalWholesale = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.wholesalePrice || p.price)), 0);
-                const totalRetail = catProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.price || 0)), 0);
-                const potentialProfit = totalRetail - totalCost;
+                const catData = stockSummary.byCategory['uncategorized'];
+                if (!catData || catData.qty === 0) return null;
                 return (
                   <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/30">
                     <td className="p-4 font-bold text-slate-400 text-sm italic">Sans Catégorie</td>
-                    <td className="p-4 text-center text-sm font-medium text-slate-600">{totalQty}</td>
-                    <td className="p-4 text-right text-sm font-mono text-slate-500">{totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-bold text-indigo-400">{totalWholesale.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-black text-indigo-600">{totalRetail.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                    <td className="p-4 text-right text-sm font-bold text-emerald-600">+{potentialProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-center text-sm font-medium text-slate-600">{catData.qty}</td>
+                    <td className="p-4 text-right text-sm font-mono text-slate-500">{catData.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-bold text-indigo-400">{catData.wholesale.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-black text-indigo-600">{catData.retail.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                    <td className="p-4 text-right text-sm font-bold text-emerald-600">+{catData.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
                   </tr>
                 );
               })()}
@@ -187,11 +216,11 @@ export const StockValueReport = React.memo(function StockValueReport({
             <tfoot className="bg-slate-900 text-white">
               <tr>
                 <td className="p-4 font-black uppercase tracking-widest text-xs">Total Général</td>
-                <td className="p-4 text-center font-black text-sm">{filteredStockProducts.reduce((sum, p) => sum + Math.max(0, p.stock || 0), 0)}</td>
-                <td className="p-4 text-right font-black text-sm">{filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.costPrice || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                <td className="p-4 text-right font-black text-sm text-indigo-300">{filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.wholesalePrice || p.price)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                <td className="p-4 text-right font-black text-sm text-indigo-400">{filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * (p.price || 0)), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
-                <td className="p-4 text-right font-black text-sm text-emerald-400">+{filteredStockProducts.reduce((sum, p) => sum + (Math.max(0, p.stock || 0) * ((p.price || 0) - (p.costPrice || 0))), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                <td className="p-4 text-center font-black text-sm">{stockSummary.totalQty}</td>
+                <td className="p-4 text-right font-black text-sm">{stockSummary.totalCostVal.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                <td className="p-4 text-right font-black text-sm text-indigo-300">{stockSummary.totalWholesaleVal.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                <td className="p-4 text-right font-black text-sm text-indigo-400">{stockSummary.totalSaleVal.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
+                <td className="p-4 text-right font-black text-sm text-emerald-400">+{stockSummary.totalProfitVal.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
               </tr>
             </tfoot>
           </table>

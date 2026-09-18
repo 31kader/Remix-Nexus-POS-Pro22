@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Button } from '../ui';
+import { Modal, Button, SafeImage } from '../ui';
 import { OnlineOrder, CompanySettings, Product } from '../../types';
 import { formatSafe } from '../../lib/utils';
 import { cn } from '../../lib/utils';
@@ -226,10 +226,9 @@ export function OrderDetailModal({
                           {(() => {
                             const imgSrc = productRef?.imageUrl || productRef?.imageUrls?.[0];
                             return imgSrc && imgSrc.trim() !== '' ? (
-                              <img 
+                              <SafeImage 
                                 src={imgSrc} 
                                 className="w-full h-full object-cover" 
-                                referrerPolicy="no-referrer" 
                                 alt={item.name}
                               />
                             ) : (

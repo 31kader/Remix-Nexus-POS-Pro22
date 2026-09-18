@@ -259,7 +259,6 @@ export function useSuppliersLogic(props: SuppliersProps) {
   };
 
   const t = (k: string) => k;
-  const togglePoDraftItem = () => {};
   const selectedSupplierPurchases = purchases.filter(p => p.supplierId === viewingDetailsSupplier?.id);
 
   return {   
@@ -318,7 +317,6 @@ export function useSuppliersLogic(props: SuppliersProps) {
     handleDeleteReminder,
     handleSavePurchaseOrderDraft,
     handleSync,
-    togglePoDraftItem,
     selectedSupplierPurchases,
     handleSubmit
   };

@@ -532,15 +532,21 @@ export async function processSyncQueue(): Promise<void> {
           const results = await Promise.all(promises);
           remoteProducts = results.flatMap(r => r.data || []);
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[SyncService] Avertissement: récupération remoteProducts incomplète:', err);
+      }
       try {
         const cRes = await supabase.from('categories').select('id');
         remoteCategories = cRes?.data;
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[SyncService] Avertissement: récupération remoteCategories impossible:', err);
+      }
       try {
         const bRes = await supabase.from('brands').select('id');
         remoteBrands = bRes?.data;
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[SyncService] Avertissement: récupération remoteBrands impossible:', err);
+      }
 
       const skuToRemoteId = new Map<string, string>();
       const barcodeToRemoteId = new Map<string, string>();

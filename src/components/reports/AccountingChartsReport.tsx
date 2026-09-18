@@ -93,6 +93,14 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         return acc;
     }, { Magasin: 0, Application: 0 } as Record<string, number>);
 
+    // Indexation O(1) des produits par ID et par nom normalisé (évite le scan O(T×I×P) catastrophique)
+    const productsById = new Map<string, any>();
+    const productsByName = new Map<string, any>();
+    safeProducts.forEach(p => {
+      if (p?.id) productsById.set(p.id, p);
+      if (p?.name) productsByName.set(p.name.toLowerCase().trim(), p);
+    });
+
     const productSalesData = Object.values(productMap)
       .sort((a, b) => b.revenue - a.revenue);
     const topProducts = productSalesData.slice(0, 10);
@@ -104,7 +112,8 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       return sum + items.reduce((itemSum, item) => {
         if (!item) return itemSum;
         const targetId = (item as any).productId || item.id;
-        const product = safeProducts.find(p => p.id === targetId || (item.name && p.name && p.name.toLowerCase() === item.name.toLowerCase()));
+        const cleanName = item.name ? item.name.toLowerCase().trim() : '';
+        const product = (targetId ? productsById.get(targetId) : null) || (cleanName ? productsByName.get(cleanName) : null);
         const costPrice = (item as any).costPrice !== undefined && (item as any).costPrice > 0 
           ? Number((item as any).costPrice) 
           : Number(product?.costPrice || 0);
@@ -124,11 +133,14 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - totalExpenses;
 
+    const revenueBySourceData = Object.entries(revenueBySource).map(([name, value]) => ({ name, value }));
+
     return { 
       categoryData, 
       employeeData, 
       periodData, 
       revenueBySource,
+      revenueBySourceData,
       topProducts, 
       productSalesData, 
       totalRevenue, 
@@ -224,7 +236,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
               <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
                 <PieChart>
                   <Pie
-                    data={Object.entries(data.revenueBySource).map(([name, value]) => ({ name, value }))}
+                    data={data.revenueBySourceData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -232,7 +244,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {Object.entries(data.revenueBySource).map((_, index) => (
+                    {data.revenueBySourceData.map((_, index) => (
                       <Cell key={`cell-rev-source-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -310,7 +322,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
           <div className="h-[400px] w-full relative min-h-[400px]">
             {isMounted && (
               <ResponsiveContainer width="100%" height={400} minWidth={0} debounce={50}>
-                <BarChart data={data.productSalesData.slice(0, 10)} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <BarChart data={data.topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
                   <XAxis 
                     dataKey="name" 

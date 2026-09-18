@@ -44,7 +44,7 @@ interface SupplierDetailsModalProps {
   handleUpdateClaimStatus: (recordId: string, status: string) => Promise<void>;
   setEditingPayment: (p: SupplierPayment | null) => void;
   handlePaymentDelete: (payment: SupplierPayment) => Promise<void>;
-  togglePoDraftItem: (product: Product, supplierName: string) => void;
+  togglePoDraftItem?: (product: Product, supplierName: string) => void;
 }
 
 export const SupplierDetailsModal = memo(function SupplierDetailsModal({
@@ -77,7 +77,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
   handleUpdateClaimStatus,
   setEditingPayment,
   handlePaymentDelete,
-  togglePoDraftItem
+  togglePoDraftItem = () => {}
 }: SupplierDetailsModalProps) {
   if (!viewingDetailsSupplier) return null;
 

@@ -38,10 +38,12 @@ import { DEFAULT_PERMISSIONS } from './constants';
 // Composants UI principaux
 import { SyncIndicator } from './components/SyncIndicator';
 import { UnauthorizedView } from './components/UnauthorizedView';
-import { LoginView } from './components/LoginView';
 import { MainAppContent } from './components/MainAppContent';
 import { TabRenderer } from './components/TabRenderer';
-import { AppModals } from './components/AppModals';
+
+// Modales et login en lazy-loading (Règle GEMINI.md : bundle optimisé)
+const LoginView = React.lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })));
+const AppModals = React.lazy(() => import('./components/AppModals').then(m => ({ default: m.AppModals })));
 
 // Modes alternatifs (lazy-loaded pour réduire la taille du bundle initial)
 const SupplierLogin = React.lazy(() => import('./components/SupplierLogin').then(m => ({ default: m.SupplierLogin })));
@@ -223,19 +225,9 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // --- Panier ---
-  const {
-    posSessions, setPosSessions,
-    activeSessionId, setActiveSessionId,
-    getCart, setCart,
-    getSelectedCustomer, setSelectedCustomer,
-    loadTransactionToCart,
-    isWholesale, setIsWholesale,
-    deliveryMethod, setDeliveryMethod,
-  } = useCartStore();
-
-  const cart = getCart();
-  const selectedCustomer = getSelectedCustomer();
+  // --- Panier (Sélecteurs d'action ciblés et stables : évite tout re-render de l'App) ---
+  const loadTransactionToCart = useCartStore(s => s.loadTransactionToCart);
+  const setSelectedCustomer = useCartStore(s => s.setSelectedCustomer);
 
   // --- États des modales ---
   const {
@@ -295,27 +287,29 @@ export default function App() {
     return <UnauthorizedView user={user} profile={profile} isOwner={isOwner} handleLogout={() => handleLogout(user)}   />;
   }
 
-  if (!user && appMode === 'pos') {
-    return (
-      <LoginView
-        loginIdentifier={loginIdentifier} setLoginIdentifier={setLoginIdentifier}
-        loginPassword={loginPassword} setLoginPassword={setLoginPassword}
-        showPassword={showPassword} setShowPassword={setShowPassword}
-        isLoggingIn={isLoggingIn} authError={authError} setAuthError={setAuthError}
-        handleIdentifierLogin={handleIdentifierLogin}
-        handleLogin={handleLogin}
-        language={language} setLanguage={setLanguage as any}
-        isLangMenuOpen={isLangMenuOpen} setIsLangMenuOpen={setIsLangMenuOpen}
-        t={t}
-        />
-    );
-  }
-
   const loadingFallback = (
     <div className="h-screen w-full flex items-center justify-center bg-[#05070a]">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"   />
     </div>
   );
+
+  if (!user && appMode === 'pos') {
+    return (
+      <Suspense fallback={loadingFallback}>
+        <LoginView
+          loginIdentifier={loginIdentifier} setLoginIdentifier={setLoginIdentifier}
+          loginPassword={loginPassword} setLoginPassword={setLoginPassword}
+          showPassword={showPassword} setShowPassword={setShowPassword}
+          isLoggingIn={isLoggingIn} authError={authError} setAuthError={setAuthError}
+          handleIdentifierLogin={handleIdentifierLogin}
+          handleLogin={handleLogin}
+          language={language} setLanguage={setLanguage as any}
+          isLangMenuOpen={isLangMenuOpen} setIsLangMenuOpen={setIsLangMenuOpen}
+          t={t}
+        />
+      </Suspense>
+    );
+  }
 
   if (!user) {
     if (appMode === 'customer') {
@@ -419,16 +413,10 @@ export default function App() {
       >
         <TabRenderer
           activeTab={activeTab}
-          cart={cart} setCart={setCart}
           setActiveTab={setActiveTab}
           setIsPOSCustomerModalOpen={setIsPOSCustomerModalOpen}
-          selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer}
-          posSessions={posSessions} setPosSessions={setPosSessions}
-          activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId}
           setIsProductModalOpen={setIsProductModalOpen}
           setEditingProduct={setEditingProduct}
-          isWholesale={isWholesale} setIsWholesale={setIsWholesale}
-          deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
           activeStaffId={activeStaffId}
           canAccess={canAccess}
           onUpdateProduct={handleUpdateProduct}

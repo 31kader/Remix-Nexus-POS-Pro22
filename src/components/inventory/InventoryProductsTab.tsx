@@ -5,7 +5,7 @@ import { useCoreStore } from '../../store/useCoreStore';
 import { DuplicateSKUAlert } from './DuplicateSKUAlert';
 import { InventoryActionBar } from './InventoryActionBar';
 import { BarcodeScanner } from '../BarcodeScanner';
-import { Modal, Button } from '../ui';
+import { Modal, Button, SafeImage } from '../ui';
 import { InventoryProductCard } from './InventoryProductCard';
 import { InventoryProductRow } from './InventoryProductRow';
 
@@ -100,7 +100,12 @@ export function InventoryProductsTab(props: any) {
             <div className="flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
               <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
                 {priceCheckResult.imageUrl ? (
-                  <img src={priceCheckResult.imageUrl} className="w-full h-full object-cover" alt="" />
+                  <SafeImage 
+                    src={priceCheckResult.imageUrl} 
+                    alt={priceCheckResult.name} 
+                    className="w-full h-full object-cover" 
+                    fallback={<Package className="text-slate-400 dark:text-slate-500" size={28} />}
+                  />
                 ) : (
                   <Package className="text-slate-400 dark:text-slate-500" size={28} />
                 )}

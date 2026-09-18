@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
+import { SafeImage } from '../ui';
 
 interface ImageZoomModalProps {
   imageUrl: string | null;
@@ -21,14 +22,17 @@ export function ImageZoomModal({ imageUrl, onClose }: ImageZoomModalProps) {
             exit={{ scale: 0.9, opacity: 0 }}
             className="relative max-w-4xl max-h-full"
           >
-            <img 
-              src={imageUrl} 
-              className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" 
-              referrerPolicy="no-referrer"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div onClick={(e) => e.stopPropagation()}>
+              <SafeImage 
+                src={imageUrl} 
+                alt="Aperçu agrandi"
+                className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" 
+              />
+            </div>
             <button 
+              type="button"
               onClick={onClose}
+              aria-label="Fermer l'aperçu"
               className="absolute -top-12 right-0 p-2 text-white hover:text-slate-300 transition-colors"
             >
               <X size={32} />

@@ -167,7 +167,7 @@ const { t } = useTranslation();
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400">System Admin v1.2.9</span>
+              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400">System Admin v1.2.10</span>
             </div>
             <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none italic">NEXUS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">CONFIG</span></h1>
             <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] ml-1">Terminal de Contrôle Centralisé</p>

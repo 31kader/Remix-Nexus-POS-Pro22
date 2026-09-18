@@ -90,9 +90,23 @@ export function useProfitsReportLogic({
 
     const stats: Record<string, { qty: number, revenue: number, cost: number }> = {};
     
-    // O(1) Speed optimization
+    // O(1) Speed optimization : indexation complète ID, SKU, Code-barres, Nom
     const productsById = new Map<string, Product>();
-    products.forEach(p => productsById.set(p.id, p));
+    const productsBySku = new Map<string, Product>();
+    const productsByBarcode = new Map<string, Product>();
+    const productsByName = new Map<string, Product>();
+    const transactionsById = new Map<string, any>();
+
+    products.forEach(p => {
+      if (p.id) productsById.set(p.id, p);
+      if (p.sku) productsBySku.set(p.sku.toLowerCase().trim(), p);
+      if (p.barcode) productsByBarcode.set(p.barcode.toLowerCase().trim(), p);
+      if (p.name) productsByName.set(p.name.toLowerCase().trim(), p);
+    });
+
+    transactions.forEach(t => {
+      if (t?.id) transactionsById.set(t.id, t);
+    });
 
     filteredTransactions.forEach(t => {
       if (!t) return;
@@ -113,9 +127,9 @@ export function useProfitsReportLogic({
 
         const matchingProduct = productsById.get((item as any).productId) || 
                                 productsById.get(item.id) || 
-                                (itemSku ? products.find(p => p.sku && p.sku.toLowerCase().trim() === itemSku) : null) ||
-                                (itemBarcode ? products.find(p => p.barcode && p.barcode.toLowerCase().trim() === itemBarcode) : null) ||
-                                (itemName ? products.find(p => p.name && p.name.toLowerCase().trim() === itemName) : null);
+                                (itemSku ? productsBySku.get(itemSku) : null) ||
+                                (itemBarcode ? productsByBarcode.get(itemBarcode) : null) ||
+                                (itemName ? productsByName.get(itemName) : null);
         const itemKey = matchingProduct ? matchingProduct.id : (item.id || item.name);
         if (!itemKey) return;
 
@@ -169,7 +183,7 @@ export function useProfitsReportLogic({
           if (tDate.getHours() > hours || (tDate.getHours() === hours && tDate.getMinutes() > minutes)) return;
         }
 
-        const originalTx = transactions.find(t => t.id === ret.transactionId);
+        const originalTx = transactionsById.get(ret.transactionId);
         if (profitFilterSource !== 'all' || profitFilterCustomer !== 'all' || profitFilterEmployee !== 'all') {
           if (profitFilterSource !== 'all') {
             const isOnline = !!originalTx?.onlineOrderId;

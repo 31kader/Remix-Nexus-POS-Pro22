@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, lazy, Suspense, useMemo } from 'react';
 import { 
   Download, 
   Trash2,
@@ -8,13 +8,25 @@ import {
 import { format } from 'date-fns';
 import { cn, formatSafe } from '../lib/utils';
 import { Button } from './ui';
-import { AIAssistant } from './AIAssistant';
-import { AccountingChartsReport } from './reports/AccountingChartsReport';
-import { ProfitsReport } from './reports/ProfitsReport';
-import { FidelityStatsReport } from './reports/FidelityStatsReport';
-import { CashflowReport } from './reports/CashflowReport';
-import { StockValueReport } from './reports/StockValueReport';
-import { LossesReport } from './reports/LossesReport';
+
+// Lazy loading des sous-rapports pour alléger le bundle initial (Règle GEMINI.md)
+const AIAssistant = lazy(() => import('./AIAssistant').then(m => ({ default: m.AIAssistant })));
+const AccountingChartsReport = lazy(() => import('./reports/AccountingChartsReport').then(m => ({ default: m.AccountingChartsReport })));
+const ProfitsReport = lazy(() => import('./reports/ProfitsReport').then(m => ({ default: m.ProfitsReport })));
+const FidelityStatsReport = lazy(() => import('./reports/FidelityStatsReport').then(m => ({ default: m.FidelityStatsReport })));
+const CashflowReport = lazy(() => import('./reports/CashflowReport').then(m => ({ default: m.CashflowReport })));
+const StockValueReport = lazy(() => import('./reports/StockValueReport').then(m => ({ default: m.StockValueReport })));
+const LossesReport = lazy(() => import('./reports/LossesReport').then(m => ({ default: m.LossesReport })));
+
+const reportFallback = (
+  <div className="flex flex-col items-center justify-center min-h-[300px] p-8 space-y-4">
+    <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+      Chargement du rapport…
+    </p>
+  </div>
+);
+
 import { Transaction, Product, Employee, Expense, SupplierPayment, ProductReturn, CompanySettings, Category, Customer, StockAdjustment } from '../types';
 
 interface DetailedReportsProps {
@@ -72,7 +84,9 @@ export const DetailedReports = memo(function DetailedReports({
     document.body.removeChild(link);
   };
 
-  const totalRevenue = transactions.reduce((sum, t) => sum + (t.status === 'returned' ? 0 : t.total), 0);
+  const totalRevenue = useMemo(() => {
+    return transactions.reduce((sum, t) => sum + (t.status === 'returned' ? 0 : (t.total || 0)), 0);
+  }, [transactions]);
 
   return (
     <div className="space-y-12 text-slate-100 p-2 animate-in fade-in duration-700">
@@ -119,66 +133,68 @@ export const DetailedReports = memo(function DetailedReports({
         </div>
       </div>
 
-      {reportsTab === 'charts' ? (
-        <AccountingChartsReport 
-          transactions={transactions}
-          products={products}
-          expenses={expenses}
-          settings={settings}
-        />
-      ) : reportsTab === 'profits' ? (
-        <ProfitsReport 
-          transactions={transactions}
-          products={products}
-          employees={employees}
-          returns={returns}
-          settings={settings}
-          categories={categories}
-          customers={customers}
-          onEditProduct={(product) => {
-            if (setEditingProduct && setIsProductModalOpen) {
-              setEditingProduct(product);
-              setIsProductModalOpen(true);
-            }
-          }}
-        />
-      ) : reportsTab === 'fidelity_stats' ? (
-        <FidelityStatsReport 
-          transactions={transactions}
-          settings={settings}
-          marketingFilterDate={marketingFilterDate}
-          setMarketingFilterDate={setMarketingFilterDate}
-        />
-      ) : reportsTab === 'cashflow' ? (
-        <CashflowReport 
-          transactions={transactions}
-          expenses={expenses}
-          supplierPayments={supplierPayments}
-          settings={settings}
-        />
-      ) : reportsTab === 'stock_value' ? (
-        <StockValueReport 
-          products={products}
-          categories={categories}
-          settings={settings}
-        />
-      ) : reportsTab === 'losses' ? (
-        <LossesReport 
-          stockAdjustments={stockAdjustments}
-          products={products}
-          categories={categories}
-          settings={settings}
-          totalRevenue={totalRevenue}
-        />
-      ) : (
-        <AIAssistant 
-          products={products}
-          transactions={transactions}
-          expenses={expenses}
-          settings={settings}
-          stockAdjustments={stockAdjustments}
-        />
-      )}
+      <Suspense fallback={reportFallback}>
+        {reportsTab === 'charts' ? (
+          <AccountingChartsReport 
+            transactions={transactions}
+            products={products}
+            expenses={expenses}
+            settings={settings}
+          />
+        ) : reportsTab === 'profits' ? (
+          <ProfitsReport 
+            transactions={transactions}
+            products={products}
+            employees={employees}
+            returns={returns}
+            settings={settings}
+            categories={categories}
+            customers={customers}
+            onEditProduct={(product) => {
+              if (setEditingProduct && setIsProductModalOpen) {
+                setEditingProduct(product);
+                setIsProductModalOpen(true);
+              }
+            }}
+          />
+        ) : reportsTab === 'fidelity_stats' ? (
+          <FidelityStatsReport 
+            transactions={transactions}
+            settings={settings}
+            marketingFilterDate={marketingFilterDate}
+            setMarketingFilterDate={setMarketingFilterDate}
+          />
+        ) : reportsTab === 'cashflow' ? (
+          <CashflowReport 
+            transactions={transactions}
+            expenses={expenses}
+            supplierPayments={supplierPayments}
+            settings={settings}
+          />
+        ) : reportsTab === 'stock_value' ? (
+          <StockValueReport 
+            products={products}
+            categories={categories}
+            settings={settings}
+          />
+        ) : reportsTab === 'losses' ? (
+          <LossesReport 
+            stockAdjustments={stockAdjustments}
+            products={products}
+            categories={categories}
+            settings={settings}
+            totalRevenue={totalRevenue}
+          />
+        ) : (
+          <AIAssistant 
+            products={products}
+            transactions={transactions}
+            expenses={expenses}
+            settings={settings}
+            stockAdjustments={stockAdjustments}
+          />
+        )}
+      </Suspense>
     </div>
   );
 });

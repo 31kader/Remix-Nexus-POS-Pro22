@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 // @ts-ignore
 import { createPortal } from 'react-dom';
 import { ShoppingBag, ArrowUpDown, ChevronUp, ChevronDown, Package, ShieldCheck, Calculator, Save, X, TrendingUp, Edit2, Receipt } from 'lucide-react';
@@ -22,7 +22,7 @@ interface ProfitsReportTableProps {
   settings?: CompanySettings;
 }
 
-export function ProfitsReportTable({
+export const ProfitsReportTable = memo(function ProfitsReportTable({
   productProfitData,
   categories,
   handleProfitSort,
@@ -43,6 +43,20 @@ export function ProfitsReportTable({
   const [desiredProfit, setDesiredProfit] = useState<string>('');
   const [desiredMargin, setDesiredMargin] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Pagination (Règle GEMINI.md : 50 items/page obligatoire)
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+  const totalPages = Math.max(1, Math.ceil((productProfitData?.length || 0) / ITEMS_PER_PAGE));
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return (productProfitData || []).slice(start, start + ITEMS_PER_PAGE);
+  }, [productProfitData, currentPage]);
+
+  // Indexation O(1) des catégories pour éviter .find() dans le tableau
+  const categoriesMap = useMemo(() => {
+    return new Map((categories || []).map(c => [c.id, c.name]));
+  }, [categories]);
 
   const handleOpenProfitModal = (p: any) => {
     setSelectedProduct(p);
@@ -178,7 +192,7 @@ export function ProfitsReportTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
-          {productProfitData.map(p => {
+          {paginatedData.map(p => {
             const safePrice = Number(p.price) || 0;
             const safeCost = Number(p.costPrice) || 0;
             const unitMargin = safePrice - safeCost;
@@ -227,7 +241,7 @@ export function ProfitsReportTable({
                 </td>
                 <td className="p-4">
                   <span className="px-2 py-1 bg-white/5 text-white/60 rounded-md text-[10px] font-black uppercase tracking-widest border border-white/5">
-                    {categories?.find(c => c.id === p.categoryId)?.name || 'N/A'}
+                    {categoriesMap.get(p.categoryId) || 'N/A'}
                   </span>
                 </td>
                 <td className="p-4 text-right font-black text-white/80 bg-white/5 text-xs font-mono">
@@ -299,6 +313,34 @@ export function ProfitsReportTable({
           )}
         </tbody>
       </table>
+
+      {/* Pagination (50 items/page — Règle GEMINI.md) */}
+      {productProfitData && productProfitData.length > ITEMS_PER_PAGE && (
+        <div className="p-4 bg-white/5 border-t border-white/5 flex items-center justify-between">
+          <span className="text-xs text-white/40 font-bold uppercase tracking-wider">
+            Affichage {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, productProfitData.length)} sur {productProfitData.length} produits
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-all"
+            >
+              Précédent
+            </button>
+            <span className="px-3 py-1 bg-white/10 text-white rounded-lg text-xs font-black">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-xs font-bold transition-all"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal d'ajustement du Bénéfice Admin pour un produit spécifique */}
       {selectedProduct && createPortal(
@@ -465,4 +507,4 @@ export function ProfitsReportTable({
       )}
     </div>
   );
-}
+});

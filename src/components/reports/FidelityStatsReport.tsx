@@ -50,7 +50,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
       }
     });
 
-    transactionsWithPromos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    transactionsWithPromos.sort((a, b) => (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0));
 
     return {
       totalDiscounts,
@@ -60,6 +60,14 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
       transactions: transactionsWithPromos
     };
   }, [transactions, marketingFilterDate]);
+
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const ITEMS_PER_PAGE = 50;
+  const totalPages = Math.max(1, Math.ceil(marketingData.transactions.length / ITEMS_PER_PAGE));
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return marketingData.transactions.slice(start, start + ITEMS_PER_PAGE);
+  }, [marketingData.transactions, currentPage]);
 
   return (
     <div className="space-y-6">
@@ -120,8 +128,8 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
                  <th className="p-4 font-black uppercase text-[10px] text-slate-400 tracking-widest text-right">Montant Final Payé</th>
                </tr>
              </thead>
-             <tbody className="divide-y divide-slate-100">
-                {marketingData.transactions.map(t => (
+              <tbody className="divide-y divide-slate-100">
+                {paginatedTransactions.map(t => (
                   <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
                       <p className="font-bold text-slate-800">{formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
@@ -162,6 +170,34 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
                 )}
              </tbody>
            </table>
+
+           {/* Pagination 50 transactions par page */}
+           {marketingData.transactions.length > ITEMS_PER_PAGE && (
+             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+               <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                 Affichage {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, marketingData.transactions.length)} sur {marketingData.transactions.length} transactions
+               </span>
+               <div className="flex items-center gap-2">
+                 <button
+                   disabled={currentPage <= 1}
+                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                   className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 rounded-lg text-[10px] font-bold transition-all"
+                 >
+                   Précédent
+                 </button>
+                 <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-100">
+                   {currentPage} / {totalPages}
+                 </span>
+                 <button
+                   disabled={currentPage >= totalPages}
+                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                   className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 rounded-lg text-[10px] font-bold transition-all"
+                 >
+                   Suivant
+                 </button>
+               </div>
+             </div>
+           )}
          </div>
       </Card>
     </div>
