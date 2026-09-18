@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useDeferredValue } from 'react';
 import { isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { calculateItemPrice } from '../../../lib/utils';
 import { Transaction, Product, Employee, ProductReturn, CompanySettings, Category, Customer } from '../../../types';
@@ -25,7 +25,7 @@ export function useProfitsReportLogic({
   returns,
   settings,
   categories,
-  customers,
+  customers
 }: UseProfitsReportLogicProps) {
   const [profitFilterDate, setProfitFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
   const [profitFilterCategory, setProfitFilterCategory] = useState<string>('all');
@@ -33,6 +33,7 @@ export function useProfitsReportLogic({
   const [profitFilterCustomer, setProfitFilterCustomer] = useState<string>('all');
   const [profitFilterEmployee, setProfitFilterEmployee] = useState<string>('all');
   const [profitSearchProduct, setProfitSearchProduct] = useState<string>('');
+  const deferredProfitSearch = useDeferredValue(profitSearchProduct);
   const [profitFilterSource, setProfitFilterSource] = useState<'all' | 'pos' | 'online'>('all');
   const [profitFilterTimeStart, setProfitFilterTimeStart] = useState<string>('');
   const [profitFilterTimeEnd, setProfitFilterTimeEnd] = useState<string>('');
@@ -65,6 +66,12 @@ export function useProfitsReportLogic({
     return map;
   }, [transactions]);
 
+  // Nom d'employé sélectionné précalculé pour éliminer les .find() répétés dans les boucles de filtrage
+  const selectedEmpName = useMemo(() => {
+    if (profitFilterEmployee === 'all') return null;
+    return employees?.find(e => e.id === profitFilterEmployee)?.name || null;
+  }, [employees, profitFilterEmployee]);
+
   // 1. Accumulate stats from transactions (Depends ONLY on transaction-level filters)
   const productStats = useMemo(() => {
     let filteredTransactions = transactions;
@@ -95,10 +102,7 @@ export function useProfitsReportLogic({
       }
       
       if (profitFilterCustomer !== 'all' && t.customerId !== profitFilterCustomer) return false;
-      if (profitFilterEmployee !== 'all') {
-         const empName = employees?.find(e => e.id === profitFilterEmployee)?.name;
-         if (empName && t.employeeName !== empName) return false;
-      }
+      if (selectedEmpName && t.employeeName !== selectedEmpName) return false;
 
       // Filter by basket total (transaction total)
       const basketTotal = (t as any).totalAmount ?? t.total ?? 0;
@@ -200,11 +204,7 @@ export function useProfitsReportLogic({
           }
           
           if (profitFilterCustomer !== 'all' && originalTx?.customerId !== profitFilterCustomer) return;
-          
-          if (profitFilterEmployee !== 'all') {
-            const empName = employees?.find(e => e.id === profitFilterEmployee)?.name;
-            if (empName && originalTx?.employeeName !== empName) return;
-          }
+          if (selectedEmpName && originalTx?.employeeName !== selectedEmpName) return;
         }
 
         // Filter by basket total (transaction total) for returns based on originalTx
@@ -252,7 +252,7 @@ export function useProfitsReportLogic({
     });
 
     return stats;
-  }, [transactions, transactionsById, productsById, productsBySku, productsByBarcode, productsByName, employees, returns, settings, profitFilterCustomer, profitFilterEmployee, profitFilterSource, profitFilterTimeStart, profitFilterTimeEnd, profitFilterDate, profitFilterMinTotal, profitFilterMaxTotal]);
+  }, [transactions, transactionsById, productsById, productsBySku, productsByBarcode, productsByName, selectedEmpName, returns, settings, profitFilterCustomer, profitFilterSource, profitFilterTimeStart, profitFilterTimeEnd, profitFilterDate, profitFilterMinTotal, profitFilterMaxTotal]);
 
   // 2. Map, filter, and sort products (Depends on productStats, search, category, sort)
   const productProfitData = useMemo(() => {
@@ -262,8 +262,8 @@ export function useProfitsReportLogic({
       filteredProductsList = filteredProductsList.filter(p => p.categoryId === profitFilterCategory);
     }
     
-    if (profitSearchProduct) {
-      const query = profitSearchProduct.toLowerCase();
+    if (deferredProfitSearch) {
+      const query = deferredProfitSearch.toLowerCase().trim();
       filteredProductsList = filteredProductsList.filter(p => 
         (p.name && p.name.toLowerCase().includes(query)) ||
         (p.sku && p.sku.toLowerCase().includes(query))
@@ -287,7 +287,7 @@ export function useProfitsReportLogic({
 
     // If there are sold products, prioritize them when filtering by period; otherwise display catalog items with their margins
     const hasSoldProducts = result.some(p => p.stats && p.stats.qty > 0);
-    if (hasSoldProducts && !profitSearchProduct && profitFilterDate !== 'all') {
+    if (hasSoldProducts && !deferredProfitSearch && profitFilterDate !== 'all') {
       result = result.filter(p => p.stats.qty > 0);
     }
 
@@ -303,7 +303,7 @@ export function useProfitsReportLogic({
       if (profitSortFormat === 'qty_asc') return a.stats.qty - b.stats.qty;
       return 0;
     });
-  }, [products, productStats, profitFilterCategory, profitSearchProduct, profitSortFormat]);
+  }, [products, productStats, profitFilterCategory, deferredProfitSearch, profitSortFormat, profitFilterDate]);
 
   const handleProfitSort = (key: 'revenue' | 'profit' | 'margin' | 'qty') => {
     setProfitSortFormat(prev => {

@@ -188,7 +188,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           <div className="space-y-6">
             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 ring-1 ring-white/5 shadow-2xl">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,1)]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 italic">Core v1.2.11 Stable Runtime</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400 italic">Core v1.2.12 Stable Runtime</span>
             </div>
             <h1 className="text-6xl xl:text-7xl font-black text-white leading-[1.0] tracking-tighter italic">
               GESTION <br/>

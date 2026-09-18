@@ -17,8 +17,11 @@ export const StockValueReport = React.memo(function StockValueReport({
   const [stockFilterCategory, setStockFilterCategory] = useState<string>('all');
   const [stockFilterStatus, setStockFilterStatus] = useState<'all' | 'in_stock' | 'low_stock' | 'out_of_stock'>('all');
   const [stockFilterSearch, setStockFilterSearch] = useState<string>('');
+  const deferredStockFilterSearch = React.useDeferredValue(stockFilterSearch);
 
   const filteredStockProducts = useMemo(() => {
+    const query = deferredStockFilterSearch ? deferredStockFilterSearch.toLowerCase().trim() : '';
+
     return products.filter(p => {
       // Category Filter
       if (stockFilterCategory !== 'all' && p.categoryId !== stockFilterCategory) return false;
@@ -29,18 +32,17 @@ export const StockValueReport = React.memo(function StockValueReport({
       if (stockFilterStatus === 'out_of_stock' && (p.stock || 0) > 0) return false;
       
       // Search Filter
-      if (stockFilterSearch) {
-        const query = stockFilterSearch.toLowerCase();
+      if (query) {
         return (
-          p.name.toLowerCase().includes(query) || 
-          p.sku?.toLowerCase().includes(query) || 
-          p.barcode?.toLowerCase().includes(query)
+          (p.name && p.name.toLowerCase().includes(query)) || 
+          (p.sku && p.sku.toLowerCase().includes(query)) || 
+          (p.barcode && p.barcode.toLowerCase().includes(query))
         );
       }
       
       return true;
     });
-  }, [products, stockFilterCategory, stockFilterStatus, stockFilterSearch]);
+  }, [products, stockFilterCategory, stockFilterStatus, deferredStockFilterSearch]);
 
   // Calcul agrégé unique en une seule passe O(N) pour éliminer les 200+ .reduce() dans le JSX
   const stockSummary = useMemo(() => {
