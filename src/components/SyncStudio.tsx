@@ -5,7 +5,7 @@ import {
   ShieldAlert, Copy, Code, ChevronDown, ChevronUp, Zap, ArrowRight, Activity, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { loadPendingSyncQueue, processSyncQueue, clearSyncQueue, onBackgroundSyncStatus, SyncPayload, getFailedSyncQueue, clearFailedSyncQueue, retryFailedSyncItem } from '../services/SyncService';
+import { loadPendingSyncQueue, processSyncQueue, clearSyncQueue, onBackgroundSyncStatus, SyncPayload, getFailedSyncQueue, clearFailedSyncQueue, retryFailedSyncItem, retryAllFailedSyncItems } from '../services/SyncService';
 import { createBackupArchive } from '../services/backupRestoreService';
 import { initAndSyncSupabase, supabase } from '../services/SupabaseSync';
 import { isSupabaseConfigured } from '../supabase';
@@ -606,18 +606,30 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={async () => {
-                if (confirm("Vider définitivement la liste des échecs ?")) {
-                  await clearFailedSyncQueue();
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  await retryAllFailedSyncItems();
                   refreshQueue();
-                  toast.success("Dead Letter Queue vidée.");
-                }
-              }}
-              className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
-            >
-              Vider la Liste des Échecs
-            </button>
+                  toast.success("Tous les éléments ont été réintégrés dans la file.");
+                }}
+                className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl text-xs transition-all shadow cursor-pointer"
+              >
+                Tout Réessayer
+              </button>
+              <button
+                onClick={async () => {
+                  if (confirm("Vider définitivement la liste des échecs ?")) {
+                    await clearFailedSyncQueue();
+                    refreshQueue();
+                    toast.success("Dead Letter Queue vidée.");
+                  }
+                }}
+                className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Vider la Liste
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">

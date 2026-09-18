@@ -891,6 +891,9 @@ export async function getFailedSyncQueue(): Promise<any[]> {
 export async function clearFailedSyncQueue(): Promise<void> {
   try {
     await setIDB('nexus_sync_failed', []);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nexus-sync-dlq-alert', { detail: { count: 0 } }));
+    }
   } catch (_) {}
 }
 
@@ -905,8 +908,32 @@ export async function retryFailedSyncItem(index: number): Promise<void> {
         delete (item as any).failedAt;
         enqueueSyncBatch([item]);
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nexus-sync-dlq-alert', { detail: { count: failed.length } }));
+      }
     }
   } catch (err) {
     console.warn('[SyncService] Erreur lors de la réimpression de l\'élément échoué:', err);
+  }
+}
+
+export async function retryAllFailedSyncItems(): Promise<void> {
+  try {
+    const failed = (await getIDB<any[]>('nexus_sync_failed')) || [];
+    if (failed.length > 0) {
+      await setIDB('nexus_sync_failed', []);
+      const itemsToRetry = failed.map(item => {
+        const cleaned = { ...item };
+        delete cleaned.retryCount;
+        delete (cleaned as any).failedAt;
+        return cleaned;
+      });
+      enqueueSyncBatch(itemsToRetry);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nexus-sync-dlq-alert', { detail: { count: 0 } }));
+      }
+    }
+  } catch (err) {
+    console.warn('[SyncService] Erreur lors de la tentative globale de retry:', err);
   }
 }
