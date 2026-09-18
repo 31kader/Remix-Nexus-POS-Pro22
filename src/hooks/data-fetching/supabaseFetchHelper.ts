@@ -14,10 +14,9 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
   let from = 0;
   let hasMore = true;
 
-  // Essential columns that exist across all schema versions (exclude heavy image_url by default to avoid 75MB base64 transfer)
+  // Essential columns that exist across all schema versions (image_url now contains lightweight Storage CDN links)
   const CORE_COLUMNS = [
-    'id', 'name', 'barcode', 'sku', 'reference', 
-    ...(isLightweight ? [] : ['image_url']),
+    'id', 'name', 'barcode', 'sku', 'reference', 'image_url',
     'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 'stock', 'min_stock', 'category_id', 'brand_id', 'supplier', 'unit', 'status', 'is_bundle', 'show_in_pos', 'damaged_stock', 'expiration_date', 'batch_number', 'location', 'created_at', 'updated_at', 'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'
   ];
   let activeCols = [...CORE_COLUMNS];
@@ -79,10 +78,7 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
         // Fallback to safe basic select if column pruning didn't work
         if (activeCols.length > 10) {
           console.warn('[Supabase Products Fallback] Falling back to core columns select');
-          activeCols = [
-            'id', 'name', 'barcode', 'sku', 'price', 'cost_price', 'stock', 'category_id', 'unit', 'status',
-            ...(isLightweight ? [] : ['image_url'])
-          ];
+          activeCols = ['id', 'name', 'barcode', 'sku', 'price', 'cost_price', 'stock', 'category_id', 'unit', 'status', 'image_url'];
           continue;
         }
 
