@@ -29,13 +29,15 @@ export function PromotionsGrid({
 }: PromotionsGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {paginatedPromotions.map((promo: Promotion) => {
+      {(paginatedPromotions || []).filter(Boolean).map((promo: Promotion) => {
         const status = getPromoStatus(promo);
+        const promoType = (promo.type ? String(promo.type) : 'percentage').replace(/_/g, ' ');
+        const currency = settings?.currency || 'DA';
         return (
-          <Card key={promo.id} className={cn("p-6 border-l-4 transition-all hover:shadow-md", promo.isActive ? "border-l-indigo-500" : "border-l-slate-300")}>
+          <Card key={promo.id || Math.random().toString()} className={cn("p-6 border-l-4 transition-all hover:shadow-md", promo.isActive ? "border-l-indigo-500" : "border-l-slate-300")}>
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h4 className="font-bold text-slate-800">{promo.name}</h4>
+                <h4 className="font-bold text-slate-800 dark:text-white">{promo.name || 'Sans titre'}</h4>
                 <p className="text-xs text-slate-500 font-mono">{promo.code || 'Remise automatique'}</p>
               </div>
               <span className={cn("px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider", status.color)}>
@@ -46,20 +48,20 @@ export function PromotionsGrid({
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Type:</span>
-                <span className="font-medium text-slate-700 capitalize">{promo.type.replace(/_/g, ' ')}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300 capitalize">{promoType}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Valeur:</span>
                 <span className="font-bold text-indigo-600">
-                  {promo.type === 'percentage' ? `${promo.value}%` : `${promo.value}${settings.currency}`}
+                  {promo.type === 'percentage' ? `${promo.value ?? 0}%` : `${promo.value ?? 0} ${currency}`}
                 </span>
               </div>
-              {promo.minPurchase && (
+              {promo.minPurchase ? (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Min. Achat:</span>
-                  <span className="font-medium text-slate-700">{promo.minPurchase}{settings.currency}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{promo.minPurchase} {currency}</span>
                 </div>
-              )}
+              ) : null}
               {(promo.startDate || promo.endDate) && (
                 <div className="pt-2 mt-2 border-t border-slate-50">
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Période de validité</p>

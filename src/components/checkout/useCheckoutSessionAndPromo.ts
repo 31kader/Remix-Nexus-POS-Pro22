@@ -140,11 +140,11 @@ export function useCheckoutSessionAndPromo({
 
       // 2. Chercher si c'est un code promotionnel actif
       const safePromos = Array.isArray(promotions) ? promotions.filter(Boolean) : [];
-      const foundPromo = safePromos.find((p) => p && p.code && p.code.trim().toLowerCase() === trimmedCode.toLowerCase() && p.isActive);
+      const foundPromo = safePromos.find((p) => p && p.code && String(p.code).trim().toLowerCase() === trimmedCode.toLowerCase() && p.isActive);
       if (foundPromo) {
         setActivePromotion(foundPromo);
         const desc = foundPromo.type === 'percentage' ? `-${foundPromo.value}%` : `-${foundPromo.value} DA`;
-        toast.success(`Promotion "${foundPromo.name}" appliquée (${desc})`);
+        toast.success(`Promotion "${foundPromo.name || 'Promotion'}" appliquée (${desc})`);
         return;
       }
 
@@ -177,10 +177,10 @@ export function useCheckoutSessionAndPromo({
   const applyPromoCode = () => {
     if (!promoCode.trim()) return;
     const safePromos = Array.isArray(promotions) ? promotions.filter(Boolean) : [];
-    const found = safePromos.find((p) => p && p.code?.toLowerCase() === promoCode.trim().toLowerCase() && p.isActive);
+    const found = safePromos.find((p) => p && p.code && String(p.code).trim().toLowerCase() === promoCode.trim().toLowerCase() && p.isActive);
     if (found) {
       setActivePromotion(found);
-      toast.success(`Promotion "${found.name}" appliquée`);
+      toast.success(`Promotion "${found.name || 'Promotion'}" appliquée`);
     } else {
       toast.error('Code promotionnel invalide ou expiré');
     }

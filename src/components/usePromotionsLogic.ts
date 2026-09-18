@@ -190,14 +190,17 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
   };
 
   const filteredPromotions = useMemo(() => {
-    const searchLower = search.toLowerCase();
-    return promotions.filter(p => 
-      p.name.toLowerCase().includes(searchLower) || 
-      (p.code && p.code.toLowerCase().includes(searchLower))
-    );
+    const searchLower = (search || '').toLowerCase().trim();
+    if (!Array.isArray(promotions)) return [];
+    return promotions.filter(p => {
+      if (!p) return false;
+      const name = (p.name ? String(p.name) : '').toLowerCase();
+      const code = (p.code ? String(p.code) : '').toLowerCase();
+      return name.includes(searchLower) || code.includes(searchLower);
+    });
   }, [promotions, search]);
 
-  const totalPages = Math.ceil(filteredPromotions.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredPromotions.length / pageSize));
   const paginatedPromotions = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredPromotions.slice(start, start + pageSize);
@@ -209,21 +212,23 @@ export function usePromotionsLogic({ promotions, transactions }: UsePromotionsLo
 
   const stats = useMemo(() => {
     const now = new Date();
+    const list = Array.isArray(promotions) ? promotions.filter(Boolean) : [];
+    const txList = Array.isArray(transactions) ? transactions.filter(Boolean) : [];
     return {
-      total: promotions.length,
-      active: promotions.filter(p => p.isActive).length,
-      ongoing: promotions.filter(p => {
+      total: list.length,
+      active: list.filter(p => Boolean(p.isActive)).length,
+      ongoing: list.filter(p => {
         if (!p.isActive) return false;
         const start = p.startDate ? new Date(p.startDate) : null;
         const end = p.endDate ? new Date(p.endDate) : null;
         return (!start || start <= now) && (!end || end >= now);
       }).length,
-      totalDiscount: transactions.reduce((sum, t) => sum + (t.discountAmount || 0), 0)
+      totalDiscount: txList.reduce((sum, t) => sum + (t?.discountAmount || 0), 0)
     };
   }, [promotions, transactions]);
 
   const getPromoStatus = (promo: Promotion) => {
-    if (!promo.isActive) return { label: 'Désactivée', color: 'bg-slate-100 text-slate-500' };
+    if (!promo || !promo.isActive) return { label: 'Désactivée', color: 'bg-slate-100 text-slate-500' };
     const now = new Date();
     const start = promo.startDate ? new Date(promo.startDate) : null;
     const end = promo.endDate ? new Date(promo.endDate) : null;

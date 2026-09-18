@@ -196,7 +196,7 @@ const PromotionsTab: React.FC<any> = () => {
   const settings = useCoreStore(s => s.settings);
   return (
     <Promotions
-      promotions={promotions || []}
+      promotions={Array.isArray(promotions) ? promotions.filter(Boolean) : []}
       products={products || []}
       categories={categories || []}
       transactions={transactions || []}
