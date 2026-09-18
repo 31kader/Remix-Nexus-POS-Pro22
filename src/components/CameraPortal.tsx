@@ -99,7 +99,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
       const fetchCartDrafts = async () => {
         const { data, error } = await supabase
           .from('cart_drafts')
-          .select('id, userId, sessions, activeSessionId, user_id, active_session_id')
+          .select('id, user_id, sessions, active_session_id')
           .limit(10);
         
         if (error) {
@@ -108,10 +108,10 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
         } else {
           const mapped = (data || []).map((draft: any) => {
             const sessionsList = Array.isArray(draft.sessions) ? draft.sessions : [];
-            const activeSessId = draft.activeSessionId || draft.active_session_id;
+            const activeSessId = draft.active_session_id;
             const activeSess = sessionsList.find((s: any) => s.id === activeSessId) || sessionsList[0];
             const items = activeSess ? (activeSess.cart || []) : [];
-            const empId = draft.user_id || draft.userId || "Caisse";
+            const empId = draft.user_id || "Caisse";
             const employeeName = `Caisse (ID: ${empId.slice(-4).toUpperCase()})`;
 
             return {

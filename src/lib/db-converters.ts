@@ -20,7 +20,9 @@ export const TABLE_NAME_MAPPINGS: Record<string, string> = {
   'invoicePatterns': 'invoice_patterns',
   'purchaseOrders': 'purchase_orders',
   'shifts': 'cash_shifts',
+  'cashShifts': 'cash_shifts',
   'cartDrafts': 'cart_drafts',
+  'cashierAlerts': 'cashier_alerts',
   'externalDeliveryRequests': 'external_delivery_requests'
 };
 
@@ -108,7 +110,7 @@ export function convertKeysToCamel(obj: any): any {
 
 // List of standard tables with explicit columns
 export const TABLE_COLUMNS: Record<string, string[]> = {
-  categories: ['id', 'name', 'parent_id', 'level', 'image_url'],
+  categories: ['id', 'name', 'parent_id', 'level', 'image_url', 'created_at', 'updated_at'],
   brands: ['id', 'name', 'logo_url', 'description', 'created_at'],
   products: [
     'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 
@@ -168,7 +170,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'name', 'contact_name', 'phone', 'email', 'address', 'categories', 
     'feed_url', 'feed_format', 'last_sync', 'sync_enabled', 'is_app_user', 
     'has_full_inventory_access', 'balance', 'pre_sale_days', 
-    'delivery_days', 'payment_days', 'planning_notes', 'updated_at'
+    'delivery_days', 'payment_days', 'planning_notes', 'updated_at', 'password_hash'
   ],
   users: [
     'id', 'uid', 'email', 'display_name', 'role', 'join_date', 'password', 'password_hash'
@@ -206,7 +208,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'supplier_id', 'items', 'total_amount', 'total', 'status', 'expected_date', 'notes', 'created_at'
   ],
   stock_adjustments: [
-    'id', 'product_id', 'new_quantity', 'adjustment', 'reason', 'timestamp', 'user_id', 'user_name', 'is_loss'
+    'id', 'product_id', 'new_quantity', 'adjustment', 'reason', 'timestamp', 'user_id', 'user_name', 'is_loss', 'created_at', 'updated_at'
   ],
   supplier_payments: [
     'id', 'supplier_id', 'supplier_name', 'amount', 'method', 'date', 'reference', 'note', 'notes'
@@ -226,7 +228,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   advances: [
     'id', 'employee_id', 'amount', 'date', 'reason', 'status', 'approved_by', 'repayment_date'
   ],
-  invoice_patterns: ['id', 'type', 'prefix', 'suffix', 'digits', 'next_number', 'supplier_name', 'system_supplier_id', 'item_mappings', 'updated_at'],
+  invoice_patterns: ['id', 'type', 'prefix', 'suffix', 'digits', 'next_number', 'supplier_name', 'system_supplier_id', 'item_mappings', 'created_at', 'updated_at'],
   goods_receipt_notes: [
     'id', 'supplier_id', 'date', 'items', 'global_discount', 'global_vat', 'status'
   ]
@@ -446,6 +448,26 @@ export function preparePayload(table: string, id: string, data: any) {
       }
       if (!filtered.role) {
         filtered.role = 'staff';
+      }
+    }
+
+    // Safety checks for online_orders bigint ID to prevent PostgreSQL 400 invalid input syntax
+    if (table === 'online_orders' || table === 'onlineOrders') {
+      if (filtered.id !== undefined && filtered.id !== null) {
+        const numId = Number(filtered.id);
+        if (isNaN(numId) || !Number.isInteger(numId) || numId <= 0) {
+          delete filtered.id;
+        } else {
+          filtered.id = numId;
+        }
+      }
+    }
+
+    // Safety checks for invoice_patterns UUID ID to prevent PostgreSQL 400 invalid UUID syntax
+    if (table === 'invoice_patterns' || table === 'invoicePatterns') {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (filtered.id && !uuidRegex.test(String(filtered.id))) {
+        delete filtered.id;
       }
     }
 

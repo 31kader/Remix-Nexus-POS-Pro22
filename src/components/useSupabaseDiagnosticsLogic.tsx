@@ -250,7 +250,7 @@ export function useSupabaseDiagnosticsLogic() {
       if (prodErr) throw new Error(`Erreur Produits : ${prodErr.message}`);
 
       // 4. Insert Demo Online Orders
-      const { error: orderErr } = await supabase.from('online_orders').upsert(demoOnlineOrders, { onConflict: 'id' });
+      const { error: orderErr } = await supabase.from('online_orders').insert(demoOnlineOrders);
       // We don't throw on order error to avoid blocking the product demo successfully created, but we notify or logs it
       if (orderErr) {
         console.warn("Could not insert demo online orders:", orderErr.message);

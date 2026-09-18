@@ -5,7 +5,7 @@ function isAuthOrPermissionError(err: any): boolean {
 }
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { supabase } from '../supabase';
-import { convertKeysToSnake, preparePayload, TABLE_COLUMNS } from '../lib/db-converters';
+import { convertKeysToSnake, preparePayload, TABLE_COLUMNS, TABLE_NAME_MAPPINGS } from '../lib/db-converters';
 import { useCoreStore } from '../store/useCoreStore';
 import { isNetworkOrTimeoutError, notifyNetworkIssue } from './networkErrorHandler';
 
@@ -190,10 +190,14 @@ export function enqueueSyncBatch(
 ): void {
   let newItems: SyncPayload[] = [];
   if (Array.isArray(tableOrItems)) {
-    newItems = tableOrItems;
+    newItems = tableOrItems.map(item => ({
+      ...item,
+      table: TABLE_NAME_MAPPINGS[item.table] || item.table
+    }));
   } else if (typeof tableOrItems === 'string' && records) {
+    const normTable = TABLE_NAME_MAPPINGS[tableOrItems] || tableOrItems;
     newItems = Object.entries(records).map(([id, val]) => ({
-      table: tableOrItems,
+      table: normTable,
       recordId: id,
       action: 'UPSERT' as const,
       payload: val,
@@ -331,8 +335,9 @@ export function clearSyncQueue(): void {
 
 function sanitizePayloadForSupabase(table: string, payload: any): any {
   if (!payload || typeof payload !== 'object') return payload;
+  const normTable = TABLE_NAME_MAPPINGS[table] || table;
   const recordId = payload.id || '';
-  const cleaned = preparePayload(table, recordId, payload);
+  const cleaned = preparePayload(normTable, recordId, payload);
 
   // Handle specific product constraints (avoid unique constraint violations on empty strings)
   if (table === 'products') {
@@ -446,7 +451,8 @@ export async function processSyncQueue(): Promise<void> {
     // 2. Traitement des suppressions
     for (const item of deleteList) {
       try {
-        const res = await supabase.from(item.table).delete().eq('id', item.recordId);
+        const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
+        const res = await supabase.from(targetTable).delete().eq('id', item.recordId);
         if (!res.error) {
           completedKeys.add(`${item.table}:${item.recordId}`);
         }
@@ -457,13 +463,17 @@ export async function processSyncQueue(): Promise<void> {
 
     // 3. Traitement des entités parentes (Catégories, Marques, Fournisseurs, Utilisateurs)
     const parentTables = ['categories', 'brands', 'suppliers', 'users', 'employees'];
-    const parentItems = queue.filter(item => parentTables.includes(item.table) && item.action !== 'DELETE');
+    const parentItems = queue.filter(item => {
+      const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
+      return parentTables.includes(targetTable) && item.action !== 'DELETE';
+    });
     
     for (const item of parentItems) {
       try {
-        const payload = sanitizePayloadForSupabase(item.table, item.payload);
+        const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
+        const payload = sanitizePayloadForSupabase(targetTable, item.payload);
         if (!payload.id && item.recordId) payload.id = item.recordId;
-        if (item.table === 'users') {
+        if (targetTable === 'users') {
           delete (payload as any).employeeId;
           delete (payload as any).employee_id;
 
@@ -482,12 +492,12 @@ export async function processSyncQueue(): Promise<void> {
             }
           } catch (_) {}
         }
-        let res = await supabase.from(item.table).upsert(payload, { onConflict: 'id' });
+        let res = await supabase.from(targetTable).upsert(payload, { onConflict: 'id' });
         if (!res?.error) {
           completedKeys.add(`${item.table}:${item.recordId || payload.id}`);
         } else {
           // En cas de conflit (ex: 409 sur email ou uid déjà existant pour users), mettre à jour la ligne existante
-          if (item.table === 'users') {
+          if (targetTable === 'users') {
             let recovered = false;
             if (payload.uid) {
               const updatePayload = { ...payload };
@@ -779,31 +789,32 @@ export async function processSyncQueue(): Promise<void> {
     }
 
     // 5. Traitement des Ventes (Transactions) et autres entités
-    const otherItems = queue.filter(item => 
-      !parentTables.includes(item.table) && 
-      item.table !== 'products' && 
-      item.table !== 'stock_adjustments' &&
-      item.table !== 'stockAdjustments' &&
-      !(item.table === 'customers' && completedKeys.has(`${item.table}:${item.recordId || item.payload?.id}`)) &&
-      item.action !== 'DELETE'
-    );
+    const otherItems = queue.filter(item => {
+      const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
+      return !parentTables.includes(targetTable) && 
+        targetTable !== 'products' && 
+        targetTable !== 'stock_adjustments' &&
+        !(targetTable === 'customers' && completedKeys.has(`${item.table}:${item.recordId || item.payload?.id}`)) &&
+        item.action !== 'DELETE';
+    });
 
     if (otherItems.length > 0) {
       const itemsByTable = new Map<string, { payload: any; originalKey: string }[]>();
       for (const item of otherItems) {
-        const payload = sanitizePayloadForSupabase(item.table, item.payload);
+        const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
+        const payload = sanitizePayloadForSupabase(targetTable, item.payload);
         if (!payload.id && item.recordId) payload.id = item.recordId;
         
         // Garantir les timestamps pour les transactions
-        if (item.table === 'transactions') {
+        if (targetTable === 'transactions') {
           if (!payload.created_at && payload.timestamp) payload.created_at = payload.timestamp;
           if (!payload.timestamp && payload.created_at) payload.timestamp = payload.created_at;
         }
 
-        if (!itemsByTable.has(item.table)) {
-          itemsByTable.set(item.table, []);
+        if (!itemsByTable.has(targetTable)) {
+          itemsByTable.set(targetTable, []);
         }
-        itemsByTable.get(item.table)!.push({ payload, originalKey: `${item.table}:${item.recordId || payload.id}` });
+        itemsByTable.get(targetTable)!.push({ payload, originalKey: `${item.table}:${item.recordId || payload.id}` });
       }
 
       for (const [table, records] of itemsByTable.entries()) {
