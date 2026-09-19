@@ -87,8 +87,10 @@ export function InventoryModalsGroup(props: any) {
             handleDelete(id);
           }}
           onMerge={async (group: any) => {
-            const [mainProduct, ...others] = group.products;
-            const totalStock = group.products.reduce((acc: number, p: any) => acc + (p.stock || 0), 0);
+            const safeProducts = group.products || [];
+            if (safeProducts.length < 2) return;
+            const [mainProduct, ...others] = safeProducts;
+            const totalStock = safeProducts.reduce((acc: number, p: any) => acc + (p.stock || 0), 0);
             
             try {
               if (!mainProduct || !mainProduct.id) {

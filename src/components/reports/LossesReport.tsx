@@ -123,7 +123,7 @@ export const LossesReport = React.memo(function LossesReport({
               <ResponsiveContainer width="100%" height={300} minWidth={0} debounce={50}>
                 <PieChart>
                   <Pie
-                    data={lossData.lossByReason}
+                    data={lossData.lossByReason || []}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -131,7 +131,7 @@ export const LossesReport = React.memo(function LossesReport({
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {lossData.lossByReason.map((entry, index) => (
+                    {(lossData.lossByReason || []).map((entry, index) => (
                       <Cell key={`cell-loss-reason-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -152,7 +152,7 @@ export const LossesReport = React.memo(function LossesReport({
             <RotateCcw size={18} className="text-indigo-500" /> Répartition par Catégorie
           </h4>
           <div className="space-y-6 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
-            {lossData.lossByCategory.map((cat, idx) => {
+            {(lossData.lossByCategory || []).map((cat, idx) => {
               const percent = lossData.totalLossValue > 0 ? (cat.value / lossData.totalLossValue) * 100 : 0;
               return (
                 <div key={`cat-loss-rep-${idx}`}>

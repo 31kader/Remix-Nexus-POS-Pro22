@@ -23,8 +23,8 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
   const previewRef = useRef<HTMLDivElement>(null);
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.sku.toLowerCase().includes(search.toLowerCase())
+    (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (p.sku || '').toLowerCase().includes(search.toLowerCase())
   ).slice(0, 10);
 
   const handlePrint = () => {

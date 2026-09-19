@@ -26,8 +26,8 @@ export function BundleItemSearchSelect({
     const searchTerms = search.toLowerCase().trim().split(' ').filter(Boolean);
     if (searchTerms.length === 0) return true;
     return searchTerms.every(term => 
-      p.name.toLowerCase().includes(term) || 
-      p.sku.toLowerCase().includes(term) ||
+      (p.name || '').toLowerCase().includes(term) || 
+      (p.sku || '').toLowerCase().includes(term) ||
       (p.barcode || '').toLowerCase().includes(term) ||
       (p.reference || '').toLowerCase().includes(term)
     );

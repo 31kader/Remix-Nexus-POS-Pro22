@@ -146,7 +146,7 @@ export function ProductMultiExpirySection({
                 };
 
                 setFormData((prev: any) => {
-                  const updatedBatches = [...prev.batches, newBatch];
+                  const updatedBatches = [...(prev.batches || []), newBatch];
                   const totalStock = updatedBatches.reduce((sum, b) => sum + b.stock, 0);
                   return {
                     ...prev,
@@ -167,7 +167,7 @@ export function ProductMultiExpirySection({
           </div>
 
           {/* Batches Table List */}
-          {formData.batches.length === 0 ? (
+          {(!formData.batches || formData.batches.length === 0) ? (
             <div className="p-8 text-center text-white/20 italic border border-dashed border-white/5 rounded-2xl">
               Aucun lot enregistré. Renseignez un lot pour démarrer le suivi multi-DLC.
             </div>
@@ -183,7 +183,7 @@ export function ProductMultiExpirySection({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {formData.batches.map((b, index) => (
+                  {(formData.batches || []).map((b, index) => (
                     <tr key={b.id || index} className="hover:bg-white/[0.01]">
                       <td className="py-3 px-4 font-mono font-bold text-indigo-400">{b.batchNumber}</td>
                       <td className="py-3 px-4 text-white/80">
@@ -195,7 +195,7 @@ export function ProductMultiExpirySection({
                           type="button"
                           onClick={() => {
                             setFormData((prev: any) => {
-                              const filtered = prev.batches.filter((_: any, idx: number) => idx !== index);
+                              const filtered = (prev.batches || []).filter((_: any, idx: number) => idx !== index);
                               const totalStock = filtered.reduce((sum: number, item: any) => sum + item.stock, 0);
                               return {
                                 ...prev,

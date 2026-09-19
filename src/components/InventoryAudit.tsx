@@ -121,8 +121,8 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
   };
 
   const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(search.toLowerCase()) || 
-    p.sku.toLowerCase().includes(search.toLowerCase()) ||
+    (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (p.sku || '').toLowerCase().includes(search.toLowerCase()) ||
     (p.description || '').toLowerCase().includes(search.toLowerCase()) ||
     (p.tags || []).some(tag => tag.toLowerCase().includes(search.toLowerCase()))
   );
