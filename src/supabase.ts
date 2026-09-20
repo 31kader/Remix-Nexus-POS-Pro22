@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { compressImage } from './lib/image-optimizer';
-import { realtimeCircuitBreaker } from './services/RealtimeCircuitBreaker';
+import { realtimeCircuitBreaker, getSafeWebSocketTransport } from './services/RealtimeCircuitBreaker';
 
 export { realtimeCircuitBreaker };
 
@@ -22,6 +22,7 @@ export const supabase = isSupabaseConfigured
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       realtime: {
         timeout: 10000,
+        transport: getSafeWebSocketTransport(realtimeCircuitBreaker),
         reconnectAfterMs: (tries: number) => realtimeCircuitBreaker.getReconnectInterval(tries)
       }
     }) 

@@ -175,3 +175,86 @@ export class RealtimeCircuitBreaker {
 }
 
 export const realtimeCircuitBreaker = new RealtimeCircuitBreaker();
+
+/**
+ * 🛡️ Transport WebSocket résilient qui prévient le spam d'erreurs réseau dans DevTools
+ * lorsque la caisse est hors-ligne ou que le coupe-circuit est actif.
+ */
+export function getSafeWebSocketTransport(circuitBreaker: RealtimeCircuitBreaker): any {
+  return class SafeWebSocket {
+    private ws: WebSocket | null = null;
+    public binaryType: string = 'arraybuffer';
+    public onopen: any = null;
+    public onclose: any = null;
+    public onerror: any = null;
+    public onmessage: any = null;
+
+    constructor(address: string | URL, protocols?: string | string[]) {
+      if (circuitBreaker.isOpen() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        setTimeout(() => {
+          if (typeof this.onclose === 'function') {
+            const ev = typeof CloseEvent !== 'undefined' 
+              ? new CloseEvent('close', { wasClean: true, code: 1000, reason: 'Offline / Circuit Breaker Active' })
+              : ({ wasClean: true, code: 1000, reason: 'Offline / Circuit Breaker Active' } as any);
+            try { this.onclose(ev); } catch (_) {}
+          }
+        }, 50);
+        return;
+      }
+
+      try {
+        const NativeWebSocket = typeof window !== 'undefined' ? window.WebSocket : (globalThis as any).WebSocket;
+        if (!NativeWebSocket) return;
+        
+        const socketInstance: WebSocket = protocols ? new NativeWebSocket(address, protocols) : new NativeWebSocket(address);
+        this.ws = socketInstance;
+        socketInstance.binaryType = 'arraybuffer';
+
+        socketInstance.onopen = (ev: Event) => {
+          circuitBreaker.recordSuccess();
+          if (typeof this.onopen === 'function') this.onopen(ev);
+        };
+        socketInstance.onclose = (ev: CloseEvent) => {
+          if (typeof this.onclose === 'function') this.onclose(ev);
+        };
+        socketInstance.onerror = (ev: Event) => {
+          circuitBreaker.recordFailure('websocket_network_error');
+          if (typeof this.onerror === 'function') this.onerror(ev);
+        };
+        socketInstance.onmessage = (ev: MessageEvent) => {
+          if (typeof this.onmessage === 'function') this.onmessage(ev);
+        };
+      } catch (err) {
+        circuitBreaker.recordFailure('websocket_constructor_error', err);
+        setTimeout(() => {
+          if (typeof this.onclose === 'function') {
+            const ev = typeof CloseEvent !== 'undefined'
+              ? new CloseEvent('close', { wasClean: false, code: 1006, reason: 'Connection failed' })
+              : ({ wasClean: false, code: 1006, reason: 'Connection failed' } as any);
+            try { this.onclose(ev); } catch (_) {}
+          }
+        }, 50);
+      }
+    }
+
+    get readyState(): number {
+      return this.ws ? this.ws.readyState : 3; // 3 = CLOSED
+    }
+
+    get bufferedAmount(): number {
+      return this.ws ? this.ws.bufferedAmount : 0;
+    }
+
+    public send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
+      if (this.ws && this.ws.readyState === 1) { // 1 = OPEN
+        this.ws.send(data);
+      }
+    }
+
+    public close(code?: number, reason?: string): void {
+      if (this.ws) {
+        this.ws.close(code, reason);
+      }
+    }
+  };
+}
