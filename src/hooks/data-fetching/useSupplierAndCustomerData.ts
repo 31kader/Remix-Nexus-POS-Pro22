@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { PurchaseOrder, Transaction, CompanySettings } from '../../types';
 
@@ -65,7 +65,15 @@ export function useSupplierAndCustomerData({
           loadSupplierPOs();
         })
       if (typeof navigator === 'undefined' || navigator.onLine) {
-        channel.subscribe();
+        if (!realtimeCircuitBreaker.isOpen()) {
+          channel.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              realtimeCircuitBreaker.recordSuccess();
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              realtimeCircuitBreaker.recordFailure('public:purchase_orders');
+            }
+          });
+        }
       }
     } else {
       unsubPos = localDb.subscribe('purchaseOrders', (snapshot) => {
@@ -130,7 +138,15 @@ export function useSupplierAndCustomerData({
           loadCustomerTxs();
         })
       if (typeof navigator === 'undefined' || navigator.onLine) {
-        channel.subscribe();
+        if (!realtimeCircuitBreaker.isOpen()) {
+          channel.subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              realtimeCircuitBreaker.recordSuccess();
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              realtimeCircuitBreaker.recordFailure('public:transactions');
+            }
+          });
+        }
       }
     } else {
       unsubTxs = localDb.subscribe('transactions', (snapshot) => {

@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { compressImage } from './lib/image-optimizer';
+import { realtimeCircuitBreaker } from './services/RealtimeCircuitBreaker';
+
+export { realtimeCircuitBreaker };
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
@@ -16,8 +19,39 @@ export const isSupabaseConfigured = (() => {
 })();
 
 export const supabase = isSupabaseConfigured 
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      realtime: {
+        timeout: 10000,
+        reconnectAfterMs: (tries: number) => realtimeCircuitBreaker.getReconnectInterval(tries)
+      }
+    }) 
   : ({} as any);
+
+if (isSupabaseConfigured && supabase?.realtime) {
+  realtimeCircuitBreaker.registerSocketHandlers(
+    () => {
+      try {
+        supabase.realtime.disconnect();
+      } catch (_) {}
+    },
+    () => {
+      try {
+        supabase.realtime.connect();
+      } catch (_) {}
+    }
+  );
+}
+
+export const disconnectRealtime = async (): Promise<void> => {
+  if (!isSupabaseConfigured || !supabase?.realtime) return;
+  try {
+    await supabase.realtime.disconnect();
+  } catch (_) {}
+};
+
+export const reconnectRealtime = (): void => {
+  realtimeCircuitBreaker.reset('manual_request');
+};
 
 export const removeChannelByName = (channelName: string) => {
   if (!isSupabaseConfigured) return;

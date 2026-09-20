@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { supabase, isSupabaseConfigured } from '../supabase';
+import { supabase, isSupabaseConfigured, realtimeCircuitBreaker } from '../supabase';
 
 export interface CustomerDisplayState {
   items: Array<{
@@ -136,7 +136,7 @@ export function broadcastCustomerDisplay(state: CustomerDisplayState): void {
 
   // 5. Diffusion sans fil globale via Supabase Realtime (si connecté au Cloud)
   try {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && !realtimeCircuitBreaker.isOpen()) {
       const channel = supabase.channel('nexus-pos-realtime');
       channel.send({
         type: 'broadcast',

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
 import { 
   Product, Category, Brand, Transaction, Promotion, Customer, Supplier, UserProfile,
   ProductReturn, Expense, StockAdjustment, Purchase, SupplierPayment, DamagedRecord, AuditLog
@@ -526,8 +526,11 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
       const connectRealtime = () => {
         if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        if (realtimeCircuitBreaker.isOpen()) return;
+
         multiplexedChannel.subscribe(async (status: string, err?: Error) => {
           if (status === 'SUBSCRIBED') {
+            realtimeCircuitBreaker.recordSuccess();
             console.log('[Realtime] ✅ Canal unique multiplexé nexus-pos-realtime connecté avec succès.');
             window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'connected' } }));
             
@@ -547,16 +550,21 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             wasDisconnected = true;
-            window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'reconnecting' } }));
-            if (typeof navigator === 'undefined' || navigator.onLine) {
-              console.warn(`[Realtime] Canal nexus-pos-realtime état: ${status}`, err?.message || '');
+            realtimeCircuitBreaker.recordFailure('nexus-pos-realtime', err);
+            if (!realtimeCircuitBreaker.isOpen()) {
+              window.dispatchEvent(new CustomEvent('nexus-realtime-status', { detail: { status: 'reconnecting' } }));
+              if (typeof navigator === 'undefined' || navigator.onLine) {
+                console.warn(`[Realtime] Canal nexus-pos-realtime état: ${status}`, err?.message || '');
+              }
             }
           }
         });
       };
 
       if (typeof navigator === 'undefined' || navigator.onLine) {
-        connectRealtime();
+        if (!realtimeCircuitBreaker.isOpen()) {
+          connectRealtime();
+        }
       }
 
       const handleOnlineRealtime = () => {
@@ -564,6 +572,12 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       };
       window.addEventListener('online', handleOnlineRealtime);
       unsubscribes.push(() => window.removeEventListener('online', handleOnlineRealtime));
+
+      const handleRetryRealtime = () => {
+        connectRealtime();
+      };
+      window.addEventListener('nexus-realtime-retry', handleRetryRealtime);
+      unsubscribes.push(() => window.removeEventListener('nexus-realtime-retry', handleRetryRealtime));
 
       unsubscribes.push(() => {
         if (productUpdateTimeout) clearTimeout(productUpdateTimeout);

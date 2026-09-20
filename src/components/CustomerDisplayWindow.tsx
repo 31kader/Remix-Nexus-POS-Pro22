@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Sparkles, CheckCircle2, ShieldCheck, Heart, Store, Wifi, Radio } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { CompanySettings } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
-import { supabase, isSupabaseConfigured, safeRemoveChannel } from '../supabase';
+import { supabase, isSupabaseConfigured, safeRemoveChannel, realtimeCircuitBreaker } from '../supabase';
 import { getCustomerDisplaySocket } from '../services/customerDisplayService';
 
 interface CustomerDisplayState {
@@ -126,11 +125,16 @@ export const CustomerDisplayWindow: React.FC = () => {
               setIsRealtimeActive(true);
             }
           })
-          .subscribe((status: string) => {
+        if (!realtimeCircuitBreaker.isOpen()) {
+          channel.subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
+              realtimeCircuitBreaker.recordSuccess();
               setIsRealtimeActive(true);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              realtimeCircuitBreaker.recordFailure('customer-display');
             }
           });
+        }
       } catch (_) {}
     }
 

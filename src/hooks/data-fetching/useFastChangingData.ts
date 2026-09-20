@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../database';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
@@ -281,20 +281,31 @@ export function useFastChangingData({
 
       const connectFastChannel = () => {
         if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        if (realtimeCircuitBreaker.isOpen()) return;
+
         fastChannel.subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
+            realtimeCircuitBreaker.recordSuccess();
             console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            realtimeCircuitBreaker.recordFailure('nexus-fast-realtime');
           }
         });
       };
 
       if (typeof navigator === 'undefined' || navigator.onLine) {
-        connectFastChannel();
+        if (!realtimeCircuitBreaker.isOpen()) {
+          connectFastChannel();
+        }
       }
 
       const handleOnlineFast = () => connectFastChannel();
       window.addEventListener('online', handleOnlineFast);
       listeners.push(() => window.removeEventListener('online', handleOnlineFast));
+
+      const handleRetryFast = () => connectFastChannel();
+      window.addEventListener('nexus-realtime-retry', handleRetryFast);
+      listeners.push(() => window.removeEventListener('nexus-realtime-retry', handleRetryFast));
 
       listeners.push(() => safeRemoveChannel(fastChannel));
     }
