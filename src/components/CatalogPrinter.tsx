@@ -86,7 +86,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   // Filtered products list for sidebar addition
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+      const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
         (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()));
       const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
       return matchSearch && matchCat;

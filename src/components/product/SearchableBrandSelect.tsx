@@ -24,8 +24,8 @@ export function SearchableBrandSelect({
   const filteredBrands = brands.filter(b => {
     const searchTerms = search.toLowerCase().trim().split(' ').filter(Boolean);
     if (searchTerms.length === 0) return true;
-    return searchTerms.every(term => b.name.toLowerCase().includes(term));
-  }).sort((a, b) => a.name.localeCompare(b.name));
+    return searchTerms.every(term => (b.name || '').toLowerCase().includes(term));
+  }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   return (
     <div className="relative flex-1">

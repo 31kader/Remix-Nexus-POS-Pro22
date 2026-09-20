@@ -42,7 +42,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
     const trimmed = newGroupName.trim();
     if (!trimmed) return;
     const groups = settings.quickSelectGroups || [];
-    if (groups.some(g => g.name.toLowerCase() === trimmed.toLowerCase())) {
+    if (groups.some(g => (g?.name || '').toLowerCase() === trimmed.toLowerCase())) {
       toast.error('Une catégorie favori portant ce nom existe déjà.');
       return;
     }

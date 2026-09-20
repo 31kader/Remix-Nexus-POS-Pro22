@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { safeGetItems, safeArray } from '../src/lib/utils';
+import { safeGetItems, safeArray, safeLower, safeIncludes } from '../src/lib/utils';
 
 describe('Safe Items & Array Access Robustness Suite', () => {
   describe('safeGetItems utility', () => {
@@ -82,6 +82,41 @@ describe('Safe Items & Array Access Robustness Suite', () => {
 
         const mapped = safeGetItems(brokenTx).map((item: any) => item.name);
         expect(mapped).toEqual([]);
+      }).not.toThrow();
+    });
+  });
+
+  describe('safeLower & safeIncludes String Defensive Suite', () => {
+    it('handles null, undefined, numbers, and objects without throwing', () => {
+      expect(safeLower(null)).toBe('');
+      expect(safeLower(undefined)).toBe('');
+      expect(safeLower('')).toBe('');
+      expect(safeLower('BONJOUR')).toBe('bonjour');
+      expect(safeLower(123)).toBe('123');
+
+      expect(safeIncludes(null, 'test')).toBe(false);
+      expect(safeIncludes(undefined, 'test')).toBe(false);
+      expect(safeIncludes('Coca-Cola 33cl', 'COCA')).toBe(true);
+      expect(safeIncludes('Pain complet', 'pain')).toBe(true);
+      expect(safeIncludes('Pain complet', null)).toBe(true); // empty query matches all
+    });
+
+    it('prevents TypeError on damagedRecords with missing productName or reason (LossReport scenario)', () => {
+      const corruptedDamagedRecords = [
+        { id: 'dmg-1', productId: 'p1', date: '2026-09-20' }, // productName and reason undefined!
+        { id: 'dmg-2', productId: 'p2', productName: null, reason: null, date: '2026-09-20' },
+        { id: 'dmg-3', productId: 'p3', productName: 'Yaourt Pêche', reason: 'Périmé', date: '2026-09-20' }
+      ];
+
+      const search = 'périmé';
+
+      expect(() => {
+        const filtered = corruptedDamagedRecords.filter(r => {
+          const matchesSearch = !search || safeIncludes(r.productName, search) || safeIncludes(r.reason, search);
+          return matchesSearch;
+        });
+        expect(filtered).toHaveLength(1);
+        expect(filtered[0].id).toBe('dmg-3');
       }).not.toThrow();
     });
   });

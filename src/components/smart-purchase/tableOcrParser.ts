@@ -99,7 +99,7 @@ const detectColumns = (rows: TableRow[], imageWidth: number): ColumnDef[] => {
   let headerRowIndex = -1;
 
   for (let i = 0; i < Math.min(rows.length, 10); i++) {
-    const rowText = rows[i].cells.map(c => c.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")).join(' ');
+    const rowText = (rows[i].cells || []).map(c => (c?.text || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")).join(' ');
     const matches = Object.keys(headerKeywords).filter(kw => rowText.includes(kw));
     if (matches.length >= 2) {
       headerRow = rows[i];
@@ -132,7 +132,7 @@ const detectColumns = (rows: TableRow[], imageWidth: number): ColumnDef[] => {
     // Assign roles to merged header zones
     for (let i = 0; i < mergedCells.length; i++) {
       const mc = mergedCells[i];
-      const normText = mc.text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const normText = (mc?.text || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       
       let role: ColumnDef['role'] = 'unknown';
       for (const [kw, r] of Object.entries(headerKeywords)) {

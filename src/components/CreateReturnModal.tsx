@@ -39,7 +39,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
     if (!searchTerm.trim()) return transactions.slice(0, 10);
     const term = searchTerm.toLowerCase();
     return transactions.filter(t => 
-      t.id.toLowerCase().includes(term) || 
+      (t.id || '').toLowerCase().includes(term) || 
       (t.customerName && t.customerName.toLowerCase().includes(term))
     );
   }, [transactions, searchTerm]);
@@ -223,7 +223,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
                   className="p-3 bg-industrial-900 hover:bg-industrial-800 border border-industrial-800 rounded-xl cursor-pointer transition-colors flex items-center justify-between"
                 >
                   <div>
-                    <p className="text-xs font-mono font-bold text-indigo-400">#{tx.id.toUpperCase()}</p>
+                    <p className="text-xs font-mono font-bold text-indigo-400">#{(tx.id || '').toUpperCase()}</p>
                     <p className="text-[10px] text-industrial-500 font-mono">
                       {formatSafe(tx.timestamp || (tx as any).date, 'dd/MM/yyyy HH:mm')} — {tx.customerName || 'Client de passage'}
                     </p>
@@ -247,7 +247,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
             <div className="flex items-center justify-between bg-industrial-900 p-3 rounded-xl border border-industrial-800">
               <div>
                 <p className="text-[10px] font-black text-industrial-500 uppercase">Transaction sélectionnée</p>
-                <p className="text-xs font-mono font-bold text-indigo-400">#{selectedTx.id.toUpperCase()}</p>
+                <p className="text-xs font-mono font-bold text-indigo-400">#{(selectedTx?.id || '').toUpperCase()}</p>
               </div>
               <Button onClick={() => setSelectedTx(null)} className="industrial-button-secondary py-1 text-xs">
                 Changer

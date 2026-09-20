@@ -80,7 +80,7 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
           const txRef = localDb.push('transactions');
           const allProducts = useCoreStore.getState().products || [];
           const enrichedItems = (order.items || []).map((item: any) => {
-            const currentProduct = allProducts.find((p: any) => p.id === (item.productId || item.id) || (item.name && p.name.toLowerCase() === item.name.toLowerCase()));
+            const currentProduct = allProducts.find((p: any) => p.id === (item.productId || item.id) || (item.name && (p.name || '').toLowerCase() === item.name.toLowerCase()));
             return {
               ...item,
               id: item.productId || item.id,

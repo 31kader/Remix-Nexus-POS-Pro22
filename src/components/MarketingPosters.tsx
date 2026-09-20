@@ -172,7 +172,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
                          posterType === 'flash' ? '#fbbf24' : '#0f172a',
       });
       const link = document.createElement('a');
-      link.download = `affiche_${selectedProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`;
+      link.download = `affiche_${(selectedProduct?.name || 'produit').toLowerCase().replace(/[^a-z0-9]+/g, '_')}.png`;
       link.href = dataUrl;
       link.click();
       toast.success("Image téléchargée avec succès !");

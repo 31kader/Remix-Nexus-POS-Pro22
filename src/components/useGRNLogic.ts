@@ -240,9 +240,10 @@ export function useGRNLogic({
     if (!grnSearch) return grns;
     const s = grnSearch.toLowerCase();
     return grns.filter(g => {
+      if (!g) return false;
       const supplierName = suppliers.find(sup => sup.id === g.supplierId)?.name || '';
       return (
-        g.id.toLowerCase().includes(s) ||
+        (g.id || '').toLowerCase().includes(s) ||
         supplierName.toLowerCase().includes(s) ||
         (g.date && g.date.toLowerCase().includes(s))
       );
@@ -253,11 +254,11 @@ export function useGRNLogic({
     const s = searchTerm.toLowerCase().trim();
     if (!s) return null;
     return products.find(p => 
-      p.sku?.toLowerCase() === s || 
-      p.barcode?.toLowerCase() === s ||
-      p.reference?.toLowerCase() === s ||
-      p.id.toLowerCase() === s ||
-      p.name?.toLowerCase() === s
+      p?.sku?.toLowerCase() === s || 
+      p?.barcode?.toLowerCase() === s ||
+      p?.reference?.toLowerCase() === s ||
+      p?.id?.toLowerCase() === s ||
+      p?.name?.toLowerCase() === s
     );
   };
 

@@ -91,7 +91,9 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
     // Try to find a transaction related to this action
     let foundTx: Transaction | null = null;
 
-    if (log.action.toLowerCase().includes('vente') || log.module.toLowerCase() === 'pos' || log.module.toLowerCase() === 'vente') {
+    const act = (log.action || '').toLowerCase();
+    const mod = (log.module || '').toLowerCase();
+    if (act.includes('vente') || mod === 'pos' || mod === 'vente') {
       const logTime = new Date(log.timestamp).getTime();
       
       const candidates = transactions.filter(tx => {

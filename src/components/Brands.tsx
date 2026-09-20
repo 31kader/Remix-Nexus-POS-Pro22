@@ -53,7 +53,7 @@ export function Brands({ brands, onEdit, onDelete, onAdd }: BrandsProps) {
             }
 
             // Eviter les doublons par nom
-            const existing = brands.find(b => b.name.toLowerCase() === nom.toLowerCase());
+            const existing = brands.find(b => (b.name || '').toLowerCase() === nom.toLowerCase());
             if (existing) {
                 failCount++;
                 continue;

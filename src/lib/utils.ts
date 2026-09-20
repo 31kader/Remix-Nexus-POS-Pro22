@@ -189,6 +189,21 @@ export const safeArray = <T = any>(val: any): T[] => {
   return [];
 };
 
+/**
+ * Safely converts any value to lowercase string. Returns empty string if null/undefined.
+ */
+export const safeLower = (val: any): string => {
+  if (val == null) return '';
+  return String(val).toLowerCase();
+};
+
+/**
+ * Safely checks if target contains query (case-insensitive, null-safe).
+ */
+export const safeIncludes = (target: any, query: any): boolean => {
+  return safeLower(target).includes(safeLower(query));
+};
+
 export const getHierarchicalCategories = (categories: Category[], parentId: string | null = null, level: number = 0): (Category & { level: number })[] => {
   let result: (Category & { level: number })[] = [];
   const children = categories.filter(c => (c.parentId || null) === parentId);

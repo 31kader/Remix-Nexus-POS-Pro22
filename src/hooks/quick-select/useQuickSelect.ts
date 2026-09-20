@@ -29,7 +29,7 @@ export const useQuickSelect = () => {
   // Filter products for display in the grid
   const filteredProducts = useMemo(() => {
     return favoriteProducts.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
       
       if (selectedCategoryId === 'all') {

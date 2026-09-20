@@ -99,7 +99,7 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) || 
+      (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
     );
   }, [products, search]);

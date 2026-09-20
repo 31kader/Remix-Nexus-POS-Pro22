@@ -61,7 +61,7 @@ export function useCategoryBrand() {
 
     // Duplicate check
     const duplicate = categories.find(c => 
-      c.name.toLowerCase() === trimmedName.toLowerCase() && 
+      (c.name || '').toLowerCase() === trimmedName.toLowerCase() && 
       c.parentId === (parentCategoryId || null) &&
       c.id !== editingCategory?.id
     );

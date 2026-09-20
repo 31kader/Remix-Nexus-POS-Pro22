@@ -117,7 +117,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
 
   const filteredExpenses = useMemo(() => {
     const raw = expenses.filter(e => {
-      const matchesSearch = e.description.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = !search || (e.description || '').toLowerCase().includes(search.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter;
       return matchesSearch && matchesCategory;
     });

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { DamagedRecord, Product } from '../../../types';
-import { formatSafe } from '../../../lib/utils';
+import { formatSafe, safeIncludes } from '../../../lib/utils';
 
 interface UseLossReportLogicProps {
   damagedRecords: DamagedRecord[];
@@ -24,11 +24,13 @@ export function useLossReportLogic({ damagedRecords, products }: UseLossReportLo
   }, [products]);
 
   const filteredRecords = useMemo(() => {
-    return damagedRecords
+    return (damagedRecords || [])
       .filter(r => {
+        if (!r) return false;
         const product = productsById.get(r.productId);
-        const matchesSearch = r.productName.toLowerCase().includes(search.toLowerCase()) || 
-                             r.reason.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = !search || 
+                             safeIncludes(r.productName, search) || 
+                             safeIncludes(r.reason, search);
         const matchesCategory = selectedCategory === 'all' || (product && product.categoryId === selectedCategory);
         const matchesDate = r.date >= new Date(dateRange.start).toISOString() && 
                            r.date <= new Date(dateRange.end + 'T23:59:59').toISOString();

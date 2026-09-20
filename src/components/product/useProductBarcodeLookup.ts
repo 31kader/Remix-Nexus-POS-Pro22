@@ -79,8 +79,8 @@ export function useProductBarcodeLookup({
             const worldCategories = product.categories.split(',');
             for (const worldCat of worldCategories) {
               const matchedCat = categories.find(c => 
-                c.name.toLowerCase().includes(worldCat.trim().toLowerCase()) || 
-                worldCat.trim().toLowerCase().includes(c.name.toLowerCase())
+                (c.name || '').toLowerCase().includes(worldCat.trim().toLowerCase()) || 
+                worldCat.trim().toLowerCase().includes((c.name || '').toLowerCase())
               );
               if (matchedCat) {
                 setFormData((prev: any) => ({ ...prev, categoryId: matchedCat.id }));

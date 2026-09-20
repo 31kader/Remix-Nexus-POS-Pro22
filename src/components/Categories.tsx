@@ -64,7 +64,7 @@ export function Categories({ categories, onEdit, onDelete, onAdd }: CategoriesPr
             const parentNom = row['Parent_Nom']?.trim();
             
             // Check if category already exists by Name to avoid duplicates?
-            const existing = categories.find(c => c.name.toLowerCase() === nom.toLowerCase());
+            const existing = categories.find(c => (c.name || '').toLowerCase() === nom.toLowerCase());
             if (existing) {
                 failCount++;
                 continue; // Skip existing categories
@@ -74,7 +74,7 @@ export function Categories({ categories, onEdit, onDelete, onAdd }: CategoriesPr
 
             // Si on a un parent_Nom mais pas de parent_Id, on cherche l'ID du parent
             if (!resolvedParentId && parentNom) {
-              const pData = categories.find(c => c.name.toLowerCase() === parentNom.toLowerCase());
+              const pData = categories.find(c => (c.name || '').toLowerCase() === parentNom.toLowerCase());
               if (pData) {
                 resolvedParentId = pData.id;
               }

@@ -176,7 +176,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
     return transactions.filter(tx => {
       // Search filter
       const matchesSearch = 
-        tx.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (tx.id || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
         tx.employeeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tx.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
       

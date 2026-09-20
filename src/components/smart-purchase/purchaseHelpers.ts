@@ -30,7 +30,7 @@ export function filterProducts(
     return (p.name || '').toLowerCase().includes(searchLower) || 
            (p.sku || '').toLowerCase() === searchLower ||
            (p.sku || '').toLowerCase().includes(searchLower) ||
-           p.id.toLowerCase() === searchLower;
+           (p.id || '').toLowerCase() === searchLower;
   });
 }
 

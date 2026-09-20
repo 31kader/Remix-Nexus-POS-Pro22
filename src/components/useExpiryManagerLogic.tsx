@@ -175,7 +175,7 @@ export function useExpiryManagerLogic(props: ExpiryManagerProps) {
         return { ...p, hasExpiryDate: true, daysLeft, expiryStatus, expiryDate: parsed };
       })
       .filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+        const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
                              (p.sku && String(p.sku).toLowerCase().includes(search.toLowerCase())) ||
                              (p.barcode && String(p.barcode).toLowerCase().includes(search.toLowerCase())) ||
                              (p.batchNumber || '').toLowerCase().includes(search.toLowerCase());

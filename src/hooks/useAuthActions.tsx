@@ -152,16 +152,18 @@ export function useAuthActions(
     } catch (error: any) {
       console.error("Online login failed:", error);
       
+      const errCode = error?.code || '';
+      const errMsg = (error?.message || '').toLowerCase();
+      const errName = error?.name || '';
+
       const isNetworkError = 
-        error.code === 'auth/network-request-failed' || 
-        error.code === 'auth/internal-error' || 
-        error.code === 'auth/quota-exceeded' ||
-        (error.message && (
-          error.message.toLowerCase().includes('failed to fetch') ||
-          error.message.toLowerCase().includes('network') ||
-          error.message.toLowerCase().includes('load failed')
-        )) ||
-        error.name === 'TypeError';
+        errCode === 'auth/network-request-failed' || 
+        errCode === 'auth/internal-error' || 
+        errCode === 'auth/quota-exceeded' ||
+        errMsg.includes('failed to fetch') ||
+        errMsg.includes('network') ||
+        errMsg.includes('load failed') ||
+        errName === 'TypeError';
 
       if (isNetworkError) {
         const success = tryOfflineLogin();
@@ -172,10 +174,10 @@ export function useAuthActions(
         recordFailure();
         setAuthError(t("Erreur de réseau (Failed to fetch). Connectez-vous avec de bons identifiants hors-ligne ou vérifiez votre connexion Internet."));
       } else if (
-        error.code === 'auth/invalid-credential' || 
-        (error.message && error.message.toLowerCase().includes('invalid login credentials')) || 
-        error.code === 'invalid_credentials' ||
-        (error.message && error.message.toLowerCase().includes('incorrect'))
+        errCode === 'auth/invalid-credential' || 
+        errCode === 'invalid_credentials' ||
+        errMsg.includes('invalid login credentials') || 
+        errMsg.includes('incorrect')
       ) {
         const success = tryOfflineLogin();
         if (success) {
