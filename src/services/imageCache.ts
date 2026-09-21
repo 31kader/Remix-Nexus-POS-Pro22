@@ -124,7 +124,19 @@ export async function cacheImage(url: string): Promise<string | null> {
       return objUrl;
     }
     
-    const response = await fetch(url, { referrerPolicy: 'no-referrer' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    
+    let response: Response;
+    try {
+      response = await fetch(url, { 
+        referrerPolicy: 'no-referrer',
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const rawBlob = await response.blob();
     
@@ -135,8 +147,12 @@ export async function cacheImage(url: string): Promise<string | null> {
     const objUrl = URL.createObjectURL(compressedBlob);
     setBoundedObjectUrl(url, objUrl);
     return objUrl;
-  } catch (err) {
-    console.warn(`[ImageCache] Failed to fetch and cache image: ${url}`, err);
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      console.warn(`[ImageCache] Timeout d'abandon pour l'image (réseau indisponible): ${url}`);
+    } else {
+      console.warn(`[ImageCache] Failed to fetch and cache image: ${url}`, err?.message || err);
+    }
     return null;
   }
 }

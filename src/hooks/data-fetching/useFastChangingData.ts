@@ -7,6 +7,7 @@ import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
 import { setLocalState, saveStateToStorage } from '../../lib/local-db';
 import { getTerminalId } from '../../services/terminalService';
+import { withNetworkTimeout } from '../../services/networkErrorHandler';
 
 interface useFastChangingDataParams {
   loading: boolean;
@@ -68,29 +69,44 @@ export function useFastChangingData({
         const onlineCols = TABLE_COLUMNS['online_orders'] ? TABLE_COLUMNS['online_orders'].join(',') : '*';
         const shiftsCols = TABLE_COLUMNS['cash_shifts'] ? TABLE_COLUMNS['cash_shifts'].join(',') : '*';
         
-        const onlinePromise = supabase.from('online_orders').select(onlineCols).then(async (res: any) => {
-          if (res.error) {
-            console.warn('[online_orders fetch] Instant load failed, falling back to select("*"):', res.error);
-            return supabase.from('online_orders').select('*');
-          }
-          return res;
-        });
+        const onlinePromise = withNetworkTimeout(
+          supabase.from('online_orders').select(onlineCols).then(async (res: any) => {
+            if (res.error) {
+              console.warn('[online_orders fetch] Instant load failed, falling back to select("*"):', res.error);
+              return supabase.from('online_orders').select('*');
+            }
+            return res;
+          }),
+          5000,
+          { data: null, error: null },
+          'online_orders'
+        );
 
-        const shiftsPromise = supabase.from('cash_shifts').select(shiftsCols).then(async (res: any) => {
-          if (res.error) {
-            console.warn('[cash_shifts fetch] Instant load failed, falling back to select("*"):', res.error);
-            return supabase.from('cash_shifts').select('*');
-          }
-          return res;
-        });
+        const shiftsPromise = withNetworkTimeout(
+          supabase.from('cash_shifts').select(shiftsCols).then(async (res: any) => {
+            if (res.error) {
+              console.warn('[cash_shifts fetch] Instant load failed, falling back to select("*"):', res.error);
+              return supabase.from('cash_shifts').select('*');
+            }
+            return res;
+          }),
+          5000,
+          { data: null, error: null },
+          'cash_shifts'
+        );
 
-        const settingsPromise = supabase.from('settings').select(settingsCols).then(async (res: any) => {
-          if (res.error) {
-            console.warn('[settings fetch] Instant load failed, falling back to select("*"):', res.error);
-            return supabase.from('settings').select('*');
-          }
-          return res;
-        });
+        const settingsPromise = withNetworkTimeout(
+          supabase.from('settings').select(settingsCols).then(async (res: any) => {
+            if (res.error) {
+              console.warn('[settings fetch] Instant load failed, falling back to select("*"):', res.error);
+              return supabase.from('settings').select('*');
+            }
+            return res;
+          }),
+          5000,
+          { data: null, error: null },
+          'settings'
+        );
 
         const [onlineRes, shiftsRes, settingsRes] = await Promise.all([
           onlinePromise,

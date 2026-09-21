@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { Product } from '../../types';
-import { isNetworkOrTimeoutError, notifyNetworkIssue } from '../../services/networkErrorHandler';
+import { isNetworkOrTimeoutError, notifyNetworkIssue, withNetworkTimeout } from '../../services/networkErrorHandler';
 
 let lastFetchTime = 0;
 let consecutiveFailures = 0;
@@ -45,7 +45,12 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
           query = query.gt('updated_at', sinceUpdatedAt);
         }
 
-        batchResult = await query;
+        batchResult = await withNetworkTimeout(
+          query,
+          6000,
+          { error: { message: 'ERR_TIMED_OUT' }, data: null },
+          'Produits'
+        );
 
         if (!batchResult.error) break;
 
@@ -230,7 +235,12 @@ export async function fetchTableFromSupabase<T>(
         
         query = query.range(from, to);
 
-        batchResult = await query;
+        batchResult = await withNetworkTimeout(
+          query,
+          6000,
+          { error: { message: 'ERR_TIMED_OUT' }, data: null },
+          collectionName
+        );
 
         if (!batchResult.error) {
           break; // Success! No error occurred!

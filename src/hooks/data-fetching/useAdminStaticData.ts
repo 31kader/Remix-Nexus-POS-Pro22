@@ -7,6 +7,7 @@ import { CompanySettings, Employee, InvoicePattern, SupplierSync, UserProfile } 
 import { safeOptionalQuery } from '../../lib/supabase/safeOptional';
 import { setLocalState, saveStateToStorage } from '../../lib/local-db';
 import { usePeopleStore } from '../../store/usePeopleStore';
+import { withNetworkTimeout } from '../../services/networkErrorHandler';
 
 interface useAdminStaticDataParams {
   loading: boolean;
@@ -52,27 +53,53 @@ export function useAdminStaticData({
             const settingsCols = TABLE_COLUMNS['settings'] ? TABLE_COLUMNS['settings'].join(',') : '*';
             const patCols = TABLE_COLUMNS['invoice_patterns'] ? TABLE_COLUMNS['invoice_patterns'].join(',') : '*';
             const patDataPromise = userRole === 'admin'
-              ? safeOptionalQuery<any[]>(
-                  'invoice_patterns.fetch',
-                  () => supabase.from('invoice_patterns').select(patCols),
+              ? withNetworkTimeout(
+                  safeOptionalQuery<any[]>(
+                    'invoice_patterns.fetch',
+                    () => supabase.from('invoice_patterns').select(patCols),
+                    [],
+                    { module: 'useAdminStaticData' }
+                  ),
+                  5000,
                   [],
-                  { module: 'useAdminStaticData' }
+                  'invoice_patterns'
                 )
               : Promise.resolve([] as any[]);
 
-            const settingsPromise = supabase.from('settings').select(settingsCols).then(async (res: any) => {
-              if (res.error) {
-                return supabase.from('settings').select('*');
-              }
-              return res;
-            });
+            const settingsPromise = withNetworkTimeout(
+              supabase.from('settings').select(settingsCols).then(async (res: any) => {
+                if (res.error) {
+                  return supabase.from('settings').select('*');
+                }
+                return res;
+              }),
+              5000,
+              { data: null, error: null },
+              'settings'
+            );
+
+            const employeesPromise = withNetworkTimeout(
+              supabase.from('employees').select(empCols),
+              5000,
+              { data: null, error: null },
+              'employees'
+            );
+
+            const syncsPromise = userRole === 'admin' 
+              ? withNetworkTimeout(
+                  supabase.from('supplier_syncs').select(syncsCols),
+                  5000,
+                  { data: null, error: null },
+                  'supplier_syncs'
+                )
+              : Promise.resolve({ data: null, error: null });
 
             const [
               employeesRes, patternsData, syncsRes, settingsRes
             ] = await Promise.all([
-              supabase.from('employees').select(empCols),
+              employeesPromise,
               patDataPromise,
-              userRole === 'admin' ? supabase.from('supplier_syncs').select(syncsCols) : Promise.resolve({ data: null, error: null }),
+              syncsPromise,
               settingsPromise
             ]);
             

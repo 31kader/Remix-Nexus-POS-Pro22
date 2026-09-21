@@ -69,6 +69,9 @@ export const pwaConfig: Partial<VitePWAOptions> = {
           },
           cacheableResponse: {
             statuses: [0, 200]
+          },
+          precacheFallback: {
+            fallbackURL: 'icon.svg'
           }
         }
       }
