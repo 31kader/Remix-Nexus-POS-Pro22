@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Camera, Image, Trash2, CheckSquare } from 'lucide-react';
+import { SafeImage } from '../../ui/SafeImage';
 
 interface TabIdentityProps {
   formData: any;
@@ -67,7 +68,7 @@ export function TabIdentity({
             <div className="relative aspect-video rounded-3xl overflow-hidden border border-dashed border-white/10 bg-black/40 flex flex-col items-center justify-center">
               {formData.idCardRectoUrl ? (
                 <>
-                  <img src={formData.idCardRectoUrl} className="w-full h-full object-cover" alt="ID Card Recto" />
+                  <SafeImage src={formData.idCardRectoUrl} className="w-full h-full object-cover" alt="ID Card Recto" />
                   <button type="button" onClick={() => setFormData((prev: any) => ({...prev, idCardRectoUrl: ''}))} className="absolute top-3 right-3 p-2.5 bg-black/60 rounded-xl text-rose-500 hover:bg-rose-500/20 hover:text-white transition-all cursor-pointer"><Trash2 size={14} /></button>
                 </>
               ) : (
@@ -112,7 +113,7 @@ export function TabIdentity({
             <div className="relative aspect-video rounded-3xl overflow-hidden border border-dashed border-white/10 bg-black/40 flex flex-col items-center justify-center">
               {formData.idCardVersoUrl ? (
                 <>
-                  <img src={formData.idCardVersoUrl} className="w-full h-full object-cover" alt="ID Card Verso" />
+                  <SafeImage src={formData.idCardVersoUrl} className="w-full h-full object-cover" alt="ID Card Verso" />
                   <button type="button" onClick={() => setFormData((prev: any) => ({...prev, idCardVersoUrl: ''}))} className="absolute top-3 right-3 p-2.5 bg-black/60 rounded-xl text-rose-500 hover:bg-rose-500/20 hover:text-white transition-all cursor-pointer"><Trash2 size={14} /></button>
                 </>
               ) : (

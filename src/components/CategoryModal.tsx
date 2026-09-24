@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Modal, Button } from './ui';
+import { SafeImage } from './ui/SafeImage';
 import { Category } from '../types';
 import { getHierarchicalCategories } from '../lib/utils';
 import { Image as ImageIcon, Upload, Link as LinkIcon, Trash2, FolderTree, ChevronDown } from 'lucide-react';
@@ -77,7 +78,7 @@ export function CategoryModal({
               <div className="w-24 h-24 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative group shadow-2xl">
                 {imageUrl ? (
                   <>
-                    <img src={imageUrl} alt="Aperçu" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <SafeImage src={imageUrl} alt="Aperçu" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     <button 
                       onClick={() => setImageUrl('')}
                       className="absolute inset-0 bg-rose-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all backdrop-blur-sm"

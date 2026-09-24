@@ -23,8 +23,8 @@ export function PosSection({ formData, setFormData }: SectionProps) {
               <Zap size={24} />
             </div>
             <div>
-              <p className="text-sm font-bold text-white uppercase tracking-wider">Mode POS Rapide</p>
-              <p className="text-[9px] text-slate-500 uppercase mt-0.5 tracking-widest">Optimisé pour les débits élevés</p>
+              <p className="text-sm font-bold text-white uppercase tracking-wider">Mode Caisse Haute Densité</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 font-medium leading-relaxed">Tableau compact (15-20 articles visibles sans défilement), zéro effet lourd, boutons F1/F2/F4 agrandis</p>
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">

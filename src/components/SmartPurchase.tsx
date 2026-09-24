@@ -21,7 +21,6 @@ import { BarcodeScanner } from './BarcodeScanner';
 import { UpdatePricesView } from './UpdatePricesView';
 import { Modal, Button, Card, ConfirmDialog, SafeImage } from './ui';
 import { scanInvoice } from '../services/geminiService';
-import Tesseract from 'tesseract.js';
 import { toast } from 'sonner';
 import { 
   extractQtyAndPrice, 
@@ -115,6 +114,23 @@ export function SmartPurchase(props: SmartPurchaseProps) {
   const { products, suppliers, patterns, purchases, purchaseOrders, settings, user, categories, supplierPayments, setIsProductModalOpen, setEditingProduct, isProductModalOpen, editingProduct, setViewingPurchaseVoucher } = props;
 
   if (step === 'updatePrices') {
+    if (!lastPurchaseItems || lastPurchaseItems.length === 0 || !lastPurchaseItems.some(i => i.productId)) {
+      return (
+        <Card className="p-12 text-center space-y-6 industrial-card">
+          <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
+            <CheckCircle2 size={48} />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight">Achat enregistré !</h2>
+            <p className="text-industrial-500 mt-2 font-mono text-sm uppercase">Le stock a été mis à jour avec succès.</p>
+          </div>
+          <Button onClick={() => { resetForm(); setStep('upload'); setFile(null); setExtractedData(null); }} className="mx-auto industrial-button-primary">
+            Nouvel achat
+          </Button>
+        </Card>
+      );
+    }
+
     return (
       <div className="relative">
         <div className="blur-[3px] pointer-events-none select-none transition-all duration-500">

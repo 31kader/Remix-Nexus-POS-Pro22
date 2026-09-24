@@ -8,6 +8,8 @@ import { get as getIDB, set as setIDB } from 'idb-keyval';
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  inline?: boolean;
+  onReset?: () => void;
 }
 
 interface State {
@@ -53,6 +55,11 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
+  private handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    this.props.onReset?.();
+  };
+
   private toggleDetails = () => {
     this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
@@ -61,6 +68,25 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
+      }
+
+      if (this.props.inline) {
+        return (
+          <div className="p-6 bg-slate-900 border border-rose-500/30 rounded-2xl text-center space-y-4 m-4">
+            <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20 text-rose-500">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Une erreur est survenue dans cette boîte de dialogue.</p>
+              <p className="text-xs text-slate-400 mt-1">{this.state.error?.message || 'Erreur inconnue'}</p>
+            </div>
+            <div className="flex justify-center gap-2">
+              <Button size="sm" onClick={this.handleReset} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs">
+                Fermer / Réinitialiser
+              </Button>
+            </div>
+          </div>
+        );
       }
 
       return (
@@ -119,4 +145,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+export function ModalErrorBoundary({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
+  return (
+    <ErrorBoundary inline onReset={onClose}>
+      {children}
+    </ErrorBoundary>
+  );
 }

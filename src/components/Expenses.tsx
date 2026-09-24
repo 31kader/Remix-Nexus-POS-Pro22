@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Plus, Search, FileText, Trash2, TrendingDown, 
-  CreditCard, Banknote, RefreshCw 
+  CreditCard, Banknote, RefreshCw, ChevronLeft, ChevronRight 
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { localDb } from '../services/LocalDatabase';
-import { cn, formatSafe, generateUniqueId } from '../lib/utils';
+import { cn, formatSafe, generateUniqueId, formatPrice } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog, SortableHeader } from './ui';
 import { Expense, CompanySettings } from '../types';
 import { toast } from 'sonner';
@@ -23,6 +23,8 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [formData, setFormData] = useState({
     description: '',
@@ -134,6 +136,18 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
     return raw;
   }, [expenses, search, categoryFilter, sortConfig]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredExpenses.length / pageSize));
+  const validPage = Math.min(currentPage, totalPages);
+
+  const displayedExpenses = useMemo(() => {
+    const from = (validPage - 1) * pageSize;
+    return filteredExpenses.slice(from, from + pageSize);
+  }, [filteredExpenses, validPage, pageSize]);
+
   const requestSort = (key: keyof Expense) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -159,7 +173,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="p-6 md:col-span-1 bg-indigo-600 text-white shadow-xl shadow-indigo-500/20">
           <p className="text-xs font-bold uppercase tracking-wider opacity-80">Total Dépenses</p>
-          <h4 className="text-3xl font-black mt-1">{totalExpenses.toFixed(2)} {settings.currency}</h4>
+          <h4 className="text-3xl font-black mt-1">{formatPrice(totalExpenses)} {settings.currency}</h4>
           <div className="mt-4 p-3 bg-white/10 rounded-lg">
             <p className="text-[10px] font-medium opacity-70">Période sélectionnée</p>
             <p className="text-xs font-bold">Toutes les dépenses</p>
@@ -203,7 +217,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {filteredExpenses.map((expense) => (
+            {displayedExpenses.map((expense) => (
               <tr key={expense.id} className="hover:bg-white/5 transition-colors">
                 <td className="p-4 text-sm text-white/60 font-medium">
                   {formatSafe(expense.date, 'dd/MM/yyyy')}
@@ -224,7 +238,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
                   </div>
                 </td>
                 <td className="p-4">
-                  <p className="text-sm font-black text-rose-500 font-mono">-{expense.amount.toFixed(2)} {settings.currency}</p>
+                  <p className="text-sm font-black text-rose-500 font-mono">-{formatPrice(expense.amount)} {settings.currency}</p>
                 </td>
                 <td className="p-4 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -250,6 +264,59 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
             )}
           </tbody>
         </table>
+
+        {/* Pagination bar */}
+        <div className="p-4 border-t border-white/10 bg-white/[0.02] flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/40">Lignes par page :</span>
+            {[50, 100, 200].map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  pageSize === size
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white/5 text-white/40 hover:text-white'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/40">
+              {filteredExpenses.length > 0
+                ? `${(validPage - 1) * pageSize + 1}-${Math.min(validPage * pageSize, filteredExpenses.length)} sur ${filteredExpenses.length}`
+                : '0 sur 0'}
+            </span>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={validPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} /> Précédent
+                </button>
+                <span className="text-xs font-bold text-indigo-400 px-2">
+                  Page {validPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={validPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                >
+                  Suivant <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </Card>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingExpense ? "Modifier la dépense" : "Nouvelle dépense"}>

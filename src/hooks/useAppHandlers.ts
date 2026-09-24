@@ -71,8 +71,8 @@ export function useAppHandlers(
   /**
    * Ouvre la modale d'ajustement de stock pour un produit donné
    */
-  const handleAdjustStock = useCallback((product: Product) => {
-    setEditingProduct(product);
+  const handleAdjustStock = useCallback((product: Product, options?: any) => {
+    setEditingProduct(options ? ({ ...product, _adjustmentOptions: options } as any) : product);
     setIsStockAdjustmentModalOpen(true);
   }, [setEditingProduct, setIsStockAdjustmentModalOpen]);
 

@@ -3,9 +3,6 @@ import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { Product } from '../../types';
 import { isNetworkOrTimeoutError, notifyNetworkIssue, withNetworkTimeout } from '../../services/networkErrorHandler';
 
-let lastFetchTime = 0;
-let consecutiveFailures = 0;
-
 export async function fetchProductsFromSupabase(limit?: number, isLightweight: boolean = true, sinceUpdatedAt?: string): Promise<Product[] | null> {
   if (!isSupabaseConfigured) return null;
   if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
@@ -15,10 +12,12 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
   let from = 0;
   let hasMore = true;
 
-  // Essential columns that exist across all schema versions (image_url now contains lightweight Storage CDN links)
+  // Colonnes essentielles optimisées pour la caisse et la gestion (allégées pour 11 700 articles)
   const CORE_COLUMNS = [
     'id', 'name', 'barcode', 'sku', 'reference', 'image_url',
-    'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 'stock', 'min_stock', 'category_id', 'brand_id', 'supplier', 'unit', 'status', 'is_bundle', 'show_in_pos', 'damaged_stock', 'expiration_date', 'batch_number', 'location', 'created_at', 'updated_at', 'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'
+    'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 'stock', 'min_stock', 
+    'category_id', 'brand_id', 'supplier', 'unit', 'status', 'is_bundle', 'show_in_pos', 
+    'expiration_date', 'batch_number', 'updated_at', 'is_quick_select'
   ];
   let activeCols = [...CORE_COLUMNS];
 
@@ -111,7 +110,6 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
       }
     }
 
-    consecutiveFailures = 0;
     const finalCamelProducts = allProducts
       .map(p => convertKeysToCamel(p) as Product)
       .filter(p => p && p.id);
@@ -181,12 +179,12 @@ export async function fetchTableFromSupabase<T>(
     let from = 0;
     let hasMore = true;
 
-    // Si limit est spécifié (ex: transactions 500, expenses 50), on le respecte
-    // Pour customers et suppliers sans limit : plafond de sécurité à 2000 pour éviter OOM
+    // Pour customers, suppliers, transactions, etc. sans limit : plafond de sécurité à 2000 pour éviter OOM
     const smallStaticTables = ['categories', 'brands', 'settings', 'promotions', 'users', 'employees', 'vouchers', 'invoice_patterns'];
+    const largeVolumeTables = ['customers', 'suppliers', 'transactions', 'returns', 'expenses', 'audit_logs', 'auditLogs', 'stock_adjustments', 'stockAdjustments'];
     const maxTarget = limit !== undefined 
       ? limit 
-      : (smallStaticTables.includes(collectionName) ? 500 : (collectionName === 'customers' || collectionName === 'suppliers' ? 2000 : 100));
+      : (largeVolumeTables.includes(collectionName) ? 2000 : 500);
 
     while (hasMore) {
       const currentBatchSize = Math.min(PAGE_SIZE, maxTarget - allRecords.length);

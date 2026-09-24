@@ -176,8 +176,9 @@ export async function loadInitialState() {
   try {
     const isSplit = await getIDB('nexus_db_split_v1');
     if (isSplit) {
+      // Produits exclus : gérés directement et sans duplication par nexus_products_cache et useCoreStore
       const tables = [
-        'products', 'categories', 'brands', 'promotions', 'patterns',
+        'categories', 'brands', 'promotions', 'patterns',
         'transactions', 'purchase_orders', 'returns', 'online_orders', 'cash_shifts',
         'customers', 'suppliers', 'employees', 'users', 'stock_adjustments',
         'audits', 'damaged_items', 'supplier_syncs', 'attendance', 'purchases',

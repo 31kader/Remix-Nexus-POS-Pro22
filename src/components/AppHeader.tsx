@@ -63,23 +63,38 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   toast
 }) => {
   const [isPinLockOpen, setIsPinLockOpen] = React.useState(false);
+  const getTabTitle = (tab: string) => {
+    const labels: Record<string, string> = {
+      checkout: isMobile ? 'POS' : 'Terminal de Vente',
+      inventory: 'Inventaire & Catalogue',
+      customers: 'Fichier Clients',
+      suppliers: 'Fournisseurs',
+      smart_purchase: 'Approvisionnement & Achats',
+      transactions: 'Historique des Ventes',
+      reports: 'Rapports & Statistiques',
+      expenses: 'Dépenses & Charges',
+      employees: 'Personnel & Pointage',
+      settings: 'Paramètres Système',
+      catalog_printer: 'Impression Catalogue A4',
+      label_printer: 'Étiquettes & Codes-Barres',
+    };
+    return labels[tab] || tab.toUpperCase();
+  };
+
   return (
-    <header className="h-20 border-b px-6 sm:px-10 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-[#0a0c12]/95 border-slate-200 dark:border-slate-800 sticky top-0 z-[60] shadow-sm">
-      <div className="flex items-center gap-6">
+    <header className="h-14 border-b px-4 sm:px-6 flex items-center justify-between flex-shrink-0 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 sticky top-0 z-[60]">
+      <div className="flex items-center gap-4">
         {isMobile && (
           <button 
             onClick={() => setIsMobileOverlayOpen(true)}
-            className="p-3 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-all active:scale-90"
+            className="p-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700"
           >
-            <Menu size={20} />
+            <Menu size={18} />
           </button>
         )}
-        <div className="flex flex-col">
-          <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400/60 uppercase tracking-[0.3em] mb-0.5">Navigation Active</p>
-          <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white italic">
-            {activeTab === 'checkout' ? (isMobile ? 'POS' : 'Terminal de Vente') : activeTab === 'dashboard' ? 'Analytics Pro' : activeTab.toUpperCase()}
-          </h2>
-        </div>
+        <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+          {getTabTitle(activeTab)}
+        </h2>
 
         {lowStockProducts.length > 0 && (
           <button 

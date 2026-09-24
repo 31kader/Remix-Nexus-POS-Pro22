@@ -200,7 +200,6 @@ return () => window.removeEventListener('resize', checkMobile);
     setCurrentPage(1);
   }, [search, selectedCategories, selectedSupplier, selectedBrand, statusFilter, stockLevelFilter, dateRange]);
   const {
-    generateLowStockOrder,
     handleDelete,
     confirmDelete,
     handleCSVImport,
@@ -319,7 +318,6 @@ return () => window.removeEventListener('resize', checkMobile);
       setEditingProduct={setEditingProduct}
       setIsProductModalOpen={setIsProductModalOpen}
       isProcessing={isProcessing}
-      generateLowStockOrder={generateLowStockOrder}
       handleCSVImport={handleCSVImport}
       productTabProps={productTabProps}
       stockAdjustments={stockAdjustments}

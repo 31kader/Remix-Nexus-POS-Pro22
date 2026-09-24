@@ -16,13 +16,13 @@ export const CheckoutControlsPanel: React.FC<any> = ({
   onClose
 }) => {
   return (
-    <div id="checkout-panel" className="w-full lg:w-96 shrink-0 flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
+    <div id="checkout-panel" className="w-full lg:w-96 shrink-0 flex flex-col bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
       {onClose && (
-        <div className="hidden lg:flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 select-none">
+        <div className="hidden lg:flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 select-none">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Panneau Caisse</span>
           <button
             onClick={onClose}
-            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Masquer le panneau de paiement"
           >
             <span>Réduire</span>
@@ -73,6 +73,10 @@ export const CheckoutControlsPanel: React.FC<any> = ({
         globalDiscount={globalDiscount}
         setGlobalDiscount={setGlobalDiscount}
         editingTransaction={editingTransaction}
+        receivedAmount={receivedAmount}
+        setReceivedAmount={setReceivedAmount}
+        keepExcessInBalance={keepExcessInBalance}
+        setKeepExcessInBalance={setKeepExcessInBalance}
       />
     </div>
   );

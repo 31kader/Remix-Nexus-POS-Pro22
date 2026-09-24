@@ -19,7 +19,6 @@ interface InventoryContentProps {
   setEditingProduct: (p: any) => void;
   setIsProductModalOpen: (v: boolean) => void;
   isProcessing: boolean;
-  generateLowStockOrder: () => void;
   handleCSVImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
   productTabProps: any;
   stockAdjustments: any[];
@@ -41,7 +40,6 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
   setEditingProduct,
   setIsProductModalOpen,
   isProcessing,
-  generateLowStockOrder,
   handleCSVImport,
   productTabProps,
   stockAdjustments,
@@ -67,7 +65,6 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
         onAddProduct={() => { setEditingProduct(null); setIsProductModalOpen(true); }}
         onExportExcel={onExportExcel || (() => productTabProps.onExportExcel?.())}
         onCSVImport={handleCSVImport}
-        onLowStockOrder={generateLowStockOrder}
         isProcessing={isProcessing}
       />
 

@@ -43,7 +43,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
   const { expiringProducts, lowStockProducts } = useProductStats();
 
   return (
-    <div className="flex h-screen text-slate-100 overflow-hidden font-sans bg-[#05070a]">
+    <div className="flex h-screen text-slate-100 overflow-hidden font-sans bg-zinc-950">
       <Sidebar 
         user={user}
         profile={profile}

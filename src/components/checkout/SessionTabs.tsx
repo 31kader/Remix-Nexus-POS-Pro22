@@ -1,7 +1,7 @@
 import React, { Dispatch, SetStateAction, MouseEvent } from 'react';
 import { Plus, ShoppingCart, X, RotateCcw, Star, CreditCard, Tv, Edit3 } from 'lucide-react';
 import { POSSession } from '../../types';
-import { cn } from '../../lib/utils';
+import { cn, formatPrice } from '../../lib/utils';
 
 export interface SessionTabsProps {
   posSessions: POSSession[];
@@ -98,7 +98,7 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
                       ? "bg-amber-200 dark:bg-amber-800/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/50"
                       : "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30"
                 )}>
-                  {cartCount} • {cartTotal.toFixed(0)}
+                  {cartCount} • {formatPrice(cartTotal, 0)}
                 </span>
               )}
 

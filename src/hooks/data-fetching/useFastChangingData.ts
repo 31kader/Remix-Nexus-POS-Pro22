@@ -116,8 +116,9 @@ export function useFastChangingData({
         
         if (!isSubscribed) return;
         
-        if (onlineRes.data) {
-          const onlineData = onlineRes.data.map((item: any) => {
+        const onlineDataRaw = (onlineRes as any)?.data;
+        if (Array.isArray(onlineDataRaw)) {
+          const onlineData = onlineDataRaw.map((item: any) => {
             if (item.items && typeof item.items === 'string') {
               try { item.items = JSON.parse(item.items); } catch(e) {}
             }
@@ -127,16 +128,18 @@ export function useFastChangingData({
           idbSet('nexus_online_orders_cache', onlineData).catch(err => console.warn('[IDB Error]', err));
         }
         
-        if (shiftsRes.data) {
-          const shiftsData = shiftsRes.data.map((item: any) => convertKeysToCamel(item) as CashShift);
+        const shiftsDataRaw = (shiftsRes as any)?.data;
+        if (Array.isArray(shiftsDataRaw)) {
+          const shiftsData = shiftsDataRaw.map((item: any) => convertKeysToCamel(item) as CashShift);
           shiftsData.sort((a: any, b: any) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
           setShifts(shiftsData);
           setActiveShift(findActiveShiftForTerminal(shiftsData));
           idbSet('nexus_cash_shifts_cache', shiftsData).catch(err => console.warn('[IDB Error]', err));
         }
         
-        if (settingsRes.data && settingsRes.data.length > 0) {
-          const companyRow = settingsRes.data.find((r: any) => r.id === 'company') || settingsRes.data[0];
+        const settData = (settingsRes as any)?.data;
+        if (Array.isArray(settData) && settData.length > 0) {
+          const companyRow = settData.find((r: any) => r.id === 'company') || settData[0];
           if (companyRow) {
             const jsonFields = ['site_locations', 'role_kpis', 'notifications', 'operational_costs', 'delivery_zones', 'api_keys', 'available_taxes', 'loyalty_tiers', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
             jsonFields.forEach(field => {

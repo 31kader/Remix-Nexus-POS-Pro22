@@ -67,7 +67,7 @@ export function PurchaseSummaryFooter({
         </div>
         <div className="flex gap-4">
           <Button 
-            onClick={() => printPurchaseOrder({ id: 'DRAFT', items: cart, supplierName: suppliers.find(s => s.id === selectedSupplierId)?.name || 'Inconnu', total: cart.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0), date: new Date().toISOString() }, settings)}
+            onClick={() => printPurchaseOrder({ id: 'DRAFT', items: cart, supplierName: suppliers.find(s => s.id === selectedSupplierId)?.name || 'Inconnu', total: (cart || []).reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)), 0), date: new Date().toISOString() }, settings)}
             className="flex-1 gap-3 py-4 bg-industrial-800 text-industrial-300 border border-industrial-700 rounded-2xl hover:bg-industrial-700 font-black uppercase text-[10px] tracking-widest shadow-none"
           >
             <Printer size={18}/> Imprimer PO
@@ -79,7 +79,7 @@ export function PurchaseSummaryFooter({
       <div className="space-y-4 bg-industrial-900 border border-industrial-800 p-8 rounded-3xl shadow-xl">
         <div className="flex justify-between text-[10px] font-black uppercase text-industrial-500 tracking-widest">
           <span>Sous-total HT</span>
-          <span className="text-white font-mono">{cart.reduce((sum, item) => sum + (item.costPrice * item.quantity * (1 - (item.discount || 0) / 100)), 0).toFixed(2)} {settings.currency}</span>
+          <span className="text-white font-mono">{((cart || []).reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0) * (1 - (Number(item.discount) || 0) / 100)), 0) || 0).toFixed(2)} {settings?.currency || 'DA'}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-[10px] font-black text-industrial-500 uppercase tracking-widest">Remise Globale (%)</span>
@@ -103,7 +103,7 @@ export function PurchaseSummaryFooter({
           <div className="flex justify-between mb-6">
             <span className="font-black text-industrial-500 uppercase tracking-widest text-xs">Total TTC Final</span>
             <span className="font-black text-4xl text-white tracking-tighter font-mono">
-              {(cart.reduce((sum, item) => sum + ((item.costPrice||0) * (item.quantity||0) * (1 - (item.discount || 0) / 100) * (1 + (item.taxRate || 0) / 100)), 0) * (1 - (globalDiscount||0) / 100) * (1 + (globalTax||0) / 100)).toFixed(2)}
+              {(((cart || []).reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0) * (1 - (Number(item.discount) || 0) / 100) * (1 + (Number(item.taxRate) || 0) / 100)), 0) * (1 - (Number(globalDiscount) || 0) / 100) * (1 + (Number(globalTax) || 0) / 100)) || 0).toFixed(2)}
             </span>
           </div>
           <Button 

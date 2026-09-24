@@ -203,14 +203,15 @@ export default function App() {
   const getInitialTab = useCallback(() => {
     if (profile?.role === 'camera_agent') return 'camera';
     const hash = window.location.hash.replace('#', '');
-    if (!hash || hash.includes('=') || hash.includes('&')) return 'checkout';
+    if (!hash || hash.includes('=') || hash.includes('&') || hash === 'dashboard' || hash === 'ai_assistant') return 'checkout';
     return hash;
   }, [profile]);
 
   const [activeTab, setActiveTabState] = useState(getInitialTab());
   const setActiveTab = useCallback((tab: string) => {
-    window.location.hash = tab;
-    setActiveTabState(tab);
+    const targetTab = (tab === 'dashboard' || tab === 'ai_assistant') ? 'checkout' : tab;
+    window.location.hash = targetTab;
+    setActiveTabState(targetTab);
   }, []);
 
   // Synchronisation dynamique avec la barre d'adresse pour support multi-fenêtres & multi-onglets
@@ -218,12 +219,16 @@ export default function App() {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash && !hash.includes('=') && !hash.includes('&')) {
-        setActiveTabState(hash);
+        if (hash === 'dashboard' || hash === 'ai_assistant') {
+          setActiveTab('checkout');
+        } else {
+          setActiveTabState(hash);
+        }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [setActiveTab]);
 
   // --- Panier (Sélecteurs d'action ciblés et stables : évite tout re-render de l'App) ---
   const loadTransactionToCart = useCartStore(s => s.loadTransactionToCart);
@@ -414,6 +419,8 @@ export default function App() {
         <TabRenderer
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
           setIsPOSCustomerModalOpen={setIsPOSCustomerModalOpen}
           setIsProductModalOpen={setIsProductModalOpen}
           setEditingProduct={setEditingProduct}

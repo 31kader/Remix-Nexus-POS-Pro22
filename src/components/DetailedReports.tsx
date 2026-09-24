@@ -1,27 +1,30 @@
 import React, { useState, memo, lazy, Suspense, useMemo } from 'react';
 import { 
   Download, 
-  Trash2,
-  Brain,
-  Zap
+  BarChart3,
+  TrendingUp,
+  Layers,
+  Award,
+  Wallet,
+  Boxes,
+  AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn, formatSafe } from '../lib/utils';
-import { Button } from './ui';
 
 // Lazy loading des sous-rapports pour alléger le bundle initial (Règle GEMINI.md)
-const AIAssistant = lazy(() => import('./AIAssistant').then(m => ({ default: m.AIAssistant })));
 const AccountingChartsReport = lazy(() => import('./reports/AccountingChartsReport').then(m => ({ default: m.AccountingChartsReport })));
 const ProfitsReport = lazy(() => import('./reports/ProfitsReport').then(m => ({ default: m.ProfitsReport })));
 const FidelityStatsReport = lazy(() => import('./reports/FidelityStatsReport').then(m => ({ default: m.FidelityStatsReport })));
 const CashflowReport = lazy(() => import('./reports/CashflowReport').then(m => ({ default: m.CashflowReport })));
 const StockValueReport = lazy(() => import('./reports/StockValueReport').then(m => ({ default: m.StockValueReport })));
 const LossesReport = lazy(() => import('./reports/LossesReport').then(m => ({ default: m.LossesReport })));
+const GroupedSalesAndBasketsReport = lazy(() => import('./reports/GroupedSalesAndBasketsReport').then(m => ({ default: m.GroupedSalesAndBasketsReport })));
 
 const reportFallback = (
-  <div className="flex flex-col items-center justify-center min-h-[300px] p-8 space-y-4">
-    <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+  <div className="flex flex-col items-center justify-center min-h-[350px] p-8 space-y-3 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+    <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <p className="text-xs font-semibold text-zinc-400">
       Chargement du rapport…
     </p>
   </div>
@@ -58,7 +61,7 @@ export const DetailedReports = memo(function DetailedReports({
   setEditingProduct,
   setIsProductModalOpen
 }: DetailedReportsProps) {
-  const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'cashflow' | 'fidelity_stats' | 'stock_value' | 'ai_assistant' | 'losses'>('charts');
+  const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'baskets' | 'fidelity_stats' | 'cashflow' | 'stock_value' | 'losses'>('charts');
   const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
 
   const exportAccountingCSV = () => {
@@ -85,54 +88,71 @@ export const DetailedReports = memo(function DetailedReports({
   };
 
   const totalRevenue = useMemo(() => {
-    return transactions.reduce((sum, t) => sum + (t.status === 'returned' ? 0 : (t.total || 0)), 0);
+    return transactions.reduce((sum, t) => sum + (t.status === 'returned' || t.status === 'cancelled' ? 0 : (t.total || 0)), 0);
   }, [transactions]);
 
+  const reportTabs = [
+    { id: 'charts', label: "Vue d'ensemble", icon: BarChart3 },
+    { id: 'profits', label: "Bénéfices & Marges", icon: TrendingUp },
+    { id: 'baskets', label: "Paniers & Groupés", icon: Layers, highlight: true },
+    { id: 'cashflow', label: "Trésorerie & Flux", icon: Wallet },
+    { id: 'fidelity_stats', label: "Fidélité Clients", icon: Award },
+    { id: 'stock_value', label: "Valeur Stock", icon: Boxes },
+    { id: 'losses', label: "Pertes & Rebuts", icon: AlertTriangle, danger: true }
+  ];
+
   return (
-    <div className="space-y-12 text-slate-100 p-2 animate-in fade-in duration-700">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8">
-        <div className="border-l-4 border-indigo-600 pl-8 space-y-2">
-          <h3 className="text-4xl font-black text-white uppercase tracking-tighter italic leading-none">ANALYTICS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">OPERATIONS</span></h3>
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] italic">Business Intelligence & Financial Metrics</p>
+    <div className="space-y-6 text-zinc-100 p-1 md:p-3 animate-in fade-in duration-300">
+      {/* Header moderne, sobre et épuré */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
+            <BarChart3 className="text-indigo-400" size={24} />
+            Rapports & Statistiques
+          </h2>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Analyse financière en temps réel, rentabilité par panier et flux de trésorerie.
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex bg-black/40 p-2 rounded-[2rem] border border-white/5 shadow-2xl ring-1 ring-white/10 backdrop-blur-3xl overflow-x-auto no-scrollbar">
-            {[
-              { id: 'charts', label: 'METRICS' },
-              { id: 'profits', label: 'MARGINS' },
-              { id: 'fidelity_stats', label: 'LOYALTY' },
-              { id: 'cashflow', label: 'CASHFLOW' },
-              { id: 'stock_value', label: 'ASSETS' },
-              { id: 'losses', label: 'LOSSES', danger: true },
-              { id: 'ai_assistant', label: 'AI_AGENT', accent: true }
-            ].map((tab: any) => (
-              <button
-                key={tab.id}
-                onClick={() => setReportsTab(tab.id)}
-                className={cn(
-                  "px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap active:scale-95 italic",
-                  reportsTab === tab.id
-                    ? tab.danger ? "bg-rose-600 text-white shadow-neon-rose border border-rose-400" : tab.accent ? "bg-indigo-600 text-white shadow-neon-indigo border border-indigo-400" : "bg-white/10 text-white shadow-2xl border border-white/20"
-                    : "text-slate-600 hover:text-white hover:bg-white/5"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={exportAccountingCSV}
-            className="group relative overflow-hidden flex items-center justify-center gap-4 px-10 py-5 bg-white text-black font-black uppercase tracking-[0.2em] text-[11px] rounded-[1.75rem] transition-all hover:shadow-neon-indigo active:scale-95 shadow-2xl border border-white/10 italic"
-          >
-            <div className="absolute inset-0 bg-indigo-600 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
-            <Download size={20} className="relative z-10 transition-colors group-hover:text-white" strokeWidth={3} />
-            <span className="relative z-10 transition-colors group-hover:text-white">EXTRACT DATA</span>
-          </button>
-        </div>
+        <button
+          onClick={exportAccountingCSV}
+          className="self-start md:self-auto flex items-center gap-2 px-3.5 py-2 bg-zinc-800 hover:bg-zinc-700 active:scale-95 text-zinc-200 border border-zinc-700/80 rounded-xl text-xs font-medium transition-all cursor-pointer shadow-sm"
+          title="Exporter l'historique comptable au format CSV"
+        >
+          <Download size={15} className="text-indigo-400" />
+          <span>Exporter CSV</span>
+        </button>
       </div>
 
+      {/* Barre d'onglets compacte, sobre et ultra-fluide */}
+      <div className="flex flex-wrap items-center gap-1.5 p-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-x-auto no-scrollbar">
+        {reportTabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = reportsTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setReportsTab(tab.id as any)}
+              className={cn(
+                "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer",
+                isActive
+                  ? tab.danger
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : tab.highlight
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-zinc-800 text-white shadow-sm border border-zinc-700"
+                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+              )}
+            >
+              <Icon size={14} className={isActive ? "text-white" : tab.danger ? "text-rose-400" : tab.highlight ? "text-indigo-400" : "text-zinc-400"} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contenu du rapport actif */}
       <Suspense fallback={reportFallback}>
         {reportsTab === 'charts' ? (
           <AccountingChartsReport 
@@ -157,6 +177,14 @@ export const DetailedReports = memo(function DetailedReports({
               }
             }}
           />
+        ) : reportsTab === 'baskets' ? (
+          <GroupedSalesAndBasketsReport 
+            transactions={transactions}
+            products={products}
+            categories={categories}
+            settings={settings}
+            employees={employees}
+          />
         ) : reportsTab === 'fidelity_stats' ? (
           <FidelityStatsReport 
             transactions={transactions}
@@ -177,7 +205,7 @@ export const DetailedReports = memo(function DetailedReports({
             categories={categories}
             settings={settings}
           />
-        ) : reportsTab === 'losses' ? (
+        ) : (
           <LossesReport 
             stockAdjustments={stockAdjustments}
             products={products}
@@ -185,16 +213,9 @@ export const DetailedReports = memo(function DetailedReports({
             settings={settings}
             totalRevenue={totalRevenue}
           />
-        ) : (
-          <AIAssistant 
-            products={products}
-            transactions={transactions}
-            expenses={expenses}
-            settings={settings}
-            stockAdjustments={stockAdjustments}
-          />
         )}
       </Suspense>
     </div>
   );
 });
+

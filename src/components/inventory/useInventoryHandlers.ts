@@ -1,7 +1,7 @@
 import { localDb } from '../../services/LocalDatabase';
 import { logAction } from '../../lib/utils';
 import Papa from 'papaparse';
-import { Product, Purchase, CompanySettings } from '../../types';
+import { Product, CompanySettings } from '../../types';
 import { toast } from 'sonner';
 
 export function useInventoryHandlers({
@@ -18,44 +18,6 @@ export function useInventoryHandlers({
   productToDelete
 }: any) {
   
-  const generateLowStockOrder = async () => {
-    const lowStockItems = products.filter((p: Product) => p.stock <= (p.minStock || 5));
-    if (lowStockItems.length === 0) {
-      toast.info("Aucun produit en stock faible.");
-      return;
-    }
-    
-    setIsProcessing(true);
-    try {
-      const purchaseData: Omit<Purchase, 'id'> = {
-        supplierId: 'low-stock-auto',
-        supplierName: 'Auto-Réapprovisionnement',
-        items: lowStockItems.map((p: Product) => ({
-          productId: p.id,
-          name: p.name,
-          quantity: (p.minStock || 5) * 2 - p.stock,
-          costPrice: p.costPrice || 0,
-          taxes: 0,
-        })),
-        total: lowStockItems.reduce((sum: number, p: Product) => sum + ((p.costPrice || 0) * ((p.minStock || 5) * 2 - p.stock)), 0),
-        date: new Date().toISOString(),
-        status: 'draft',
-        paymentStatus: 'unpaid',
-        paidAmount: 0,
-        updatedAt: new Date().toISOString()
-      };
-      const newId = Math.random().toString(36).substring(2, 10);
-      await localDb.insert(`purchases/${newId}`, purchaseData);
-      toast.success("Commande automatique générée dans les achats (Brouillon).");
-      setActiveTab('purchases');
-    } catch (error: any) {
-      console.error("Error creating purchase:", error);
-      toast.error("Erreur lors de la création de la commande: " + (error?.message || "Erreur inconnue"));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const handleDelete = (id: string) => {
     setProductToDelete(id);
     setIsDeleteConfirmOpen(true);
@@ -263,7 +225,6 @@ export function useInventoryHandlers({
   };
 
   return {
-    generateLowStockOrder,
     handleDelete,
     confirmDelete,
     handleCSVImport,

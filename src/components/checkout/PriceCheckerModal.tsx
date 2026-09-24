@@ -49,7 +49,7 @@ export function PriceCheckerModal({
         <div className="grid grid-cols-2 gap-4">
           <div className="p-6 bg-emerald-500/10 rounded-[2rem] border border-emerald-500/20 text-center shadow-neon-cyan animate-pulse-subtle">
             <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Prix Final</p>
-            <p className="text-3xl font-black text-emerald-400 tracking-tighter">{priceCheckResult.price.toFixed(2)} <span className="text-xs uppercase tracking-widest opacity-60">{settings.currency}</span></p>
+            <p className="text-3xl font-black text-emerald-400 tracking-tighter">{Number(priceCheckResult?.price || 0).toFixed(2)} <span className="text-xs uppercase tracking-widest opacity-60">{settings?.currency || 'DA'}</span></p>
           </div>
           <div className="p-6 bg-indigo-500/10 rounded-[2rem] border border-indigo-500/20 text-center shadow-neon-indigo">
             <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Stock Dispo</p>

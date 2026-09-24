@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
-import { enqueueStockAdjustment } from '../services/SyncService';
+import { enqueueStockAdjustment, enqueueSync } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { Product, GRNItem, GoodsReceiptNote, CompanySettings } from '../types';
@@ -138,12 +138,12 @@ export function useGRNLogic({
 
       const grnRecord: GoodsReceiptNote = {
         id: grnId,
-        supplierId,
+        supplierId: supplierId || '',
         date: nowIso,
-        items,
-        globalDiscount,
-        globalVat,
-        status
+        items: items || [],
+        globalDiscount: Number(globalDiscount) || 0,
+        globalVat: Number(globalVat) || 0,
+        status: status || 'draft'
       };
 
       await localDb.insert(`goodsReceiptNotes/${grnId}`, grnRecord);
@@ -151,17 +151,22 @@ export function useGRNLogic({
       // Supabase Direct Sync
       if (isSupabaseConfigured) {
         try {
-          await supabase.from('goods_receipt_notes').upsert({
+          const supabasePayload = {
             id: grnId,
-            supplier_id: supplierId,
+            supplier_id: supplierId || null,
             date: nowIso,
-            items: items,
-            global_discount: globalDiscount,
-            global_vat: globalVat,
-            status
-          });
+            items: items || [],
+            global_discount: Number(globalDiscount) || 0,
+            global_vat: Number(globalVat) || 0,
+            status: status || 'draft'
+          };
+          const { error: sbErr } = await supabase.from('goods_receipt_notes').upsert(supabasePayload, { onConflict: 'id' });
+          if (sbErr) {
+            console.warn('[Supabase GRN Insert Error]', sbErr);
+            enqueueSync('goods_receipt_notes', grnId, 'UPSERT', supabasePayload);
+          }
         } catch (sErr) {
-          console.warn('[Supabase GRN Insert]', sErr);
+          console.warn('[Supabase GRN Insert Exception]', sErr);
         }
       }
 
@@ -265,6 +270,7 @@ export function useGRNLogic({
   const fetchGrns = async () => {
     try {
       let combinedGrns: GoodsReceiptNote[] = [];
+      let remoteRows: any[] = [];
 
       // 1. Fetch from Supabase if configured
       if (isSupabaseConfigured) {
@@ -275,6 +281,7 @@ export function useGRNLogic({
             .order('date', { ascending: false });
 
           if (!error && data && Array.isArray(data)) {
+            remoteRows = data;
             combinedGrns = data.map((item: any) => {
               if (typeof item.items === 'string') {
                 try { item.items = JSON.parse(item.items); } catch(e) {}
@@ -289,15 +296,43 @@ export function useGRNLogic({
 
       // 2. Fetch localDb snapshot
       const snapshot = await localDb.get('goodsReceiptNotes');
+      let localList: GoodsReceiptNote[] = [];
       if (snapshot.exists()) {
-        const grnsData = snapshot.val();
-        const localList = Object.keys(grnsData).map(id => ({ id, ...grnsData[id] } as GoodsReceiptNote));
+        const grnsData = snapshot.val() || {};
+        localList = Object.keys(grnsData).map(id => ({ id, ...grnsData[id] } as GoodsReceiptNote));
         
         // Merge without duplicates
         const map = new Map<string, GoodsReceiptNote>();
         combinedGrns.forEach(g => map.set(g.id, g));
         localList.forEach(g => map.set(g.id, { ...map.get(g.id), ...g }));
         combinedGrns = Array.from(map.values());
+      }
+
+      // 3. Auto-backfill: Si des bons existent localement mais pas dans Supabase, les synchroniser
+      if (isSupabaseConfigured && localList.length > 0) {
+        const remoteIds = new Set(remoteRows.map((d: any) => d.id));
+        const missingFromRemote = localList.filter(l => l.id && !remoteIds.has(l.id));
+        if (missingFromRemote.length > 0) {
+          const backfillPayloads = missingFromRemote.map(g => ({
+            id: g.id,
+            supplier_id: g.supplierId || null,
+            date: g.date || new Date().toISOString(),
+            items: g.items || [],
+            global_discount: Number(g.globalDiscount) || 0,
+            global_vat: Number(g.globalVat) || 0,
+            status: g.status || 'draft'
+          }));
+          supabase.from('goods_receipt_notes').upsert(backfillPayloads, { onConflict: 'id' })
+            .then((res: any) => {
+              const bErr = res?.error;
+              if (bErr) {
+                console.warn('[Supabase GRN Auto-Backfill Error]', bErr);
+              } else {
+                console.log(`[Supabase GRN Auto-Backfill] ${backfillPayloads.length} bon(s) synchronisé(s) vers Supabase.`);
+              }
+            })
+            .catch(() => {});
+        }
       }
 
       combinedGrns.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
@@ -422,7 +457,11 @@ export function useGRNLogic({
       // Supabase Update
       if (isSupabaseConfigured) {
         try {
-          await supabase.from('goods_receipt_notes').update({ status: 'validated' }).eq('id', grn.id);
+          const { error: updErr } = await supabase.from('goods_receipt_notes').update({ status: 'validated' }).eq('id', grn.id);
+          if (updErr) {
+            console.warn('[Supabase GRN Update Error]', updErr);
+            enqueueSync('goods_receipt_notes', grn.id, 'UPSERT', { id: grn.id, status: 'validated' });
+          }
         } catch (sErr) {
           console.warn('[Supabase GRN Update Error]', sErr);
         }
@@ -435,6 +474,55 @@ export function useGRNLogic({
       toast.error("Erreur lors de la validation");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const [isSyncingGrns, setIsSyncingGrns] = useState(false);
+
+  const handleSyncAllToSupabase = async () => {
+    if (!isSupabaseConfigured) {
+      toast.error("Supabase n'est pas configuré.");
+      return;
+    }
+    setIsSyncingGrns(true);
+    try {
+      const snapshot = await localDb.get('goodsReceiptNotes');
+      const grnsData = snapshot.exists() ? snapshot.val() || {} : {};
+      const localList: GoodsReceiptNote[] = Object.keys(grnsData).map(id => ({ id, ...grnsData[id] }));
+
+      const allMap = new Map<string, GoodsReceiptNote>();
+      grns.forEach(g => allMap.set(g.id, g));
+      localList.forEach(g => allMap.set(g.id, { ...allMap.get(g.id), ...g }));
+      const allGrns = Array.from(allMap.values());
+
+      if (allGrns.length === 0) {
+        toast.info("Aucun bon de réception à synchroniser.");
+        return;
+      }
+
+      const payloads = allGrns.map(g => ({
+        id: g.id,
+        supplier_id: g.supplierId || null,
+        date: g.date || new Date().toISOString(),
+        items: g.items || [],
+        global_discount: Number(g.globalDiscount) || 0,
+        global_vat: Number(g.globalVat) || 0,
+        status: g.status || 'draft'
+      }));
+
+      const { error } = await supabase.from('goods_receipt_notes').upsert(payloads, { onConflict: 'id' });
+      if (error) {
+        console.error('[Supabase GRN Sync Error]', error);
+        toast.error("Erreur de synchronisation : " + (error.message || "Erreur"));
+      } else {
+        toast.success(`${payloads.length} bon(s) de réception synchronisé(s) vers Supabase !`);
+        await fetchGrns();
+      }
+    } catch (err: any) {
+      console.error('[Supabase GRN Sync Exception]', err);
+      toast.error("Erreur inattendue : " + (err?.message || "Erreur inconnue"));
+    } finally {
+      setIsSyncingGrns(false);
     }
   };
 
@@ -483,6 +571,8 @@ export function useGRNLogic({
     handleKeyDown,
     handleAddSupplier,
     updateItem,
-    handleValidate
+    handleValidate,
+    handleSyncAllToSupabase,
+    isSyncingGrns
   };
 }

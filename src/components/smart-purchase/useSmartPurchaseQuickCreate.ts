@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { localDb } from '../../services/LocalDatabase';
 import { logAction } from '../../lib/utils';
 import { Category, Product, PurchaseCartItem } from '../../types';
+import { useCoreStore } from '../../store/useCoreStore';
 
 interface UseSmartPurchaseQuickCreateProps {
   categories: Category[];
@@ -54,8 +55,8 @@ export function useSmartPurchaseQuickCreate({
     setDraftItemToCreate(item);
     setQuickCreateForm({
       name: item.productName || '',
-      price: (item.costPrice * 1.3).toFixed(2), // prefill 30% margin
-      costPrice: item.costPrice.toFixed(2),
+      price: ((Number(item.costPrice) || 0) * 1.3).toFixed(2), // prefill 30% margin
+      costPrice: (Number(item.costPrice) || 0).toFixed(2),
       taxRate: String(item.taxRate || '19'),
       stock: String(item.quantity || '0'),
       minStock: '5',
@@ -72,6 +73,16 @@ export function useSmartPurchaseQuickCreate({
     if (!quickCreateForm.name.trim()) {
       toast.error("Le nom du produit est requis.");
       return;
+    }
+
+    if (quickCreateForm.barcode && quickCreateForm.barcode.trim()) {
+      const existingWithBarcode = useCoreStore.getState().products?.find((p: any) => 
+        p.barcode && p.barcode.trim().toLowerCase() === quickCreateForm.barcode.trim().toLowerCase()
+      );
+      if (existingWithBarcode) {
+        toast.error(`Le code-barres "${quickCreateForm.barcode.trim()}" est déjà utilisé par "${existingWithBarcode.name}".`);
+        return;
+      }
     }
 
     try {

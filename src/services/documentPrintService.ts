@@ -181,8 +181,8 @@ export const printPurchaseVoucher = (purchase: any, settings: CompanySettings) =
         <div style="font-weight: 900; color: #000;">${item.name}</div>
       </td>
       <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: center; font-weight: 900; color: #000;">${item.quantity}</td>
-      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; color: #000; font-weight: 700;">${item.costPrice.toFixed(2)} ${settings.currency}</td>
-      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; font-weight: 900; color: #000;">${(item.quantity * item.costPrice).toFixed(2)} ${settings.currency}</td>
+      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; color: #000; font-weight: 700;">${(Number(item.costPrice) || 0).toFixed(2)} ${settings?.currency || 'DA'}</td>
+      <td style="padding: 12px 8px; border-bottom: 2px solid #000; text-align: right; font-weight: 900; color: #000;">${((Number(item.quantity) || 0) * (Number(item.costPrice) || 0)).toFixed(2)} ${settings?.currency || 'DA'}</td>
     </tr>
   `).join('');
 

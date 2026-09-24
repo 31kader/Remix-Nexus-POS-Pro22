@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useDeferredValue, useCallback } from 'react';
 import { Product, Category, CompanySettings, Employee, Customer, CartItem, Transaction, Promotion, POSSession, CashShift } from '../../types';
-import { calculateItemPrice, playScanSound, announcePrice, generateUniqueId, normalizeSearchText } from '../../lib/utils';
+import { calculateItemPrice, playScanSound, announcePrice, generateUniqueId } from '../../lib/utils';
 import { printReceipt } from '../../services/printService';
 import { DEFAULT_PERMISSIONS } from '../../constants';
 import { useCheckoutProcess } from '../../hooks/useCheckoutProcess';
@@ -12,6 +12,7 @@ import { useCheckoutDrafts } from './useCheckoutDrafts';
 import { useCheckoutBarcode } from './useCheckoutBarcode';
 import { useCheckoutShortcuts } from './useCheckoutShortcuts';
 import { useCheckoutSessionAndPromo } from './useCheckoutSessionAndPromo';
+import { useSearchWorker } from '../../hooks/useSearchWorker';
 
 interface CheckoutProps {
   products: Product[];
@@ -221,57 +222,31 @@ export function useCheckoutLogic(props: CheckoutProps) {
     }
   }, [cart, isWholesale, settings.enableVoiceGuidance, settings.currency]);
 
-  // Pre-compile search strings for products with normalized tokens
-  const searchableProducts = useMemo(() => {
-    return (products || [])
-      .filter(p => p && p.status === 'active')
-      .map(p => ({
-        product: p,
-        searchStr: normalizeSearchText(`${p.name || ''} ${p.sku || ''} ${p.barcode || ''} ${p.reference || ''} ${p.supplier || ''} ${p.description || ''} ${(p.tags || []).join(' ')}`)
-      }));
-  }, [products]);
+  // ⚡ Worker de recherche hors thread principal : 0 saccade sur 11 700 articles
+  const { searchProducts } = useSearchWorker(products);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(() => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
+  });
 
-  // Full-text token-based search matching + Exact Barcode Shortcut Priority
-  const filteredProducts = useMemo(() => {
+  useEffect(() => {
     const safeProducts = Array.isArray(products) ? products : [];
     if (!deferredSearch || !deferredSearch.trim()) {
-      return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
-    }
-    const rawSearch = deferredSearch.trim().toLowerCase();
-    const query = normalizeSearchText(deferredSearch);
-    const tokens = query.split(/\s+/).filter(Boolean);
-    if (tokens.length === 0) {
-      return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
+      setFilteredProducts(safeProducts.filter(p => p && p.status === 'active').slice(0, 100));
+      return;
     }
 
-    const matches: Product[] = [];
-    let exactShortcutMatch: Product | null = null;
-
-    for (let i = 0; i < searchableProducts.length; i++) {
-      const p = searchableProducts[i].product;
-      const bc = (p.barcode || '').trim().toLowerCase();
-      const sku = (p.sku || '').trim().toLowerCase();
-      const ref = (p.reference || '').trim().toLowerCase();
-
-      if (bc === rawSearch || sku === rawSearch || ref === rawSearch) {
-        exactShortcutMatch = p;
+    let isMounted = true;
+    searchProducts(deferredSearch, 80).then((matches) => {
+      if (isMounted) {
+        setFilteredProducts(matches || []);
       }
+    });
 
-      const target = searchableProducts[i].searchStr;
-      const isMatch = tokens.every(token => target.includes(token));
-      if (isMatch) {
-        matches.push(p);
-        if (matches.length >= 80) break;
-      }
-    }
-
-    if (exactShortcutMatch) {
-      const rest = matches.filter(p => p.id !== exactShortcutMatch!.id);
-      return [exactShortcutMatch, ...rest];
-    }
-
-    return matches;
-  }, [deferredSearch, products, searchableProducts]);
+    return () => {
+      isMounted = false;
+    };
+  }, [deferredSearch, products, searchProducts]);
 
   // 🛡️ SÉCURISÉ : Protection de setQuantity + Focus optionnel
   const setQuantity = useCallback((cartItemId: string, quantity: number, shouldFocusSearch: boolean = false) => {

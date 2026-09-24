@@ -14,8 +14,6 @@ import { Button } from './ui';
 // IMPORTATION SÉCURISÉE DE CHECKOUT
 const Checkout = lazy(() =>
 import('./Checkout').then(m => ({ default: m.Checkout })));
-const Dashboard = lazy(() => import('./Dashboard').then(m => ({ default: m.Dashboard })));
-const AIAssistant = lazy(() => import('./AIAssistant').then(m => ({ default: m.AIAssistant })));
 const DetailedReports = lazy(() => import('./DetailedReports').then(m => ({ default: m.DetailedReports })));
 const Inventory = lazy(() => import('./Inventory').then(m => ({ default: m.Inventory })));
 const ExpiryManager = lazy(() => import('./ExpiryManager').then(m => ({ default: m.ExpiryManager })));
@@ -59,40 +57,6 @@ const loadingFallback = (
 );
 
 // Tab Wrappers that only subscribe to what each specific tab needs
-const DashboardTab: React.FC<any> = (props) => {
-  const transactions = useTransactionStore(s => s.transactions);
-  const products = useCoreStore(s => s.products);
-  const settings = useCoreStore(s => s.settings);
-  const returns = useTransactionStore(s => s.returns);
-  return (
-    <Dashboard
-      transactions={transactions || []}
-      products={products || []}
-      settings={settings || {}}
-      returns={returns || []}
-      isStandalone={props.isStandalone}
-      deferredPrompt={props.deferredPrompt}
-      handleInstallApp={props.handleInstallApp}
-    />
-  );
-};
-
-const AIAssistantTab: React.FC<any> = () => {
-  const products = useCoreStore(s => s.products);
-  const transactions = useTransactionStore(s => s.transactions);
-  const expenses = useFinanceStore(s => s.expenses);
-  const settings = useCoreStore(s => s.settings);
-  const stockAdjustments = useInventoryStore(s => s.stockAdjustments);
-  return (
-    <AIAssistant
-      products={products || []}
-      transactions={transactions || []}
-      expenses={expenses || []}
-      settings={settings || {}}
-      stockAdjustments={stockAdjustments || []}
-    />
-  );
-};
 
 const DetailedReportsTab: React.FC<any> = (props) => {
   const transactions = useTransactionStore(s => s.transactions);
@@ -417,6 +381,8 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
       case 'checkout':
       case 'caisse':
       case 'pos':
+      case 'dashboard':
+      case 'ai_assistant':
         return (
           <Checkout
             setActiveTab={props.setActiveTab}
@@ -427,12 +393,9 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
             setEditingProduct={props.setEditingProduct}
             activeStaffId={props.activeStaffId}
             isSidebarOpen={props.isSidebarOpen}
+            setIsSidebarOpen={props.setIsSidebarOpen}
           />
         );
-      case 'dashboard':
-        return <DashboardTab {...props} />;
-      case 'ai_assistant':
-        return <AIAssistantTab {...props} />;
       case 'reports':
         return <DetailedReportsTab {...props} />;
       case 'inventory':

@@ -104,13 +104,13 @@ export async function savePurchaseDb({
             return v.toString(16);
           });
       await safeOptionalMutation(
-        'invoice_patterns.insert',
+        'invoice_patterns.upsert',
         () => supabase
           .from('invoice_patterns')
-          .insert({
+          .upsert({
             ...snakePattern,
             id: newPatternId
-          }),
+          }, { onConflict: 'id' }),
         { module: 'purchaseDbOperations', action: 'insertPattern' }
       );
     }
@@ -184,6 +184,7 @@ export async function savePurchaseDb({
       const supplier = suppliers.find(s => s.id === selectedSupplierId);
       if (supplier) {
         await localDb.update(`suppliers/${supplier.id}`, {
+          ...supplier,
           balance: (supplier.balance || 0) + debtDelta
         });
       }
@@ -246,10 +247,16 @@ export async function savePurchaseDb({
        }
     }
 
+    try {
+      localStorage.removeItem('nexus_purchase_draft');
+    } catch (_) {}
+
     setLastPurchaseItems(purchaseItems);
     setStep('updatePrices');
-  } catch (error) {
+    toast.success("Achat enregistré avec succès !");
+  } catch (error: any) {
     console.error("Confirmation error:", error);
+    toast.error(`Erreur lors de l'enregistrement de l'achat : ${error?.message || error}`);
   } finally {
     setIsProcessing(false);
   }
@@ -303,6 +310,7 @@ export async function handleSupplierPaymentDb({
     await localDb.insert(`supplierPayments/${paymentId}`, payment);
 
     await localDb.update(`suppliers/${supplierId}`, {
+      ...supplier,
       balance: (supplier.balance || 0) - amount
     });
 

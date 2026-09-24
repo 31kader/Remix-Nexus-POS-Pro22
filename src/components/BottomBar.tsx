@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShoppingCart, Package, ShoppingBag, LayoutDashboard, Settings as SettingsIcon } from 'lucide-react';
+import { ShoppingCart, Package, ShoppingBag, FileText, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface BottomNavItemProps {
@@ -72,10 +72,10 @@ export const BottomBar = ({ activeTab, setActiveTab }: BottomBarProps) => {
         onClick={() => setActiveTab('transactions')} 
       />
        <BottomNavItem 
-        icon={<LayoutDashboard size={24} />} 
-        label="Stats" 
-        active={activeTab === 'dashboard'} 
-        onClick={() => setActiveTab('dashboard')} 
+        icon={<FileText size={24} />} 
+        label="Rapports" 
+        active={activeTab === 'reports'} 
+        onClick={() => setActiveTab('reports')} 
       />
       <BottomNavItem 
         icon={<SettingsIcon size={24} />} 

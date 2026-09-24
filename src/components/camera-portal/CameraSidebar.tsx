@@ -109,7 +109,7 @@ export function CameraSidebar({
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-black text-white">{tx.total.toFixed(2)} {settings.currency}</p>
+                  <p className="text-sm font-black text-white">{Number(tx.total || 0).toFixed(2)} {settings?.currency || 'DA'}</p>
                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{tx.employeeName}</p>
                 </div>
                 <div className={cn(

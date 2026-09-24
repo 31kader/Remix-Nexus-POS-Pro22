@@ -47,8 +47,8 @@ export function ItemDiscountModal({
             />
           </div>
           <div className="text-left">
-            <p className="text-sm font-black text-white uppercase tracking-tight">{item.name}</p>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5">Prix unitaire: {item.price.toFixed(2)} {settings.currency}</p>
+            <p className="text-sm font-black text-white uppercase tracking-tight">{item?.name}</p>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-0.5">Prix unitaire: {Number(item?.price || 0).toFixed(2)} {settings?.currency || 'DA'}</p>
           </div>
         </div>
 

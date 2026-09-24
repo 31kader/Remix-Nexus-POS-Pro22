@@ -15,6 +15,13 @@ interface FinanceState {
   setAuditLogs: (logs: AuditLog[] | ((prev: AuditLog[]) => AuditLog[])) => void;
 }
 
+const isAutoReplenishment = (p: any): boolean => {
+  if (!p) return false;
+  const sId = p.supplierId || p.supplier_id;
+  const sName = (p.supplierName || p.supplier_name || '').toLowerCase();
+  return sId === 'low-stock-auto' || sName.includes('auto-réapprovisionnement') || sName.includes('auto-reapprovisionnement');
+};
+
 export const useFinanceStore = create<FinanceState>((set) => ({
   purchases: [],
   expenses: [],
@@ -22,9 +29,11 @@ export const useFinanceStore = create<FinanceState>((set) => ({
   advances: [],
   auditLogs: [],
 
-  setPurchases: (update) => set((state) => ({
-    purchases: typeof update === 'function' ? update(state.purchases) : update
-  })),
+  setPurchases: (update) => set((state) => {
+    const raw = typeof update === 'function' ? update(state.purchases) : update;
+    const clean = Array.isArray(raw) ? raw.filter(p => !isAutoReplenishment(p)) : raw;
+    return { purchases: clean };
+  }),
   setExpenses: (update) => set((state) => ({
     expenses: typeof update === 'function' ? update(state.expenses) : update
   })),

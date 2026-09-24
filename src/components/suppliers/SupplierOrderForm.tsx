@@ -119,15 +119,15 @@ export const SupplierOrderForm = ({
                 <tr key={idx} className="border-t border-slate-100">
                   <td className="p-3 text-sm font-bold text-slate-800">{item.productName}</td>
                   <td className="p-3 text-right text-sm">{item.quantity}</td>
-                  <td className="p-3 text-right text-sm">{item.price.toFixed(2)}</td>
-                  <td className="p-3 text-right text-sm font-bold">{(item.price * item.quantity).toFixed(2)}</td>
+                  <td className="p-3 text-right text-sm">{Number(item.price || 0).toFixed(2)}</td>
+                  <td className="p-3 text-right text-sm font-bold">{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-slate-50 border-t border-slate-200">
               <tr>
                 <td colSpan={3} className="p-3 text-right font-bold">Total</td>
-                <td className="p-3 text-right font-bold">{total.toFixed(2)}</td>
+                <td className="p-3 text-right font-bold">{Number(total || 0).toFixed(2)}</td>
               </tr>
             </tfoot>
           </table>

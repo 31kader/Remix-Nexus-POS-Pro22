@@ -1,4 +1,4 @@
-import { formatSafe, calculateItemPrice } from '../lib/utils';
+import { formatSafe, calculateItemPrice, formatPrice } from '../lib/utils';
 import { Product, CompanySettings } from '../types';
 
 export function escapeHtml(str: any): string {
@@ -55,12 +55,12 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
         <div style="font-weight: 800; font-size: 11px; margin-bottom: 2px; color: #000;">${escapeHtml(item.name)}</div>
         <div style="display: flex; justify-content: space-between; align-items: flex-end;">
           <div style="font-size: 10px; font-weight: 600; color: #111;">
-            <span style="font-weight: 900;">${item.quantity}</span> x ${unitPrice.toFixed(2)} ${settings.currency || 'DA'}
+            <span style="font-weight: 900;">${item.quantity}</span> x ${formatPrice(unitPrice)} ${settings.currency || 'DA'}
             ${item.lineDiscount ? `<span style="color: #c00; font-weight: 800; margin-left: 4px;">(-${item.lineDiscount.value}${item.lineDiscount.type === 'percentage' ? '%' : (settings.currency || 'DA')})</span>` : ''}
           </div>
           <div style="text-align: right;">
-            ${hasLineDiscount ? `<div style="text-decoration: line-through; font-size: 8px; color: #888;">${((originalUnitPrice || 0) * (item.quantity || 0)).toFixed(2)}</div>` : ''}
-            <div style="font-weight: 900; font-size: 11px; color: #000;">${((unitPrice || 0) * (item.quantity || 0)).toFixed(2)} ${settings.currency || 'DA'}</div>
+            ${hasLineDiscount ? `<div style="text-decoration: line-through; font-size: 8px; color: #888;">${formatPrice((Number(originalUnitPrice) || 0) * (Number(item.quantity) || 0))}</div>` : ''}
+            <div style="font-weight: 900; font-size: 11px; color: #000;">${formatPrice((Number(unitPrice) || 0) * (Number(item.quantity) || 0))} ${settings.currency || 'DA'}</div>
           </div>
         </div>
       </div>
@@ -123,17 +123,17 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
                <div style="width: 280px;">
                   <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #666;">
                      <span>Sous-total HT</span>
-                     <span style="font-family: monospace; font-weight: bold;">${subtotalBeforeDiscounts.toFixed(2)} ${settings.currency || 'DA'}</span>
+                     <span style="font-family: monospace; font-weight: bold;">${formatPrice(subtotalBeforeDiscounts)} ${settings.currency || 'DA'}</span>
                   </div>
                   ${totalSavings > 0 ? `
                   <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #16a34a; font-weight: bold;">
                      <span>Remises Déduites</span>
-                     <span style="font-family: monospace;">-${totalSavings.toFixed(2)} ${settings.currency || 'DA'}</span>
+                     <span style="font-family: monospace;">-${formatPrice(totalSavings)} ${settings.currency || 'DA'}</span>
                   </div>
                   ` : ''}
                   <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; font-weight: 900; border-top: 2px solid #111; margin-top: 6px;">
                      <span>TOTAL TTC</span>
-                     <span style="font-family: monospace;">${(t.total || 0).toFixed(2)} ${settings.currency || 'DA'}</span>
+                     <span style="font-family: monospace;">${formatPrice(t.total)} ${settings.currency || 'DA'}</span>
                   </div>
                </div>
             </div>
@@ -224,46 +224,46 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
           <div>
             <div class="summary-row">
               <span>Sous-total:</span>
-              <span>${subtotalBeforeDiscounts.toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>${formatPrice(subtotalBeforeDiscounts)} ${settings.currency || 'DA'}</span>
             </div>
             
             ${t.discountAmount > 0 ? `
             <div class="summary-row" style="color: #000; font-weight: 900;">
               <span>Remise:</span>
-              <span>-${t.discountAmount.toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>-${formatPrice(t.discountAmount)} ${settings.currency || 'DA'}</span>
             </div>
             ` : ''}
             
             ${t.pointsDiscount > 0 ? `
             <div class="summary-row" style="color: #000; font-weight: 900;">
               <span>Fidélité:</span>
-              <span>-${t.pointsDiscount.toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>-${formatPrice(t.pointsDiscount)} ${settings.currency || 'DA'}</span>
             </div>
             ` : ''}
   
             <div class="grand-total">
               <span class="total-label">TOTAL NET</span>
-              <span class="total-value">${(t.total || 0).toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span class="total-value">${formatPrice(t.total)} ${settings.currency || 'DA'}</span>
             </div>
 
             ${t.amountReceived !== undefined ? `
             <div class="summary-row" style="margin-top: 4px; padding-top: 2px;">
               <span>Reçu (${escapeHtml((t.paymentMethod || 'Espèces').toUpperCase())}):</span>
-              <span>${t.amountReceived.toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>${formatPrice(t.amountReceived)} ${settings.currency || 'DA'}</span>
             </div>
             ` : ''}
 
             ${t.amountReturned !== undefined && t.amountReturned > 0 ? `
             <div class="summary-row" style="font-weight: 900;">
               <span>Rendu Monnaie:</span>
-              <span>${t.amountReturned.toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>${formatPrice(t.amountReturned)} ${settings.currency || 'DA'}</span>
             </div>
             ` : ''}
 
             ${t.amountReceived !== undefined && t.amountReceived < t.total && t.customerId ? `
             <div class="summary-row" style="font-weight: 900; color: #000;">
               <span>Nouv. Dette Client:</span>
-              <span>+${(t.total - t.amountReceived).toFixed(2)} ${settings.currency || 'DA'}</span>
+              <span>+${formatPrice((Number(t.total) || 0) - (Number(t.amountReceived) || 0))} ${settings.currency || 'DA'}</span>
             </div>
             ` : ''}
           </div>
@@ -278,7 +278,7 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
 
           ${settings.showSavingsOnReceipt !== false && totalSavings > 0 ? `
           <div style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 900; font-size: 10px; margin: 8px 0; text-transform: uppercase;">
-            🎉 ÉCONOMISÉ: ${totalSavings.toFixed(2)} ${settings.currency || 'DA'}
+            🎉 ÉCONOMISÉ: ${formatPrice(totalSavings)} ${settings.currency || 'DA'}
           </div>
           ` : ''}
   

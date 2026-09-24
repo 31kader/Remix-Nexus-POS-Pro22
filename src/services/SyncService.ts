@@ -405,22 +405,15 @@ export async function processSyncQueue(): Promise<void> {
   let watchdog: any = null;
 
   try {
-    const rawQueue = loadPendingSyncQueue();
-    if (rawQueue.length === 0) {
-      notifySyncStatus(false, 0);
-      isProcessingQueue = false;
-      return;
-    }
-
-    const filteredQueue = rawQueue;
-    if (filteredQueue.length === 0) {
+    const queueItems = loadPendingSyncQueue();
+    if (queueItems.length === 0) {
       notifySyncStatus(false, 0);
       isProcessingQueue = false;
       return;
     }
 
     // 🛡️ Watchdog dynamique : minimum 60 secondes, +500ms par élément pour résister aux réseaux 3G/4G lents
-    const watchdogDuration = Math.max(60000, filteredQueue.length * 500);
+    const watchdogDuration = Math.max(60000, queueItems.length * 500);
     watchdog = setTimeout(() => {
       if (isProcessingQueue) {
         console.warn(`[SyncService] Watchdog de synchronisation expiré après ${watchdogDuration / 1000}s`);
@@ -429,13 +422,13 @@ export async function processSyncQueue(): Promise<void> {
       }
     }, watchdogDuration);
 
-    notifySyncStatus(true, filteredQueue.length);
+    notifySyncStatus(true, queueItems.length);
 
     // 1. Déduplication en mémoire de la file de synchronisation
     const dedupMap = new Map<string, SyncPayload>();
     const deleteList: SyncPayload[] = [];
 
-    for (const item of filteredQueue) {
+    for (const item of queueItems) {
       if (item.action === 'DELETE') {
         deleteList.push(item);
       } else {
@@ -496,9 +489,20 @@ export async function processSyncQueue(): Promise<void> {
         if (!res?.error) {
           completedKeys.add(`${item.table}:${item.recordId || payload.id}`);
         } else {
+          // 🛡️ Fallback UPDATE si l'upsert échoue (ex: erreur 400/23502 NOT NULL lors d'un update partiel de balance)
+          let recovered = false;
+          if (payload.id) {
+            const updatePayload = { ...payload };
+            delete updatePayload.id;
+            const { error: updErr } = await supabase.from(targetTable).update(updatePayload).eq('id', payload.id);
+            if (!updErr) {
+              recovered = true;
+              completedKeys.add(`${item.table}:${item.recordId || payload.id}`);
+            }
+          }
+
           // En cas de conflit (ex: 409 sur email ou uid déjà existant pour users), mettre à jour la ligne existante
-          if (targetTable === 'users') {
-            let recovered = false;
+          if (!recovered && targetTable === 'users') {
             if (payload.uid) {
               const updatePayload = { ...payload };
               delete updatePayload.id;
@@ -872,6 +876,13 @@ export async function processSyncQueue(): Promise<void> {
     persistQueueToIDB();
     notifySyncStatus(false, memorySyncQueue.length);
     isProcessingQueue = false;
+
+    // 🚀 Retry avec backoff exponentiel si des éléments restent dans la file et que le réseau est disponible
+    if (memorySyncQueue.length > 0 && (typeof navigator === 'undefined' || navigator.onLine)) {
+      const maxRetry = Math.max(1, ...memorySyncQueue.map(i => i.retryCount || 1));
+      const backoffDelay = Math.min(1000 * Math.pow(2, Math.min(maxRetry - 1, 5)), 60000);
+      scheduleQueueProcessing(backoffDelay);
+    }
   }
 }
 

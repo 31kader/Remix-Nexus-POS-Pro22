@@ -104,8 +104,9 @@ export function useAdminStaticData({
             ]);
             
             if (isSubscribed) {
-              if (employeesRes.data && Array.isArray(employeesRes.data)) {
-                const updatedEmployees = employeesRes.data.map((item: any) => convertKeysToCamel(item) as Employee);
+              const empData = (employeesRes as any)?.data;
+              if (Array.isArray(empData) && empData.length > 0) {
+                const updatedEmployees = empData.map((item: any) => convertKeysToCamel(item) as Employee);
                 if (updatedEmployees.length > 0) {
                   setEmployees(updatedEmployees);
                   idbSet('nexus_employees_cache', updatedEmployees);
@@ -114,11 +115,13 @@ export function useAdminStaticData({
               if (patternsData && Array.isArray(patternsData)) {
                 setPatterns(patternsData.map((item: any) => convertKeysToCamel(item) as InvoicePattern));
               }
-              if (syncsRes.data && Array.isArray(syncsRes.data)) {
-                setSupplierSyncs(syncsRes.data.map((item: any) => convertKeysToCamel(item) as SupplierSync));
+              const syncData = (syncsRes as any)?.data;
+              if (Array.isArray(syncData)) {
+                setSupplierSyncs(syncData.map((item: any) => convertKeysToCamel(item) as SupplierSync));
               }
-              if (settingsRes.data && settingsRes.data.length > 0) {
-                const companyRow = settingsRes.data.find((r: any) => r.id === 'company') || settingsRes.data[0];
+              const settData = (settingsRes as any)?.data;
+              if (Array.isArray(settData) && settData.length > 0) {
+                const companyRow = settData.find((r: any) => r.id === 'company') || settData[0];
                 if (companyRow) {
                   const jsonFields = ['site_locations', 'role_kpis', 'notifications', 'operational_costs', 'delivery_zones', 'api_keys', 'available_taxes', 'loyalty_tiers', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
                   jsonFields.forEach(field => {

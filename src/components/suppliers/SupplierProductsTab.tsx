@@ -115,8 +115,8 @@ export const SupplierProductsTab: React.FC<Props> = ({
                   </div>
                 </td>
                 <td className="p-4 text-sm text-slate-500 font-mono">{p.sku || '-'}</td>
-                <td className="p-4 text-right font-bold text-slate-700">{p.costPrice?.toFixed(2)} {settings.currency}</td>
-                <td className="p-4 text-right font-bold text-indigo-600">{p.price.toFixed(2)} {settings.currency}</td>
+                <td className="p-4 text-right font-bold text-slate-700">{p.costPrice !== undefined ? `${Number(p.costPrice).toFixed(2)} ${settings.currency}` : '-'}</td>
+                <td className="p-4 text-right font-bold text-indigo-600">{Number(p.price || 0).toFixed(2)} {settings.currency}</td>
                 <td className="p-4 text-center">
                   <span className={cn(
                     "px-2 py-1 rounded-lg text-xs font-bold",

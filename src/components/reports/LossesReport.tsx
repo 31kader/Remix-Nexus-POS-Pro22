@@ -40,7 +40,7 @@ export const LossesReport = React.memo(function LossesReport({
   }, [categories]);
 
   const lossData = useMemo(() => {
-    const losses = stockAdjustments.filter(adj => adj.adjustment < 0 && adj.isLoss === true);
+    const losses = stockAdjustments.filter(adj => adj.adjustment < 0 && (adj.isLoss === true || (adj.reason && /perte|périmé|perime|casse|dlc|jeter|expire|détruit|avarie/i.test(adj.reason))));
     
     let totalLossValue = 0;
     const lossByCategory: Record<string, number> = {};

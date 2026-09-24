@@ -230,6 +230,18 @@ export const getCategoryPath = (categoryId: string, categories: Category[]): str
   return `${getCategoryPath(category.parentId, categories)} > ${category.name}`;
 };
 
+// --- Price & Number Formatting Utilities ---
+/**
+ * Formate de manière sécurisée un prix ou montant numérique sans risque d'erreur toFixed sur undefined/null/NaN/Infinity.
+ */
+export function formatPrice(value: any, decimals: number = 2): string {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return (0).toFixed(decimals);
+  }
+  return num.toFixed(decimals);
+}
+
 // --- Audio Utilities ---
 export const playScanSound = () => {
   // Désactivé : Le lecteur de code-barres physique bipe déjà naturellement
@@ -250,7 +262,7 @@ export const announcePrice = (name: string, price: number, currency: string) => 
     const canUseNew = Utterance.prototype && typeof Utterance.prototype === 'object';
     const msg = canUseNew ? new Utterance() : (typeof Utterance === 'function' ? Utterance() : null);
     if (!msg) return;
-    msg.text = `${name}. ${price.toFixed(2)} ${currency || 'DA'}`;
+    msg.text = `${name}. ${formatPrice(price, 2)} ${currency || 'DA'}`;
     msg.lang = 'fr-FR';
     msg.rate = 1.1;
     msg.pitch = 1;

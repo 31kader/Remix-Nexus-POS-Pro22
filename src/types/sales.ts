@@ -58,7 +58,7 @@ export interface Transaction {
   userId: string;
   customerId?: string | null;
   customerName?: string | null;
-  status?: 'completed' | 'returned' | 'partially_returned' | 'pending' | 'delivered';
+  status?: 'completed' | 'returned' | 'partially_returned' | 'pending' | 'delivered' | 'cancelled';
   employeeId?: string;
   employeeName?: string;
   promotionId?: string | null;

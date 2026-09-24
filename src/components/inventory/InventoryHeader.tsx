@@ -11,7 +11,6 @@ interface InventoryHeaderProps {
   onAddProduct: () => void;
   onExportExcel: () => void;
   onCSVImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onLowStockOrder: () => void;
   isProcessing: boolean;
 }
 
@@ -23,7 +22,6 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   onAddProduct,
   onExportExcel,
   onCSVImport,
-  onLowStockOrder,
   isProcessing
 }) => {
   const totalProducts = products.length;

@@ -420,7 +420,7 @@ async function startServer() {
         const fullPrompt = `${userPrompt || "Analyse mon commerce."}${dataContext}`;
 
         const result = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
+          model: "gemini-2.5-flash",
           contents: [{ parts: [{ text: systemPrompt }, { text: fullPrompt }] }]
         });
         res.json({ response: result.text });
@@ -432,7 +432,7 @@ async function startServer() {
           try {
             const aiFallback = new (await import("@google/genai")).GoogleGenAI({ apiKey: apiKey! });
             const fallbackResult = await aiFallback.models.generateContent({
-              model: "gemini-3.6-flash",
+              model: "gemini-2.5-flash",
               contents: [{ parts: [{ text: systemPromptOverride || "Analyse mon commerce." }, { text: userPrompt || "Analyse mon commerce." }] }]
             });
             return res.json({ response: fallbackResult.text });
@@ -519,7 +519,7 @@ Retourne STRICTEMENT un JSON valide contenant :
 IMPORTANT POUR LES NOMBRES : Les champs 'quantity', 'price' et 'total' des articles doivent être de purs types numériques (float ou int, exemple : 13.0, 143.0, 1859.0). Ne combine pas les colonnes adjacentes (ne fusionne pas le prix avec un code-barres ou un montant pour donner des chiffres aberrants comme 1450004). Si tu lis '143,00 DA' pour le prix, convertis-le strictement en le nombre 143.`;
 
         const result = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
+          model: "gemini-2.5-flash",
           contents: [{
             parts: [
               { text: prompt },
@@ -555,7 +555,7 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 - 'total': number (le total, pur type numérique)
 ).`;
             const resultFallback = await aiFallback.models.generateContent({
-              model: "gemini-3.6-flash",
+              model: "gemini-2.5-flash",
               contents: [{
                 parts: [
                   { text: promptFallback },

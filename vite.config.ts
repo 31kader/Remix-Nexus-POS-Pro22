@@ -51,15 +51,14 @@ export default defineConfig(({ mode }) => {
               if (id.includes('xlsx')) return 'vendor-xlsx-lazy';
               if (id.includes('papaparse')) return 'vendor-data-utils';
               if (id.includes('@supabase') || id.includes('postgrest')) return 'vendor-supabase';
-              if (id.includes('tesseract.js') || id.includes('tesseract.js-core')) return 'vendor-ocr';
-              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('html-to-image')) return 'vendor-pdf-export';
-              if (id.includes('@zxing') || id.includes('html5-qrcode')) return 'vendor-scanner-lazy';
+              if (id.includes('html-to-image')) return 'vendor-image-export';
+              if (id.includes('@zxing')) return 'vendor-scanner-lazy';
               if (id.includes('@google/genai') || id.includes('@google/generative-ai')) return 'vendor-gemini';
               if (id.includes('motion/react') || (id.includes('/motion/') && !id.includes('emotion'))) return 'vendor-motion';
               if (id.includes('socket.io-client') || id.includes('engine.io-client')) return 'vendor-socket';
               if (id.includes('qrcode') || id.includes('qr-code')) return 'vendor-qrcode';
               
-              const coreLibs = ['dexie', 'zustand', 'sonner', 'bcryptjs', 'tailwind-merge', 'clsx', '@capacitor/core', '@capacitor/app', '@capacitor/browser'];
+              const coreLibs = ['zustand', 'sonner', 'bcryptjs', 'tailwind-merge', 'clsx', '@capacitor/core', '@capacitor/app', '@capacitor/browser'];
               if (coreLibs.some(lib => id.includes(`/node_modules/${lib}/`) || id.includes(`\\node_modules\\${lib}\\`))) {
                 return 'vendor-base';
               }

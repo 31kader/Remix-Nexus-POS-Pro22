@@ -1,5 +1,51 @@
 // Local storage data encryption helper
-const SECRET_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'default-nexus-key-salt-2026';
+const DEFAULT_KEY = 'default-nexus-key-salt-2026';
+const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+const SECRET_KEY = envKey || DEFAULT_KEY;
+
+if (!envKey && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+  console.warn('[Security] ⚠️ Attention: VITE_SUPABASE_ANON_KEY non défini dans l\'environnement. Utilisation de la clé de secours par défaut.');
+}
+
+function textToBytes(text: string): Uint8Array {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(text);
+  }
+  const utf8 = unescape(encodeURIComponent(text));
+  const bytes = new Uint8Array(utf8.length);
+  for (let i = 0; i < utf8.length; i++) {
+    bytes[i] = utf8.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function bytesToText(bytes: Uint8Array): string {
+  if (typeof TextDecoder !== 'undefined') {
+    return new TextDecoder().decode(bytes);
+  }
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) {
+    bin += String.fromCharCode(bytes[i]);
+  }
+  return decodeURIComponent(escape(bin));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) {
+    bin += String.fromCharCode(bytes[i]);
+  }
+  return btoa(bin);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) {
+    bytes[i] = bin.charCodeAt(i);
+  }
+  return bytes;
+}
 
 // Multi-round hash helper for keystream generation
 function hashKeyWithSalt(key: string, salt: string): number[] {
@@ -40,16 +86,15 @@ export function encryptData(text: string): string {
     }
 
     const keyStream = hashKeyWithSalt(SECRET_KEY, salt);
-    const utf8Text = unescape(encodeURIComponent(text));
-    let encryptedChars = '';
+    const inputBytes = textToBytes(text);
+    const encryptedBytes = new Uint8Array(inputBytes.length);
 
-    for (let i = 0; i < utf8Text.length; i++) {
-      const charCode = utf8Text.charCodeAt(i);
+    for (let i = 0; i < inputBytes.length; i++) {
       const k = keyStream[i % keyStream.length];
-      encryptedChars += String.fromCharCode(charCode ^ k);
+      encryptedBytes[i] = inputBytes[i] ^ k;
     }
 
-    const payload = `${salt}:${btoa(encryptedChars)}`;
+    const payload = `${salt}:${bytesToBase64(encryptedBytes)}`;
     return `nx2:${btoa(payload)}`;
   } catch (err) {
     console.warn('[Security] Enhanced encryption failed, using fallback:', err);
@@ -58,10 +103,10 @@ export function encryptData(text: string): string {
 }
 
 function legacyEncrypt(text: string): string {
+  const inputBytes = textToBytes(text);
   let result = '';
-  const utf8Text = unescape(encodeURIComponent(text));
-  for (let i = 0; i < utf8Text.length; i++) {
-    const charCode = utf8Text.charCodeAt(i);
+  for (let i = 0; i < inputBytes.length; i++) {
+    const charCode = inputBytes[i];
     const keyChar = SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
     result += String.fromCharCode(charCode ^ keyChar);
   }
@@ -70,13 +115,13 @@ function legacyEncrypt(text: string): string {
 
 function legacyDecrypt(cipherText: string): string {
   const rawData = atob(cipherText);
-  let result = '';
+  const decryptedBytes = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; i++) {
     const charCode = rawData.charCodeAt(i);
     const keyChar = SECRET_KEY.charCodeAt(i % SECRET_KEY.length);
-    result += String.fromCharCode(charCode ^ keyChar);
+    decryptedBytes[i] = charCode ^ keyChar;
   }
-  return decodeURIComponent(escape(result));
+  return bytesToText(decryptedBytes);
 }
 
 /**
@@ -94,17 +139,16 @@ export function decryptData(cipherText: string): string {
       if (colonIndex > 0) {
         const salt = rawPayload.substring(0, colonIndex);
         const encryptedBase64 = rawPayload.substring(colonIndex + 1);
-        const encryptedBytes = atob(encryptedBase64);
+        const encryptedBytes = base64ToBytes(encryptedBase64);
         const keyStream = hashKeyWithSalt(SECRET_KEY, salt);
+        const decryptedBytes = new Uint8Array(encryptedBytes.length);
 
-        let result = '';
         for (let i = 0; i < encryptedBytes.length; i++) {
-          const charCode = encryptedBytes.charCodeAt(i);
           const k = keyStream[i % keyStream.length];
-          result += String.fromCharCode(charCode ^ k);
+          decryptedBytes[i] = encryptedBytes[i] ^ k;
         }
 
-        return decodeURIComponent(escape(result));
+        return bytesToText(decryptedBytes);
       }
     } catch (e) {
       console.warn('[Security] nx2 decryption failed, trying fallback:', e);
@@ -138,6 +182,16 @@ export function getSecureItem<T = any>(key: string): T | null {
   try {
     const cipherText = localStorage.getItem(key);
     if (!cipherText) return null;
+
+    // Rétrocompatibilité : migration transparente du JSON en clair existant
+    if (cipherText.startsWith('{') || cipherText.startsWith('[')) {
+      try {
+        const plain = JSON.parse(cipherText) as T;
+        setSecureItem(key, plain);
+        return plain;
+      } catch (_) {}
+    }
+
     const decrypted = decryptData(cipherText);
     try {
       return JSON.parse(decrypted) as T;

@@ -121,7 +121,7 @@ export function useProfitsReportLogic({
     const stats: Record<string, { qty: number, revenue: number, cost: number }> = {};
 
     filteredTransactions.forEach(t => {
-      if (!t) return;
+      if (!t || t.status === 'returned' || t.status === 'cancelled') return;
       let items = t.items;
       if (typeof items === 'string') {
         try { items = JSON.parse(items); } catch (_) { items = []; }

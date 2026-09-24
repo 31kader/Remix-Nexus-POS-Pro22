@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Printer, FileText, Search, Plus, Trash2, Sliders, Check, LayoutGrid, Type, Image as ImageIcon, Sparkles, Eye, Share2, Download, Mail, Send } from 'lucide-react';
+import { Printer, FileText, Search, Plus, Trash2, Sliders, Check, LayoutGrid, Type, Image as ImageIcon, Sparkles, Eye, Share2, Download, Mail, Send, X } from 'lucide-react';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Product, CompanySettings } from '../types';
 import { Button } from './ui';
 import { SafeImage } from './ui/SafeImage';
 import { printCatalog, shareCatalog, exportCatalogAsHtml, CatalogPrintSettings, SocialTarget } from '../services/printService';
+import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 
 interface CatalogPrinterProps {
@@ -19,6 +20,8 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(initialSelectedProductIds);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
+  const [activeListTab, setActiveListTab] = useState<'search' | 'queue'>('search');
 
   // Print Settings State
   const [title, setTitle] = useState('CATALOGUE PRODUITS');
@@ -58,6 +61,10 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
 
   // Preview zoom factor
   const [zoom, setZoom] = useState(0.65);
+  // Preview pagination (lightweight rendering)
+  const [activePreviewPage, setActivePreviewPage] = useState<number>(0);
+  const [previewMode, setPreviewMode] = useState<'single' | 'all'>('single');
+
   // Share/Export panel
   const [isSharePanelOpen, setIsSharePanelOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -76,22 +83,30 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
 
   // Categories helper
   const uniqueCategories = useMemo(() => {
-    const ids = Array.from(new Set(products.map(p => p.categoryId)));
+    const ids = Array.from(new Set(products.map(p => p.categoryId).filter(Boolean)));
     return ids.map(id => {
-      // Look up category in cache or just use ID
       return { id, name: id.charAt(0).toUpperCase() + id.slice(1) };
     });
   }, [products]);
 
-  // Filtered products list for sidebar addition
+  // Filtered products list for sidebar addition with multi-field search and stock filters
   const filteredProducts = useMemo(() => {
+    const s = search.trim().toLowerCase();
     return products.filter(p => {
-      const matchSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
-        (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()));
+      const pStock = Number(p.stock) || 0;
+      if (stockStatusFilter === 'in_stock' && pStock <= 0) return false;
+      if (stockStatusFilter === 'out_of_stock' && pStock > 0) return false;
+
       const matchCat = categoryFilter === 'all' || p.categoryId === categoryFilter;
-      return matchSearch && matchCat;
+      if (!matchCat) return false;
+
+      if (!s) return true;
+      const matchName = (p.name || '').toLowerCase().includes(s);
+      const matchSku = (p.sku || '').toLowerCase().includes(s);
+      const matchBarcode = (p.barcode || '').toLowerCase().includes(s);
+      return matchName || matchSku || matchBarcode;
     });
-  }, [products, search, categoryFilter]);
+  }, [products, search, categoryFilter, stockStatusFilter]);
 
   // Products in print queue
   const queueProducts = useMemo(() => {
@@ -110,13 +125,34 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
     setSelectedProductIds(prev => prev.filter(pid => pid !== id));
   };
 
+  const toggleProductQueue = (id: string) => {
+    if (selectedProductIds.includes(id)) {
+      removeProductFromQueue(id);
+    } else {
+      addProductToQueue(id);
+    }
+  };
+
   const addAllFiltered = () => {
     const toAdd = filteredProducts.map(p => p.id);
     setSelectedProductIds(prev => Array.from(new Set([...prev, ...toAdd])));
+    toast.success(`${toAdd.length} article(s) ajouté(s) au catalogue.`);
+  };
+
+  const addInStockOnly = () => {
+    const inStockIds = filteredProducts.filter(p => (Number(p.stock) || 0) > 0).map(p => p.id);
+    if (inStockIds.length === 0) {
+      toast.info("Aucun article avec stock positif trouvé.");
+      return;
+    }
+    setSelectedProductIds(prev => Array.from(new Set([...prev, ...inStockIds])));
+    toast.success(`${inStockIds.length} article(s) en stock ajouté(s).`);
   };
 
   const clearQueue = () => {
     setSelectedProductIds([]);
+    setActivePreviewPage(0);
+    toast.info("File d'impression réinitialisée.");
   };
 
   // Partition products into A4 pages for preview & printing
@@ -141,6 +177,13 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
 
     return result;
   }, [queueProducts, showHeader, columns, rowsPerPage]);
+
+  // Keep activePreviewPage clamped within bounds
+  useEffect(() => {
+    if (activePreviewPage >= pages.length && pages.length > 0) {
+      setActivePreviewPage(pages.length - 1);
+    }
+  }, [pages.length, activePreviewPage]);
 
   const handlePrint = async () => {
     if (queueProducts.length === 0) {
@@ -299,79 +342,217 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         
         {/* Column 1: Product Selection Selector */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[650px] space-y-4">
-          <div>
-            <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
-              <Plus size={15} className="text-indigo-400" /> 1. Sélection Articles
-            </h3>
-            <p className="text-[11px] text-slate-400">Recherchez et ajoutez des produits au catalogue.</p>
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[650px] space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
+                <Plus size={15} className="text-indigo-400" /> 1. Sélection Articles
+              </h3>
+              <p className="text-[11px] text-slate-400">Recherchez et ajoutez les articles au catalogue.</p>
+            </div>
+            {selectedProductIds.length > 0 && (
+              <button
+                type="button"
+                onClick={clearQueue}
+                className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                title="Vider la file d'impression"
+              >
+                <Trash2 size={12} /> Vider
+              </button>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
-              <input 
-                type="text"
-                placeholder="Nom ou SKU..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500"
-              />
-            </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+          {/* Onglets Sélection : Recherche / File d'attente */}
+          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveListTab('search')}
+              className={cn(
+                "flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer",
+                activeListTab === 'search'
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              )}
             >
-              <option value="all">Toutes catégories</option>
-              {uniqueCategories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <div className="flex justify-between items-center text-[10px] px-1">
-              <span className="text-slate-400 font-bold">{filteredProducts.length} articles trouvés</span>
-              <button onClick={addAllFiltered} className="text-indigo-400 font-bold hover:underline uppercase">Tout ajouter</button>
-            </div>
+              Recherche ({filteredProducts.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveListTab('queue')}
+              className={cn(
+                "flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer",
+                activeListTab === 'queue'
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+              )}
+            >
+              Dans le Catalogue ({queueProducts.length})
+            </button>
           </div>
 
-          {/* Product Items List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
-            {filteredProducts.map(p => {
-              const inQueue = selectedProductIds.includes(p.id);
-              return (
-                <div 
-                  key={p.id}
-                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
-                    inQueue 
-                      ? 'bg-indigo-950/20 border-indigo-500/40 text-indigo-400' 
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="min-width-0 flex-1">
-                    <p className="text-xs font-bold truncate text-white">{p.name}</p>
-                    <p className="text-[9px] font-mono text-slate-500 mt-0.5">REF : {p.sku || p.id.substring(0,8).toUpperCase()}</p>
-                  </div>
-                  {inQueue ? (
-                    <button 
-                      onClick={() => removeProductFromQueue(p.id)}
-                      className="p-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-lg transition-colors"
-                      title="Retirer"
+          {activeListTab === 'search' ? (
+            <>
+              {/* Barre de recherche style Inventaire */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                  <input 
+                    type="text"
+                    placeholder="Rechercher nom, SKU, code-barres..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-0.5 cursor-pointer"
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => addProductToQueue(p.id)}
-                      className="p-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
-                      title="Ajouter"
-                    >
-                      <Plus size={13} />
+                      <X size={13} />
                     </button>
                   )}
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Filtres Catégorie et Disponibilité */}
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-indigo-500 truncate"
+                  >
+                    <option value="all">Toutes catégories</option>
+                    {uniqueCategories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={stockStatusFilter}
+                    onChange={(e) => setStockStatusFilter(e.target.value as any)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-[11px] text-white outline-none focus:border-indigo-500"
+                  >
+                    <option value="all">Tout stock</option>
+                    <option value="in_stock">En stock (&gt;0)</option>
+                    <option value="out_of_stock">Rupture (0)</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] px-1 gap-2 pt-1 border-t border-slate-800/60">
+                  <span className="text-slate-400 font-bold truncate">
+                    {filteredProducts.length} trouvé(s)
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={addInStockOnly} className="text-emerald-400 font-bold hover:underline uppercase text-[9px] cursor-pointer">
+                      + En stock
+                    </button>
+                    <span className="text-slate-700">|</span>
+                    <button onClick={addAllFiltered} className="text-indigo-400 font-bold hover:underline uppercase text-[9px] cursor-pointer">
+                      + Tout ajouter
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Items List (Limitée à 30 pour fluidité max) */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
+                {filteredProducts.slice(0, 30).map(p => {
+                  const inQueue = selectedProductIds.includes(p.id);
+                  const pStock = Number(p.stock) || 0;
+                  const isOutOfStock = pStock <= 0;
+                  return (
+                    <div 
+                      key={p.id}
+                      onClick={() => toggleProductQueue(p.id)}
+                      className={cn(
+                        "p-2.5 rounded-xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer select-none",
+                        inQueue 
+                          ? "bg-indigo-950/40 border-indigo-500/50 text-indigo-300 shadow-sm" 
+                          : "bg-slate-950 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-950/80"
+                      )}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold truncate text-white">{p.name}</p>
+                          <span className={cn(
+                            "text-[8px] font-bold px-1.5 py-0.2 rounded-full font-mono shrink-0",
+                            isOutOfStock 
+                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" 
+                              : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          )}>
+                            {isOutOfStock ? "Rupture" : `${pStock} en stock`}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1 text-[9px] font-mono text-slate-400">
+                          <span>REF: {p.sku || p.id.substring(0,8).toUpperCase()}</span>
+                          <span className="text-emerald-400 font-bold font-sans">
+                            {Number(p.price || 0).toFixed(2)} {settings?.currency || 'DA'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {inQueue ? (
+                          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+                            <Check size={14} strokeWidth={3} />
+                          </div>
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-indigo-600 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                            <Plus size={14} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredProducts.length > 30 && (
+                  <div className="p-2 text-center text-[10px] text-slate-500 font-mono italic bg-slate-950/50 rounded-xl border border-slate-800">
+                    Affichage des 30 premiers articles. Affinez votre recherche pour cibler des articles spécifiques.
+                  </div>
+                )}
+
+                {filteredProducts.length === 0 && (
+                  <div className="p-8 text-center text-slate-500 text-xs italic">
+                    Aucun article ne correspond à votre recherche.
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Queue Tab */
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2">
+              {queueProducts.map(p => (
+                <div 
+                  key={p.id}
+                  className="p-2.5 rounded-xl border bg-indigo-950/20 border-indigo-500/30 text-indigo-300 flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold truncate text-white">{p.name}</p>
+                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 mt-0.5">
+                      <span>REF: {p.sku || p.id.substring(0,8).toUpperCase()}</span>
+                      <span className="text-emerald-400 font-bold font-sans">
+                        {Number(p.price || 0).toFixed(2)} {settings?.currency || 'DA'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeProductFromQueue(p.id)}
+                    className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Retirer du catalogue"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+
+              {queueProducts.length === 0 && (
+                <div className="p-8 text-center text-slate-500 text-xs italic">
+                  La file d'impression est vide. Ajoutez des articles depuis l'onglet Recherche.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Column 2: Layout / Print Studio Design Settings */}
@@ -624,23 +805,68 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div>
               <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
-                <Eye size={15} className="text-indigo-400" /> 3. Aperçu A4 Paginated
+                <Eye size={15} className="text-indigo-400" /> 3. Aperçu A4 ({pages.length} page{pages.length > 1 ? 's' : ''})
               </h3>
               <p className="text-[11px] text-slate-400">Simulation dynamique du catalogue avant l'impression.</p>
             </div>
             
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-500 font-bold">Zoom :</span>
-              <div className="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800">
-                {[0.4, 0.5, 0.65, 0.8].map(z => (
-                  <button 
-                    key={z} 
-                    onClick={() => setZoom(z)} 
-                    className={`px-2 py-0.5 rounded text-[9px] font-bold ${zoom === z ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Pagination toolbar */}
+              {pages.length > 1 && (
+                <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+                  <button
+                    disabled={activePreviewPage === 0}
+                    onClick={() => setActivePreviewPage(p => Math.max(0, p - 1))}
+                    className="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors"
+                    title="Page précédente"
                   >
-                    {Math.round(z * 100)}%
+                    ◀
                   </button>
-                ))}
+                  <span className="text-[10px] font-bold text-white px-1">
+                    {activePreviewPage + 1} / {pages.length}
+                  </span>
+                  <button
+                    disabled={activePreviewPage >= pages.length - 1}
+                    onClick={() => setActivePreviewPage(p => Math.min(pages.length - 1, p + 1))}
+                    className="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-bold transition-colors"
+                    title="Page suivante"
+                  >
+                    ▶
+                  </button>
+                </div>
+              )}
+
+              {/* Preview mode toggle */}
+              {pages.length > 1 && (
+                <div className="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+                  <button
+                    onClick={() => setPreviewMode('single')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${previewMode === 'single' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                  >
+                    1 Page (Fluide)
+                  </button>
+                  <button
+                    onClick={() => setPreviewMode('all')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-bold transition-colors ${previewMode === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                  >
+                    Tout voir
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-slate-500 font-bold">Zoom :</span>
+                <div className="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+                  {[0.4, 0.5, 0.65, 0.8].map(z => (
+                    <button 
+                      key={z} 
+                      onClick={() => setZoom(z)} 
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold ${zoom === z ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
+                    >
+                      {Math.round(z * 100)}%
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -658,7 +884,10 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                 </div>
               </div>
             ) : (
-              pages.map((pageItems, pageIdx) => {
+              (previewMode === 'single'
+                ? (pages[activePreviewPage] ? [{ pageItems: pages[activePreviewPage], pageIdx: activePreviewPage }] : [])
+                : pages.map((pageItems, pageIdx) => ({ pageItems, pageIdx }))
+              ).map(({ pageItems, pageIdx }) => {
                 const isFirstPage = pageIdx === 0;
                 
                 // Define A4 proportions (Width: 210mm = 794px, Height: 297mm = 1123px at 96 DPI)
@@ -687,7 +916,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                         <div className="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-3 h-[50px] shrink-0">
                           <div className="flex items-center">
                             {showLogo && settings.logoUrl && (
-                              <img src={settings.logoUrl} className="h-8 object-contain mr-2 rounded border border-slate-200" alt="logo" />
+                              <SafeImage src={settings.logoUrl} className="h-8 object-contain mr-2 rounded border border-slate-200" alt="logo" />
                             )}
                             <div className="text-left">
                               <h1 className="text-sm font-black uppercase text-slate-800 tracking-tight leading-none">{title || settings.name || 'CATALOGUE'}</h1>
@@ -767,7 +996,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                                   <div className="flex justify-between items-baseline mt-1">
                                     {showPrice && (
                                       <span style={{ fontSize: `${priceFontSize}px` }} className="font-black text-indigo-600">
-                                        {p.price.toFixed(2)} {settings.currency || 'DA'}
+                                        {(Number(p.price) || 0).toFixed(2)} {settings?.currency || 'DA'}
                                       </span>
                                     )}
                                     {showSku && (

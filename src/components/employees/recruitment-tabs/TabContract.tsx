@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { FileText, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { CompanySettings, Employee } from '../../../types';
+import { SafeImage } from '../../ui/SafeImage';
 
 interface TabContractProps {
   formData: any;
@@ -77,7 +78,7 @@ Fait de manière numérique de plein accord des deux parties.`}
           <div className="border border-emerald-500/20 bg-emerald-500/[0.02] rounded-xl p-6 text-center space-y-3 flex flex-col items-center">
             <CheckSquare className="text-emerald-400" size={24} />
             <p className="text-[10px] font-black tracking-widest text-emerald-400 uppercase font-black">Signature Sécurisée Enregistrée</p>
-            <img src={formData.digitalSignatureUrl} className="max-h-20 bg-white dark:bg-black/40 rounded-xl p-3 shadow-inner border border-white/10" alt="Signed" />
+            <SafeImage src={formData.digitalSignatureUrl} className="max-h-20 bg-white dark:bg-black/40 rounded-xl p-3 shadow-inner border border-white/10" alt="Signed" />
             <button type="button" onClick={() => setFormData((prev: any) => ({ ...prev, digitalSignatureUrl: '' }))} className="text-[9px] font-bold text-rose-500 underline uppercase tracking-widest cursor-pointer">Effacer et recommencer</button>
           </div>
         ) : (

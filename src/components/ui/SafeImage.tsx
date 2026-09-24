@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getLocalImage, cacheImage } from '../../services/imageCache';
+import { getLocalImage, cacheImage, evictObjectUrl } from '../../services/imageCache';
 import { getOptimizedImageUrl } from '../../lib/image-optimizer';
 
 interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -57,11 +57,9 @@ export const SafeImage: React.FC<SafeImageProps> = ({
           }
 
           setDisplaySrc(finalSrc);
-          cacheImage(finalSrc).then(cachedBlobUrl => {
-            if (active && cachedBlobUrl) {
-              setDisplaySrc(cachedBlobUrl);
-            }
-          }).catch(() => {});
+          // Mettre en cache en tâche de fond pour les prochains rendus et le mode hors-ligne,
+          // sans écraser displaySrc pour éviter d'avorter la requête HTTP en cours dans Chromium
+          cacheImage(finalSrc).catch(() => {});
         }
       }).catch(() => {
         if (active) setError(true);
@@ -74,6 +72,38 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       active = false;
     };
   }, [src, optimizeWidth, isRemote]);
+
+  const handleImageError = () => {
+    if (displaySrc && displaySrc.startsWith('blob:') && src) {
+      const finalSrc = getOptimizedImageUrl(src, optimizeWidth);
+      evictObjectUrl(finalSrc);
+      getLocalImage(finalSrc, true).then(freshBlobUrl => {
+        if (freshBlobUrl) {
+          setDisplaySrc(freshBlobUrl);
+        } else if (typeof navigator === 'undefined' || navigator.onLine) {
+          setDisplaySrc(finalSrc);
+        } else {
+          setError(true);
+        }
+      }).catch(() => setError(true));
+      return;
+    }
+
+    // Si l'URL optimisée a échoué et qu'elle diffère de l'URL brute d'origine, repli sur l'originale
+    if (src && displaySrc && displaySrc !== src) {
+      setDisplaySrc(src);
+      return;
+    }
+
+    setError(true);
+  };
+
+  const handleImageLoad = () => {
+    // Si l'image affichée est distante, s'assurer qu'elle est archivée en cache local
+    if (displaySrc && !displaySrc.startsWith('blob:') && !displaySrc.startsWith('data:')) {
+      cacheImage(displaySrc).catch(() => {});
+    }
+  };
 
   if (!displaySrc || isBadUrl(displaySrc) || error) {
     return (
@@ -88,8 +118,11 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       src={displaySrc}
       alt={alt}
       className={className}
-      onError={() => setError(true)}
+      onError={handleImageError}
+      onLoad={handleImageLoad}
       referrerPolicy="no-referrer"
+      loading="lazy"
+      decoding="async"
       {...props}
     />
   );

@@ -1,7 +1,17 @@
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 
-const MAX_CACHED_OBJECT_URLS = 150;
+const MAX_CACHED_OBJECT_URLS = 2000;
 const objectUrlMap = new Map<string, string>();
+
+export function evictObjectUrl(url: string) {
+  if (objectUrlMap.has(url)) {
+    const existing = objectUrlMap.get(url);
+    if (existing && existing.startsWith('blob:')) {
+      try { URL.revokeObjectURL(existing); } catch (_) {}
+    }
+    objectUrlMap.delete(url);
+  }
+}
 
 function setBoundedObjectUrl(url: string, objUrl: string) {
   if (objectUrlMap.has(url)) {
@@ -11,12 +21,9 @@ function setBoundedObjectUrl(url: string, objUrl: string) {
     }
     objectUrlMap.delete(url);
   } else if (objectUrlMap.size >= MAX_CACHED_OBJECT_URLS) {
+    // Élagage LRU sans révocation agressive pour ne pas casser le rendu des balises <img> montées
     const oldestKey = objectUrlMap.keys().next().value;
     if (oldestKey) {
-      const oldObjUrl = objectUrlMap.get(oldestKey);
-      if (oldObjUrl && oldObjUrl.startsWith('blob:')) {
-        try { URL.revokeObjectURL(oldObjUrl); } catch (_) {}
-      }
       objectUrlMap.delete(oldestKey);
     }
   }
@@ -76,11 +83,11 @@ async function compressImageBlob(blob: Blob, maxWidth = 400, quality = 0.7): Pro
   });
 }
 
-export async function getLocalImage(url: string): Promise<string | null> {
+export async function getLocalImage(url: string, forceFresh = false): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
   
-  if (objectUrlMap.has(url)) {
+  if (!forceFresh && objectUrlMap.has(url)) {
     const cached = objectUrlMap.get(url)!;
     // Re-insert to refresh LRU order
     objectUrlMap.delete(url);
@@ -101,6 +108,32 @@ export async function getLocalImage(url: string): Promise<string | null> {
   return null;
 }
 
+const inFlightRequests = new Map<string, Promise<string | null>>();
+const MAX_CONCURRENT_FETCHES = 3;
+let activeFetches = 0;
+const fetchQueue: Array<() => void> = [];
+
+async function acquireFetchSlot(): Promise<void> {
+  if (activeFetches < MAX_CONCURRENT_FETCHES) {
+    activeFetches++;
+    return;
+  }
+  return new Promise<void>((resolve) => {
+    fetchQueue.push(() => {
+      activeFetches++;
+      resolve();
+    });
+  });
+}
+
+function releaseFetchSlot(): void {
+  activeFetches--;
+  if (fetchQueue.length > 0) {
+    const next = fetchQueue.shift();
+    if (next) next();
+  }
+}
+
 export async function cacheImage(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
@@ -115,44 +148,61 @@ export async function cacheImage(url: string): Promise<string | null> {
     objectUrlMap.set(url, cached);
     return cached;
   }
-  
-  try {
-    const cachedBlob = await getIDB(`img_${url}`);
-    if (cachedBlob instanceof Blob) {
-      const objUrl = URL.createObjectURL(cachedBlob);
+
+  // Deduplicate concurrent requests for the same image
+  if (inFlightRequests.has(url)) {
+    return inFlightRequests.get(url)!;
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const cachedBlob = await getIDB(`img_${url}`);
+      if (cachedBlob instanceof Blob) {
+        const objUrl = URL.createObjectURL(cachedBlob);
+        setBoundedObjectUrl(url, objUrl);
+        return objUrl;
+      }
+      
+      // Throttle network fetches so we never exceed MAX_CONCURRENT_FETCHES
+      await acquireFetchSlot();
+      
+      let rawBlob: Blob;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        let response: Response;
+        try {
+          response = await fetch(url, { 
+            referrerPolicy: 'no-referrer',
+            signal: controller.signal
+          });
+        } catch (netErr: any) {
+          return null;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+
+        if (!response.ok) return null;
+        rawBlob = await response.blob();
+      } finally {
+        releaseFetchSlot();
+      }
+      
+      // Compress and convert to WebP before saving
+      const compressedBlob = await compressImageBlob(rawBlob);
+      
+      await setIDB(`img_${url}`, compressedBlob);
+      const objUrl = URL.createObjectURL(compressedBlob);
       setBoundedObjectUrl(url, objUrl);
       return objUrl;
-    }
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    
-    let response: Response;
-    try {
-      response = await fetch(url, { 
-        referrerPolicy: 'no-referrer',
-        signal: controller.signal
-      });
+    } catch (err: any) {
+      return null;
     } finally {
-      clearTimeout(timeoutId);
+      inFlightRequests.delete(url);
     }
+  })();
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const rawBlob = await response.blob();
-    
-    // Compress and convert to WebP before saving
-    const compressedBlob = await compressImageBlob(rawBlob);
-    
-    await setIDB(`img_${url}`, compressedBlob);
-    const objUrl = URL.createObjectURL(compressedBlob);
-    setBoundedObjectUrl(url, objUrl);
-    return objUrl;
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
-      console.warn(`[ImageCache] Timeout d'abandon pour l'image (réseau indisponible): ${url}`);
-    } else {
-      console.warn(`[ImageCache] Failed to fetch and cache image: ${url}`, err?.message || err);
-    }
-    return null;
-  }
+  inFlightRequests.set(url, fetchPromise);
+  return fetchPromise;
 }

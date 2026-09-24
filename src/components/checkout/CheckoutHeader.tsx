@@ -1,8 +1,11 @@
 import React from 'react';
-import { Search, Scan, X, Barcode } from 'lucide-react';
+import { Search, Scan, X, Barcode, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { SearchOverlay } from './SearchOverlay';
 import { Product } from '../../types';
+import { useCoreStore } from '../../store/useCoreStore';
+import { localDb } from '../../services/LocalDatabase';
+import { toast } from 'sonner';
 
 interface Props {
   search: string;
@@ -31,17 +34,33 @@ export const CheckoutHeader: React.FC<Props> = ({
     hasUsedArrowKeys.current = false;
   }, [search]);
 
+  const isFastMode = Boolean(settings?.fastModeEnabled);
+
+  const toggleFastMode = async () => {
+    const updated = !isFastMode;
+    const currentSettings = useCoreStore.getState().settings || {};
+    const newSettings = { ...currentSettings, fastModeEnabled: updated };
+    useCoreStore.getState().setSettings(newSettings);
+    toast.success(updated ? "Mode Caisse Haute Densité activé (Tableau compact)" : "Mode Caisse Standard réactivé (Cartes)");
+    try {
+      await localDb.update('settings/default', { fast_mode_enabled: updated });
+    } catch (_) {}
+  };
+
   React.useEffect(() => {
-    const handleF10Key = (e: KeyboardEvent) => {
+    const handleShortcuts = (e: KeyboardEvent) => {
       if (e.key === 'F10') {
         e.preventDefault();
         barcodeRef.current?.focus();
         barcodeRef.current?.select();
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        toggleFastMode();
       }
     };
-    window.addEventListener('keydown', handleF10Key);
-    return () => window.removeEventListener('keydown', handleF10Key);
-  }, []);
+    window.addEventListener('keydown', handleShortcuts);
+    return () => window.removeEventListener('keydown', handleShortcuts);
+  }, [isFastMode, settings]);
 
   const handleClearSearch = () => {
     setSearch('');
@@ -63,7 +82,7 @@ export const CheckoutHeader: React.FC<Props> = ({
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-5 border-b border-slate-200 dark:border-white/5 bg-white/95 dark:bg-workspace/60 sticky top-0 z-30 backdrop-blur-2xl shadow-sm">
+    <div className="p-3 sm:p-4 md:p-5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-sm">
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 md:gap-4">
         {/* Giant High-Visibility Centered Total Banner */}
         <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border-2 border-emerald-400 dark:border-emerald-500/50 rounded-2xl px-5 py-2 shadow-lg shadow-emerald-500/10 min-w-[200px]">
@@ -167,13 +186,28 @@ export const CheckoutHeader: React.FC<Props> = ({
           />
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          <button 
+            type="button"
+            onClick={toggleFastMode}
+            className={cn(
+              "px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 select-none",
+              isFastMode
+                ? "bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 font-black shadow-amber-500/25"
+                : "bg-slate-100 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            )}
+            title={isFastMode ? "Mode Caisse Haute Densité Actif (F8 pour basculer)" : "Activer le Mode Caisse Haute Densité (F8)"}
+          >
+            <Zap size={15} className={cn("transition-transform", isFastMode && "fill-slate-950")} />
+            <span className="hidden sm:inline">{isFastMode ? "Haute Densité (F8)" : "Mode Rapide (F8)"}</span>
+          </button>
+
           <button 
             onClick={() => setIsScannerOpen(true)}
-            className="p-3 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-500 transition-all shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
+            className="p-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-500 transition-all shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
             title="DÉMARRER SCANNER OPTIQUE"
           >
-            <Scan size={20} className="relative z-10" />
+            <Scan size={18} className="relative z-10" />
           </button>
         </div>
       </div>

@@ -72,14 +72,25 @@ export async function compressImage(
  * Helps mobile devices download much smaller image files.
  */
 export function getOptimizedImageUrl(url: string, width: number = 300): string {
-  if (!url || !url.includes('supabase.co')) return url;
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('supabase.co')) return url;
+  if (url.toLowerCase().endsWith('.svg')) return url;
 
   // Check if URL already has transformations
   if (url.includes('?width=') || url.includes('&width=')) return url;
 
   // Supabase Image Transformation API format
-  // Note: This requires Supabase Pro plan or self-hosted transformation service enabled.
-  // If using free tier, this might return the original image unless configured.
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}width=${width}&quality=70&resize=contain`;
+  // In Supabase, image transformations use the /storage/v1/render/image/public/ endpoint
+  if (url.includes('/storage/v1/object/public/')) {
+    const renderUrl = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+    const separator = renderUrl.includes('?') ? '&' : '?';
+    return `${renderUrl}${separator}width=${width}&quality=70&resize=contain`;
+  }
+
+  if (url.includes('/storage/v1/render/image/public/')) {
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}width=${width}&quality=70&resize=contain`;
+  }
+
+  return url;
 }

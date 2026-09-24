@@ -79,7 +79,7 @@ export function SubTabPurchasesHistory({
                   <td className="p-4 text-sm font-black text-white uppercase tracking-tight">{p.supplierName}</td>
                   <td className="p-4 text-xs font-mono text-indigo-400">{p.invoiceNumber}</td>
                   <td className="p-4 text-md font-black text-white font-mono">{(p.total ?? (p as any).totalAmount ?? 0).toFixed(2)}</td>
-                  <td className="p-4 text-sm text-emerald-400 font-black font-mono">{p.paidAmount?.toFixed(2) || '0.00'}</td>
+                  <td className="p-4 text-sm text-emerald-400 font-black font-mono">{Number(p.paidAmount || 0).toFixed(2)}</td>
                   <td className="p-4 text-sm text-rose-500 font-black font-mono">{((p.total ?? (p as any).totalAmount ?? 0) - (p.paidAmount || 0)).toFixed(2)}</td>
                   <td className="p-4 text-right flex gap-3 justify-end items-center">
                     <button onClick={(e) => { e.stopPropagation(); setViewingPurchaseVoucher(p); }} className="p-2 text-industrial-500 hover:text-indigo-400 hover:bg-industrial-800 transition-all rounded-xl"><FileText size={18}/></button>

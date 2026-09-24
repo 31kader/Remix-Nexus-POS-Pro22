@@ -61,7 +61,7 @@ export function PurchaseCartTable({
           ) : (
             cart.map((item) => {
               const matchedProd = item.productId ? products.find(p => p.id === item.productId) : undefined;
-              const lineTotal = (item.costPrice * item.quantity) * (1 - (item.discount || 0) / 100);
+              const lineTotal = ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0)) * (1 - (Number(item.discount) || 0) / 100);
 
               return (
                 <tr key={item.lineId} className="hover:bg-industrial-800/30 group transition-colors">
@@ -174,7 +174,7 @@ export function PurchaseCartTable({
 
                   {/* Total HT */}
                   <td className="py-2.5 px-4 text-right font-black text-white font-mono text-base tracking-tight">
-                    {lineTotal.toFixed(2)}
+                    {(Number(lineTotal) || 0).toFixed(2)}
                   </td>
 
                   {/* Actions */}

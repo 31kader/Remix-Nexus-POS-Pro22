@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Modal, Button } from '../ui';
 import { AuditLog, Transaction, CompanySettings } from '../../types';
-import { formatSafe } from '../../lib/utils';
+import { formatSafe, formatPrice } from '../../lib/utils';
 
 interface UndoLogModalProps {
   cancellingLog: AuditLog | null;
@@ -63,7 +63,7 @@ export function UndoLogModal({
               <span className="font-mono text-xs font-black text-white">#{String(undoTransactionDetails.id || "").slice(-8).toUpperCase()}</span>
             </div>
             <p className="text-xs text-industrial-400">
-              Une transaction de <strong className="text-white">{undoTransactionDetails.total.toFixed(2)} {settings.currency}</strong> émise le {formatSafe(undoTransactionDetails.timestamp || (undoTransactionDetails as any).date, 'dd/MM/yyyy HH:mm')} correspond à cette action.
+              Une transaction de <strong className="text-white">{formatPrice(undoTransactionDetails.total)} {settings.currency}</strong> émise le {formatSafe(undoTransactionDetails.timestamp || (undoTransactionDetails as any).date, 'dd/MM/yyyy HH:mm')} correspond à cette action.
             </p>
 
             <div className="border-t border-indigo-500/10 pt-3 flex items-center gap-3">

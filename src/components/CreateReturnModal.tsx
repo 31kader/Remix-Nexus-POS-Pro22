@@ -7,7 +7,7 @@ import { useCoreStore } from '../store/useCoreStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { generateLocalId } from '../lib/db-converters';
-import { formatSafe, safeGetItems } from '../lib/utils';
+import { formatSafe, safeGetItems, formatPrice } from '../lib/utils';
 import { localDb, enqueueStockAdjustment } from '../database';
 import { toast } from 'sonner';
 import bcrypt from 'bcryptjs';
@@ -229,7 +229,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
                     </p>
                   </div>
                   <div className="text-right flex items-center gap-3">
-                    <span className="text-xs font-bold text-white font-mono">{tx.total.toFixed(2)} {settings.currency}</span>
+                    <span className="text-xs font-bold text-white font-mono">{formatPrice(tx.total)} {settings.currency}</span>
                     <ArrowRight size={16} className="text-industrial-500" />
                   </div>
                 </div>
@@ -280,7 +280,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
                         />
                         <div>
                           <p className="text-xs font-bold text-white uppercase">{item.name}</p>
-                          <p className="text-[10px] text-industrial-500 font-mono">{item.price.toFixed(2)} {settings.currency} / unité</p>
+                          <p className="text-[10px] text-industrial-500 font-mono">{formatPrice(item.price)} {settings.currency} / unité</p>
                         </div>
                       </div>
                       {isSelected && (
@@ -332,7 +332,7 @@ export function CreateReturnModal({ isOpen, onClose, products = [], settings }: 
             <div className="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-xl flex items-center justify-between">
               <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Total à Rembourser</span>
               <span className="text-lg font-black text-emerald-400 font-mono">
-                {calculateTotalRefund().toFixed(2)} {settings.currency}
+                {formatPrice(calculateTotalRefund())} {settings.currency}
               </span>
             </div>
 

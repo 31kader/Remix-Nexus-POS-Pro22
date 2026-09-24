@@ -1,24 +1,26 @@
-import React, { useState, memo, useEffect, useMemo } from 'react';
+import React, { useState, memo, useEffect, useMemo, Suspense } from 'react';
 import { CreditCard, ShoppingCart, LayoutGrid, ArrowRight, Edit3, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Product, Customer } from '../types';
-import { cn } from '../lib/utils';
+import { cn, formatPrice } from '../lib/utils';
 import { printReceipt } from '../services/printService';
 
-import { QuickAddProductModal } from './QuickAddProductModal';
-import { DeliveryRequestModal } from './DeliveryRequestModal';
 import { SessionTabs } from './checkout/SessionTabs';
 import { SessionInitialCard } from './checkout/SessionInitialCard';
 import { BarcodeScanner } from './BarcodeScanner';
-import { CheckoutSuccessModal } from './checkout/CheckoutSuccessModal';
 import { QuickSelectPanel } from './checkout/QuickSelectPanel';
 import { CheckoutHeader } from './checkout/CheckoutHeader';
 import { CheckoutControlsPanel } from './checkout/CheckoutControlsPanel';
 import { CartItemsList } from './checkout/CartItemsList';
 import { useCheckoutLogic } from './checkout/useCheckoutLogic';
-import { CustomerDisplayModal } from './checkout/CustomerDisplayModal';
 import { broadcastCustomerDisplay } from '../services/customerDisplayService';
+
+// 🚀 Modals lourds chargés à la demande (Lazy Loading + Code Splitting)
+const QuickAddProductModal = React.lazy(() => import('./QuickAddProductModal').then(m => ({ default: m.QuickAddProductModal })));
+const DeliveryRequestModal = React.lazy(() => import('./DeliveryRequestModal').then(m => ({ default: m.DeliveryRequestModal })));
+const CheckoutSuccessModal = React.lazy(() => import('./checkout/CheckoutSuccessModal').then(m => ({ default: m.CheckoutSuccessModal })));
+const CustomerDisplayModal = React.lazy(() => import('./checkout/CustomerDisplayModal').then(m => ({ default: m.CustomerDisplayModal })));
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
@@ -35,6 +37,7 @@ interface CheckoutProps {
   setEditingProduct: (product: Product | null) => void;
   activeStaffId: string;
   isSidebarOpen?: boolean;
+  setIsSidebarOpen?: (open: boolean) => void;
 }
 
 export const Checkout = memo(function Checkout(props: CheckoutProps) {
@@ -232,22 +235,34 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
   return (
     <div className="relative h-full flex flex-col w-full bg-slate-100 dark:bg-[#05070a] overflow-hidden">
-      <CustomerDisplayModal 
-        isOpen={isCustomerDisplayModalOpen}
-        onClose={() => setIsCustomerDisplayModalOpen(false)}
-      />
-      <QuickAddProductModal 
-        isOpen={isQuickAddModalOpen}
-        onClose={() => setIsQuickAddModalOpen(false)}
-        barcode={newProductBarcode}
-        user={user}
-        onSuccess={(product) => addToCart(product, isReturnMode ? -1 : 1)}
-      />
-      <DeliveryRequestModal 
-        isOpen={isDeliveryModalOpen}
-        onClose={() => setIsDeliveryModalOpen(false)}
-        cartTotal={displayTotal}
-      />
+      {isCustomerDisplayModalOpen && (
+        <Suspense fallback={null}>
+          <CustomerDisplayModal 
+            isOpen={isCustomerDisplayModalOpen}
+            onClose={() => setIsCustomerDisplayModalOpen(false)}
+          />
+        </Suspense>
+      )}
+      {isQuickAddModalOpen && (
+        <Suspense fallback={null}>
+          <QuickAddProductModal 
+            isOpen={isQuickAddModalOpen}
+            onClose={() => setIsQuickAddModalOpen(false)}
+            barcode={newProductBarcode}
+            user={user}
+            onSuccess={(product) => addToCart(product, isReturnMode ? -1 : 1)}
+          />
+        </Suspense>
+      )}
+      {isDeliveryModalOpen && (
+        <Suspense fallback={null}>
+          <DeliveryRequestModal 
+            isOpen={isDeliveryModalOpen}
+            onClose={() => setIsDeliveryModalOpen(false)}
+            cartTotal={displayTotal}
+          />
+        </Suspense>
+      )}
        {/* Session Tabs - More compact on mobile */}
       {activeShift && (
         <SessionTabs 
@@ -385,14 +400,14 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsPaymentSheetOpen(false)}
-                  className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100]"
+                  className="fixed inset-0 bg-black/80 z-[100]"
                 />
                 <motion.div
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 z-[101] bg-[#0a0c10] border-t border-white/10 rounded-t-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+                  className="fixed inset-x-0 bottom-0 z-[101] bg-zinc-950 border-t border-zinc-800 rounded-t-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
                 >
                   <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto my-4" />
                   <CheckoutControlsPanel
@@ -487,7 +502,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
               <CreditCard size={18} />
             </div>
             <span className="[writing-mode:vertical-lr] text-[11px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-              Caisse • {total.toFixed(0)} {settings.currency}
+              Caisse • {formatPrice(total, 0)} {settings.currency}
             </span>
             <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
               {cart.length} art.
@@ -498,7 +513,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
       {/* Mobile Navigation Bar */}
       {isMobile && (
-        <div className="bg-black/60 backdrop-blur-2xl border-t border-white/5 p-4 flex items-center justify-between gap-4 z-[90]">
+        <div className="bg-zinc-950 border-t border-zinc-800 p-4 flex items-center justify-between gap-4 z-[90]">
           <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
             <button
               onClick={() => setMobileTab('cart')}
@@ -526,7 +541,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
                onClick={() => setIsPaymentSheetOpen(true)}
                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-900 disabled:text-slate-700 text-white py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center gap-3 italic"
              >
-               {displayTotal.toFixed(2)} {settings.currency} <ArrowRight size={18} />
+               {formatPrice(displayTotal, 2)} {settings.currency} <ArrowRight size={18} />
              </button>
           </div>
         </div>
@@ -534,18 +549,22 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
 
       {/* Success Notification */}
-      <CheckoutSuccessModal
-        isOpen={showSuccess}
-        onClose={() => {
-          setShowSuccess(false);
-        }}
-        lastTransaction={lastTransaction}
-        settings={settings}
-        customers={customers}
-        printReceipt={(tx, st) => {
-          printReceipt(tx, st);
-        }}
-      />
+      {showSuccess && (
+        <Suspense fallback={null}>
+          <CheckoutSuccessModal
+            isOpen={showSuccess}
+            onClose={() => {
+              setShowSuccess(false);
+            }}
+            lastTransaction={lastTransaction}
+            settings={settings}
+            customers={customers}
+            printReceipt={(tx, st) => {
+              printReceipt(tx, st);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 });

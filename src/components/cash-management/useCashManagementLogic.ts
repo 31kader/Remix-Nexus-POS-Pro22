@@ -33,7 +33,7 @@ export function useCashManagementLogic({
   const currentShiftStats = useMemo(() => {
     if (!activeShift) return null;
     const shiftTransactions = (transactions || []).filter(t => 
-      t && t.timestamp && new Date(t.timestamp) >= new Date(activeShift.openedAt) && t.status !== 'returned'
+      t && t.timestamp && new Date(t.timestamp) >= new Date(activeShift.openedAt) && t.status !== 'returned' && t.status !== 'cancelled'
     );
     const shiftExpenses = (expenses || []).filter(e => 
       e && e.date && new Date(e.date) >= new Date(activeShift.openedAt)

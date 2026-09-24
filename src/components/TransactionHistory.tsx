@@ -4,7 +4,7 @@ import { Package, Tag, RefreshCw, LayoutGrid, Plus, FileSpreadsheet, History, Up
 import { supabase } from '../supabase';
 import { Button, Card, Modal, ConfirmDialog, BlurCard, SortableHeader } from './ui';
 import { Product, Category, Brand, StockAdjustment, CompanySettings, SupplierSync, Supplier, Purchase, Transaction, OnlineOrder, Employee, Customer, CartItem, ProductReturn, RolePermissions } from '../types';
-import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked } from '../lib/utils';
+import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked, formatPrice } from '../lib/utils';
 import { printReceipt } from '../services/printService';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -131,14 +131,14 @@ export function TransactionHistory(props: TransactionHistoryProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <BlurCard title="Total Période" borderClass="border-l-4 border-l-indigo-500">
-          <p className="text-2xl font-black text-white">{totalPeriod.toFixed(2)} {settings.currency}</p>
+          <p className="text-2xl font-black text-white">{formatPrice(totalPeriod)} {settings.currency}</p>
         </BlurCard>
         <BlurCard title="Transactions" borderClass="border-l-4 border-l-emerald-500">
           <p className="text-2xl font-black text-white">{filteredTransactions.length}</p>
         </BlurCard>
         <BlurCard title="Panier Moyen" borderClass="border-l-4 border-l-amber-500">
           <p className="text-2xl font-black text-white">
-            {filteredTransactions.length > 0 ? (totalPeriod / filteredTransactions.length).toFixed(2) : '0.00'} {settings.currency}
+            {filteredTransactions.length > 0 ? formatPrice(totalPeriod / filteredTransactions.length) : '0.00'} {settings.currency}
           </p>
         </BlurCard>
       </div>

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8,7 +8,7 @@
     <meta name="google" content="notranslate" />
     <title>Nexus POS Pro</title>
     <meta name="description" content="Système de point de vente professionnel" />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#f8fafc" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,7 +18,8 @@
     <script>
       (function() {
         try {
-          var t = localStorage.getItem('nexus-pos-theme') || 'dark';
+          var t = localStorage.getItem('nexus-pos-theme-v3') || 'light';
+          document.documentElement.classList.remove('light', 'dark', 'emerald', 'gold', 'nardo-grey-racing');
           if (t === 'light') {
             document.documentElement.classList.add('light');
           } else {

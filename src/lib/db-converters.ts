@@ -231,6 +231,9 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   invoice_patterns: ['id', 'type', 'prefix', 'suffix', 'digits', 'next_number', 'supplier_name', 'system_supplier_id', 'item_mappings', 'created_at', 'updated_at'],
   goods_receipt_notes: [
     'id', 'supplier_id', 'date', 'items', 'global_discount', 'global_vat', 'status'
+  ],
+  goodsReceiptNotes: [
+    'id', 'supplier_id', 'date', 'items', 'global_discount', 'global_vat', 'status'
   ]
 };
 
@@ -253,15 +256,27 @@ export const CONFLICT_MAPS: Record<string, string[][]> = {
   ]
 };
 
+import { useCoreStore } from '../store/useCoreStore';
+
 export function preparePayload(table: string, id: string, data: any) {
   let combined = { ...data };
   if (table === 'products') {
-    const cached = dbState?.products?.[id];
+    let cached = dbState?.products?.[id];
+    if (!cached) {
+      try {
+        cached = useCoreStore.getState().products?.find(p => p && p.id === id);
+      } catch (_) {}
+    }
     if (cached) {
       combined = { ...cached, ...data };
     }
   } else if (table === 'customers') {
     const cached = dbState?.customers?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'suppliers') {
+    const cached = dbState?.suppliers?.[id];
     if (cached) {
       combined = { ...cached, ...data };
     }
@@ -290,7 +305,8 @@ export function preparePayload(table: string, id: string, data: any) {
   }
   const payload = { id, ...combined };
   
-  const allowed = TABLE_COLUMNS[table];
+  const normTable = TABLE_NAME_MAPPINGS[table] || table;
+  const allowed = TABLE_COLUMNS[normTable] || TABLE_COLUMNS[table];
   if (allowed && allowed.includes('password_hash')) {
     const hasHash = (payload as any).passwordHash || (payload as any).password_hash || payload.password_hash;
     const hasPlain = payload.password || (payload as any).password;
@@ -330,7 +346,8 @@ export function preparePayload(table: string, id: string, data: any) {
         'price', 'cost_price', 'tax_rate', 'stock', 'min_stock', 
         'amount', 'total', 'points_earned', 'discount_amount', 
         'points_discount', 'balance_used', 'voucher_discount',
-        'value', 'current_balance', 'min_purchase', 'loyalty_points', 'balance'
+        'value', 'current_balance', 'min_purchase', 'loyalty_points', 'balance',
+        'global_discount', 'global_vat'
       ];
       if (nonNullableNumerics.includes(key)) return 0;
       if (key === 'category_id') return 'uncategorized';
@@ -363,7 +380,8 @@ export function preparePayload(table: string, id: string, data: any) {
       'loyalty_points', 'total_spent', 'expected_cash', 'final_cash', 
       'initial_cash', 'total_sales', 'total_expenses', 'level', 'points_earned',
       'discount_amount', 'points_discount', 'balance_used', 'voucher_discount', 'value', 'current_balance', 'min_purchase',
-      'units_per_parent', 'label_width_custom', 'label_height_custom'
+      'units_per_parent', 'label_width_custom', 'label_height_custom',
+      'global_discount', 'global_vat'
     ];
     if (numericKeys.includes(key)) {
       let parsedNum: number;
@@ -431,6 +449,14 @@ export function preparePayload(table: string, id: string, data: any) {
       if (!filtered.name) {
         const cached = dbState?.customers?.[id];
         filtered.name = cleanValueForPostgres('name', cached?.name || snakePayload.name || 'Client');
+      }
+    }
+
+    // Safety checks for supplier non-nullable fields (e.g. name) on partial upserts
+    if (table === 'suppliers') {
+      if (!filtered.name) {
+        const cached = dbState?.suppliers?.[id];
+        filtered.name = cleanValueForPostgres('name', cached?.name || snakePayload.name || 'Fournisseur');
       }
     }
 

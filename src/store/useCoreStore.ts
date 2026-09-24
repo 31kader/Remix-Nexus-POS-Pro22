@@ -1,16 +1,14 @@
 import { create } from 'zustand';
 import { Product, Category, Brand, CompanySettings, Promotion } from '../types';
 import { DEFAULT_SETTINGS } from '../hooks/data-fetching/initialStates';
+import { getSecureItem, setSecureItem } from '../lib/security';
 
 const getInitialSettings = (): CompanySettings => {
   if (typeof localStorage !== 'undefined') {
     try {
-      const saved = localStorage.getItem('nexus_company_settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          return { ...DEFAULT_SETTINGS, ...parsed };
-        }
+      const saved = getSecureItem<CompanySettings>('nexus_company_settings');
+      if (saved && typeof saved === 'object') {
+        return { ...DEFAULT_SETTINGS, ...saved };
       }
     } catch (_) {}
   }
@@ -48,7 +46,7 @@ export const useCoreStore = create<CoreState>((set) => ({
     const newSettings = typeof update === 'function' ? update(state.settings) : update;
     if (typeof localStorage !== 'undefined' && newSettings) {
       try {
-        localStorage.setItem('nexus_company_settings', JSON.stringify(newSettings));
+        setSecureItem('nexus_company_settings', newSettings);
       } catch (_) {}
     }
     return { settings: newSettings };

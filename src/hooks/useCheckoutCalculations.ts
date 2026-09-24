@@ -101,20 +101,20 @@ export function useCheckoutCalculations({
           }
         });
       }
-      total = Math.max(0, subtotal - (discountAmount || 0));
+      total = subtotal < 0 ? subtotal : Math.max(0, subtotal - (discountAmount || 0));
     }
 
     // 4. Calculate Customer profile loyalty points discounts
     const customerLoyaltyPoints = Number(selectedCustomer?.loyaltyPoints || 0);
     const pointValue = Number(settings?.loyaltyPointValue || 0.01);
 
-    const pointsDiscount = (useLoyaltyPoints && selectedCustomer && customerLoyaltyPoints > 0)
+    const pointsDiscount = (useLoyaltyPoints && selectedCustomer && customerLoyaltyPoints > 0 && total > 0)
       ? Math.min(total, customerLoyaltyPoints * pointValue)
       : 0;
     
     // 5. Calculate Applied physical/gift Voucher discounts
     let voucherDiscount = 0;
-    if (appliedVoucher) {
+    if (appliedVoucher && total > 0) {
       const vVal = Number(appliedVoucher.value || 0);
       if (appliedVoucher.type === 'percent') {
         voucherDiscount = (total - pointsDiscount) * (vVal / 100);
@@ -124,7 +124,7 @@ export function useCheckoutCalculations({
       }
     }
 
-    total = Math.max(0, total - pointsDiscount - voucherDiscount);
+    total = total < 0 ? total : Math.max(0, total - pointsDiscount - voucherDiscount);
 
     return {
       subtotal,

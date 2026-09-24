@@ -14,6 +14,7 @@ import { useTranslation } from '../translations';
 import { RolePermissions, CompanySettings } from '../types';
 
 import { useTransactionStore } from '../store/useTransactionStore';
+import { SafeImage } from './ui/SafeImage';
 
 interface NavItemProps {
   icon: React.ReactNode;
@@ -32,7 +33,6 @@ function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePu
       href={href || "#"}
       tabIndex={-1}
       onClick={(e) => {
-        // Laisser le comportement natif du navigateur si Ctrl, Cmd ou clic du milieu
         if (e.ctrlKey || e.metaKey || (e as any).button === 1) {
           return;
         }
@@ -47,25 +47,24 @@ function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePu
         }
       }}
       className={cn(
-        "flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group relative cursor-pointer border",
+        "flex items-center gap-2.5 py-2 px-3 rounded-lg transition-colors duration-100 group relative cursor-pointer border",
         active 
-          ? "bg-indigo-600/10 text-indigo-400 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)] font-bold scale-[1.02]"
-          : "text-slate-400 hover:text-white hover:bg-white/5 border-transparent hover:border-white/5"
+          ? "bg-indigo-50 dark:bg-indigo-600/15 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 font-bold"
+          : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800/60 border-transparent"
       )}
     >
       <div className={cn(
-        "transition-transform duration-300 shrink-0",
-        active ? "scale-110 text-indigo-400" : "group-hover:scale-110 group-hover:text-indigo-400"
+        "shrink-0",
+        active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
       )}>
-        {React.cloneElement(icon as React.ReactElement<any>, { size: 18 })}
+        {React.cloneElement(icon as React.ReactElement<any>, { size: 17 })}
       </div>
       {!collapsed && (
-        <span className="font-semibold text-xs tracking-wide transition-all group-hover:translate-x-1 duration-300 truncate">
+        <span className="font-medium text-xs truncate">
           {label}
         </span>
       )}
       
-      {/* Bouton d'action directe pour ouvrir dans une nouvelle fenêtre (2ème écran) */}
       {!collapsed && href && href !== '#' && (
         <button
           type="button"
@@ -74,8 +73,8 @@ function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePu
             e.stopPropagation();
             window.open(href, '_blank', 'width=1400,height=900');
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-indigo-500/20 text-slate-500 hover:text-indigo-300 rounded-md transition-all ml-auto"
-          title="Ouvrir dans une nouvelle page / fenêtre (2ème écran)"
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-indigo-500/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 rounded transition-opacity ml-auto"
+          title="Ouvrir dans une nouvelle fenêtre (2ème écran)"
         >
           <ExternalLink size={12} />
         </button>
@@ -83,20 +82,17 @@ function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePu
 
       {badge !== undefined && Number(badge) > 0 && (
         <span className={cn(
-          "px-1.5 py-0.5 text-[9px] font-black rounded-full transition-all",
+          "px-1.5 py-0.5 text-[10px] font-bold rounded-md",
           collapsed ? "absolute top-1 right-1 px-1 py-0 text-[8px]" : (href && href !== '#' ? "ml-1" : "ml-auto"),
           badgePulse 
-            ? "bg-amber-500 text-slate-950 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.6)]" 
-            : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+            ? "bg-amber-500 text-slate-950" 
+            : "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300"
         )}>
           {badge}
         </span>
       )}
-      {active && !collapsed && badge === undefined && (!href || href === '#') && (
-        <span className="absolute right-3 w-1.5 h-1.5 bg-indigo-400 rounded-full shadow-[0_0_8px_#6366f1]" />
-      )}
       {collapsed && (
-        <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-950 text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-50 shadow-2xl border border-white/10 flex items-center gap-1.5">
+        <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-md border border-slate-700 flex items-center gap-1.5">
           <span>{label}</span>
           {href && href !== '#' && <ExternalLink size={10} className="text-indigo-400" />}
         </div>
@@ -184,7 +180,7 @@ export const Sidebar = ({
         x: isMobile && !isMobileOverlayOpen ? -300 : 0
       }}
       className={cn(
-        "border-r flex flex-col h-full bg-[#08080c] border-slate-800 shadow-2xl relative",
+        "border-r flex flex-col h-full bg-zinc-950 border-zinc-800 shadow-2xl relative",
         isMobile ? "fixed inset-y-0 left-0 z-[70]" : "relative z-40"
       )}
     >
@@ -194,6 +190,7 @@ export const Sidebar = ({
       {isMobile && isMobileOverlayOpen && (
         <button 
           onClick={() => setIsMobileOverlayOpen(false)}
+          aria-label="Fermer le menu mobile"
           className="absolute top-5 right-5 p-2 bg-white/5 border border-white/10 rounded-full text-slate-400 hover:text-white transition-all z-50 cursor-pointer"
         >
           <X size={18} />
@@ -229,7 +226,7 @@ export const Sidebar = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-1 overflow-hidden"
+                className={cn("space-y-1", (!isSidebarOpen && !isMobile) ? "overflow-visible" : "overflow-hidden")}
               >
                 <NavItem href="#checkout" icon={<ShoppingCart size={20} />} label={t("Caisse")} active={activeTab === 'checkout'} onClick={() => { setActiveTab('checkout'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
                 {canAccess('canAccessOnlineOrders') && (
@@ -263,7 +260,7 @@ export const Sidebar = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-1 overflow-hidden"
+                className={cn("space-y-1", (!isSidebarOpen && !isMobile) ? "overflow-visible" : "overflow-hidden")}
               >
                 {canAccess('canAccessInventory') && <NavItem href="#inventory" icon={<Package size={20} />} label={t("Inventaire")} active={activeTab === 'inventory'} onClick={() => { setActiveTab('inventory'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessInventory') && <NavItem href="#grns" icon={<FileCheck size={20} />} label={t("Bons de Réception (BR)")} active={activeTab === 'grns' || activeTab === 'grn'} onClick={() => { setActiveTab('grns'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
@@ -288,10 +285,8 @@ export const Sidebar = ({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="space-y-1 overflow-hidden"
+                className={cn("space-y-1", (!isSidebarOpen && !isMobile) ? "overflow-visible" : "overflow-hidden")}
               >
-                {canAccess('canAccessAnalytics') && <NavItem href="#dashboard" icon={<LayoutDashboard size={20} />} label={t("Tableau de bord")} active={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
-                {canAccess('canAccessAnalytics') && <NavItem href="#ai_assistant" icon={<Brain size={20} />} label={t("Assistant IA")} active={activeTab === 'ai_assistant'} onClick={() => { setActiveTab('ai_assistant'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessAnalytics') && <NavItem href="#reports" icon={<FileText size={20} />} label={t("Rapports")} active={activeTab === 'reports'} onClick={() => { setActiveTab('reports'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessShifts') && <NavItem href="#shifts" icon={<Wallet size={20} />} label={t("Clôture")} active={activeTab === 'shifts'} onClick={() => { setActiveTab('shifts'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessEmployees') && <NavItem href="#employees" icon={<UserCog size={20} />} label={t("Personnel & Accès")} active={activeTab === 'employees'} onClick={() => { setActiveTab('employees'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
@@ -326,6 +321,7 @@ export const Sidebar = ({
           <button 
             tabIndex={-1}
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            aria-label="Basculer l'affichage du menu latéral"
             className="w-full p-2.5 rounded-xl flex items-center justify-center transition-colors hover:bg-white/5 text-slate-500 hover:text-white cursor-pointer border border-transparent hover:border-white/5"
           >
             <Menu size={16} />
@@ -334,7 +330,16 @@ export const Sidebar = ({
 
         <div className="flex items-center gap-3 p-3 bg-white/[0.02] hover:bg-white/[0.04] transition-colors rounded-2xl border border-white/5 shadow-inner">
           {user.photoURL ? (
-            <img src={user.photoURL} className="w-9 h-9 rounded-xl border border-white/10 shadow-lg object-cover" referrerPolicy="no-referrer" alt={user.displayName} />
+            <SafeImage 
+              src={user.photoURL} 
+              className="w-9 h-9 rounded-xl border border-white/10 shadow-lg object-cover" 
+              alt={user.displayName}
+              fallback={
+                <div className="w-9 h-9 bg-indigo-600/15 text-indigo-400 border border-indigo-500/20 rounded-xl flex items-center justify-center font-black text-xs shadow-inner shrink-0">
+                  {user.displayName?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              }
+            />
           ) : (
             <div className="w-9 h-9 bg-indigo-600/15 text-indigo-400 border border-indigo-500/20 rounded-xl flex items-center justify-center font-black text-xs shadow-inner shrink-0">
               {user.displayName?.charAt(0).toUpperCase() || 'U'}
@@ -350,7 +355,7 @@ export const Sidebar = ({
             </div>
           )}
           {(isSidebarOpen || isMobile) && (
-            <button onClick={handleLogout} className="p-2 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer" title="Se déconnecter">
+            <button onClick={handleLogout} aria-label="Se déconnecter de la session" className="p-2 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer" title="Se déconnecter">
               <LogOut size={16} />
             </button>
           )}

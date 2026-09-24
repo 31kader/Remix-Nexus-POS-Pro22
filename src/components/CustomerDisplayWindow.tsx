@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Sparkles, CheckCircle2, ShieldCheck, Heart, Store, Wifi, Radio } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useCoreStore } from '../store/useCoreStore';
+import { SafeImage } from './ui/SafeImage';
 import { supabase, isSupabaseConfigured, safeRemoveChannel, realtimeCircuitBreaker } from '../supabase';
 import { getCustomerDisplaySocket } from '../services/customerDisplayService';
 
@@ -229,7 +230,16 @@ export const CustomerDisplayWindow: React.FC = () => {
       <header className="h-20 bg-slate-900/90 border-b border-slate-800 px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="Logo" className="h-12 w-auto object-contain rounded-xl" />
+            <SafeImage 
+              src={settings.logoUrl} 
+              alt="Logo" 
+              className="h-12 w-auto object-contain rounded-xl" 
+              fallback={
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <Store size={26} />
+                </div>
+              }
+            />
           ) : (
             <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
               <Store size={26} />

@@ -46,7 +46,14 @@ export function useSmartPurchaseLogic({
   const draft = useMemo(() => {
     try {
       const saved = localStorage.getItem('nexus_purchase_draft');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      // 🛡️ Sécurité : Si le draft est dans une étape de finalisation, le purger pour ne jamais bloquer l'UI
+      if (parsed?.step === 'updatePrices' || parsed?.step === 'confirm') {
+        localStorage.removeItem('nexus_purchase_draft');
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }
@@ -62,7 +69,8 @@ export function useSmartPurchaseLogic({
   const deferredSearch = useDeferredValue(search);
   const [isProcessing, setIsProcessing] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState<string | null>(null);
-  const [step, setStep] = useState<'upload' | 'review' | 'confirm' | 'updatePrices'>(draft?.step || 'upload');
+  const initialStep = (draft?.step === 'review' && Array.isArray(draft?.cart) && draft.cart.length > 0) ? 'review' : 'upload';
+  const [step, setStep] = useState<'upload' | 'review' | 'confirm' | 'updatePrices'>(initialStep);
   const [lastPurchaseItems, setLastPurchaseItems] = useState<any[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'new' | 'purchases' | 'debts' | 'payments'>((draft?.activeSubTab === 'suggestions' ? 'new' : draft?.activeSubTab) || 'new');
   const [purchaseStatus, setPurchaseStatus] = useState<'draft' | 'ordered' | 'completed'>(draft?.purchaseStatus || 'completed');
@@ -131,8 +139,18 @@ export function useSmartPurchaseLogic({
   const quantityInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
+    // Ne jamais sauvegarder d'étapes terminales de mise à jour des prix dans le draft
+    if (step === 'updatePrices' || step === 'confirm') {
+      try {
+        localStorage.removeItem('nexus_purchase_draft');
+      } catch (e) {
+        console.error("Error removing purchase draft:", e);
+      }
+      return;
+    }
+
     const draftData = {
-      step,
+      step: step === 'review' ? 'review' : 'upload',
       activeSubTab,
       purchaseStatus,
       paidAmount,
@@ -178,6 +196,11 @@ export function useSmartPurchaseLogic({
     setPaidAmount(0);
     setEditingPurchaseId(null);
     setMode('manual');
+    setStep('upload');
+    setLastPurchaseItems([]);
+    try {
+      localStorage.removeItem('nexus_purchase_draft');
+    } catch (_) {}
   };
 
   const handleEditPurchaseRequest = (purchase: Purchase) => {

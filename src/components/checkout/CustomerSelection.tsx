@@ -217,23 +217,32 @@ export const CustomerSelection = memo(function CustomerSelection({
                 </div>
               </div>
 
-              {/* Raccourcis de paiement rapides */}
+              {/* Raccourcis de paiement rapides (Dinars Algériens) */}
               <div className="flex flex-wrap gap-2 pt-2">
                 <button
                   onClick={() => setReceivedAmount(total.toFixed(2))}
-                  className="px-4 py-2 bg-indigo-50 dark:bg-indigo-600/10 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white font-black text-[9px] uppercase tracking-[0.2em] rounded-xl border border-indigo-200 dark:border-indigo-500/20 transition-all shadow-sm active:scale-90 cursor-pointer"
+                  className="px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-black text-[9px] uppercase tracking-[0.2em] rounded-xl border border-emerald-300 dark:border-emerald-700/60 transition-all shadow-sm active:scale-90 cursor-pointer"
                 >
-                  SOLDE TOTAL
+                  COMPTE JUSTE
                 </button>
-                {[10, 20, 50, 100].map(val => {
+                {[500, 1000, 2000].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => setReceivedAmount(val.toString())}
+                    className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 text-[9px] text-slate-800 dark:text-zinc-200 font-mono font-black rounded-xl border border-slate-200 dark:border-zinc-700 transition-all cursor-pointer shadow-sm"
+                  >
+                    {val} DA
+                  </button>
+                ))}
+                {[500, 1000].map(addVal => {
                   const currentVal = parseFloat(receivedAmount) || 0;
                   return (
                     <button
-                      key={val}
-                      onClick={() => setReceivedAmount((currentVal + val).toString())}
-                      className="px-3 py-2 bg-white dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 text-[9px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-black rounded-xl border border-slate-200 dark:border-white/5 transition-all cursor-pointer"
+                      key={`+${addVal}`}
+                      onClick={() => setReceivedAmount((currentVal + addVal).toString())}
+                      className="px-2.5 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 text-[9px] text-slate-700 dark:text-zinc-300 font-mono font-black rounded-xl border border-slate-300 dark:border-zinc-700 transition-all cursor-pointer"
                     >
-                      +{val}
+                      +{addVal}
                     </button>
                   );
                 })}

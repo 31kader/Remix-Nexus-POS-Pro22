@@ -1,6 +1,8 @@
 import React from 'react';
 import { Package, ShoppingCart } from 'lucide-react';
 import { Button, Modal } from '../ui';
+import { SafeImage } from '../ui/SafeImage';
+import { formatPrice } from '../../lib/utils';
 import { Product, CompanySettings } from '../../types';
 
 interface PriceCheckerModalProps {
@@ -31,7 +33,12 @@ export function PriceCheckerModal({
         <div className="flex items-center gap-4 p-6 bg-white/5 rounded-3xl border border-white/10 shadow-2xl">
           <div className="w-20 h-20 bg-black/40 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden shadow-inner">
             {product.imageUrl ? (
-              <img src={product.imageUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt={product.name} />
+              <SafeImage 
+                src={product.imageUrl} 
+                className="w-full h-full object-cover" 
+                alt={product.name} 
+                fallback={<Package className="text-white/10" size={32} />}
+              />
             ) : (
               <Package className="text-white/10" size={32} />
             )}
@@ -48,7 +55,7 @@ export function PriceCheckerModal({
                <ShoppingCart size={12} /> Vente
             </p>
             <p className="text-3xl font-black text-white tracking-tighter tabular-nums text-nowrap" style={{ fontSize: "clamp(1rem, 6vw, 1.875rem)" }}>
-              {product.price.toFixed(2)} <span className="text-xs text-emerald-400 uppercase tracking-widest ml-1">{settings.currency}</span>
+              {formatPrice(product.price)} <span className="text-xs text-emerald-400 uppercase tracking-widest ml-1">{settings.currency}</span>
             </p>
           </div>
           <div className="p-6 bg-indigo-500/5 rounded-3xl border border-indigo-500/20 shadow-lg shadow-indigo-500/5">

@@ -6,8 +6,8 @@ import { formatSafe } from '../../lib/utils';
 import { format } from 'date-fns';
 
 export function SubTabDebts({
-  suppliers,
-  supplierPayments,
+  suppliers = [],
+  supplierPayments = [],
   settings,
   setPaymentData,
   setIsPaymentModalOpen,
@@ -18,6 +18,10 @@ export function SubTabDebts({
   setPaymentData: (data: any) => void;
   setIsPaymentModalOpen: (b: boolean) => void;
 }) {
+  const safeSuppliers = Array.isArray(suppliers) ? suppliers : [];
+  const safeSupplierPayments = Array.isArray(supplierPayments) ? supplierPayments : [];
+  const currency = settings?.currency || 'DA';
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -26,7 +30,7 @@ export function SubTabDebts({
             <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-3xl flex items-center justify-center border border-rose-500/20 shadow-lg shadow-rose-500/10"><Wallet size={32}/></div>
             <div>
               <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Dette Totale Fournisseurs</p>
-              <p className="text-4xl font-black text-white font-mono">{suppliers.reduce((sum, s) => sum + (s.balance || 0), 0).toFixed(2)} {settings.currency}</p>
+              <p className="text-4xl font-black text-white font-mono">{safeSuppliers.reduce((sum, s) => sum + (Number(s.balance) || 0), 0).toFixed(2)} {currency}</p>
             </div>
           </div>
         </Card>
@@ -35,7 +39,7 @@ export function SubTabDebts({
             <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center border border-emerald-500/20 shadow-lg shadow-emerald-500/10"><CheckCircle2 size={32}/></div>
             <div>
               <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Fournisseurs à jour</p>
-              <p className="text-4xl font-black text-white font-mono">{suppliers.filter(s => (s.balance || 0) <= 0).length}</p>
+              <p className="text-4xl font-black text-white font-mono">{safeSuppliers.filter(s => (Number(s.balance) || 0) <= 0).length}</p>
             </div>
           </div>
         </Card>
@@ -54,17 +58,17 @@ export function SubTabDebts({
                 </tr>
               </thead>
               <tbody className="divide-y divide-industrial-800">
-                {suppliers.filter(s => (s.balance || 0) > 0).map(s => (
+                {safeSuppliers.filter(s => (Number(s.balance) || 0) > 0).map(s => (
                   <tr key={s.id} className="hover:bg-industrial-800/20 transition-colors">
                     <td className="p-4 font-black text-white uppercase tracking-tight">{s.name}</td>
-                    <td className="p-4 text-right font-black text-rose-500 font-mono">{(s.balance || 0).toFixed(2)}</td>
+                    <td className="p-4 text-right font-black text-rose-500 font-mono">{(Number(s.balance) || 0).toFixed(2)}</td>
                     <td className="p-4 text-right">
                       <Button 
                         className="industrial-button-primary py-2 px-4 text-[10px] shadow-none bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
                         onClick={() => {
                           setPaymentData({ 
                             supplierId: s.id, 
-                            amount: s.balance || 0,
+                            amount: Number(s.balance) || 0,
                             method: 'cash',
                             note: 'Règlement solde',
                             date: format(new Date(), 'yyyy-MM-dd')
@@ -77,7 +81,7 @@ export function SubTabDebts({
                     </td>
                   </tr>
                 ))}
-                {suppliers.filter(s => (s.balance || 0) > 0).length === 0 && (
+                {safeSuppliers.filter(s => (Number(s.balance) || 0) > 0).length === 0 && (
                   <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono italic uppercase text-xs">Aucune dette fournisseur.</td></tr>
                 )}
               </tbody>
@@ -97,14 +101,14 @@ export function SubTabDebts({
                 </tr>
               </thead>
               <tbody className="divide-y divide-industrial-800">
-                {supplierPayments.slice(0, 10).map(p => (
+                {safeSupplierPayments.slice(0, 10).map(p => (
                   <tr key={p.id} className="hover:bg-industrial-800/20 transition-colors">
                     <td className="p-4 font-mono text-industrial-400">{formatSafe(p.date, 'dd/MM/yyyy')}</td>
                     <td className="p-4 font-black text-white uppercase tracking-tight">{p.supplierName}</td>
-                    <td className="p-4 text-right font-black text-emerald-400 font-mono">{p.amount.toFixed(2)}</td>
+                    <td className="p-4 text-right font-black text-emerald-400 font-mono">{(Number(p.amount ?? (p as any).paidAmount ?? 0)).toFixed(2)}</td>
                   </tr>
                 ))}
-                {supplierPayments.length === 0 && (
+                {safeSupplierPayments.length === 0 && (
                   <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono italic uppercase text-xs">Aucun versement enregistré.</td></tr>
                 )}
               </tbody>

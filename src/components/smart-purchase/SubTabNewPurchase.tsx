@@ -234,8 +234,8 @@ export function SubTabNewPurchase({
                                   <p className="text-[10px] font-mono text-industrial-500 uppercase tracking-widest">{p.sku || p.id}</p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-black text-indigo-400 font-mono text-xs">{p.costPrice.toFixed(2)} {settings.currency}</p>
-                                  <p className="text-[10px] font-black text-industrial-600 uppercase">Stock: {p.stock}</p>
+                                  <p className="font-black text-indigo-400 font-mono text-xs">{Number(p.costPrice ?? p.price ?? 0).toFixed(2)} {settings?.currency || 'DA'}</p>
+                                  <p className="text-[10px] font-black text-industrial-600 uppercase">Stock: {p.stock ?? 0}</p>
                                 </div>
                               </button>
                             ))}

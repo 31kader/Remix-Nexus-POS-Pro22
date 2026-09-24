@@ -282,6 +282,37 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
     window.addEventListener('force-full-sync', handleForceFullSync);
     unsubscribes.push(() => window.removeEventListener('force-full-sync', handleForceFullSync));
 
+    // Purge automatique de toute ancienne commande d'auto-réapprovisionnement
+    const purgeAutoReapprovisionnement = async () => {
+      try {
+        const purchasesSnap = await localDb.get('purchases');
+        if (purchasesSnap.exists()) {
+          const pData = purchasesSnap.val() || {};
+          for (const [key, p] of Object.entries<any>(pData)) {
+            const sId = p?.supplierId || p?.supplier_id;
+            const sName = (p?.supplierName || p?.supplier_name || '').toLowerCase();
+            if (sId === 'low-stock-auto' || sName.includes('auto-réapprovisionnement') || sName.includes('auto-reapprovisionnement')) {
+              await localDb.delete(`purchases/${key}`);
+            }
+          }
+        }
+        const cached = await idbGet<any[]>('nexus_purchases_cache');
+        if (Array.isArray(cached)) {
+          const filtered = cached.filter(p => {
+            const sId = p?.supplierId || p?.supplier_id;
+            const sName = (p?.supplierName || p?.supplier_name || '').toLowerCase();
+            return sId !== 'low-stock-auto' && !sName.includes('auto-réapprovisionnement') && !sName.includes('auto-reapprovisionnement');
+          });
+          if (filtered.length !== cached.length) {
+            await idbSet('nexus_purchases_cache', filtered);
+          }
+        }
+      } catch (err) {
+        console.warn('[Startup] Cleanup Auto-Réapprovisionnement warning:', err);
+      }
+    };
+    purgeAutoReapprovisionnement();
+
     type QueueConfig = {
       cacheKey: string;
       collectionName: string;
@@ -292,7 +323,8 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       enableRealtime?: boolean;
     };
 
-    const queueConfig: QueueConfig[] = [
+    // Tables vitales au fonctionnement de la caisse (chargées et synchronisées en priorité)
+    const coreQueueConfig: QueueConfig[] = [
       { cacheKey: 'nexus_categories', collectionName: 'categories', setState: setCategories },
       { cacheKey: 'nexus_brands', collectionName: 'brands', setState: setBrands },
       { cacheKey: 'nexus_promotions', collectionName: 'promotions', setState: setPromotions },
@@ -301,19 +333,15 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       { cacheKey: 'nexus_users', collectionName: 'users', setState: setUsers }
     ];
 
+    // Tables administratives secondaires (synchronisation différée en arrière-plan pour ne pas saturer la caisse)
+    const deferredQueueConfig: QueueConfig[] = [];
+
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
     if (appMode !== 'customer') {
-      queueConfig.push(
+      coreQueueConfig.push(
         { cacheKey: 'nexus_transactions_cache', collectionName: 'transactions', setState: setTransactions as any, limit: 500, startDate: ninetyDaysAgo, timestampColumn: 'timestamp' },
-        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 500, timestampColumn: 'date' },
-        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments, limit: 500 },
-        { cacheKey: 'nexus_purchases_cache', collectionName: 'purchases', setState: setPurchases, limit: 500, timestampColumn: 'date' },
         { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, limit: 500, timestampColumn: 'date' },
-        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
-        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
-        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'updated_at', enableRealtime: false },
-        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 },
         { 
           cacheKey: 'nexus_online_orders_cache', 
           collectionName: 'onlineOrders', 
@@ -328,7 +356,33 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
           timestampColumn: 'timestamp' 
         }
       );
+
+      deferredQueueConfig.push(
+        { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_stock_adjustments_cache', collectionName: 'stockAdjustments', setState: setStockAdjustments, limit: 500 },
+        { 
+          cacheKey: 'nexus_purchases_cache', 
+          collectionName: 'purchases', 
+          setState: (purchases: any) => {
+            const arr = Array.isArray(purchases) ? purchases : [];
+            const clean = arr.filter(p => {
+              const sId = p?.supplierId || p?.supplier_id;
+              const sName = (p?.supplierName || p?.supplier_name || '').toLowerCase();
+              return sId !== 'low-stock-auto' && !sName.includes('auto-réapprovisionnement') && !sName.includes('auto-reapprovisionnement');
+            });
+            setPurchases(clean);
+          }, 
+          limit: 500, 
+          timestampColumn: 'date' 
+        },
+        { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
+        { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
+        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'updated_at', enableRealtime: false },
+        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 }
+      );
     }
+
+    const queueConfig: QueueConfig[] = [...coreQueueConfig, ...deferredQueueConfig];
 
     if (isSupabaseConfigured) {
       // 1. CANAL TEMPS RÉEL UNIQUE & MULTIPLEXÉ POUR TOUTES LES TABLES
@@ -654,12 +708,24 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       // 3. Synchronisation réseau en arrière-plan (ne bloque plus l'UI)
       await syncProducts();
 
-      // 4. Synchronisation réseau concurrente par lots de 4 tables (5x plus rapide, zéro saturation)
+      // 4. Synchronisation réseau prioritaire des tables vitales à la caisse
       const CONCURRENCY = 4;
-      for (let i = 0; i < queueConfig.length; i += CONCURRENCY) {
+      for (let i = 0; i < coreQueueConfig.length; i += CONCURRENCY) {
         if (!isSubscribed) break;
-        const chunk = queueConfig.slice(i, i + CONCURRENCY);
+        const chunk = coreQueueConfig.slice(i, i + CONCURRENCY);
         await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
+      }
+
+      // 5. Synchronisation différée des tables administratives secondaires (arrière-plan non bloquant)
+      if (deferredQueueConfig.length > 0) {
+        setTimeout(async () => {
+          if (!isSubscribed) return;
+          for (let i = 0; i < deferredQueueConfig.length; i += CONCURRENCY) {
+            if (!isSubscribed) break;
+            const chunk = deferredQueueConfig.slice(i, i + CONCURRENCY);
+            await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
+          }
+        }, 2500);
       }
     };
 

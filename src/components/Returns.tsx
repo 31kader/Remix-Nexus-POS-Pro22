@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { RotateCcw, Calendar, Search, Filter, Eye, FileSpreadsheet, Database, X, Trash2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { RotateCcw, Calendar, Search, Filter, Eye, FileSpreadsheet, Database, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product, CompanySettings, ProductReturn } from '../types';
-import { formatSafe, exportToExcel, exportToCSV } from '../lib/utils';
+import { formatSafe, exportToExcel, exportToCSV, formatPrice } from '../lib/utils';
 import { Button, Card } from './ui';
 import { startOfDay, endOfDay, subDays, parseISO, isWithinInterval, isYesterday } from 'date-fns';
 import { localDb } from '../services/LocalDatabase';
@@ -16,6 +16,8 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last7days' | 'last30days' | 'custom'>('today');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const safeReturns = Array.isArray(returns) ? returns : [];
 
@@ -82,6 +84,18 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
     });
   }, [safeReturns, dateFilter, customRange, searchTerm]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFilter, customRange, searchTerm, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredReturns.length / pageSize));
+  const validPage = Math.min(currentPage, totalPages);
+
+  const displayedReturns = useMemo(() => {
+    const from = (validPage - 1) * pageSize;
+    return filteredReturns.slice(from, from + pageSize);
+  }, [filteredReturns, validPage, pageSize]);
+
   const totalRefundAmount = useMemo(() => {
     return filteredReturns.reduce((sum, r: any) => {
       const refundVal = typeof r.totalRefund === 'number' 
@@ -102,7 +116,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
             Gestion des Retours
           </h3>
           <p className="text-sm text-slate-400 mt-0.5">
-            {filteredReturns.length} retours filtrés • Total Remboursé : <strong className="text-rose-400 font-mono">{totalRefundAmount.toFixed(2)} {settings?.currency || 'DA'}</strong>
+            {filteredReturns.length} retours filtrés • Total Remboursé : <strong className="text-rose-400 font-mono">{formatPrice(totalRefundAmount)} {settings?.currency || 'DA'}</strong>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -212,7 +226,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {filteredReturns.map((r: any) => {
+              {displayedReturns.map((r: any) => {
                 const dateVal = r.timestamp || r.date || r.created_at || r.updated_at;
                 const refundVal = typeof r.totalRefund === 'number' 
                   ? r.totalRefund 
@@ -241,7 +255,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
                     <td className="p-4 text-xs text-slate-400 italic">
                       "{r.reason || r.notes || 'Aucune raison indiquée'}"
                     </td>
-                    <td className="p-4 font-black text-emerald-400 font-mono">{refundVal.toFixed(2)} {settings?.currency || 'DA'}</td>
+                    <td className="p-4 font-black text-emerald-400 font-mono">{formatPrice(refundVal)} {settings?.currency || 'DA'}</td>
                     <td className="p-4 text-right">
                       <button 
                         onClick={() => setSelectedReturn(r)}
@@ -261,6 +275,59 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination bar */}
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Lignes par page :</span>
+            {[50, 100, 200].map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  pageSize === size
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400">
+              {filteredReturns.length > 0
+                ? `${(validPage - 1) * pageSize + 1}-${Math.min(validPage * pageSize, filteredReturns.length)} sur ${filteredReturns.length}`
+                : '0 sur 0'}
+            </span>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={validPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                >
+                  <ChevronLeft size={16} /> Précédent
+                </button>
+                <span className="text-xs font-bold text-indigo-400 px-2">
+                  Page {validPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={validPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                >
+                  Suivant <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -337,7 +404,7 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
             </div>
             <div>
               <span className="text-slate-500 block uppercase text-[10px]">Montant Remboursé</span>
-              <strong className="text-emerald-400 text-sm font-black">{refundVal.toFixed(2)} {settings?.currency || 'DA'}</strong>
+              <strong className="text-emerald-400 text-sm font-black">{formatPrice(refundVal)} {settings?.currency || 'DA'}</strong>
             </div>
           </div>
 
@@ -348,9 +415,9 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
                 <div key={idx} className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-800">
                   <div>
                     <p className="font-bold text-white text-xs">{item.name}</p>
-                    <p className="text-[10px] text-slate-500 font-mono">{item.quantity} x {Number(item.price || 0).toFixed(2)} {settings?.currency || 'DA'}</p>
+                    <p className="text-[10px] text-slate-500 font-mono">{item.quantity} x {formatPrice(item.price)} {settings?.currency || 'DA'}</p>
                   </div>
-                  <strong className="text-white font-mono">{((item.quantity || 1) * (item.price || 0)).toFixed(2)} {settings?.currency || 'DA'}</strong>
+                  <strong className="text-white font-mono">{formatPrice((item.quantity || 1) * (item.price || 0))} {settings?.currency || 'DA'}</strong>
                 </div>
               ))}
             </div>

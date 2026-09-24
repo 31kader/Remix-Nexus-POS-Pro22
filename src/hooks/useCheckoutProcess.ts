@@ -83,7 +83,7 @@ export function useCheckoutProcess({
         toast.error("Veuillez sélectionner un client pour payer par solde.");
         return;
       }
-      if ((selectedCustomer.balance || 0) < total) {
+      if (total > 0 && (selectedCustomer.balance || 0) < total) {
         toast.error("Solde insuffisant.");
         return;
       }
@@ -102,7 +102,7 @@ export function useCheckoutProcess({
 
       const loyaltyRatio = settings?.loyaltyPointsPerCurrencyUnit || 1;
       const pointsEarned = (selectedCustomer && deliveryMethod === 'in_store') 
-        ? Math.floor(total * loyaltyRatio) 
+        ? (total >= 0 ? Math.floor(total * loyaltyRatio) : -Math.floor(Math.abs(total) * loyaltyRatio))
         : 0;
         
       const parsedReceived = receivedAmount !== '' ? parseFloat(receivedAmount) || 0 : total;

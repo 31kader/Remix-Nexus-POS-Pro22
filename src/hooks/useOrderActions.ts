@@ -2,7 +2,7 @@ import { supabase, isSupabaseConfigured } from '../supabase';
 import { OnlineOrder, Customer, Employee, CompanySettings, Transaction } from '../types';
 import { generateUniqueId } from '../lib/utils';
 import { localDb } from '../services/LocalDatabase';
-import { enqueueSync } from '../services/SyncService';
+import { enqueueSync, enqueueStockAdjustment } from '../services/SyncService';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { convertKeysToCamel } from '../lib/db-converters';
 import { set as idbSet } from 'idb-keyval';
@@ -95,9 +95,95 @@ export function useOrderActions({
     toast.success('Paiement mis à jour en local.');
   };
 
+  // 🛡️ SYNCHRONISATION / ROLLBACK : Si une commande confirmée/livrée est annulée, annuler sa transaction de caisse et réintégrer le stock
+  const rollbackCancelledOrderTransactions = async (order: OnlineOrder) => {
+    try {
+      const orderIdStr = String(order.id);
+      const extIdStr = order.externalOrderId ? String(order.externalOrderId) : '';
+      const allTx = useTransactionStore.getState().transactions || [];
+
+      // Trouver toutes les transactions de vente associées à cette commande
+      const matchingTxs = allTx.filter((t: Transaction) => {
+        const matchesOnlineId = t.onlineOrderId && String(t.onlineOrderId) === orderIdStr;
+        const matchesNotesExt = extIdStr && t.notes && t.notes.includes(extIdStr);
+        const matchesNotesId = t.notes && t.notes.includes(orderIdStr);
+        return matchesOnlineId || matchesNotesExt || matchesNotesId;
+      });
+
+      if (matchingTxs.length === 0) {
+        console.log(`[Order Rollback] Aucune transaction POS trouvée pour la commande #${orderIdStr}.`);
+        return;
+      }
+
+      console.log(`[Order Rollback] ${matchingTxs.length} transaction(s) trouvée(s) pour la commande #${orderIdStr}. Annulation en cours...`);
+
+      const matchingIds = new Set(matchingTxs.map(t => t.id));
+
+      for (const t of matchingTxs) {
+        // 1. Marquer la transaction comme annulée en local
+        await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
+        
+        // 2. Synchroniser vers Supabase
+        if (isSupabaseConfigured) {
+          try {
+            await supabase.from('transactions').update({ status: 'cancelled' }).eq('id', t.id);
+          } catch (err) {
+            console.warn('[Order Rollback] Échec update direct Supabase transaction, mise en file d\'attente:', err);
+          }
+        }
+        enqueueSync('transactions', t.id, 'UPSERT', { id: t.id, status: 'cancelled' });
+
+        // 3. Réintégration des stocks physiques
+        const items = Array.isArray(t.items) ? t.items : (Array.isArray(order.items) ? order.items : []);
+        for (const item of items) {
+          const prodId = (item as any).productId || (item as any).id;
+          const qty = Number(item.quantity || 1);
+          if (prodId && qty > 0) {
+            enqueueStockAdjustment(prodId, qty);
+            await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+          }
+        }
+
+        // 4. Annuler les points de fidélité accordés le cas échéant
+        if (t.pointsEarned && t.customerId) {
+          const cust = customers.find(c => c.id === t.customerId);
+          if (cust) {
+            const newPoints = Math.max(0, (cust.loyaltyPoints || 0) - t.pointsEarned);
+            const newSpent = Math.max(0, (cust.totalSpent || 0) - Number(t.total || 0));
+            await localDb.update(`customers/${t.customerId}`, { loyaltyPoints: newPoints, totalSpent: newSpent });
+            if (isSupabaseConfigured) {
+              await supabase.from('customers').update({ loyalty_points: newPoints, total_spent: newSpent }).eq('id', t.customerId);
+            }
+          }
+        }
+      }
+
+      // 5. Mettre à jour l'état Zustand des transactions en mémoire
+      useTransactionStore.getState().setTransactions(prev => 
+        (Array.isArray(prev) ? prev : []).map(tx => matchingIds.has(tx.id) ? { ...tx, status: 'cancelled' } : tx)
+      );
+
+      // 6. Réinitialiser syncedToPos sur la commande
+      await localDb.update(`onlineOrders/${order.id}`, { syncedToPos: false });
+      if (isSupabaseConfigured) {
+        await supabase.from('online_orders').update({ synced_to_pos: false }).eq('id', toSupabaseId(order.id));
+      }
+      enqueueSync('online_orders', String(order.id), 'UPSERT', { id: toSupabaseId(order.id), synced_to_pos: false });
+
+      toast.info(`Transaction de caisse associée #${orderIdStr} annulée et stock réintégré.`);
+    } catch (rollbackError) {
+      console.error('[Order Rollback Error]', rollbackError);
+    }
+  };
+
   const updateOrderStatus = async (order: OnlineOrder, newStatus: OnlineOrder['status']) => {
     const orderId = order.id;
     const dbId = toSupabaseId(orderId);
+
+    // Si la commande est annulée, déclencher le rollback de sa recette et du stock
+    if (newStatus === 'cancelled') {
+      await rollbackCancelledOrderTransactions(order);
+    }
 
     // 1. SUPABASE-FIRST: Update Supabase directly with only valid columns
     if (isSupabaseConfigured) {
@@ -153,6 +239,7 @@ export function useOrderActions({
             employeeName: 'Commande en Ligne',
             customerName: order.customerName || 'Client en Ligne',
             customerId: order.customerId,
+            onlineOrderId: String(order.id),
             notes: `Commande en Ligne #${order.externalOrderId || String(order.id || "").slice(0, 8)}`
           };
 
@@ -191,6 +278,7 @@ export function useOrderActions({
             employeeName: 'Commande en Ligne',
             customerName: order.customerName || 'Client en Ligne',
             customerId: order.customerId,
+            onlineOrderId: String(order.id),
             notes: `Commande en Ligne #${order.externalOrderId || String(order.id || "").slice(0, 8)}`
           };
           await localDb.insert(`transactions/${tid}`, transaction);
@@ -217,6 +305,13 @@ export function useOrderActions({
   const bulkUpdateOrderStatus = async (targetOrders: OnlineOrder[], newStatus: OnlineOrder['status']) => {
     if (!targetOrders || targetOrders.length === 0) return;
     
+    // Si les commandes sont annulées en lot, déclencher le rollback de leurs recettes et du stock
+    if (newStatus === 'cancelled') {
+      for (const o of targetOrders) {
+        await rollbackCancelledOrderTransactions(o);
+      }
+    }
+
     const dbIds = targetOrders.map(o => toSupabaseId(o.id));
     const targetExtIds = targetOrders.map(o => o.externalOrderId).filter(Boolean) as string[];
     const targetIdsSet = new Set(targetOrders.map(o => String(o.id)));

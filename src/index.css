@@ -16,38 +16,96 @@
   --color-industrial-400: #f1f5f9;
   --color-industrial-500: #94a3b8;
 
-  --color-nardo: #05070a;
-  --color-workspace: #0a0c12;
+  --color-nardo: #09090b;
+  --color-workspace: #18181b;
   
-  --shadow-neon-indigo: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 40px rgba(99, 102, 241, 0.05);
-  --shadow-neon-cyan: 0 0 20px rgba(6, 182, 212, 0.15);
-  --shadow-soft: 0 30px 60px -12px rgba(0, 0, 0, 0.45);
+  --shadow-neon-indigo: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-neon-cyan: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-  --radius-3xl: 1.5rem;
-  --radius-4xl: 2.5rem;
-  --radius-5xl: 3.5rem;
+  --radius-3xl: 0.75rem;
+  --radius-4xl: 0.75rem;
+  --radius-5xl: 0.75rem;
 }
 
 :root {
-  --bg-industrial-950: #05070a;
-  --bg-industrial-900: #0a0c12;
-  --bg-industrial-800: #12141c;
-  --bg-industrial-700: #1c1f2a;
-  --text-industrial-400: #f1f5f9;
-  --text-industrial-500: #94a3b8;
-  --bg-nardo: #05070a;
-  --bg-workspace: #0a0c12;
-  --card-border: rgba(255, 255, 255, 0.06);
-  --text-primary: #ffffff;
-  --text-secondary: #94a3b8;
-  --input-bg: rgba(0, 0, 0, 0.4);
-  --input-border: rgba(255, 255, 255, 0.08);
-  --neon-indigo: 0 0 20px rgba(99, 102, 241, 0.25), 0 0 40px rgba(99, 102, 241, 0.1);
-  --neon-cyan: 0 0 20px rgba(6, 182, 212, 0.25);
-  --soft-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.6);
+  --bg-industrial-950: #f8fafc;
+  --bg-industrial-900: #ffffff;
+  --bg-industrial-800: #f1f5f9;
+  --bg-industrial-700: #e2e8f0;
+  --text-industrial-400: #0f172a;
+  --text-industrial-500: #64748b;
+  --bg-nardo: #f8fafc;
+  --bg-workspace: #ffffff;
+  --card-border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --neon-indigo: none;
+  --neon-cyan: none;
+  --soft-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   --brand-primary: #4f46e5;
   --brand-hover: #4338ca;
-  --brand-shadow: rgba(79, 70, 229, 0.3);
+  --brand-shadow: rgba(79, 70, 229, 0.12);
+}
+
+/* ==========================================================================
+   GLOBAL PRO MINIMALIST OVERRIDES (Zéro Italique, Zéro Flou, Zéro Animation Lente)
+   ========================================================================== */
+*, *::before, *::after {
+  font-style: normal !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.italic, h1, h2, h3, h4, h5, h6, button, span, p, a, label, th, td {
+  font-style: normal !important;
+}
+
+/* Désactivation des animations lentes tout en gardant le spinner de chargement */
+*:not(.animate-spin) {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 100ms !important;
+}
+
+/* Normalisation des coins géants vers des coins professionnels sobres (10px - 12px) */
+[class*="rounded-3xl"],
+[class*="rounded-4xl"],
+[class*="rounded-5xl"],
+[class*="rounded-[1.5rem]"],
+[class*="rounded-[1.75rem]"],
+[class*="rounded-[2rem]"],
+[class*="rounded-[2.5rem]"],
+[class*="rounded-[3rem]"] {
+  border-radius: 0.65rem !important;
+}
+
+/* Normalisation de l'espacement excessif des lettres */
+[class*="tracking-[0.2em]"],
+[class*="tracking-[0.3em]"],
+[class*="tracking-[0.4em]"],
+[class*="tracking-widest"] {
+  letter-spacing: 0.03em !important;
+}
+
+/* Compaction globale des tableaux pour voir 2x plus de lignes sans scroller */
+table thead th {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.03em !important;
+}
+
+table tbody td {
+  padding-top: 0.45rem !important;
+  padding-bottom: 0.45rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+  font-size: 0.8rem !important;
 }
 
 @layer base {
@@ -56,31 +114,22 @@
   }
 
   button, .clickable {
-    @apply cursor-pointer select-none active:scale-[0.96] transition-all duration-300;
-  }
-
-  .card-reveal {
-    animation: reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  @keyframes reveal {
-    from { opacity: 0; transform: translateY(10px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    @apply cursor-pointer select-none transition-colors duration-100;
   }
 
   body {
-    @apply text-slate-200 font-sans antialiased selection:bg-indigo-500/30;
-    background-color: #080a10;
+    @apply text-slate-900 font-sans antialiased selection:bg-indigo-500/20;
+    background-color: #f8fafc;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-slate-900/95 border border-slate-800 shadow-md;
+    @apply bg-white border border-slate-200 shadow-xs;
   }
 
   .neon-border-hover {
-    @apply hover:border-indigo-500/60 transition-colors duration-200;
+    @apply hover:border-indigo-500/60 transition-colors duration-100;
   }
 }
 
@@ -105,12 +154,12 @@
   --text-secondary: #a7f3d0;
   --input-bg: rgba(16, 185, 129, 0.04);
   --input-border: rgba(16, 185, 129, 0.2);
-  --neon-indigo: 0 0 15px rgba(16, 185, 129, 0.35);
-  --neon-cyan: 0 0 15px rgba(52, 211, 153, 0.3);
-  --soft-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.6);
+  --neon-indigo: none;
+  --neon-cyan: none;
+  --soft-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
   --brand-primary: #10b981;
   --brand-hover: #059669;
-  --brand-shadow: rgba(16, 185, 129, 0.25);
+  --brand-shadow: rgba(16, 185, 129, 0.15);
 }
 
 /* --------------------------------------------------------------------------
@@ -130,10 +179,10 @@
   --text-secondary: #fde68a;
   --input-bg: rgba(217, 119, 6, 0.04);
   --input-border: rgba(217, 119, 6, 0.2);
-  --soft-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.6);
+  --soft-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
   --brand-primary: #f59e0b;
   --brand-hover: #d97706;
-  --brand-shadow: rgba(245, 158, 11, 0.25);
+  --brand-shadow: rgba(245, 158, 11, 0.15);
 }
 
 /* --------------------------------------------------------------------------
@@ -155,11 +204,11 @@
   --input-border: #3b3e4c;
   --brand-primary: #f97316;
   --brand-hover: #ea580c;
-  --brand-shadow: rgba(249, 115, 22, 0.25);
+  --brand-shadow: rgba(249, 115, 22, 0.15);
 }
 
 /* --------------------------------------------------------------------------
-   4. Albâtre / Alabaster Puro (Complete, High-Contrast Premium Light Mode)
+   4. Thème Clair Propre (Complete, High-Contrast Clean Light Mode)
    -------------------------------------------------------------------------- */
 html.light {
   color-scheme: light;
@@ -180,7 +229,7 @@ html.light {
   --input-border: #cbd5e1;
   --brand-primary: #4f46e5;
   --brand-hover: #4338ca;
-  --brand-shadow: rgba(79, 70, 229, 0.15);
+  --brand-shadow: rgba(79, 70, 229, 0.12);
 }
 
 /* Base Body & Root */
@@ -192,7 +241,7 @@ html.light body,
   color: #0f172a !important;
 }
 
-/* Universal Background & Subtle Border Depth Overrides */
+/* Universal Background & Subtle Border Depth Overrides (Slate + Zinc + Industrial) */
 html.light [class*="bg-[#05070a]"],
 html.light [class*="bg-[#0a0c12]"],
 html.light [class*="bg-[#080a10]"],
@@ -202,6 +251,8 @@ html.light [class*="bg-[#0a0a0f]"],
 html.light [class*="bg-[#050508]"],
 html.light [class*="bg-slate-950"],
 html.light [class*="bg-slate-900"],
+html.light [class*="bg-zinc-950"],
+html.light [class*="bg-zinc-900"],
 html.light [class*="bg-industrial-950"],
 html.light [class*="bg-workspace"],
 html.light [class*="bg-[#12141c]"],
@@ -217,25 +268,37 @@ html.light [class*="bg-industrial-900"] {
   border-color: #e2e8f0 !important;
 }
 
-/* Layered Soft Shadows for High-End Depth */
+html.light [class*="bg-slate-800"],
+html.light [class*="bg-zinc-800"],
+html.light [class*="bg-industrial-800"],
+html.light [class*="bg-white/5"],
+html.light [class*="bg-white/10"],
+html.light [class*="bg-black/40"],
+html.light [class*="bg-black/50"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light [class*="border-slate-800"],
+html.light [class*="border-slate-700"],
+html.light [class*="border-zinc-800"],
+html.light [class*="border-zinc-700"],
+html.light [class*="border-white/5"],
+html.light [class*="border-white/10"],
+html.light [class*="border-white/20"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Flat Clean Borders Instead of Heavy Shadows */
 html.light [class*="shadow-2xl"],
-html.light .shadow-2xl {
-  box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.08), 0 8px 12px -6px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.06) !important;
-}
-
+html.light .shadow-2xl,
 html.light [class*="shadow-xl"],
-html.light .shadow-xl {
-  box-shadow: 0 8px 20px -3px rgba(15, 23, 42, 0.06), 0 4px 8px -4px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
-}
-
+html.light .shadow-xl,
 html.light [class*="shadow-lg"],
-html.light .shadow-lg {
-  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 2px 5px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
-}
-
+html.light .shadow-lg,
 html.light [class*="shadow-sm"],
 html.light .shadow-sm {
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -452,6 +515,9 @@ html.light div[id="checkout-panel"] button[class*="rounded-[2rem]"][class*="bg-i
 html.light [class*="text-slate-400"],
 html.light [class*="text-slate-500"],
 html.light [class*="text-slate-600"],
+html.light [class*="text-zinc-400"],
+html.light [class*="text-zinc-500"],
+html.light [class*="text-zinc-600"],
 html.light [class*="text-white/40"],
 html.light [class*="text-white/50"],
 html.light [class*="text-white/60"],
@@ -464,6 +530,9 @@ html.light [class*="text-white"]:not([class*="aspect-square"] *):not(button[clas
 html.light [class*="text-slate-100"],
 html.light [class*="text-slate-200"],
 html.light [class*="text-slate-300"],
+html.light [class*="text-zinc-100"],
+html.light [class*="text-zinc-200"],
+html.light [class*="text-zinc-300"],
 html.light h1:not(button *),
 html.light h2:not(button *),
 html.light h3:not(button *),

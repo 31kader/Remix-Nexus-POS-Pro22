@@ -371,7 +371,9 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
     setSortConfig({ key, direction });
   };
 
-  const totalPeriod = filteredTransactions.reduce((acc: number, t: Transaction) => acc + (Number(t.total) || 0), 0);
+  const totalPeriod = filteredTransactions
+    .filter((t: Transaction) => t.status !== 'cancelled')
+    .reduce((acc: number, t: Transaction) => acc + (Number(t.total) || 0), 0);
 
   const handlePrint = (t: Transaction) => {
     printReceipt(t, settings);

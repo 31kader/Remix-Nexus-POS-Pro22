@@ -9,6 +9,7 @@ import { Button, Modal } from './ui';
 import { toast } from 'sonner';
 import { sanitizeProductForSupabase, cn } from '../lib/utils';
 import { useCoreStore } from '../store/useCoreStore';
+import { useInventoryStore } from '../store/useInventoryStore';
 
 export function StockAdjustmentModal({ 
   isOpen, onClose, product, user, settings 
@@ -25,8 +26,32 @@ export function StockAdjustmentModal({
 
   useEffect(() => {
     if (product) {
-      setNewStock(product.stock || 0);
-      setLocalBatches(product.batches ? product.batches.map(b => ({ ...b })) : []);
+      const opts = (product as any)._adjustmentOptions;
+      if (opts?.newStock !== undefined) {
+        setNewStock(opts.newStock);
+      } else {
+        setNewStock(product.stock || 0);
+      }
+
+      if (opts?.reason) {
+        setReason(opts.reason);
+      } else {
+        setReason('Ajustement manuel');
+      }
+
+      if (opts?.defaultLoss) {
+        setIsLoss(true);
+      } else {
+        setIsLoss(false);
+      }
+
+      let batchesCopy = product.batches ? product.batches.map(b => ({ ...b })) : [];
+      if (opts?.batchNumber && batchesCopy.length > 0) {
+        batchesCopy = batchesCopy.map(b => b.batchNumber === opts.batchNumber ? { ...b, stock: 0 } : b);
+        const sum = batchesCopy.reduce((sum, item) => sum + item.stock, 0);
+        setNewStock(sum);
+      }
+      setLocalBatches(batchesCopy);
     }
   }, [product]);
 
@@ -116,9 +141,12 @@ export function StockAdjustmentModal({
       
       await localDb.insert(`stock_adjustments/${adjustmentData.id}`, adjustmentData);
 
+      // ⚡ Synchronisation temps réel avec useInventoryStore (Rapport des Pertes & Historique)
+      useInventoryStore.getState().setStockAdjustments(prev => [adjustmentData as any, ...(prev || [])]);
+
       if (isLossRecord) {
         const damId = Math.random().toString(36).substring(2, 10);
-        await localDb.insert(`damaged_items/${damId}`, {
+        const damRecord = {
           id: damId,
           productId: product.id,
           productName: product.name,
@@ -127,10 +155,22 @@ export function StockAdjustmentModal({
           date: new Date().toISOString(),
           userId: user.uid,
           userName: user.displayName || 'Inconnu',
-          claimStatus: 'to_claim',
+          claimStatus: 'to_claim' as const,
           costPrice: product.costPrice || 0
-        });
+        };
+        await localDb.insert(`damaged_items/${damId}`, damRecord);
+        useInventoryStore.getState().setDamagedItems(prev => [damRecord as any, ...(prev || [])]);
       }
+
+      // ⚡ Mise à jour du cache persistant IndexedDB
+      try {
+        const { get: getIDB, set: setIDB } = await import('idb-keyval');
+        const cached = (await getIDB<any[]>('nexus_stock_adjustments_cache')) || [];
+        await setIDB('nexus_stock_adjustments_cache', [adjustmentData, ...cached]);
+      } catch (_) {}
+
+      window.dispatchEvent(new CustomEvent('stock-adjustment-created', { detail: adjustmentData }));
+      toast.success(isLossRecord ? "Perte déclarée et synchronisée avec le rapport des pertes !" : "Stock ajusté avec succès !");
 
       onClose();
     } catch (error: any) {
