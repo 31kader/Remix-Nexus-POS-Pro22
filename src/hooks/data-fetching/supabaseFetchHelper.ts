@@ -196,7 +196,7 @@ export async function fetchTableFromSupabase<T>(
 
       while (attempts < 5) {
         attempts++;
-        let cols = activeCols.length > 0 ? activeCols.join(',') : '*';
+        const cols = '*';
 
         // Use dynamic sort column based on what columns actually exist in activeCols list
         let sortCol: string | null = null;

@@ -37,11 +37,11 @@ export function useFastChangingData({
   setSettings
 }: useFastChangingDataParams) {
   useEffect(() => {
-    if (loading) return;
+    if (loading || !userId || userId === 'unauthenticated') return;
     
     let isSubscribed = true;
     const listeners: (() => void)[] = [];
-    const settingsCols = TABLE_COLUMNS['settings'] ? TABLE_COLUMNS['settings'].join(',') : '*';
+    const settingsCols = '*';
 
     // Load from local IndexedDB cache immediately so the UI is not empty at start
     const loadCachedData = async () => {
@@ -66,8 +66,8 @@ export function useFastChangingData({
     const loadInstantSupabaseData = async () => {
       if (!isSupabaseConfigured) return;
       try {
-        const onlineCols = TABLE_COLUMNS['online_orders'] ? TABLE_COLUMNS['online_orders'].join(',') : '*';
-        const shiftsCols = TABLE_COLUMNS['cash_shifts'] ? TABLE_COLUMNS['cash_shifts'].join(',') : '*';
+        const onlineCols = '*';
+        const shiftsCols = '*';
         
         const onlinePromise = withNetworkTimeout(
           supabase.from('online_orders').select(onlineCols).then(async (res: any) => {

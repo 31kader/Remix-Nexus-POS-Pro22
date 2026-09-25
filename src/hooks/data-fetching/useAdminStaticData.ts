@@ -48,10 +48,10 @@ export function useAdminStaticData({
 
         if (isSupabaseConfigured) {
           try {
-            const empCols = TABLE_COLUMNS['employees'] ? TABLE_COLUMNS['employees'].join(',') : '*';
-            const syncsCols = TABLE_COLUMNS['supplier_syncs'] ? TABLE_COLUMNS['supplier_syncs'].join(',') : '*';
-            const settingsCols = TABLE_COLUMNS['settings'] ? TABLE_COLUMNS['settings'].join(',') : '*';
-            const patCols = TABLE_COLUMNS['invoice_patterns'] ? TABLE_COLUMNS['invoice_patterns'].join(',') : '*';
+            const empCols = '*';
+            const syncsCols = '*';
+            const settingsCols = '*';
+            const patCols = '*';
             const patDataPromise = userRole === 'admin'
               ? withNetworkTimeout(
                   safeOptionalQuery<any[]>(

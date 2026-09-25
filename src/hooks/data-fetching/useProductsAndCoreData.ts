@@ -70,8 +70,19 @@ export function useProductsAndCoreData({
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
     }
 
-    if (appMode !== 'price_checker' && !userId) {
+    if (appMode !== 'price_checker' && (!userId || userId === 'unauthenticated')) {
       setIsDataLoading(false);
+      idbGet<UserProfile[]>('nexus_users').then(cachedUsers => {
+        if (cachedUsers && cachedUsers.length > 0) setUsers(cachedUsers);
+      }).catch(() => {});
+      if (isSupabaseConfigured) {
+        fetchTableFromSupabase<UserProfile>('users', 100).then(remoteUsers => {
+          if (remoteUsers && remoteUsers.length > 0) {
+            setUsers(remoteUsers);
+            idbSet('nexus_users', remoteUsers).catch(() => {});
+          }
+        }).catch(() => {});
+      }
       return;
     }
 

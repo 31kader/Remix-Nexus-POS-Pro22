@@ -33,9 +33,7 @@ export function useSupplierAndCustomerData({
     
     const loadSupplierPOs = async () => {
       try {
-        const poCols = TABLE_COLUMNS['purchase_orders'] 
-          ? TABLE_COLUMNS['purchase_orders'].filter((c: string) => !['audited_by', 'audited_at', 'audit_duration', 'audit_note'].includes(c)).join(',')
-          : '*';
+        const poCols = '*';
         const { data, error } = await supabase
           .from('purchase_orders')
           .select(poCols)
@@ -106,9 +104,7 @@ export function useSupplierAndCustomerData({
     
     const loadCustomerTxs = async () => {
       try {
-        const txCols = TABLE_COLUMNS['transactions']
-          ? TABLE_COLUMNS['transactions'].filter((c: string) => !['audited_by', 'audited_at', 'audit_duration', 'audit_note'].includes(c)).join(',')
-          : '*';
+        const txCols = '*';
         const { data, error } = await supabase
           .from('transactions')
           .select(txCols)

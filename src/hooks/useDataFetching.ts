@@ -69,7 +69,7 @@ export function useDataFetching(
   const safeSetOnlineOrders = safeSetter(setOnlineOrders);
   const safeSetShifts = safeSetter(setShifts);
 
-  const activeUserId = user?.uid || user?.id || profile?.uid || profile?.id || 'active_user';
+  const activeUserId = user?.uid || user?.id || profile?.uid || profile?.id || 'unauthenticated';
 
   // Hook 1: Core real-time subscriptions with caching and syncing
   useProductsAndCoreData({

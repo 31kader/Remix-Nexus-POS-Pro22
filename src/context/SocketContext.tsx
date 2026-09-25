@@ -11,22 +11,26 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     let newSocket: Socket | null = null;
     try {
       const session = getSecureItem<any>('nexus_active_online_session') || getSecureItem<any>('nexus_active_offline_session');
-      const token = session ? session.uid : 'anonymous';
+      if (!session || !session.uid) {
+        return;
+      }
+      const token = session.uid;
 
       newSocket = io(window.location.origin, {
-        transports: ['polling', 'websocket'], // Prefer polling first for better compatibility in proxied envs
-        reconnectionAttempts: 3,
-        timeout: 10000,
+        transports: ['websocket', 'polling'],
+        reconnection: false,
+        timeout: 5000,
         auth: { token }
       });
 
-      newSocket.on('connect_error', (error) => {
-        console.warn('Socket connection error (expected in some environments):', error.message);
+      newSocket.on('connect_error', () => {
+        // Silencieux en environnement statique / PWA sans serveur Socket.IO
+        newSocket?.close();
       });
 
       setSocket(newSocket);
-    } catch (err) {
-      console.error('Failed to initialize socket:', err);
+    } catch {
+      // Ignorer silencieusement en mode statique
     }
 
     return () => {

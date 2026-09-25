@@ -200,7 +200,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       {/* Main Login Card */}
-      <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-5 shadow-md space-y-6 relative">
+      <main className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-5 shadow-md space-y-6 relative">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 text-white mb-1">
@@ -260,12 +260,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
             className="space-y-4"
           >
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-400">
+              <label htmlFor="login-identifier-input" className="text-xs font-semibold text-zinc-400">
                 {t("E-mail ou Identifiant")}
               </label>
               <div className="relative">
                 <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
+                  id="login-identifier-input"
                   type="text"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
@@ -277,12 +278,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-400">
+              <label htmlFor="login-password-input" className="text-xs font-semibold text-zinc-400">
                 {t("Mot de passe")}
               </label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
+                  id="login-password-input"
                   type={showPassword ? "text" : "password"}
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
@@ -293,6 +295,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t("Masquer le mot de passe") : t("Afficher le mot de passe")}
+                  title={showPassword ? t("Masquer le mot de passe") : t("Afficher le mot de passe")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1 cursor-pointer"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -498,7 +502,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             Nexus POS Pro v1.2.14 • Architecture Offline-First
           </span>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
