@@ -9,6 +9,7 @@ interface UseCheckoutShortcutsProps {
   handleCheckout: (method: 'cash' | 'card' | 'balance', shouldPrint?: boolean) => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   addNewSession?: () => void;
+  onReprintLastTicket?: () => void;
 }
 
 export function useCheckoutShortcuts({
@@ -18,7 +19,8 @@ export function useCheckoutShortcuts({
   quantityInputRefs,
   handleCheckout,
   setCart,
-  addNewSession
+  addNewSession,
+  onReprintLastTicket
 }: UseCheckoutShortcutsProps) {
   
   const safeCart = Array.isArray(cart) ? cart : [];
@@ -57,6 +59,11 @@ export function useCheckoutShortcuts({
       else if (e.key === 'F8') {
         e.preventDefault();
         if (addNewSession) addNewSession();
+      }
+      // F10: Réimprimer le dernier ticket de caisse thermique
+      else if (e.key === 'F10') {
+        e.preventDefault();
+        if (onReprintLastTicket) onReprintLastTicket();
       }
       // Ctrl+Delete ou Ctrl+Backspace: Vider le panier actuel (avec confirmation sécurisée)
       else if (e.ctrlKey && (e.key === 'Delete' || e.key === 'Backspace')) {

@@ -316,34 +316,34 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 </span>
               </div>
 
-              {/* Rendu Dynamique */}
-              <div className="flex flex-col justify-center text-right font-mono bg-slate-50 dark:bg-zinc-900 px-3 py-1 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-inner min-h-[38px]">
+              {/* Rendu Dynamique Grand Format */}
+              <div className="flex flex-col justify-center text-right font-mono bg-white dark:bg-zinc-950 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-zinc-800 shadow-sm min-h-[44px]">
                 {(() => {
                   const typed = parseFloat(receivedAmount || '');
                   if (isNaN(typed) || receivedAmount === '') {
-                    return <span className="text-[9px] font-bold text-slate-400 dark:text-zinc-500 uppercase">EN ATTENTE</span>;
+                    return <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">EN ATTENTE</span>;
                   }
                   if (typed > total) {
                     return (
                       <>
-                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 leading-tight">
+                        <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight tracking-tight">
                           +{(typed - total).toFixed(2)} {currency}
                         </span>
-                        <span className="text-[7.5px] font-black text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-wider">À RENDRE</span>
+                        <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-widest bg-emerald-100 dark:bg-emerald-950/80 px-1 py-0.5 rounded w-fit ml-auto mt-0.5">À RENDRE</span>
                       </>
                     );
                   } else if (typed < total) {
                     return (
                       <>
-                        <span className="text-sm font-black text-amber-600 dark:text-amber-400 leading-tight">
+                        <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 leading-tight tracking-tight">
                           -{(total - typed).toFixed(2)} {currency}
                         </span>
-                        <span className="text-[7.5px] font-black text-amber-600/80 dark:text-amber-400/80 uppercase tracking-wider">RESTE DÛ</span>
+                        <span className="text-[8px] font-black text-amber-700 dark:text-amber-300 uppercase tracking-widest bg-amber-100 dark:bg-amber-950/80 px-1 py-0.5 rounded w-fit ml-auto mt-0.5">RESTE DÛ</span>
                       </>
                     );
                   } else {
                     return (
-                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                      <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-widest bg-emerald-100 dark:bg-emerald-950/80 px-2 py-1 rounded text-center">
                         COMPTE JUSTE
                       </span>
                     );
@@ -352,35 +352,35 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               </div>
             </div>
 
-            {/* Boutons Rapides Billets Algériens */}
-            <div className="flex flex-wrap gap-1 pt-0.5">
+            {/* Boutons Rapides Billets Algériens (500, 1000, 2000, 5000 DA) */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
               <button
                 type="button"
                 onClick={() => setReceivedAmount(total.toFixed(2))}
-                className="px-2 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 text-[9px] font-black rounded-lg border border-emerald-300 dark:border-emerald-700/60 transition-all active:scale-95 cursor-pointer shadow-sm"
+                className="px-2.5 py-1.5 bg-emerald-100 dark:bg-emerald-950/80 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-900 dark:text-emerald-200 text-[10px] font-black rounded-lg border border-emerald-300 dark:border-emerald-700 transition-all active:scale-95 cursor-pointer shadow-sm"
               >
                 COMPTE JUSTE
               </button>
-              {[500, 1000, 2000].map(val => (
+              {[500, 1000, 2000, 5000].map(val => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => setReceivedAmount(val.toString())}
-                  className="px-2 py-1 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 text-[9px] font-black font-mono rounded-lg border border-slate-300 dark:border-zinc-700 transition-all active:scale-95 cursor-pointer shadow-sm"
+                  className="px-2.5 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-900 dark:text-zinc-100 text-[10px] font-black font-mono rounded-lg border border-slate-300 dark:border-zinc-700 transition-all active:scale-95 cursor-pointer shadow-sm"
                 >
-                  {val} DA
+                  {val >= 1000 ? `${val / 1000}k` : val} DA
                 </button>
               ))}
-              {[500, 1000].map(addVal => {
+              {[500, 1000, 2000].map(addVal => {
                 const cur = parseFloat(receivedAmount || '') || 0;
                 return (
                   <button
                     key={`+${addVal}`}
                     type="button"
                     onClick={() => setReceivedAmount((cur + addVal).toString())}
-                    className="px-1.5 py-1 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 text-[9px] font-black font-mono rounded-lg border border-slate-300 dark:border-zinc-700 transition-all active:scale-95 cursor-pointer"
+                    className="px-2 py-1.5 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-[10px] font-black font-mono rounded-lg border border-slate-300 dark:border-zinc-700 transition-all active:scale-95 cursor-pointer"
                   >
-                    +{addVal}
+                    +{addVal >= 1000 ? `${addVal / 1000}k` : addVal}
                   </button>
                 );
               })}

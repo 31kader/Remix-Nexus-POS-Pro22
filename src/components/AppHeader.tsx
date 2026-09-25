@@ -2,12 +2,14 @@ import React from 'react';
 import { PinLockModal } from './PinLockModal';
 import { 
   Menu, Languages, ChevronDown, Palette, AlertTriangle, 
-  Calendar, LogOut, LogIn, Monitor, Lock, Sun, Moon, Banknote 
+  Calendar, LogOut, LogIn, Monitor, Lock, Sun, Moon, Banknote,
+  Cloud, CloudOff, RefreshCw
 } from 'lucide-react';
 import { cn, formatSafe } from '../lib/utils';
 import { fr } from 'date-fns/locale';
 import { getTerminalId, getTerminalName } from '../services/terminalService';
 import { testCashDrawer } from '../services/hardwareService';
+import { onBackgroundSyncStatus, flushSyncQueueImmediate } from '../services/SyncService';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -63,6 +65,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   toast
 }) => {
   const [isPinLockOpen, setIsPinLockOpen] = React.useState(false);
+  const [syncStatus, setSyncStatus] = React.useState<{ isSyncing: boolean; pendingCount: number }>({ isSyncing: false, pendingCount: 0 });
+  const [isOnline, setIsOnline] = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  React.useEffect(() => {
+    const unsub = onBackgroundSyncStatus(status => setSyncStatus(status));
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      unsub();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const getTabTitle = (tab: string) => {
     const labels: Record<string, string> = {
       checkout: isMobile ? 'POS' : 'Terminal de Vente',
@@ -144,7 +162,52 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       <div className="flex items-center gap-4">
         {/* Language Selector Dropdown */}
-                {/* Badge Terminal / Poste Multi-Caisses */}
+                {/* Badge État de Synchronisation Temps Réel (T5.1) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (syncStatus.pendingCount > 0) {
+              flushSyncQueueImmediate();
+              toast.info("Envoi immédiat des modifications locales vers le Cloud...");
+            } else {
+              toast.success("Toutes les données sont parfaitement synchronisées avec le Cloud !");
+            }
+          }}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all cursor-pointer border shadow-xs",
+            !isOnline
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20"
+              : (syncStatus.isSyncing || syncStatus.pendingCount > 0)
+                ? "bg-blue-500/15 border-blue-500/40 text-blue-500 hover:bg-blue-500/25 animate-pulse"
+                : "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
+          )}
+          title={
+            !isOnline 
+              ? "Mode Hors-Ligne (IndexedDB actif, les modifications seront envoyées dès le retour d'Internet)" 
+              : syncStatus.pendingCount > 0 
+                ? `${syncStatus.pendingCount} modification(s) en cours d'envoi vers le Cloud (Cliquez pour forcer)` 
+                : "Synchronisation Cloud active et à jour"
+          }
+        >
+          {!isOnline ? (
+            <>
+              <CloudOff size={14} className="text-amber-500" />
+              <span className="hidden md:inline">Hors-Ligne</span>
+            </>
+          ) : (syncStatus.isSyncing || syncStatus.pendingCount > 0) ? (
+            <>
+              <RefreshCw size={14} className="animate-spin text-blue-500" />
+              <span>Synchro ({syncStatus.pendingCount})</span>
+            </>
+          ) : (
+            <>
+              <Cloud size={14} className="text-emerald-500" />
+              <span className="hidden md:inline">Synchronisé</span>
+            </>
+          )}
+        </button>
+
+        {/* Badge Terminal / Poste Multi-Caisses */}
         <div 
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-bold tracking-wider cursor-default"
           title={`Poste de caisse actif : ${getTerminalName()} (${getTerminalId()})`}

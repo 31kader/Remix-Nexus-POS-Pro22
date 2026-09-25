@@ -125,9 +125,13 @@ describe('Axe 5 & Axe 6 : Fiabilité des Rapports, Impression & Qualité du Code
     const threeDaysAgoDate = subDays(now, 3);
 
     const mockSettings: CompanySettings = {
-      companyName: 'Nexus Store',
+      name: 'Nexus Store',
       currency: 'DA',
       taxRate: 19,
+      receiptTemplate: 'standard',
+      labelTemplate: 'standard',
+      loyaltyPointsPerCurrencyUnit: 1,
+      loyaltyPointValue: 1,
       address: 'Alger',
       phone: '0555000000',
       email: 'contact@nexuspos.dz',

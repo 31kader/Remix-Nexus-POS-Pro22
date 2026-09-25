@@ -466,12 +466,36 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
       `;
     } else {
       // standard template
+      const name = p.name || '';
+      const matchUnit = name.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|g|gramme|l|litre|ml|cl)\b/i);
+      let unitPriceText = '';
+      if (matchUnit) {
+        const val = parseFloat(matchUnit[1].replace(',', '.'));
+        const unit = matchUnit[2].toLowerCase();
+        if (val > 0) {
+          if (unit === 'kg' || unit === 'kilo') {
+            unitPriceText = `(${formatPrice(p.price / val)} ${settings.currency}/kg)`;
+          } else if (unit === 'g' || unit === 'gramme') {
+            unitPriceText = `(${formatPrice((p.price / val) * 1000)} ${settings.currency}/kg)`;
+          } else if (unit === 'l' || unit === 'litre') {
+            unitPriceText = `(${formatPrice(p.price / val)} ${settings.currency}/L)`;
+          } else if (unit === 'cl') {
+            unitPriceText = `(${formatPrice((p.price / val) * 100)} ${settings.currency}/L)`;
+          } else if (unit === 'ml') {
+            unitPriceText = `(${formatPrice((p.price / val) * 1000)} ${settings.currency}/L)`;
+          }
+        }
+      }
+
       contentHtml = `
         <div class="label-standard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
           <div class="name" style="font-weight: bold; font-size: 11px; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0;">
-            ${(p.imageUrl || p.image) ? `<div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1.5px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : ''}
-            <div class="price" style="font-size: 16px; font-weight: 900; margin: 0;">${formatPrice(p.price)} ${settings.currency}</div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 2px 0;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+              ${(p.imageUrl || p.image) ? `<div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1.5px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : ''}
+              <div class="price" style="font-size: 16px; font-weight: 900; margin: 0;">${formatPrice(p.price)} ${settings.currency}</div>
+            </div>
+            ${unitPriceText ? `<div style="font-size: 7.5px; font-weight: 800; color: #444; margin-top: 1px;">${unitPriceText}</div>` : ''}
           </div>
           ${barcodeHtml}
           <div class="sku" style="font-size: 8px; color: #666; margin-top: 2px;">${p.sku || p.id}</div>

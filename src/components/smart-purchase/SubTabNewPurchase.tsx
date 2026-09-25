@@ -39,7 +39,7 @@ interface SubTabNewPurchaseProps {
   setSearch: (v: string) => void;
   setIsPurchaseScannerOpen: (v: boolean) => void;
   filteredProducts: Product[];
-  addToCart: (p: Product) => void;
+  addToCart: (p: any) => void;
   settings: CompanySettings;
   selectedSupplierId: string;
   setSelectedSupplierId: (v: string) => void;
@@ -118,18 +118,57 @@ export function SubTabNewPurchase({
                     📂 Importer Facture / Fichier (CSV, Excel)
                   </button>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black text-industrial-500 uppercase tracking-widest">Marge Auto.</span>
                     <button 
                       onClick={() => setAutoMargin(!autoMargin)}
-                      className={cn("w-12 h-6 rounded-full relative transition-all shadow-inner", autoMargin ? "bg-emerald-500" : "bg-industrial-700")}
+                      className={cn("w-10 h-5 rounded-full relative transition-all shadow-inner", autoMargin ? "bg-emerald-500" : "bg-industrial-700")}
                     >
-                      <div className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-md", autoMargin ? "left-7" : "left-1")} />
+                      <div className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md", autoMargin ? "left-5" : "left-1")} />
                     </button>
                   </div>
-                  <Button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} size="sm" className="industrial-button-primary bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-black py-2 px-4 shadow-none">
-                    <Plus size={14} className="mr-2" /> Nouveau Produit
+
+                  <Button 
+                    type="button"
+                    onClick={() => {
+                      const lowStockProducts = (products || []).filter(p => {
+                        const curStock = p.stock || 0;
+                        const min = p.minStock || 5;
+                        const matchSupplier = !selectedSupplierId || p.supplier === selectedSupplierId || (p as any).supplierId === selectedSupplierId;
+                        return curStock <= min && matchSupplier;
+                      });
+
+                      if (lowStockProducts.length === 0) {
+                        toast.info("Aucun article en rupture ou alerte de stock pour ce filtre.");
+                        return;
+                      }
+
+                      let addedCount = 0;
+                      lowStockProducts.forEach(p => {
+                        const curStock = p.stock || 0;
+                        const min = p.minStock || 5;
+                        const targetStock = Math.max(min * 2, 10);
+                        const neededQty = Math.max(1, targetStock - curStock);
+                        addToCart({
+                          ...p,
+                          quantity: neededQty
+                        } as any);
+                        addedCount++;
+                      });
+
+                      toast.success(`⚡ ${addedCount} articles en alerte de stock ajoutés au bon de commande !`);
+                    }}
+                    size="sm" 
+                    className="industrial-button-primary bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-black py-2 px-3.5 shadow-none text-[10px] flex items-center gap-1.5 cursor-pointer"
+                    title="Générer automatiquement le bon de commande pour tous les articles sous leur seuil d'alerte (minStock)"
+                  >
+                    <Package size={13} />
+                    <span>Réapprovisionner Alertes Stock</span>
+                  </Button>
+
+                  <Button onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }} size="sm" className="industrial-button-primary bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-black py-2 px-3.5 shadow-none text-[10px] cursor-pointer">
+                    <Plus size={14} className="mr-1.5" /> Nouveau Produit
                   </Button>
                 </div>
               </div>

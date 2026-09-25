@@ -1,8 +1,9 @@
 import React from 'react';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, Printer } from 'lucide-react';
 import { Modal } from './ui';
 import { cn } from '../lib/utils';
 import { CompanySettings, Customer } from '../types';
+import { printDebtPaymentReceipt } from '../services/receiptPrintService';
 
 interface CustomerFinancialModalProps {
   isOpen: boolean;
@@ -219,20 +220,47 @@ export function CustomerFinancialModal({
           return null;
         })()}
         
-        <div className="pt-2 flex gap-3">
+        <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-slate-800 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-xl hover:bg-slate-700 transition-all font-sans"
+            className="sm:w-28 bg-slate-800 text-white font-extrabold uppercase tracking-widest text-[10px] py-3.5 rounded-xl hover:bg-slate-700 transition-all font-sans cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isProcessingTopUp || !topUpAmount || parseFloat(topUpAmount) <= 0}
-            className="flex-1 bg-indigo-500 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-xl hover:bg-indigo-400 transition-all shadow-xs/30 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-extrabold uppercase tracking-widest text-[10px] py-3.5 rounded-xl transition-all shadow-sm font-sans disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isProcessingTopUp ? 'Traitement...' : 'Valider'}
+            {isProcessingTopUp ? 'Traitement...' : 'Valider Seul'}
+          </button>
+          <button
+            type="button"
+            disabled={isProcessingTopUp || !topUpAmount || parseFloat(topUpAmount) <= 0}
+            onClick={(e) => {
+              if (selectedCustomer) {
+                const val = parseFloat(topUpAmount) || 0;
+                const prev = selectedCustomer.balance || 0;
+                const change = financialOpType === 'encaissement' ? val : -val;
+                const nextBal = prev + change;
+                printDebtPaymentReceipt({
+                  customerName: selectedCustomer.name || 'Client',
+                  customerPhone: selectedCustomer.phone,
+                  date: new Date().toLocaleString('fr-FR'),
+                  previousBalance: prev,
+                  paymentAmount: val,
+                  newBalance: nextBal,
+                  paymentMethod: financialMethod === 'cash' ? 'Espèces' : financialMethod === 'card' ? 'Carte/TPE' : financialMethod === 'bank' ? 'Virement' : 'Autre',
+                  note: financialNote
+                }, settings);
+              }
+              handleTopUp(e as any);
+            }}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold uppercase tracking-wider text-[10px] py-3.5 rounded-xl transition-all shadow-md font-sans disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Printer size={15} />
+            <span>Valider & Imprimer Reçu</span>
           </button>
         </div>
       </form>

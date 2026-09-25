@@ -54,7 +54,19 @@ export function useCheckoutBarcode({
 
   const handleBarcodeScan = useCallback((barcode: string, suppressNotFoundToast: boolean = false): boolean => {
     if (!barcode || barcode.trim().length === 0) return false;
-    const cleanBarcode = barcode.trim().toLowerCase();
+    let cleanBarcode = barcode.trim().toLowerCase();
+    
+    // Support de la saisie de quantité par préfixe scanner (ex: 6*12345678 ou 12*REF01)
+    let quantityMultiplier = 1;
+    const prefixMatch = cleanBarcode.match(/^(\d+)\s*[*xX]\s*(.+)$/);
+    if (prefixMatch) {
+      const parsedQty = parseInt(prefixMatch[1], 10);
+      if (!isNaN(parsedQty) && parsedQty > 0) {
+        quantityMultiplier = parsedQty;
+        cleanBarcode = prefixMatch[2].trim();
+      }
+    }
+
     const normalizedBarcode = cleanBarcode.replace(/[^a-z0-9]/g, '');
     playScanSound();
 
@@ -76,7 +88,11 @@ export function useCheckoutBarcode({
         setPriceCheckResult(product);
       } else {
         try {
-          addToCart(product, isReturnMode ? -1 : 1, true);
+          const finalQty = (isReturnMode ? -1 : 1) * quantityMultiplier;
+          addToCart(product, finalQty, true);
+          if (quantityMultiplier > 1) {
+            toast.success(`Ajouté : ${quantityMultiplier}x ${product.name}`);
+          }
         } catch (error) {
           console.error("Erreur lors de l'ajout au panier:", error);
           toast.error("Erreur d'initialisation du panier. Réessayez.");

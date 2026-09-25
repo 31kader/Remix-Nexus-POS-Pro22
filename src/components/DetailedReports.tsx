@@ -10,6 +10,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { cn, formatSafe } from '../lib/utils';
 
 // Lazy loading des sous-rapports pour alléger le bundle initial (Règle GEMINI.md)
@@ -65,30 +66,45 @@ export const DetailedReports = memo(function DetailedReports({
   const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
 
   const exportAccountingCSV = () => {
-    const headers = ['Date', 'Transaction ID', 'Total', 'Tax', 'Payment Method', 'Status'];
+    const headers = [
+      'Date & Heure',
+      'N° Ticket / Facture',
+      'Mode de Règlement',
+      'Total HT (DA)',
+      'Taux TVA',
+      'TVA 19% Collectée (DA)',
+      'Total TTC (DA)',
+      'Statut Transaction'
+    ];
     const vatRate = Number(settings.taxRate || 19) / 100;
     const rows = transactions.map(t => {
-      const taxAmount = (t.total || 0) - ((t.total || 0) / (1 + vatRate));
+      const totalTtc = t.total || 0;
+      const totalHt = totalTtc / (1 + vatRate);
+      const taxAmount = totalTtc - totalHt;
+      const methodLabel = t.paymentMethod === 'cash' ? 'Espèces' : t.paymentMethod === 'card' ? 'Carte / TPE' : t.paymentMethod === 'balance' ? 'Crédit (Dette)' : (t.paymentMethod || 'Autre');
       return [
-        formatSafe(t.timestamp, 'yyyy-MM-dd HH:mm:ss'),
-        t.id,
-        (t.total || 0).toFixed(2),
+        `"${formatSafe(t.timestamp, 'yyyy-MM-dd HH:mm:ss')}"`,
+        `"${t.id}"`,
+        `"${methodLabel}"`,
+        totalHt.toFixed(2),
+        `"19%"`,
         taxAmount.toFixed(2),
-        t.paymentMethod || 'N/A',
-        t.status || 'completed'
+        totalTtc.toFixed(2),
+        `"${t.status || 'completed'}"`
       ];
     });
 
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map(e => e.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `accounting_export_${format(new Date(), 'yyyyMMdd')}.csv`);
+    link.setAttribute("download", `Grand_Livre_Ventes_TVA_${format(new Date(), 'yyyyMMdd_HHmm')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success("Grand Livre des Ventes exporté avec succès (format Excel UTF-8) !");
   };
 
   const returnsByTx = useMemo(() => {

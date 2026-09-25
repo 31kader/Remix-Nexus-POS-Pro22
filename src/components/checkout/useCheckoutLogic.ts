@@ -369,7 +369,22 @@ export function useCheckoutLogic(props: CheckoutProps) {
 
   // Shortcuts keys handler Sub-hook integration
   useCheckoutShortcuts({
-    cart, searchRef, setSelectedItemId, quantityInputRefs, handleCheckout, setCart, addNewSession
+    cart, 
+    searchRef, 
+    setSelectedItemId, 
+    quantityInputRefs, 
+    handleCheckout, 
+    setCart, 
+    addNewSession,
+    onReprintLastTicket: () => {
+      const txToPrint = lastTransaction || (transactions && transactions.length > 0 ? transactions[0] : null);
+      if (txToPrint) {
+        toast.info(`Réimpression du ticket #${txToPrint.id?.slice(0, 8) || ''}...`);
+        printReceipt(txToPrint, settings);
+      } else {
+        toast.error("Aucune transaction récente à réimprimer.");
+      }
+    }
   });
 
   return {
