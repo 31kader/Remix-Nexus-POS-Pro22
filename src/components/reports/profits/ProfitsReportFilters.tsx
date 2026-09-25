@@ -49,7 +49,7 @@ export function ProfitsReportFilters({
   setProfitSearchProduct
 }: ProfitsReportFiltersProps) {
   return (
-    <div className="flex flex-wrap gap-4 w-full mt-4 bg-white/5 p-3 rounded-2xl border border-white/5">
+    <div className="flex flex-wrap gap-4 w-full mt-4 bg-white/5 p-3 rounded-xl border border-white/5">
       <div className="flex-1 min-w-[150px] max-w-[200px]">
         <label className="text-[10px] font-black uppercase text-white/20 tracking-widest mb-1 block">Période</label>
         <select 

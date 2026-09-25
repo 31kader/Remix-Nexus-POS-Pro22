@@ -105,7 +105,7 @@ export function SmartPurchaseModals({
 
       <Modal isOpen={isOcrInspectorOpen} onClose={() => setIsOcrInspectorOpen(false)} title="INSPECTEUR DE NUMÉRISATION (OCR LOCAL)">
         <div className="p-2 space-y-6">
-          <div className="p-4 bg-industrial-950 border border-industrial-800 rounded-2xl">
+          <div className="p-4 bg-industrial-950 border border-industrial-800 rounded-xl">
             {detectedOcrType === 'pos' ? (
               <div className="space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full border border-indigo-500/20 text-[10px] font-black uppercase tracking-wider">
@@ -134,7 +134,7 @@ export function SmartPurchaseModals({
             <label className="text-[10px] font-black text-industrial-500 uppercase tracking-widest px-1 block">
               Texte Brut Extrait par le moteur OCR (100% Réel)
             </label>
-            <div className="p-4 bg-industrial-950 border border-industrial-800 rounded-2xl max-h-60 overflow-y-auto font-mono text-xs text-industrial-400 whitespace-pre-line leading-relaxed scrollbar-thin">
+            <div className="p-4 bg-industrial-950 border border-industrial-800 rounded-xl max-h-60 overflow-y-auto font-mono text-xs text-industrial-400 whitespace-pre-line leading-relaxed scrollbar-thin">
               {rawOcrText || "Aucun texte détecté."}
             </div>
             <p className="text-[10px] text-industrial-500 px-1">
@@ -215,7 +215,7 @@ export function SmartPurchaseModals({
             onChange={e => setQuickCreateSearchFilter(e.target.value)}
             className="industrial-input w-full"
           />
-          <div className="divide-y divide-industrial-805 border border-industrial-800 rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto bg-industrial-950">
+          <div className="divide-y divide-industrial-805 border border-industrial-800 rounded-xl overflow-hidden max-h-[300px] overflow-y-auto bg-industrial-950">
             {products
               .filter(p => !quickCreateSearchFilter || (p?.name && p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())) || (p?.sku && p.sku.toLowerCase().includes(quickCreateSearchFilter.toLowerCase())))
               .slice(0, 50)

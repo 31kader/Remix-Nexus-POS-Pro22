@@ -29,7 +29,7 @@ export function SessionInitialCard({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="max-w-md w-full"
       >
-        <Card className="p-8 space-y-8 bg-slate-900/50 border-white/5  shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+        <Card className="p-5 space-y-8 bg-slate-900/50 border-white/5  shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
           <div className="space-y-4">
             <div className="w-20 h-20 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center mx-auto rotate-12 group-hover:rotate-0 transition-transform">
               <Wallet size={40} />
@@ -56,7 +56,7 @@ export function SessionInitialCard({
                   type="number"
                   autoFocus
                   placeholder="0.00"
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-12 pr-6 text-2xl font-black text-white placeholder:text-white/10 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-12 pr-6 text-2xl font-black text-white placeholder:text-white/10 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   value={initialCashInput}
                   onChange={(e) => setInitialCashInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && initialCashInput && handleDirectOpenShift()}
@@ -67,7 +67,7 @@ export function SessionInitialCard({
             <Button 
               onClick={handleDirectOpenShift}
               disabled={!initialCashInput || isOpeningSession}
-              className="w-full py-6 text-sm font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+              className="w-full py-6 text-sm font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3"
             >
               {isOpeningSession ? (
                 <RefreshCw className="animate-spin" size={20} />

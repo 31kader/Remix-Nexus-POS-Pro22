@@ -46,7 +46,7 @@ export const CartItemRow = memo(({
     <div 
       key={item.cartItemId || item.id} 
       className={cn(
-        "flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-black/40 border transition-all duration-300 group relative overflow-hidden ring-1 ring-slate-200/50 dark:ring-white/5 shadow-sm",
+        "flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-black/40 border transition-all duration-300 group relative overflow-hidden ring-1 ring-slate-200/50 dark:ring-white/5 shadow-sm",
         item.quantity < 0 
           ? "border-rose-400 dark:border-rose-500/50 bg-rose-50/80 dark:bg-rose-500/5 shadow-rose-500/10"
           : (isLast || isSelected ? "border-indigo-400 dark:border-indigo-500/50 bg-indigo-50/80 dark:bg-indigo-500/5 shadow-indigo-500/10" : "border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5")

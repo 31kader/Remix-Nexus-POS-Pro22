@@ -31,7 +31,7 @@ export function UpdatePricesItem({ item, product, settings, updateData, setUpdat
   return (
     <div 
       className={cn(
-        "group p-5 bg-industrial-900/40 rounded-2xl border transition-all duration-300 shadow-sm space-y-4 flex flex-col",
+        "group p-5 bg-industrial-900/40 rounded-xl border transition-all duration-300 shadow-sm space-y-4 flex flex-col",
         isItemActive 
           ? "border-industrial-700 hover:border-indigo-500/30 bg-industrial-900/65" 
           : "border-industrial-900 bg-industrial-950/40 opacity-50"

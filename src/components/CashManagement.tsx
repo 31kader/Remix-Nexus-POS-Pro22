@@ -71,7 +71,7 @@ export function CashManagement({
           setIsClosingModalOpen={setIsClosingModalOpen}
         />
       ) : (
-        <Card className="p-12 border-dashed border-2 border-slate-200 bg-slate-50/50 text-center flex flex-col items-center gap-4">
+        <Card className="p-6 border-dashed border-2 border-slate-200 bg-slate-50/50 text-center flex flex-col items-center gap-4">
           <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center">
             <Wallet size={32} />
           </div>

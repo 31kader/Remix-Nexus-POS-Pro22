@@ -9,10 +9,10 @@ interface Props {
 
 export const RewardLogicCard: React.FC<Props> = ({ loyaltyPoints, settings }) => {
   return (
-    <div className="bg-amber-500/5 rounded-xl border border-amber-500/20 p-8 shadow-inner relative overflow-hidden">
+    <div className="bg-amber-500/5 rounded-xl border border-amber-500/20 p-5 shadow-inner relative overflow-hidden">
       <div className="relative z-10">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-12 h-12 bg-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center border border-amber-500/20">
+          <div className="w-12 h-12 bg-amber-500/20 text-amber-500 rounded-xl flex items-center justify-center border border-amber-500/20">
             <Gift size={24} />
           </div>
           <h3 className="font-black text-amber-400 uppercase  tracking-wider text-sm">Reward Logic</h3>

@@ -35,7 +35,7 @@ export const TransactionTable: React.FC<Props> = ({
 
   if (!Array.isArray(transactions) || transactions.length === 0) {
     return (
-      <Card className="p-8 text-center text-slate-400">
+      <Card className="p-5 text-center text-slate-400">
         Aucune transaction trouvée
       </Card>
     );

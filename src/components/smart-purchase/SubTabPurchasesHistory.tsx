@@ -33,7 +33,7 @@ export function SubTabPurchasesHistory({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-6 items-end industrial-card p-8">
+      <div className="flex flex-col md:flex-row gap-6 items-end industrial-card p-5">
         <div className="flex-1 space-y-2">
           <label className="text-[10px] font-black text-industrial-500 uppercase px-1 tracking-widest">
             Recherche Fournisseur / N° Facture

@@ -469,7 +469,7 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
 
   const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   const fallbackUI = (
-    <div className="flex flex-col items-center justify-center min-h-[400px] h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-4">
+    <div className="flex flex-col items-center justify-center min-h-[400px] h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 text-center space-y-4">
       <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20">
         <AlertTriangle className="text-rose-500" size={24} />
       </div>

@@ -32,7 +32,7 @@ export function UndoLogModal({
       title={cancellingLog && (cancellingLog as any).isCancelled ? "Restaurer l'action" : "Annuler l'action"}
     >
       <div className="space-y-6 text-left">
-        <div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
+        <div className="flex items-start gap-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
           <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
           <div>
             <h4 className="text-sm font-black text-amber-500 uppercase tracking-wider">
@@ -55,7 +55,7 @@ export function UndoLogModal({
 
         {/* If the system found a related transaction, show details of rollback option */}
         {undoTransactionDetails ? (
-          <div className="p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl space-y-3">
+          <div className="p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                 Transaction Associée Trouvée
@@ -90,7 +90,7 @@ export function UndoLogModal({
             </div>
           </div>
         ) : (
-          <div className="p-4 bg-industrial-900 text-industrial-500 rounded-2xl border border-industrial-800 text-xs ">
+          <div className="p-4 bg-industrial-900 text-industrial-500 rounded-xl border border-industrial-800 text-xs ">
             Aucune transaction POS correspondante trouvée automatiquement. L'annulation marquera simplement l'événement comme "ANNULÉ" visuellement sans restaurer de stock physique.
           </div>
         )}

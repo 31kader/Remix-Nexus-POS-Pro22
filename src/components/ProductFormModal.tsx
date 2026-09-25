@@ -87,11 +87,11 @@ export function ProductFormModal(props: ProductFormModalProps) {
         maxHeight="max-h-[95vh]"
         padding="p-0"
         headerAction={headerAction}
-        className="lg:rounded-xl border border-white/10 shadow-2xl"
+        className="lg:rounded-xl border border-white/10 shadow-md"
       >
         <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full bg-[#05070a] relative">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 xl:p-12 space-y-8 sm:space-y-10 lg:space-y-12 pb-32">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 xl:gap-12">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-5 xl:p-6 space-y-8 sm:space-y-10 lg:space-y-12 pb-32">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-5 xl:gap-12">
               {/* Left Column */}
               <div className="space-y-12">
                 <div className="space-y-6">
@@ -164,18 +164,18 @@ export function ProductFormModal(props: ProductFormModalProps) {
                         Générer
                       </button>
                     </label>
-                    <textarea rows={3} className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white outline-none focus:border-indigo-500/40 transition-all placeholder:text-slate-800 shadow-inner" placeholder="Description marketing..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+                    <textarea rows={3} className="w-full bg-black/40 border border-white/5 rounded-xl p-4 text-xs text-white outline-none focus:border-indigo-500/40 transition-all placeholder:text-slate-800 shadow-inner" placeholder="Description marketing..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
                   </div>
 
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal">Tags & Indexation</label>
-                    <input className="w-full bg-black/40 border border-white/5 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500/40 transition-all placeholder:text-slate-800 shadow-inner" placeholder="Tags..." value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} />
+                    <input className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500/40 transition-all placeholder:text-slate-800 shadow-inner" placeholder="Tags..." value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} />
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 xl:gap-12 border-t border-white/5 pt-8 lg:pt-10 xl:pt-12">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-5 xl:gap-12 border-t border-white/5 pt-8 lg:pt-10 xl:pt-12">
                <ProductMultiExpirySection
                 formData={formData}
                 setFormData={setFormData}
@@ -190,8 +190,8 @@ export function ProductFormModal(props: ProductFormModalProps) {
               <div className="space-y-6">
                  {(setIsPurchaseHistoryModalOpen || setIsSalesHistoryModalOpen) && (
                     <div className="flex gap-4">
-                      {setIsPurchaseHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-2xl" onClick={() => setIsPurchaseHistoryModalOpen(true)}>Historique Achats</Button>}
-                      {setIsSalesHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-2xl" onClick={() => setIsSalesHistoryModalOpen(true)}>Historique Ventes</Button>}
+                      {setIsPurchaseHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-xl" onClick={() => setIsPurchaseHistoryModalOpen(true)}>Historique Achats</Button>}
+                      {setIsSalesHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-xl" onClick={() => setIsSalesHistoryModalOpen(true)}>Historique Ventes</Button>}
                     </div>
                   )}
                   <ProductAdvancedOptions
@@ -232,7 +232,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
               <button
                 type="submit"
                 disabled={!!skuError}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/30 active:scale-98 transition-all cursor-pointer"
               >
                 <RefreshCw size={14} className={isGlobalLoading ? "animate-spin" : ""} />
                 <span>{editingProduct ? "Enregistrer les modifications" : "Créer le produit"}</span>

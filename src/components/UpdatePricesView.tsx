@@ -47,7 +47,7 @@ export function UpdatePricesView({ items, onComplete, settings, products }: Upda
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0.95 }}
             transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className="relative w-full max-w-2xl h-full bg-industrial-950 border-l border-industrial-800 flex flex-col shadow-2xl z-10 overflow-hidden"
+            className="relative w-full max-w-2xl h-full bg-industrial-950 border-l border-industrial-800 flex flex-col shadow-md z-10 overflow-hidden"
           >
             {/* Top Header */}
             <div className="p-6 border-b border-industrial-800/80 bg-industrial-900/60  flex items-start justify-between">

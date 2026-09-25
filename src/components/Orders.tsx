@@ -243,7 +243,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
 
       {/* Floating Bulk Action Bar */}
       {selectedOrderIds && selectedOrderIds.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-indigo-950/80 border border-indigo-500/40 rounded-2xl  shadow-2xl animate-in fade-in slide-in-from-top-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-indigo-950/80 border border-indigo-500/40 rounded-xl  shadow-md animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
             <span className="text-sm font-black text-white">
@@ -321,7 +321,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
       {/* Confirmation de suppression */}
       {orderToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 ">
-          <Card className="max-w-md w-full p-6 bg-slate-900 border-slate-800 shadow-2xl">
+          <Card className="max-w-md w-full p-6 bg-slate-900 border-slate-800 shadow-md">
             <h3 className="text-xl font-bold text-white mb-4">Confirmer la suppression</h3>
             <p className="text-slate-400 mb-6">
               Êtes-vous sûr de vouloir supprimer cette commande sur Supabase ? Cette action est irréversible.

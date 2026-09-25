@@ -40,7 +40,7 @@ export function BundleItemSearchSelect({
         <input 
           type="text" 
           placeholder="Rechercher par nom, SKU ou code..."
-          className="w-full pl-11 pr-10 py-3 bg-white/5 border border-white/10 rounded-2xl text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 placeholder:text-white/20 transition-all font-bold"
+          className="w-full pl-11 pr-10 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 placeholder:text-white/20 transition-all font-bold"
           value={isOpen ? search : displayValue}
           onFocus={() => { setIsOpen(true); setSearch(''); }}
           onBlur={() => setTimeout(() => setIsOpen(false), 200)}
@@ -51,7 +51,7 @@ export function BundleItemSearchSelect({
         )}
       </div>
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-hidden flex flex-col ">
+        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-xl shadow-md max-h-80 overflow-hidden flex flex-col ">
           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-white/5">
              <span className="text-[10px] font-black text-white uppercase tracking-normal px-1">Résultats ({filteredProducts.length})</span>
              <button type="button" className="text-white/20 hover:text-white transition-colors p-1" onClick={() => { onChange(''); setIsOpen(false); }}>
@@ -60,7 +60,7 @@ export function BundleItemSearchSelect({
           </div>
           <div className="overflow-y-auto custom-scrollbar flex-1">
           {filteredProducts.length === 0 ? (
-            <div className="p-8 text-center text-white/20 ">
+            <div className="p-5 text-center text-white/20 ">
               <Package size={24} className="mx-auto mb-2 opacity-10" />
               <p className="text-xs font-bold uppercase tracking-widest">Aucun produit</p>
             </div>

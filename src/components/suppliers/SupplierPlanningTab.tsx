@@ -107,7 +107,7 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
         setIsDetailsModalOpen={setIsDetailsModalOpen}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start mt-10 text-left">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start mt-10 text-left">
         <MonthlyCalendar
           currentCalendarMonth={currentCalendarMonth}
           setCurrentCalendarMonth={setCurrentCalendarMonth}
@@ -119,7 +119,7 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
           formatDateKey={formatDateKey}
         />
 
-        <div className="xl:col-span-7 space-y-6 text-white grid grid-cols-1 md:grid-cols-2 lg:gap-8 items-start">
+        <div className="xl:col-span-7 space-y-6 text-white grid grid-cols-1 md:grid-cols-2 lg:gap-5 items-start">
           <ReminderForm
             newReminderData={newReminderData}
             setNewReminderData={setNewReminderData}

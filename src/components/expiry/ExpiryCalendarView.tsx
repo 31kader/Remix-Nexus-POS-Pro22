@@ -20,7 +20,7 @@ export function ExpiryCalendarView({
   now
 }: ExpiryCalendarViewProps) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-6 lg:p-10">
+    <div className="bg-white/5 border border-white/10 rounded-xl p-6 lg:p-5">
       <div className="flex items-center justify-between mb-8">
         <h3 className="text-xl font-black text-white uppercase tracking-tighter">
           {format(currentMonth, 'MMMM yyyy', { locale: fr })}
@@ -41,7 +41,7 @@ export function ExpiryCalendarView({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-px bg-white/10 rounded-xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50">
+      <div className="grid grid-cols-7 gap-px bg-white/10 rounded-xl overflow-hidden border border-white/10 shadow-md shadow-black/50">
         {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
           <div key={day} className="bg-black/40 p-4 text-center text-[10px] font-black text-white/30 uppercase tracking-widest underline decoration-indigo-500/10 underline-offset-8">
             {day}

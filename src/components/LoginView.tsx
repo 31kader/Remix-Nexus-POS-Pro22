@@ -171,7 +171,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </button>
           
           {isLangMenuOpen && (
-            <div className="absolute right-0 mt-2 w-44 rounded-2xl bg-zinc-900 border border-zinc-800 p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-44 rounded-xl bg-zinc-900 border border-zinc-800 p-1.5 shadow-md z-50 animate-in fade-in zoom-in-95 duration-150">
               <button 
                 type="button"
                 onClick={() => { setLanguage('fr'); setIsLangMenuOpen(false); }} 
@@ -200,10 +200,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       {/* Main Login Card */}
-      <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-8 shadow-2xl space-y-6 relative">
+      <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-5 shadow-md space-y-6 relative">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 shadow-md shadow-indigo-600/30 text-white mb-1">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 text-white mb-1">
             <ShoppingCart size={26} strokeWidth={2.5} />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">
@@ -343,7 +343,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                             setPinCode('');
                             setAuthError(null);
                           }}
-                          className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-800/50 transition-all flex flex-col items-center justify-center text-center cursor-pointer group"
+                          className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-indigo-500/50 hover:bg-zinc-800/50 transition-all flex flex-col items-center justify-center text-center cursor-pointer group"
                         >
                           <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs mb-2 transition-transform group-hover:scale-105", style.bg)}>
                             {initials}
@@ -359,7 +359,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     })}
                   </div>
                 ) : (
-                  <div className="p-6 text-center bg-zinc-950 rounded-2xl border border-zinc-800 text-zinc-500 text-xs space-y-2">
+                  <div className="p-6 text-center bg-zinc-950 rounded-xl border border-zinc-800 text-zinc-500 text-xs space-y-2">
                     <p>Aucun utilisateur en mémoire locale.</p>
                     <p className="text-[11px] text-zinc-600">Connectez-vous une première fois avec vos identifiants pour enregistrer votre profil.</p>
                   </div>
@@ -375,7 +375,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 className="space-y-4"
               >
                 {/* Utilisateur actif avec bouton retour */}
-                <div className="flex items-center justify-between bg-zinc-950 p-2.5 rounded-2xl border border-zinc-800">
+                <div className="flex items-center justify-between bg-zinc-950 p-2.5 rounded-xl border border-zinc-800">
                   <div className="flex items-center gap-3">
                     <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs", getRoleStyle(selectedUser.role).bg)}>
                       {(selectedUser.displayName || selectedUser.name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}

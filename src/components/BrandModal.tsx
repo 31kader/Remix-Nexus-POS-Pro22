@@ -66,7 +66,7 @@ export function BrandModal({
       title={editingBrand ? "PROFIL MARQUE CORPORATE" : "ENREGISTREMENT NOUVELLE MARQUE"}
       maxWidth="max-w-lg"
     >
-      <form onSubmit={onSave} className="space-y-8 bg-[#05070a] p-8 rounded-xl ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
+      <form onSubmit={onSave} className="space-y-8 bg-[#05070a] p-5 rounded-xl ring-1 ring-white/5 shadow-md relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
 
         <div className="space-y-4">
@@ -76,7 +76,7 @@ export function BrandModal({
               type="button" 
               onClick={generateAIInfo}
               disabled={isGenerating || !name}
-              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/20 rounded-full text-[9px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-[0.15em] disabled:opacity-30  group/ia shadow-2xl"
+              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/20 rounded-full text-[9px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-[0.15em] disabled:opacity-30  group/ia shadow-md"
             >
               <Sparkles size={12} className={cn("group-hover/ia:rotate-12 transition-transform", isGenerating ? "animate-pulse" : "")} />
               {isGenerating ? "SYNTÉSIS..." : "GÉNÉRER PAR IA"}
@@ -88,7 +88,7 @@ export function BrandModal({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase  group-hover:border-white/20"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase  group-hover:border-white/20"
               placeholder="NOM DE LA MARQUE..."
             />
           </div>
@@ -108,7 +108,7 @@ export function BrandModal({
                 />
               </div>
               {logo && (
-                <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center p-2 shrink-0 group-hover:scale-110 transition-transform duration-500">
+                <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl overflow-hidden shadow-md flex items-center justify-center p-2 shrink-0 group-hover:scale-110 transition-transform duration-500">
                   <img 
                     src={logo} 
                     alt="Preview" 
@@ -122,7 +122,7 @@ export function BrandModal({
               )}
             </div>
 
-            <label className="flex items-center justify-center gap-3 py-3 border-2 border-dashed border-white/5 rounded-2xl cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-600/5 transition-all group/up">
+            <label className="flex items-center justify-center gap-3 py-3 border-2 border-dashed border-white/5 rounded-xl cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-600/5 transition-all group/up">
               <Upload size={16} className="text-slate-700 group-hover/up:text-indigo-400 group-hover/up:scale-110 transition-all" />
               <span className="text-[9px] font-black text-slate-600 uppercase tracking-normal group-hover/up:text-indigo-400 transition-colors ">IMPORTER FICHIER LOGO</span>
               <input 

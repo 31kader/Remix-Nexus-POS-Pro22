@@ -44,7 +44,7 @@ export const DeliveryRequestModal = ({ isOpen, onClose, cartTotal }: { isOpen: b
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full space-y-4"
+        className="bg-white rounded-xl shadow-md p-6 max-w-sm w-full space-y-4"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-black text-slate-800 tracking-tight">Commande Livreur</h3>

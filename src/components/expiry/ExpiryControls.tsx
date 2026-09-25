@@ -35,7 +35,7 @@ export function ExpiryControls({
 }: ExpiryControlsProps) {
   return (
     <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
-      <div className="flex items-center gap-2 bg-black/40 p-1 rounded-2xl border border-white/5">
+      <div className="flex items-center gap-2 bg-black/40 p-1 rounded-xl border border-white/5">
         <button 
           onClick={() => setView('list')}
           className={cn(
@@ -68,14 +68,14 @@ export function ExpiryControls({
       <div className="flex flex-wrap gap-2 items-center">
         <button 
           onClick={handleExportCSV}
-          className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-2xl text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 shadow-lg"
+          className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 shadow-lg"
         >
           <FileDown size={14} /> Exporter (CSV)
         </button>
         
         <button 
           onClick={handlePrintPDF}
-          className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-2xl text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 shadow-lg"
+          className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2 shadow-lg"
         >
           <Printer size={14} /> Imprimer (PDF)
         </button>
@@ -84,7 +84,7 @@ export function ExpiryControls({
 
         <button 
           onClick={() => handleBatchDiscount('critical')}
-          className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-2xl text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-amber-500/5"
+          className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-[10px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-amber-500/5"
         >
           <Percent size={14} /> Solder Critiques (-20%)
         </button>
@@ -96,14 +96,14 @@ export function ExpiryControls({
           <input 
             type="text"
             placeholder="Rechercher produit ou lot..."
-            className="bg-white/5 border border-white/10 rounded-2xl pl-10 pr-4 py-2 text-xs text-white focus:border-indigo-500 transition-all outline-none"
+            className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white focus:border-indigo-500 transition-all outline-none"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         
         <select 
-          className="bg-white/5 border border-white/10 rounded-2xl px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 outline-none hover:border-white/20 cursor-pointer"
+          className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/60 outline-none hover:border-white/20 cursor-pointer"
           value={filterStatus}
           onChange={(e: any) => setFilterStatus(e.target.value)}
         >

@@ -188,7 +188,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
       >
         <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black select-none z-20">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-slate-900 rounded-2xl text-indigo-400 shadow-inner">
+            <div className="p-2.5 bg-slate-900 rounded-xl text-indigo-400 shadow-inner">
               <Camera size={20} />
             </div>
             <div>
@@ -200,12 +200,12 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             {torchAvailable && (
               <button 
                 onClick={toggleTorch}
-                className={`h-11 w-11 rounded-2xl border transition-all flex items-center justify-center ${torchEnabled ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-xs' : 'hover:bg-white/5 border-white/10 text-slate-500'}`}
+                className={`h-11 w-11 rounded-xl border transition-all flex items-center justify-center ${torchEnabled ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-xs' : 'hover:bg-white/5 border-white/10 text-slate-500'}`}
               >
                 {torchEnabled ? <Zap size={20} fill="currentColor" /> : <ZapOff size={20} />}
               </button>
             )}
-            <button onClick={onClose} className="h-11 w-11 rounded-2xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-slate-500 transition-all border border-white/10" title="Fermer le scanner">
+            <button onClick={onClose} className="h-11 w-11 rounded-xl bg-white/5 hover:bg-rose-500/20 hover:text-rose-400 text-slate-500 transition-all border border-white/10" title="Fermer le scanner">
               <X size={24} />
             </button>
           </div>
@@ -213,7 +213,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
 
         <div className="p-0 bg-black flex-1 relative flex items-center justify-center overflow-hidden touch-none group">
           {errorMsg ? (
-            <div className="flex flex-col items-center justify-center text-rose-500 p-8 text-center bg-rose-50/10 w-full h-full">
+            <div className="flex flex-col items-center justify-center text-rose-500 p-5 text-center bg-rose-50/10 w-full h-full">
               <CameraOff size={48} className="mb-4 opacity-50" />
               <p className="text-sm font-bold tracking-tight">{errorMsg}</p>
               <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-4 border-rose-200 text-rose-600">Actualiser</Button>
@@ -274,7 +274,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
                     exit={{ opacity: 0, scale: 0.8 }}
                     className="absolute inset-0 z-30 flex items-center justify-center bg-indigo-600/40 "
                   >
-                    <div className="bg-slate-900/90 px-8 py-6 rounded-xl shadow-xs border border-emerald-500/30 flex flex-col items-center gap-4">
+                    <div className="bg-slate-900/90 px-5 py-6 rounded-xl shadow-xs border border-emerald-500/30 flex flex-col items-center gap-4">
                       <div className="w-16 h-16 bg-emerald-500/10 rounded-xl text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-inner">
                         <CheckCircle2 size={36} />
                       </div>

@@ -29,7 +29,7 @@ export function PriceCheckerModal({
     >
       <div className="space-y-6">
         <div className="flex items-center gap-4 p-4 bg-slate-900/60 rounded-xl border border-slate-800/40 shadow-inner">
-          <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700/50 overflow-hidden shadow-2xl">
+          <div className="w-20 h-20 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700/50 overflow-hidden shadow-md">
             {priceCheckResult.imageUrl ? (
               <SafeImage 
                 src={priceCheckResult.imageUrl} 

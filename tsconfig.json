@@ -19,6 +19,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "motion/react": [
+        "./src/lib/motion-shim.tsx"
+      ],
+      "framer-motion": [
+        "./src/lib/motion-shim.tsx"
       ]
     },
     "allowImportingTsExtensions": true,

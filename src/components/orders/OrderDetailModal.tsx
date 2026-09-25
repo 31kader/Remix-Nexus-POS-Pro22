@@ -38,7 +38,7 @@ export function EditOrderItems({ order, onSave, onCancel, settings }: EditOrderI
       <h4 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Modifier les articles</h4>
       <div className="space-y-2">
         {(items || []).map((item, idx) => (
-          <div key={`order-item-${idx}`} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl ">
+          <div key={`order-item-${idx}`} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl ">
             <div className="flex-1 text-left">
               <p className="text-sm font-bold text-white tracking-tight">{item.name}</p>
               <p className="text-xs text-white/40 font-mono mt-0.5">{(item.price || 0).toFixed(2)} {settings?.currency || 'DA'} x {item.quantity}</p>
@@ -62,8 +62,8 @@ export function EditOrderItems({ order, onSave, onCancel, settings }: EditOrderI
         ))}
       </div>
       <div className="flex gap-3 pt-6">
-        <Button variant="secondary" onClick={onCancel} className="flex-1 bg-white/10 hover:bg-white/20 border-none text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto">Annuler</Button>
-        <Button onClick={() => onSave(order, items)} className="flex-1 bg-indigo-500 hover:bg-indigo-600 border-none text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto shadow-lg shadow-indigo-500/20">Sauvegarder</Button>
+        <Button variant="secondary" onClick={onCancel} className="flex-1 bg-white/10 hover:bg-white/20 border-none text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl h-auto">Annuler</Button>
+        <Button onClick={() => onSave(order, items)} className="flex-1 bg-indigo-500 hover:bg-indigo-600 border-none text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl h-auto shadow-lg shadow-indigo-500/20">Sauvegarder</Button>
       </div>
     </div>
   );
@@ -122,7 +122,7 @@ export function OrderDetailModal({
           />
         ) : (
           <>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-6 ">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/5 rounded-xl p-6 ">
               <div>
                 <p className="text-sm font-bold text-white tracking-tight">{selectedOrder.customerName || 'Client Inconnu'}</p>
                 <div className="flex items-center gap-3 mt-1">
@@ -164,7 +164,7 @@ export function OrderDetailModal({
             </div>
 
             {selectedOrder.deliveryMethod === 'delivery' && (
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-6  text-left">
+              <div className="bg-white/5 border border-white/5 rounded-xl p-6  text-left">
                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <MapPin size={12} className="text-indigo-400" /> Adresse de livraison
                 </p>
@@ -187,7 +187,7 @@ export function OrderDetailModal({
               </div>
             )}
 
-            <div className="bg-white/5 border rounded-2xl p-6 shadow-2xl text-center border-white/10 ">
+            <div className="bg-white/5 border rounded-xl p-6 shadow-md text-center border-white/10 ">
               <p className="text-xs font-black text-white/60 uppercase tracking-widest text-left mb-4 flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-indigo-400"><Package size={14}/> Articles Commandés</span>
                 <span className="text-[10px] font-black text-white/20">Vérifier avant emballage</span>
@@ -206,7 +206,7 @@ export function OrderDetailModal({
                     const itemKey = item.lineId || `pick-item-${idx}`;
                     const productRef = (products || []).find(p => p.id === (item.productId || (item as any).id));
                     return (
-                      <div key={itemKey} className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all group">
+                      <div key={itemKey} className="flex items-center gap-4 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group">
                         <div className="flex items-center justify-center">
                           <input 
                             type="checkbox" 
@@ -272,42 +272,42 @@ export function OrderDetailModal({
             </div>
 
             <div className="flex flex-wrap gap-2 pt-4">
-              <Button onClick={() => handlePrintOrder(selectedOrder)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border-white/10 text-white font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+              <Button onClick={() => handlePrintOrder(selectedOrder)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border-white/10 text-white font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto">
                 <Printer size={16} /> Imprimer Ticket
               </Button>
 
               {selectedOrder.status === 'pending' && (
-                <Button onClick={() => setIsEditingItems(true)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-white border border-amber-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+                <Button onClick={() => setIsEditingItems(true)} className="flex-1 min-w-[130px] flex items-center justify-center gap-2 bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-white border border-amber-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto">
                   <Edit size={16} /> Modifier Articles
                 </Button>
               )}
               
               {selectedOrder.status === 'pending' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'confirmed')} className="flex-1 min-w-[130px] bg-blue-600 text-white hover:bg-blue-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-blue-500/20">
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'confirmed')} className="flex-1 min-w-[130px] bg-blue-600 text-white hover:bg-blue-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto shadow-lg shadow-blue-500/20">
                   Confirmer
                 </Button>
               )}
               
               {['confirmed', 'pending'].includes(selectedOrder.status) && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'processing')} className="flex-1 min-w-[130px] bg-indigo-600 text-white hover:bg-indigo-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-indigo-500/20">
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'processing')} className="flex-1 min-w-[130px] bg-indigo-600 text-white hover:bg-indigo-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto shadow-lg shadow-indigo-500/20">
                   En Préparation
                 </Button>
               )}
 
               {['confirmed', 'processing'].includes(selectedOrder.status) && selectedOrder.deliveryMethod === 'delivery' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'shipped')} className="flex-1 min-w-[130px] bg-purple-600 text-white hover:bg-purple-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-purple-500/20">
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'shipped')} className="flex-1 min-w-[130px] bg-purple-600 text-white hover:bg-purple-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto shadow-lg shadow-purple-500/20">
                   Expédier
                 </Button>
               )}
 
               {selectedOrder.status !== 'delivered' && selectedOrder.status !== 'cancelled' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'delivered')} className="flex-1 min-w-[130px] bg-emerald-600 text-white hover:bg-emerald-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto shadow-lg shadow-emerald-500/20">
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'delivered')} className="flex-1 min-w-[130px] bg-emerald-600 text-white hover:bg-emerald-500 border-none font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto shadow-lg shadow-emerald-500/20">
                   Marquer Livré
                 </Button>
               )}
 
               {selectedOrder.status !== 'cancelled' && selectedOrder.status !== 'delivered' && (
-                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'cancelled')} className="flex-1 min-w-[130px] bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-2xl h-auto">
+                <Button variant="secondary" onClick={() => updateOrderStatus(selectedOrder, 'cancelled')} className="flex-1 min-w-[130px] bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/30 font-black uppercase tracking-widest text-[10px] py-3.5 rounded-xl h-auto">
                   Annuler Cde
                 </Button>
               )}
@@ -317,7 +317,7 @@ export function OrderDetailModal({
               <div className="pt-2">
                 <Button 
                   onClick={() => handleYassirRequest(selectedOrder)} 
-                  className="w-full flex items-center justify-center gap-2 bg-[#f2ec24] text-black hover:bg-[#dcd01b] border-none font-black uppercase tracking-widest text-[10px] py-4 rounded-2xl h-auto shadow-lg shadow-[#f2ec24]/20"
+                  className="w-full flex items-center justify-center gap-2 bg-[#f2ec24] text-black hover:bg-[#dcd01b] border-none font-black uppercase tracking-widest text-[10px] py-4 rounded-xl h-auto shadow-lg shadow-[#f2ec24]/20"
                 >
                   <Truck size={18} /> {t("Demander livreur Yassir")}
                 </Button>

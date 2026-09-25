@@ -37,7 +37,7 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
             <Timer size={24} />
           </div>
           <div>
@@ -86,7 +86,7 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
                       key={perm}
                       onClick={() => togglePermission(role, perm as any)}
                       className={cn(
-                        "w-full flex items-center justify-between p-3 rounded-2xl border transition-all text-left",
+                        "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
                         isGranted 
                           ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300" 
                           : "bg-black/20 border-white/5 text-slate-600 grayscale opacity-60"

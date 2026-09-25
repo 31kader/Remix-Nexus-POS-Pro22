@@ -74,11 +74,11 @@ export function DeliveryDashboard({ user, profile, onLogout, settings, onlineOrd
       <div className="flex-1 p-4 space-y-6 max-w-lg mx-auto w-full">
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
             <h3 className="text-3xl font-black text-indigo-600">{pendingOrders.length}</h3>
             <p className="text-xs font-bold text-slate-500 uppercase">À Livrer</p>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
             <h3 className="text-3xl font-black text-emerald-600">{pastOrders.length}</h3>
             <p className="text-xs font-bold text-slate-500 uppercase">Livrées</p>
           </div>
@@ -121,7 +121,7 @@ export function DeliveryDashboard({ user, profile, onLogout, settings, onlineOrd
           ))}
 
           {(activeTab === 'pending' ? pendingOrders : pastOrders).length === 0 && (
-            <div className="text-center p-8 bg-white border border-slate-200 border-dashed rounded-2xl">
+            <div className="text-center p-5 bg-white border border-slate-200 border-dashed rounded-xl">
               <Package size={48} className="mx-auto text-slate-300 mb-4" />
               <p className="font-bold text-slate-600">Aucune commande {activeTab === 'pending' ? 'en attente' : 'terminée'}</p>
               <p className="text-sm text-slate-400 mt-1">Vous êtes à jour !</p>

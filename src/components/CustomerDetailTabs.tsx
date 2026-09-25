@@ -508,7 +508,7 @@ export function CustomerDetailTabs({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               
               {/* Tableau Coordonnées & Identité */}
-              <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-lg">
+              <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-lg">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <h4 className="text-xs font-black text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                     <Contact size={15} /> Identité & Coordonnées
@@ -583,7 +583,7 @@ export function CustomerDetailTabs({
               </div>
 
               {/* Tableau Profil Commercial & Compte */}
-              <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-lg">
+              <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-lg">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                   <h4 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
                     <Briefcase size={15} /> Profil Commercial & Conditions
@@ -664,7 +664,7 @@ export function CustomerDetailTabs({
 
             {/* Note Interne si présente */}
             {selectedCustomer.notes && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-md">
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 shadow-md">
                 <h5 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2 mb-1.5">
                   <Quote size={14} /> Note Interne sur le Client
                 </h5>
@@ -676,7 +676,7 @@ export function CustomerDetailTabs({
 
             {/* Répartition des Achats : Magasin vs Application */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-slate-900/95 border border-blue-500/20 rounded-2xl p-4 shadow-lg flex items-center justify-between">
+              <div className="bg-slate-900/95 border border-blue-500/20 rounded-xl p-4 shadow-lg flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase text-blue-400 tracking-wider flex items-center gap-1.5">
                     <Store size={13} /> Achats en Magasin
@@ -693,7 +693,7 @@ export function CustomerDetailTabs({
                 </div>
               </div>
 
-              <div className="bg-slate-900/95 border border-violet-500/20 rounded-2xl p-4 shadow-lg flex items-center justify-between">
+              <div className="bg-slate-900/95 border border-violet-500/20 rounded-xl p-4 shadow-lg flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1.5">
                     <Smartphone size={13} /> Sur l'Application
@@ -710,7 +710,7 @@ export function CustomerDetailTabs({
                 </div>
               </div>
 
-              <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-lg flex items-center justify-between">
+              <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-4 shadow-lg flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
                     <TrendingUp size={13} /> Total Net Dépensé
@@ -729,7 +729,7 @@ export function CustomerDetailTabs({
             </div>
 
             {/* 2. Le Grand TABLEAU des Règlements, Versements & Mémos */}
-            <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                 <div>
                   <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
@@ -914,7 +914,7 @@ export function CustomerDetailTabs({
                 <p className="font-bold text-xs uppercase tracking-wider text-slate-400">Chargement du journal de bord...</p>
               </div>
             ) : timeline.length === 0 ? (
-              <div className="text-center py-16 text-slate-500 bg-slate-900/40 rounded-2xl border border-slate-800/60 p-8">
+              <div className="text-center py-16 text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800/60 p-5">
                 <ShoppingBag size={40} className="mx-auto mb-3 opacity-30 text-indigo-400" />
                 <p className="font-bold text-sm text-slate-300">Aucune opération enregistrée</p>
                 <p className="text-xs text-slate-500 mt-1">Les achats et retours liés à ce client apparaîtront ici sous forme de tableau complet.</p>

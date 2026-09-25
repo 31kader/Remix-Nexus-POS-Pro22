@@ -20,10 +20,10 @@ export function PerformanceSummary({
   settings
 }: PerformanceSummaryProps) {
   return (
-    <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
-      <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+    <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-md">
+      <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20">
             <TrendingUp size={24} />
           </div>
           <div>
@@ -57,7 +57,7 @@ export function PerformanceSummary({
                 >
                   <td className="p-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black/40 border border-white/10 text-indigo-400 rounded-2xl flex items-center justify-center text-lg font-black group-hover:scale-110 group-hover:border-indigo-500/50 transition-all duration-500 shadow-xl">
+                      <div className="w-12 h-12 bg-black/40 border border-white/10 text-indigo-400 rounded-xl flex items-center justify-center text-lg font-black group-hover:scale-110 group-hover:border-indigo-500/50 transition-all duration-500 shadow-xl">
                         {employee.name.charAt(0)}
                       </div>
                       <div>

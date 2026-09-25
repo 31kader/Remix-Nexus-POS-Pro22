@@ -53,10 +53,10 @@ export function SupplierLogin({ onLogin }: { onLogin: (supplier: Supplier) => vo
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl shadow-xl border border-slate-200 w-full max-w-md"
+        className="bg-white p-5 rounded-xl shadow-xl border border-slate-200 w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+          <div className="w-16 h-16 bg-indigo-600 text-white rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
             <Truck size={32} />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Portail Fournisseur</h1>

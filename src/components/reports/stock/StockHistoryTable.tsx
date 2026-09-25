@@ -94,7 +94,7 @@ export function StockHistoryTable({
             })}
             {adjustments.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-slate-400 bg-white/5">
+                <td colSpan={7} className="p-6 text-center text-slate-400 bg-white/5">
                   <div className="flex flex-col items-center gap-3">
                     <History size={48} className="text-slate-600" strokeWidth={1.5} />
                     <p className="text-sm font-medium">Aucun ajustement de stock enregistré</p>

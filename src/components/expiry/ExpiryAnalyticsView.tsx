@@ -19,13 +19,13 @@ export function ExpiryAnalyticsView({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-8">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
           <h3 className="text-sm font-black text-white uppercase tracking-normal mb-6 flex items-center gap-2">
             <AlertTriangle size={18} className="text-rose-500" /> Top Pertes Potentielles
           </h3>
           <div className="space-y-4">
             {analyzedProducts.slice(0, 5).map(p => (
-              <div key={`loss-${p.id}`} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+              <div key={`loss-${p.id}`} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
                 <div className="min-w-0">
                   <p className="text-[10px] font-black text-white uppercase truncate">{p.name}</p>
                   <p className="text-[9px] text-white/40 uppercase tracking-widest">{p.stock} {p.unit} à {p.price} DA</p>
@@ -39,7 +39,7 @@ export function ExpiryAnalyticsView({
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-8">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
           <h3 className="text-sm font-black text-white uppercase tracking-normal mb-6 flex items-center gap-2">
             <TrendingDown size={18} className="text-indigo-500" /> Analyse par Catégorie
           </h3>
@@ -71,7 +71,7 @@ export function ExpiryAnalyticsView({
         </div>
       </div>
       
-      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-8 text-center">
+      <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-5 text-center">
          <div className="max-w-xl mx-auto space-y-4">
             <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <Info className="text-indigo-400" size={32} />
@@ -84,7 +84,7 @@ export function ExpiryAnalyticsView({
             <div className="pt-4">
               <button 
                 onClick={() => handleBatchDiscount('critical')}
-                className="bg-indigo-500 hover:bg-indigo-400 text-white font-black uppercase tracking-normal text-[10px] px-8 py-4 rounded-2xl shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
+                className="bg-indigo-500 hover:bg-indigo-400 text-white font-black uppercase tracking-normal text-[10px] px-5 py-4 rounded-xl shadow-xl shadow-indigo-500/20 transition-all active:scale-95"
               >
                 Lancer la Promo Flash
               </button>

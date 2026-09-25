@@ -25,7 +25,7 @@ export const SupplierOrderForm = ({
 
   return (
     <div className="space-y-8">
-      <div className="bg-white p-8 space-y-6">
+      <div className="bg-white p-5 space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-slate-800">Nouveau Bon de Commande</h2>

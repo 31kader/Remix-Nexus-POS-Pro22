@@ -53,10 +53,10 @@ export function CustomerLogin({ onLogin }: { onLogin: (customer: Customer) => vo
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md"
+        className="bg-white p-5 rounded-xl shadow-xl w-full max-w-md"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
+          <div className="w-16 h-16 bg-indigo-600 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-200">
             <ShoppingBag className="text-white w-8 h-8" />
           </div>
           <h2 className="text-2xl font-bold text-slate-800">Espace Client</h2>

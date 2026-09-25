@@ -270,7 +270,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
               })}
               {filteredReturns.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-500 font-mono ">AUCUN RETOUR CORRESPONDANT</td>
+                  <td colSpan={6} className="p-6 text-center text-slate-500 font-mono ">AUCUN RETOUR CORRESPONDANT</td>
                 </tr>
               )}
             </tbody>
@@ -377,7 +377,7 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70  ${isOpen ? 'block' : 'hidden'}`}>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-6 shadow-md">
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div>
             <h4 className="text-lg font-black text-white uppercase tracking-wider">Détails du Retour</h4>
@@ -389,7 +389,7 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
         </div>
 
         <div className="space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800/60 font-mono">
+          <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800/60 font-mono">
             <div>
               <span className="text-slate-500 block uppercase text-[10px]">Date & Heure</span>
               <strong className="text-white">{dateVal ? formatSafe(dateVal, 'dd/MM/yyyy HH:mm') : '—'}</strong>

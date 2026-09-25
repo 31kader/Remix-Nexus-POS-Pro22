@@ -19,7 +19,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-xl group hover:border-amber-500/30 transition-all">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20 group-hover:scale-110 transition-transform">
               <Zap size={24} />
             </div>
             <div>
@@ -40,7 +40,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
 
         <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-xl group hover:border-amber-500/30 transition-all">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 border border-rose-500/20 group-hover:scale-110 transition-transform">
               <Database size={24} />
             </div>
             <div>
@@ -68,7 +68,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
             type="number" 
             value={formData.sessionTimeoutMinutes ?? ''}
             onChange={e => setFormData({ ...formData, sessionTimeoutMinutes: parseInt(e.target.value) || 0 })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-amber-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-amber-500/50 transition-all font-medium"
           />
         </div>
 
@@ -81,7 +81,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
             type="number" 
             value={formData.globalStockAlertThreshold ?? ''}
             onChange={e => setFormData({ ...formData, globalStockAlertThreshold: parseInt(e.target.value) || 0 })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-amber-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-amber-500/50 transition-all font-medium"
           />
         </div>
       </div>
@@ -97,7 +97,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
             <select 
               value={formData.receiptTemplate}
               onChange={e => setFormData({ ...formData, receiptTemplate: e.target.value as any })}
-              className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-amber-500/50 transition-all"
+              className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-amber-500/50 transition-all"
             >
               <option value="standard">Standard NEXUS</option>
               <option value="minimal">Compact Minimal</option>
@@ -110,7 +110,7 @@ export function PosSection({ formData, setFormData }: SectionProps) {
             <select 
               value={formData.labelTemplate}
               onChange={e => setFormData({ ...formData, labelTemplate: e.target.value as any })}
-              className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-amber-500/50 transition-all"
+              className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-amber-500/50 transition-all"
             >
               <option value="standard">Standard (60x40)</option>
               <option value="barcode-only">Code-barre uniquement</option>

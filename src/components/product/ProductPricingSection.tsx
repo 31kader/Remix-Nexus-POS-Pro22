@@ -63,7 +63,7 @@ export function ProductPricingSection({
 
   return (
     <div className="space-y-4">
-      <div className="bg-black/20 p-6 rounded-2xl border border-white/5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 shadow-xl ring-1 ring-white/5 relative overflow-hidden">
+      <div className="bg-black/20 p-6 rounded-xl border border-white/5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 shadow-xl ring-1 ring-white/5 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500/20 via-indigo-500/20 to-emerald-500/20"></div>
 
         {/* Prix de vente détail */}
@@ -168,7 +168,7 @@ export function ProductPricingSection({
       </div>
 
       {/* Barre d'analyse de marge & Bouton Admin */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900/60 rounded-2xl border border-white/5">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-900/60 rounded-xl border border-white/5">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
@@ -214,7 +214,7 @@ export function ProductPricingSection({
 
       {/* Panneau Réglage Bénéfice Admin */}
       {isAdmin && showAdminCalc && (
-        <div className="p-5 bg-indigo-950/40 rounded-2xl border border-indigo-500/30 space-y-4 animate-in fade-in duration-200">
+        <div className="p-5 bg-indigo-950/40 rounded-xl border border-indigo-500/30 space-y-4 animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-indigo-500/20 pb-3">
             <h5 className="text-xs font-black uppercase tracking-wider text-indigo-200 flex items-center gap-2">
               <ShieldCheck size={16} className="text-indigo-400" />

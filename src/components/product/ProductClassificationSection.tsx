@@ -152,7 +152,7 @@ export function ProductClassificationSection({
       </div>
 
       {/* Ligne 3 : État Opérationnel, Emplacement Logistique & Réf Interne */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-black/20 p-6 rounded-2xl border border-white/5 ring-1 ring-white/5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-black/20 p-6 rounded-xl border border-white/5 ring-1 ring-white/5">
         <div className="space-y-2">
           <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">ÉTAT OPÉRATIONNEL</label>
           <div className="relative group">

@@ -80,7 +80,7 @@ export function ReminderList({
 
           if (filtered.length === 0) {
             return (
-              <div className="py-12 text-center text-white/20 uppercase text-[10px] font-black tracking-widest border border-dashed border-white/5 rounded-2xl">
+              <div className="py-12 text-center text-white/20 uppercase text-[10px] font-black tracking-widest border border-dashed border-white/5 rounded-xl">
                 Aucun rappel planifié
               </div>
             );
@@ -92,7 +92,7 @@ export function ReminderList({
               <div 
                 key={r.id} 
                 className={cn(
-                  "p-4 rounded-2xl border transition-all flex items-start gap-3 group text-left",
+                  "p-4 rounded-xl border transition-all flex items-start gap-3 group text-left",
                   r.isCompleted 
                     ? "bg-slate-900/50 border-slate-950/20 opacity-60" 
                     : isOverdue 

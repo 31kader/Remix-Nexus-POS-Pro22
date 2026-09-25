@@ -107,7 +107,7 @@ export const SyncIndicator = ({
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 20, scale: 0.9 }}
             onClick={handleClick}
-            className="flex items-center gap-2.5 px-3.5 py-2 bg-rose-600 dark:bg-rose-700 text-white rounded-2xl shadow-xl shadow-rose-900/30 border border-rose-400/30 cursor-pointer pointer-events-auto hover:bg-rose-500 transition-all active:scale-95 group"
+            className="flex items-center gap-2.5 px-3.5 py-2 bg-rose-600 dark:bg-rose-700 text-white rounded-xl shadow-xl shadow-rose-900/30 border border-rose-400/30 cursor-pointer pointer-events-auto hover:bg-rose-500 transition-all active:scale-95 group"
             title="Mode Hors-Ligne actif — Les ventes sont stockées localement en toute sécurité. Cliquer pour ouvrir le Studio."
           >
             <div className="relative">
@@ -128,7 +128,7 @@ export const SyncIndicator = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 10 }}
             onClick={handleClick}
-            className="bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-white border border-indigo-200 dark:border-indigo-500/30 p-3 rounded-2xl shadow-2xl ring-1 ring-indigo-500/20 flex items-center gap-3 cursor-pointer pointer-events-auto hover:border-indigo-500 transition-all active:scale-95"
+            className="bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-white border border-indigo-200 dark:border-indigo-500/30 p-3 rounded-xl shadow-md ring-1 ring-indigo-500/20 flex items-center gap-3 cursor-pointer pointer-events-auto hover:border-indigo-500 transition-all active:scale-95"
             title="Synchronisation en cours... Cliquer pour voir les détails."
           >
             <div className="relative">
@@ -162,7 +162,7 @@ export const SyncIndicator = ({
              animate={{ opacity: 1, y: 0, scale: 1 }}
              exit={{ opacity: 0, y: 10, scale: 0.9 }}
              title="Changements en attente de synchronisation. Cliquer pour ouvrir le Studio."
-             className="bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-500/40 px-3.5 py-2 rounded-2xl flex items-center gap-2.5 shadow-xl shadow-amber-900/10 cursor-pointer transition-all active:scale-95 pointer-events-auto hover:bg-amber-100 dark:hover:bg-amber-900/80"
+             className="bg-amber-50 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-500/40 px-3.5 py-2 rounded-xl flex items-center gap-2.5 shadow-xl shadow-amber-900/10 cursor-pointer transition-all active:scale-95 pointer-events-auto hover:bg-amber-100 dark:hover:bg-amber-900/80"
            >
               <AlertCircle size={15} className="text-amber-600 dark:text-amber-400 animate-pulse shrink-0" />
               <div className="flex flex-col text-left">
@@ -189,7 +189,7 @@ export const SyncIndicator = ({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-rose-600 text-white border border-rose-400 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-2xl cursor-pointer pointer-events-auto hover:bg-rose-700 transition-colors animate-bounce"
+            className="bg-rose-600 text-white border border-rose-400 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-md cursor-pointer pointer-events-auto hover:bg-rose-700 transition-colors animate-bounce"
             title={`${dlqCount} élément(s) bloqué(s) dans la file d'échecs. Cliquer pour ouvrir le Studio de Synchro.`}
           >
             <AlertCircle size={15} className="text-white shrink-0" />
@@ -204,7 +204,7 @@ export const SyncIndicator = ({
             initial={{ opacity: 0, y: -10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.9 }}
-            className="bg-amber-600 text-white px-3.5 py-2 rounded-2xl shadow-2xl flex items-center gap-2.5 pointer-events-auto border border-amber-400/40"
+            className="bg-amber-600 text-white px-3.5 py-2 rounded-xl shadow-md flex items-center gap-2.5 pointer-events-auto border border-amber-400/40"
           >
             <BellRing size={16} className="animate-bounce shrink-0" />
             <div className="flex flex-col text-left">

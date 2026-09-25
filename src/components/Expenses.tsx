@@ -254,7 +254,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
             ))}
             {filteredExpenses.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-white/20 uppercase tracking-widest">
+                <td colSpan={6} className="p-6 text-center text-white/20 uppercase tracking-widest">
                   <div className="flex flex-col items-center gap-2 opacity-20">
                     <TrendingDown size={48} strokeWidth={1} />
                     <p className="text-xs font-black">Aucune dépense trouvée</p>
@@ -325,7 +325,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Description *</label>
             <input 
               required
-              className="w-full p-3.5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all placeholder:text-white/20"
+              className="w-full p-3.5 bg-black/40 border border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all placeholder:text-white/20"
               placeholder="Ex: Loyer Mars 2026"
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
@@ -339,7 +339,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
                 required
                 type="number"
                 step="0.01"
-                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all font-mono"
+                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all font-mono"
                 value={formData.amount}
                 onChange={e => setFormData({...formData, amount: e.target.value})}
               />
@@ -349,7 +349,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
               <input 
                 required
                 type="date"
-                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all"
+                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all"
                 value={formData.date}
                 onChange={e => setFormData({...formData, date: e.target.value})}
               />
@@ -361,7 +361,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Catégorie *</label>
               <select 
                 required
-                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all cursor-pointer"
+                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all cursor-pointer"
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
               >
@@ -373,7 +373,7 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest px-1">Méthode de Paiement *</label>
               <select 
                 required
-                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all cursor-pointer"
+                className="w-full p-3.5 bg-black/40 border border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 text-sm font-bold text-white transition-all cursor-pointer"
                 value={formData.paymentMethod}
                 onChange={e => setFormData({...formData, paymentMethod: e.target.value as any})}
               >

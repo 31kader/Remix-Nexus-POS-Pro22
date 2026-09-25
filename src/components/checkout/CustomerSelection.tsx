@@ -60,7 +60,7 @@ export const CustomerSelection = memo(function CustomerSelection({
   }, [customers, customerSearch]);
 
   return (
-    <div className="space-y-6 p-6 sm:p-8 bg-white dark:bg-black/40 border-b border-slate-200 dark:border-white/5 ring-1 ring-slate-200/50 dark:ring-white/5">
+    <div className="space-y-6 p-6 sm:p-5 bg-white dark:bg-black/40 border-b border-slate-200 dark:border-white/5 ring-1 ring-slate-200/50 dark:ring-white/5">
       <div className="flex items-center justify-between">
         <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-normal flex items-center gap-2">
            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs" />
@@ -79,19 +79,19 @@ export const CustomerSelection = memo(function CustomerSelection({
 
       {selectedCustomer ? (
         <div className="space-y-6 animate-in slide-in-from-top-2 duration-500">
-          <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm dark:shadow-2xl space-y-5 relative overflow-hidden group ring-1 ring-slate-200/50 dark:ring-white/5">
+          <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm dark:shadow-md space-y-5 relative overflow-hidden group ring-1 ring-slate-200/50 dark:ring-white/5">
             <div className="absolute top-0 right-0 p-1 opacity-20">
                <div className="w-32 h-32 bg-indigo-500/10 rounded-full absolute -top-16 -right-16 blur-[40px]" />
             </div>
             <div className="flex items-center gap-5 relative">
-              <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center font-black border border-indigo-200 dark:border-indigo-500/20 shadow-sm dark:shadow-2xl text-xl  shadow-inner">
+              <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center font-black border border-indigo-200 dark:border-indigo-500/20 shadow-sm dark:shadow-md text-xl  shadow-inner">
                 {(selectedCustomer.name || 'C').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-black text-slate-900 dark:text-white truncate uppercase tracking-tight ">{selectedCustomer.name || 'Client sans nom'}</p>
                 <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400/60 tracking-normal font-mono mt-1">TEL: {selectedCustomer.phone || 'NON RENSEIGNÉ'}</p>
               </div>
-              <button onClick={() => { setSelectedCustomer(null); setUseLoyaltyPoints(false); }} className="text-slate-400 hover:text-rose-500 p-3 transition-all hover:bg-rose-500/10 rounded-2xl active:scale-90 border border-transparent hover:border-rose-500/20 cursor-pointer">
+              <button onClick={() => { setSelectedCustomer(null); setUseLoyaltyPoints(false); }} className="text-slate-400 hover:text-rose-500 p-3 transition-all hover:bg-rose-500/10 rounded-xl active:scale-90 border border-transparent hover:border-rose-500/20 cursor-pointer">
                 <X size={24} />
               </button>
             </div>
@@ -143,7 +143,7 @@ export const CustomerSelection = memo(function CustomerSelection({
 
           {/* Calculateur de Règlement */}
           {total > 0 && (
-            <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl space-y-5 relative overflow-hidden text-left shadow-sm dark:shadow-2xl ring-1 ring-slate-200/50 dark:ring-white/5">
+            <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl space-y-5 relative overflow-hidden text-left shadow-sm dark:shadow-md ring-1 ring-slate-200/50 dark:ring-white/5">
               <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
                 <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal flex items-center gap-2 ">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -175,7 +175,7 @@ export const CustomerSelection = memo(function CustomerSelection({
                         }
                       }}
                       placeholder={(total || 0).toFixed(2)}
-                      className="w-full bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-xl font-black font-mono rounded-2xl pl-4 pr-10 py-4 focus:outline-none focus:border-indigo-500/40 focus:ring-8 focus:ring-indigo-500/5 transition-all text-left placeholder:text-slate-400 dark:placeholder:text-slate-700 shadow-inner group-hover:border-slate-300 dark:group-hover:border-white/20"
+                      className="w-full bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-xl font-black font-mono rounded-xl pl-4 pr-10 py-4 focus:outline-none focus:border-indigo-500/40 focus:ring-8 focus:ring-indigo-500/5 transition-all text-left placeholder:text-slate-400 dark:placeholder:text-slate-700 shadow-inner group-hover:border-slate-300 dark:group-hover:border-white/20"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 dark:text-slate-400 font-black font-mono">{settings.currency}</span>
                   </div>
@@ -183,7 +183,7 @@ export const CustomerSelection = memo(function CustomerSelection({
 
                 <div className="space-y-2 text-right">
                   <label className="block text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal mr-1">DIFFÉRENTIEL</label>
-                  <div className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white rounded-2xl px-5 py-3.5 font-mono flex items-center justify-end min-h-[60px] shadow-inner">
+                  <div className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white rounded-xl px-5 py-3.5 font-mono flex items-center justify-end min-h-[60px] shadow-inner">
                     {(() => {
                       const typed = parseFloat(receivedAmount);
                       if (isNaN(typed)) return <span className="text-slate-400 dark:text-slate-700 text-[9px] font-black uppercase tracking-normal">WAITING...</span>;
@@ -309,14 +309,14 @@ export const CustomerSelection = memo(function CustomerSelection({
               <input 
                 type="text"
                 placeholder="RECHERCHE CLIENT ACTIF..."
-                className="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 shadow-sm transition-all"
+                className="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 shadow-sm transition-all"
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
               />
               {customerSearch && (
-                <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-50 max-h-72 overflow-y-auto  no-scrollbar animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-md z-50 max-h-72 overflow-y-auto  no-scrollbar animate-in fade-in slide-in-from-top-4 duration-300">
                   {filteredCustomerResults.length === 0 ? (
-                    <div className="p-8 text-center text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-normal ">Aucun client correspondant</div>
+                    <div className="p-5 text-center text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-normal ">Aucun client correspondant</div>
                   ) : (
                     filteredCustomerResults.map((c: Customer) => (
                         <button
@@ -352,7 +352,7 @@ export const CustomerSelection = memo(function CustomerSelection({
             </div>
             <button 
               onClick={() => setIsPOSCustomerModalOpen(true)}
-              className="px-5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl hover:bg-indigo-600 text-slate-600 dark:text-slate-600 hover:text-white transition-all flex items-center justify-center shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
+              className="px-5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-indigo-600 text-slate-600 dark:text-slate-600 hover:text-white transition-all flex items-center justify-center shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
               title="CRÉER NOUVEAU CLIENT"
             >
               <UserPlus size={22} className="relative z-10" />

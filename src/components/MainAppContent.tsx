@@ -96,7 +96,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         <div className="flex-1 overflow-hidden">
           <div className={cn(
             "h-full overflow-y-auto custom-scrollbar animate-in fade-in duration-150",
-            activeTab !== 'checkout' && (isMobile ? "p-4" : "p-8")
+            activeTab !== 'checkout' && (isMobile ? "p-4" : "p-5")
           )}>
             
               {children}

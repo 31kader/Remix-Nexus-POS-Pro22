@@ -20,7 +20,7 @@ function BottomNavItem({ icon, label, active, onClick }: BottomNavItemProps) {
       )}
     >
       <div className={cn(
-        "p-2.5 rounded-2xl transition-all duration-300",
+        "p-2.5 rounded-xl transition-all duration-300",
         active ? "bg-indigo-500/10 shadow-[inset_0_0_10px_rgba(99,102,241,0.1)]" : "bg-transparent"
       )}>
         {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement<any>, { 

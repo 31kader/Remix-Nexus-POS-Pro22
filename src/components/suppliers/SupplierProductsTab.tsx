@@ -46,7 +46,7 @@ export const SupplierProductsTab: React.FC<Props> = ({
   const setSearchQuery = passedSetSearchQuery || setLocalSearch;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-5 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-slate-800">
           {supplier.hasFullInventoryAccess ? "Catalogue / Inventaire Complet" : "Mes Produits Référencés"}

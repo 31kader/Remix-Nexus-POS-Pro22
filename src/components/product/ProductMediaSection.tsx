@@ -18,7 +18,7 @@ export function ProductMediaSection({
   handleImageUpload
 }: ProductMediaSectionProps) {
   return (
-    <div className="space-y-8 bg-black/40 p-8 rounded-xl border border-white/5 shadow-2xl ring-1 ring-white/5 relative overflow-hidden">
+    <div className="space-y-8 bg-black/40 p-5 rounded-xl border border-white/5 shadow-md ring-1 ring-white/5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
       <div className="flex items-center justify-between">
@@ -30,7 +30,7 @@ export function ProductMediaSection({
 
       <div className="flex flex-wrap gap-6">
         {formData.imageUrls.map((url: string, idx: number) => (
-          <div key={`product-img-${idx}`} className="relative group w-28 h-28 sm:w-36 sm:h-36 rounded-xl bg-black/60 border border-white/10 overflow-hidden shadow-2xl transition-all duration-500 hover:border-indigo-500/50 ring-1 ring-white/5">
+          <div key={`product-img-${idx}`} className="relative group w-28 h-28 sm:w-36 sm:h-36 rounded-xl bg-black/60 border border-white/10 overflow-hidden shadow-md transition-all duration-500 hover:border-indigo-500/50 ring-1 ring-white/5">
             <SafeImage 
               src={url} 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
@@ -40,14 +40,14 @@ export function ProductMediaSection({
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
-                className="p-4 bg-rose-600/20 text-rose-500 border border-rose-500/20 rounded-2xl hover:bg-rose-600 hover:text-white transition-all active:scale-90 shadow-2xl"
+                className="p-4 bg-rose-600/20 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-90 shadow-md"
                 title="SUPPRIMER IMAGE"
               >
                 <Trash2 size={22} />
               </button>
             </div>
             {idx === 0 && (
-              <div className="absolute top-3 left-3 bg-indigo-600 text-white text-[7px] font-black px-2.5 py-1 rounded-lg uppercase tracking-normal shadow-2xl border border-indigo-400 ring-1 ring-white/20 ">
+              <div className="absolute top-3 left-3 bg-indigo-600 text-white text-[7px] font-black px-2.5 py-1 rounded-lg uppercase tracking-normal shadow-md border border-indigo-400 ring-1 ring-white/20 ">
                 PRIMARY
               </div>
             )}
@@ -63,7 +63,7 @@ export function ProductMediaSection({
         
         {formData.imageUrls.length < 5 && !isUploadingImage && (
           <label className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-600/5 transition-all duration-500 text-slate-700 hover:text-indigo-400 group shadow-inner">
-            <div className="w-12 h-12 rounded-2xl bg-black/40 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all">
+            <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all">
               <Plus size={24} strokeWidth={3} />
             </div>
             <span className="text-[9px] font-black uppercase tracking-normal ">AJOUTER</span>
@@ -74,7 +74,7 @@ export function ProductMediaSection({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="cursor-pointer group relative overflow-hidden">
-          <div className="flex items-center justify-center w-full gap-4 py-5 px-6 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl text-[10px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-normal shadow-2xl active:scale-95 ">
+          <div className="flex items-center justify-center w-full gap-4 py-5 px-6 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-[10px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95 ">
             <Camera size={20} className="group-hover:rotate-12 transition-transform" />
             <span>CAPTURE OPTIQUE</span>
           </div>
@@ -84,7 +84,7 @@ export function ProductMediaSection({
         <button 
           type="button"
           onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(formData.name)}&tbm=shop`, '_blank')}
-          className="flex items-center justify-center gap-4 py-5 px-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-slate-500 hover:bg-white/10 hover:text-white transition-all uppercase tracking-normal shadow-2xl active:scale-95  group"
+          className="flex items-center justify-center gap-4 py-5 px-6 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-slate-500 hover:bg-white/10 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95  group"
         >
           <ShoppingCart size={20} className="text-rose-500/60 group-hover:text-rose-500 transition-colors" />
           <span>SOURCE GOOGLE SHOPPING</span>
@@ -99,7 +99,7 @@ export function ProductMediaSection({
           <div className="relative flex-1 group">
             <input
               placeholder="HTTPS://ASSETS.NEXUS.CLOUD/IMAGE..."
-              className="w-full py-5 px-6 bg-black/40 border border-white/10 rounded-2xl text-xs font-black text-white  outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 placeholder:text-slate-800 transition-all shadow-inner group-hover:border-white/20"
+              className="w-full py-5 px-6 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white  outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 placeholder:text-slate-800 transition-all shadow-inner group-hover:border-white/20"
               value={formData.imageUrl || ''}
               onChange={e => setFormData({...formData, imageUrl: e.target.value})}
             />
@@ -111,7 +111,7 @@ export function ProductMediaSection({
                 setFormData({...formData, imageUrls: [...formData.imageUrls, formData.imageUrl], imageUrl: ''});
               }
             }}
-            className="px-8 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-500 disabled:opacity-20 transition-all shadow-xs active:scale-90 border border-indigo-400"
+            className="px-5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 disabled:opacity-20 transition-all shadow-xs active:scale-90 border border-indigo-400"
             disabled={!formData.imageUrl || formData.imageUrls.length >= 5}
           >
             <Plus size={24} strokeWidth={4} />

@@ -36,7 +36,7 @@ export function CategoryModal({
       title={editingCategory ? "CONFIGURATION CATÉGORIE" : "DÉPLOYER NOUVELLE CATÉGORIE"}
       maxWidth="max-w-lg"
     >
-      <div className="space-y-8 bg-[#05070a] p-8 rounded-xl ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
+      <div className="space-y-8 bg-[#05070a] p-5 rounded-xl ring-1 ring-white/5 shadow-md relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
 
         <div className="space-y-4">
@@ -45,7 +45,7 @@ export function CategoryModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase "
+            className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase "
             placeholder="EX: ÉLECTRONIQUE, ALIMENTATION..."
           />
         </div>
@@ -58,7 +58,7 @@ export function CategoryModal({
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-normal outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-normal outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
             >
               <option value="" className="bg-[#0a0c10] text-slate-700">RACINE DU SYSTÈME (MAIN)</option>
               {getHierarchicalCategories(categories.filter((c: Category) => c.id !== editingCategory?.id)).map((c: any) => (
@@ -75,7 +75,7 @@ export function CategoryModal({
           <div className="space-y-4">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1">ASSET VISUEL</label>
             <div className="flex gap-6 items-center bg-black/20 p-6 rounded-xl border border-white/5 ring-1 ring-white/5 shadow-inner">
-              <div className="w-24 h-24 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative group shadow-2xl">
+              <div className="w-24 h-24 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative group shadow-md">
                 {imageUrl ? (
                   <>
                     <SafeImage src={imageUrl} alt="Aperçu" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />

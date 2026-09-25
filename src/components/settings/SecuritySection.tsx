@@ -36,7 +36,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="space-y-6">
-        <div className="p-4 bg-slate-900/50 border border-white/5 rounded-2xl flex items-center gap-4 text-amber-500">
+        <div className="p-4 bg-slate-900/50 border border-white/5 rounded-xl flex items-center gap-4 text-amber-500">
           <AlertTriangle size={24} className="shrink-0" />
           <p className="text-[10px] font-bold uppercase leading-relaxed tracking-wider">Les clés d'API et les secrets système sont encryptés au repos. Ne partagez jamais ces identifiants publiquement.</p>
         </div>
@@ -50,7 +50,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
                 type="password" 
                 value={formData.apiKeys?.googleMapsKey || ''}
                 onChange={e => setFormData({ ...formData, apiKeys: { ...formData.apiKeys!, googleMapsKey: e.target.value } })}
-                className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-mono text-sm"
+                className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-mono text-sm"
                 placeholder="AIza..."
               />
             </div>
@@ -63,7 +63,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
                 type="text" 
                 value={formData.apiKeys?.twilioSid || ''}
                 onChange={e => setFormData({ ...formData, apiKeys: { ...formData.apiKeys!, twilioSid: e.target.value } })}
-                className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-mono text-sm"
+                className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-mono text-sm"
                 placeholder="AC..."
               />
             </div>
@@ -85,7 +85,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
                 type="number" 
                 value={formData.auditLogRetentionDays ?? ''}
                 onChange={e => setFormData({ ...formData, auditLogRetentionDays: parseInt(e.target.value) || 0 })}
-                className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-medium"
+                className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-medium"
               />
             </div>
           </div>
@@ -97,7 +97,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
                 type="number" 
                 value={formData.lockingPeriodDays ?? ''}
                 onChange={e => setFormData({ ...formData, lockingPeriodDays: parseInt(e.target.value) || 0 })}
-                className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-medium"
+                className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl pl-12 pr-4 text-white outline-none focus:border-white/20 transition-all font-medium"
               />
             </div>
             <p className="text-[9px] text-slate-600 font-bold uppercase mt-1 leading-tight tracking-tighter">Période après laquelle une transaction devient immuable</p>
@@ -110,7 +110,7 @@ export function SecuritySection({ formData, setFormData }: SectionProps) {
           <Shield size={18} className="text-slate-500" />
           Sécurité des Comptes
         </h4>
-        <div className="p-6 bg-slate-900/50 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-6 bg-slate-900/50 border border-white/5 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <p className="text-xs font-bold text-slate-300">Hachage des mots de passe en clair</p>
             <p className="text-[10px] text-slate-500 mt-1">Recherche tous les mots de passe stockés en clair dans la base de données locale (utilisateurs, clients, fournisseurs) pour les chiffrer avec bcrypt.</p>

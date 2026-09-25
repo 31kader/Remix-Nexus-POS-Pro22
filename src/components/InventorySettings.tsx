@@ -65,7 +65,7 @@ export function InventorySettings({
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 min-h-[500px]">
+      <div className="bg-white rounded-xl border border-slate-200 p-6 min-h-[500px]">
         {activeSubTab === 'categories' ? (
           <Categories 
             categories={categories} 

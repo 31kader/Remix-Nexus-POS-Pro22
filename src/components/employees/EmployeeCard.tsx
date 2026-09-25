@@ -32,11 +32,11 @@ export function EmployeeCard({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: idx * 0.05 }}
     >
-      <Card className="relative overflow-hidden group border-white/5 bg-white/5  rounded-xl shadow-xl hover:shadow-2xl hover:border-white/10 transition-all duration-500">
-        <div className="p-8">
+      <Card className="relative overflow-hidden group border-white/5 bg-white/5  rounded-xl shadow-xl hover:shadow-md hover:border-white/10 transition-all duration-500">
+        <div className="p-5">
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-black/60 rounded-2xl flex items-center justify-center text-white border border-white/10 shadow-xl group-hover:scale-110 group-hover:border-indigo-500/50 transition-all duration-500">
+              <div className="w-14 h-14 bg-black/60 rounded-xl flex items-center justify-center text-white border border-white/10 shadow-xl group-hover:scale-110 group-hover:border-indigo-500/50 transition-all duration-500">
                 <UserCog size={24} />
               </div>
               <div>
@@ -103,7 +103,7 @@ export function EmployeeCard({
             <button 
               type="button"
               onClick={() => handleDeleteEmployee(employee)}
-              className="px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 transition-all font-mono"
+              className="px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500/10 transition-all font-mono"
             >
               SUPPRIMER
             </button>
@@ -111,7 +111,7 @@ export function EmployeeCard({
               <button 
                 type="button"
                 onClick={() => handlePrintDossier(employee)}
-                className="px-4 py-3 rounded-2xl bg-indigo-500/10 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-1.5"
+                className="px-4 py-3 rounded-xl bg-indigo-500/10 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-500/20 transition-all border border-indigo-500/10 flex items-center gap-1.5"
                 title="Imprimer le Contrat et le Dossier complet"
               >
                 <Printer size={12} /> DOSSIER
@@ -119,7 +119,7 @@ export function EmployeeCard({
               <button 
                 type="button"
                 onClick={() => { setEditingEmployee(employee); setIsModalOpen(true); }}
-                className="px-5 py-3 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all border border-white/5"
+                className="px-5 py-3 rounded-xl bg-white/5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all border border-white/5"
               >
                 MODIFIER
               </button>

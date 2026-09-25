@@ -41,7 +41,7 @@ export function SupplierPaymentModal({
     >
       <div className="space-y-4 text-left py-1">
         {/* Supplier summary */}
-        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl space-y-2 border border-slate-100 dark:border-white/5">
+        <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-xl space-y-2 border border-slate-100 dark:border-white/5">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500 dark:text-white/40">Fournisseur</span>
             <span className="font-bold text-slate-800 dark:text-white uppercase">{viewingDetailsSupplier?.name}</span>

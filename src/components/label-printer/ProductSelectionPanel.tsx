@@ -29,7 +29,7 @@ export function ProductSelectionPanel({
 }: ProductSelectionPanelProps) {
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[580px]">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md flex flex-col h-[580px]">
         <div className="mb-4">
           <h3 className="font-bold text-white text-sm uppercase mb-1 flex items-center gap-2">
             <Grid size={15} className="text-indigo-400" /> 1. Sélectionner les produits

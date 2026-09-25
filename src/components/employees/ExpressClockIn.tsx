@@ -18,13 +18,13 @@ export function ExpressClockIn({
   handleExpressClockIn
 }: ExpressClockInProps) {
   return (
-    <div className="border border-white/5 bg-white/5  rounded-xl p-8 shadow-2xl relative overflow-hidden group">
-      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+    <div className="border border-white/5 bg-white/5  rounded-xl p-5 shadow-md relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-5 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
          <Clock className="text-indigo-400 rotate-12 w-[160px] h-[160px]" />
       </div>
       
       <div className="flex items-center gap-6 mb-10 relative z-10">
-        <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center border border-indigo-500/20 shadow-xs/20">
+        <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20 shadow-xs/20">
           <Clock size={32} />
         </div>
         <div>
@@ -52,7 +52,7 @@ export function ExpressClockIn({
               )}
             >
               <div className={cn(
-                "w-14 h-14 rounded-2xl flex items-center justify-center transition-all border shadow-lg",
+                "w-14 h-14 rounded-xl flex items-center justify-center transition-all border shadow-lg",
                 isClockedIn ? "bg-rose-500/20 border-rose-400/20 text-rose-300" : "bg-emerald-500/20 border-emerald-400/20 text-emerald-300"
               )}>
                 {isClockedIn ? <LogOut size={28} /> : <LogIn size={28} />}

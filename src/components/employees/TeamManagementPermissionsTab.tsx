@@ -19,7 +19,7 @@ export function TeamManagementPermissionsTab({
   handleTogglePermission
 }: TeamManagementPermissionsTabProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8 text-white">
+    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 text-white">
       {roles.map((role, idx) => {
         const permissions = settings.rolePermissions?.[role] || DEFAULT_PERMISSIONS[role];
         return (
@@ -29,11 +29,11 @@ export function TeamManagementPermissionsTab({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: idx * 0.05 }}
           >
-            <Card className="p-8 border-white/5 bg-white/5  rounded-xl shadow-2xl relative overflow-hidden group">
+            <Card className="p-5 border-white/5 bg-white/5  rounded-xl shadow-md relative overflow-hidden group">
               <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/10">
                 <div className="flex items-center gap-4">
                   <div className={cn(
-                    "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl transition-transform duration-500 group-hover:rotate-12",
+                    "w-14 h-14 rounded-xl flex items-center justify-center border shadow-xl transition-transform duration-500 group-hover:rotate-12",
                     role === 'admin' ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/20 shadow-xs/20" : 
                     role === 'manager' ? "bg-amber-500/20 text-amber-400 border-amber-500/20" : 
                     "bg-white/5 text-white/40 border-white/10"
@@ -49,7 +49,7 @@ export function TeamManagementPermissionsTab({
 
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {permissionKeys.map(key => (
-                  <div key={String(key)} className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/[0.03] hover:border-white/10 transition-colors">
+                  <div key={String(key)} className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/[0.03] hover:border-white/10 transition-colors">
                     <span className="text-[10px] font-black text-white/60 uppercase tracking-widest text-left">{permissionLabels[key]}</span>
                     <button
                       disabled={role === 'admin' || isProcessing}
@@ -69,7 +69,7 @@ export function TeamManagementPermissionsTab({
               </div>
               
               {role === 'admin' && (
-                <div className="mt-8 p-6 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                <div className="mt-8 p-6 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
                   <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-loose text-center ">
                      ACCÈS NO-LIMIT : Le rôle Administrateur est protégé par le noyau Nexus System. Toutes les permissions sont actives nativement.
                   </p>

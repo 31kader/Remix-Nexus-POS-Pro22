@@ -211,7 +211,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
         {/* Sales by Period Chart */}
         <Card id="card-chart-evolution" className="p-6 bg-white/5 border-white/10">
           <h4 className="flex items-center gap-2 text-sm font-black text-white/60 mb-8 uppercase tracking-widest">
@@ -286,7 +286,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
           </h4>
           <div className="space-y-3">
             {data.topProducts.map((p, idx) => (
-              <div key={`top-product-${idx}`} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+              <div key={`top-product-${idx}`} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white/20 text-xs shadow-inner">
                     {idx + 1}

@@ -127,9 +127,9 @@ export function TeamManagementUsersTab({
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="p-8 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex gap-6 relative overflow-hidden group"
+        className="p-5 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex gap-6 relative overflow-hidden group"
       >
-        <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20 shrink-0">
+        <div className="w-14 h-14 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20 shrink-0">
           <ShieldCheck size={28} />
         </div>
         <div className="text-[11px] font-black tracking-widest uppercase relative z-10">
@@ -141,7 +141,7 @@ export function TeamManagementUsersTab({
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] -mr-32 -mt-32 pointer-events-none" />
       </motion.div>
 
-      <Card className="overflow-hidden bg-white/5 border-white/5  rounded-xl shadow-2xl">
+      <Card className="overflow-hidden bg-white/5 border-white/5  rounded-xl shadow-md">
         <div className="overflow-x-auto text-white">
           <table className="w-full text-left">
             <thead>
@@ -168,7 +168,7 @@ export function TeamManagementUsersTab({
                   >
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-black/40 border border-white/10 text-white rounded-2xl flex items-center justify-center font-black text-lg group-hover:border-indigo-400 transition-colors shadow-xl">
+                        <div className="w-12 h-12 bg-black/40 border border-white/10 text-white rounded-xl flex items-center justify-center font-black text-lg group-hover:border-indigo-400 transition-colors shadow-xl">
                           {(u.displayName || u.email || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
@@ -265,7 +265,7 @@ export function TeamManagementUsersTab({
           title="IDENTITY PROFILE"
         >
           <div className="p-2 space-y-8 text-left text-white">
-             <div className="flex items-center gap-6 bg-white/5 p-8 rounded-xl border border-white/10">
+             <div className="flex items-center gap-6 bg-white/5 p-5 rounded-xl border border-white/10">
                <div className="w-20 h-20 bg-indigo-600 text-white rounded-[1.8rem] flex items-center justify-center font-black text-3xl shadow-xs/40 border border-indigo-400/30">
                  {(viewedUser.displayName || viewedUser.email || 'U').charAt(0).toUpperCase()}
                </div>
@@ -323,11 +323,11 @@ export function TeamManagementUsersTab({
                   }
                 }}
                 type="password"
-                className="w-full bg-black/60 border border-white/10 rounded-2xl px-4 py-4 text-white text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all"
+                className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-4 text-white text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all"
                 placeholder="Minimum 4 caractères"
               />
               {pinError && (
-                <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-rose-400">
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-rose-400">
                   {pinError}
                 </div>
               )}

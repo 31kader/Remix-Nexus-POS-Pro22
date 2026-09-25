@@ -188,10 +188,10 @@ export function StockAdjustmentModal({
       title="CALIBRATION DES STOCKS"
       maxWidth="max-w-xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-10 pt-4 bg-[#05070a] p-8 rounded-xl ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="space-y-10 pt-4 bg-[#05070a] p-5 rounded-xl ring-1 ring-white/5 shadow-md relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
 
-        <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-2xl flex items-center justify-between ring-1 ring-white/5 relative group">
+        <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-md flex items-center justify-between ring-1 ring-white/5 relative group">
           <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           <div className="flex items-center gap-6 relative z-10">
             <div className="w-16 h-16 bg-black/60 rounded-xl shadow-inner flex items-center justify-center border border-white/10 group-hover:scale-105 transition-transform duration-500">
@@ -224,7 +224,7 @@ export function StockAdjustmentModal({
                 onChange={e => setNewStock(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0.00"
                 className={cn(
-                  "w-full p-8 bg-black/40 border rounded-xl text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner  font-mono tracking-tighter",
+                  "w-full p-5 bg-black/40 border rounded-xl text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner  font-mono tracking-tighter",
                   product.useMultiExpiry
                     ? "opacity-40 border-indigo-500/20 text-indigo-400 cursor-not-allowed bg-indigo-600/5 ring-1 ring-indigo-500/20"
                     : "border-white/10 group-hover:border-white/20 focus:ring-indigo-500/5 focus:border-indigo-500/40"
@@ -235,7 +235,7 @@ export function StockAdjustmentModal({
           </div>
 
           {product.useMultiExpiry && localBatches && localBatches.length > 0 && (
-            <div className="space-y-5 bg-white/[0.02] border border-white/5 p-6 rounded-xl ring-1 ring-white/5 shadow-2xl">
+            <div className="space-y-5 bg-white/[0.02] border border-white/5 p-6 rounded-xl ring-1 ring-white/5 shadow-md">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-normal ">
@@ -244,7 +244,7 @@ export function StockAdjustmentModal({
               </div>
               <div className="space-y-3 max-h-[220px] overflow-y-auto pr-3 custom-scrollbar">
                 {localBatches.map((batch, index) => (
-                  <div key={batch.id || index} className="flex items-center justify-between gap-4 bg-black/40 p-5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all group/item shadow-inner">
+                  <div key={batch.id || index} className="flex items-center justify-between gap-4 bg-black/40 p-5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all group/item shadow-inner">
                     <div className="flex-1">
                       <span className="font-mono text-xs font-black text-indigo-400 block tracking-widest uppercase ">{batch.batchNumber}</span>
                       <span className="text-[10px] text-slate-500 font-black uppercase tracking-normal mt-1 block  opacity-60">
@@ -280,7 +280,7 @@ export function StockAdjustmentModal({
           </div>
 
           {isLossCheckboxVisible && (
-            <div className="bg-rose-600/5 hover:bg-rose-600/10 border border-rose-500/20 p-6 rounded-xl transition-all flex items-start gap-5 mx-1 ring-1 ring-rose-500/10 shadow-2xl animate-in zoom-in-95">
+            <div className="bg-rose-600/5 hover:bg-rose-600/10 border border-rose-500/20 p-6 rounded-xl transition-all flex items-start gap-5 mx-1 ring-1 ring-rose-500/10 shadow-md animate-in zoom-in-95">
               <div className="relative">
                 <input
                   id="check-loss"

@@ -26,7 +26,7 @@ export function ImageZoomModal({ imageUrl, onClose }: ImageZoomModalProps) {
               <SafeImage 
                 src={imageUrl} 
                 alt="Aperçu agrandi"
-                className="max-w-full max-h-[90vh] rounded-xl shadow-2xl object-contain" 
+                className="max-w-full max-h-[90vh] rounded-xl shadow-md object-contain" 
               />
             </div>
             <button 

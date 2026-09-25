@@ -11,7 +11,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ state, handlePresetChange, handlePaddingBaseChange }: SettingsPanelProps) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl h-[580px] overflow-y-auto custom-scrollbar space-y-5">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md h-[580px] overflow-y-auto custom-scrollbar space-y-5">
       <div>
         <h3 className="font-bold text-white text-sm uppercase mb-1 flex items-center gap-2">
           <Settings size={15} className="text-indigo-400" /> 2. Configurer le Layout (100% Libre)

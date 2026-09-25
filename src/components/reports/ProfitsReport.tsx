@@ -120,7 +120,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
       {/* Premium Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-white/[0.02] border-b border-white/10">
         {/* Card 1: Gross Revenue */}
-        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-300">
+        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-300">
           <div className="absolute top-0 right-0 p-3 opacity-10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
             <Banknote size={48} />
           </div>
@@ -130,7 +130,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
         </div>
 
         {/* Card 2: Cost of Sales */}
-        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-amber-500/20 transition-all duration-300">
+        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-amber-500/20 transition-all duration-300">
           <div className="absolute top-0 right-0 p-3 opacity-10 text-amber-500 group-hover:scale-110 transition-transform duration-300">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           </div>
@@ -140,7 +140,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
         </div>
 
         {/* Card 3: Net Profit */}
-        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-all duration-300">
+        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-emerald-500/20 transition-all duration-300">
           <div className="absolute top-0 right-0 p-3 opacity-10 text-emerald-500 group-hover:scale-110 transition-transform duration-300">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
@@ -152,7 +152,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
         </div>
 
         {/* Card 4: Average Margin */}
-        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-2xl relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-300">
+        <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-300">
           <div className="absolute top-0 right-0 p-3 opacity-10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
           </div>

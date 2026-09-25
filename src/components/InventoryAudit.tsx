@@ -128,7 +128,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
   );
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto py-8 px-4 font-sans">
+    <div className="space-y-10 max-w-6xl mx-auto py-5 px-4 font-sans">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -139,7 +139,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
           </div>
           <p className="text-xs font-black text-slate-500 uppercase tracking-normal ml-1">Vérification de l'inventaire physique & Réconciliation</p>
         </div>
-        <Button onClick={startNewAudit} className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[11px] tracking-widest shadow-xs active:translate-y-1 transition-all">
+        <Button onClick={startNewAudit} className="h-14 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[11px] tracking-widest shadow-xs active:translate-y-1 transition-all">
           <Plus size={20} /> Lancer un audit
         </Button>
       </header>
@@ -151,7 +151,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
              <p className="text-sm font-black uppercase tracking-widest">Aucun historique d'audit</p>
           </div>
         ) : audits.map((audit) => (
-          <Card key={audit.id} className="p-8 bg-workspace/80 border-white/5  relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+          <Card key={audit.id} className="p-5 bg-workspace/80 border-white/5  relative overflow-hidden group hover:border-indigo-500/30 transition-all">
             <div className="absolute top-0 right-0 p-4">
                <span className={cn(
                  "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
@@ -206,14 +206,14 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Audit Opérationnel" maxWidth="max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[75vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[75vh]">
           <div className="lg:col-span-5 flex flex-col gap-6 overflow-hidden">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={18} />
               <input 
                 type="text"
                 placeholder="Scanner Code-Barre ou Recherche..."
-                className="w-full pl-12 pr-4 h-14 bg-black/40 border border-white/5 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm transition-all"
+                className="w-full pl-12 pr-4 h-14 bg-black/40 border border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -223,7 +223,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                 <button 
                   key={p.id}
                   onClick={() => addProductToAudit(p)}
-                  className="w-full p-4 flex items-center justify-between bg-workspace/50 border border-white/5 rounded-2xl hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left group"
+                  className="w-full p-4 flex items-center justify-between bg-workspace/50 border border-white/5 rounded-xl hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all text-left group"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-black/40 rounded-xl flex items-center justify-center text-slate-500 group-hover:text-indigo-400 transition-colors">
@@ -267,11 +267,11 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                   <p className="text-base font-black text-white uppercase tracking-tight">{item.productName}</p>
                   
                   <div className="grid grid-cols-3 gap-6">
-                    <div className="bg-black/20 p-3 rounded-2xl border border-white/5">
+                    <div className="bg-black/20 p-3 rounded-xl border border-white/5">
                       <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 ">Système</p>
                       <p className="text-lg font-black text-slate-400 font-mono">{item.expectedStock}</p>
                     </div>
-                    <div className="bg-indigo-500/5 p-3 rounded-2xl border border-indigo-500/20">
+                    <div className="bg-indigo-500/5 p-3 rounded-xl border border-indigo-500/20">
                       <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 ">Réel</p>
                       <input 
                         type="number"
@@ -282,7 +282,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                       />
                     </div>
                     <div className={cn(
-                      "p-3 rounded-2xl border flex flex-col justify-center",
+                      "p-3 rounded-xl border flex flex-col justify-center",
                       item.discrepancy < 0 ? "bg-rose-500/5 border-rose-500/20" : item.discrepancy > 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-black/20 border-white/5"
                     )}>
                       <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 ">Écart</p>
@@ -305,7 +305,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
             <div className="pt-6 border-t border-white/5">
               <Button 
                 onClick={completeAudit} 
-                className="w-full py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-normal shadow-xs shadow-lg active:scale-[0.98] transition-all disabled:opacity-20 disabled:grayscale" 
+                className="w-full py-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-normal shadow-xs shadow-lg active:scale-[0.98] transition-all disabled:opacity-20 disabled:grayscale" 
                 disabled={auditItems.length === 0}
               >
                 Valider et synchroniser l'inventaire

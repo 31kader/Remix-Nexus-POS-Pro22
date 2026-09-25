@@ -455,7 +455,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-2xl border border-slate-800 gap-4 shadow-xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-xl border border-slate-800 gap-4 shadow-xl">
         <div>
           <h2 className="text-xl font-bold text-white uppercase flex items-center gap-3">
             <Sparkles className="text-amber-400 animate-pulse" size={24} /> Affiches & Marketing Pro
@@ -478,7 +478,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left Column: Settings & Controls (5 Cols) */}
         <div className="xl:col-span-6 space-y-5">
-          <Card className="p-5 space-y-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+          <Card className="p-5 space-y-5 bg-slate-900 border border-slate-800 rounded-xl shadow-xl">
             {/* 1. Product Search */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-indigo-400 uppercase tracking-wider block">
@@ -496,7 +496,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
               </div>
               
               {search && (
-                <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80 bg-slate-950 shadow-2xl max-h-56 overflow-y-auto custom-scrollbar">
+                <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80 bg-slate-950 shadow-md max-h-56 overflow-y-auto custom-scrollbar">
                   {filteredProducts.length === 0 ? (
                     <div className="p-3 text-center text-xs text-slate-500 font-medium">Aucun article trouvé</div>
                   ) : (
@@ -751,7 +751,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
         </div>
 
         {/* Right Column: Live Interactive Poster Simulator (7 Cols) */}
-        <div className="xl:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col items-center justify-center min-h-[600px]">
+        <div className="xl:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md flex flex-col items-center justify-center min-h-[600px]">
           <div className="w-full flex justify-between items-center mb-4">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
               <Sparkles size={13} className="text-indigo-400" /> Aperçu du visuel ({posterFormat})
@@ -764,8 +764,8 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
           </div>
 
           {!selectedProduct ? (
-            <div className="flex flex-col items-center justify-center text-center p-8 space-y-3">
-              <div className="w-16 h-16 rounded-2xl bg-slate-950 flex items-center justify-center text-slate-600 border border-slate-800">
+            <div className="flex flex-col items-center justify-center text-center p-5 space-y-3">
+              <div className="w-16 h-16 rounded-xl bg-slate-950 flex items-center justify-center text-slate-600 border border-slate-800">
                 <ImageIcon size={28} />
               </div>
               <h4 className="text-white text-sm font-bold uppercase">Aucun article sélectionné</h4>
@@ -778,7 +778,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
               <div 
                 ref={previewRef}
                 className={cn(
-                  "rounded-xl shadow-2xl p-7 flex flex-col justify-between transition-all duration-300 relative overflow-hidden select-none border",
+                  "rounded-xl shadow-md p-7 flex flex-col justify-between transition-all duration-300 relative overflow-hidden select-none border",
                   `bg-gradient-to-br ${activeTheme.bgGradient}`,
                   activeTheme.textPrimary,
                   activeTheme.border,
@@ -832,7 +832,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
                   {/* Photo of Product */}
                   {showImage && productImage && (
                     <div className={cn(
-                      "rounded-2xl bg-white/95 p-2 shadow-2xl flex items-center justify-center shrink-0 border border-white/20",
+                      "rounded-xl bg-white/95 p-2 shadow-md flex items-center justify-center shrink-0 border border-white/20",
                       posterFormat === 'shelf-tag' ? "w-20 h-20" : 
                       posterFormat === 'a4-landscape' ? "w-28 h-28" : "w-32 h-32 self-center my-2"
                     )}>

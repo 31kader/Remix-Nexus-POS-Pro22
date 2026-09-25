@@ -160,10 +160,10 @@ const { t } = useTranslation();
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8 lg:p-12 font-sans overflow-x-hidden bg-[#05070a]">
+    <div className="min-h-screen p-4 md:p-5 lg:p-6 font-sans overflow-x-hidden bg-[#05070a]">
       <div className="max-w-7xl mx-auto space-y-12">
         {/* Header Section */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-10 gap-8 animate-in fade-in slide-in-from-top-6 duration-700">
+        <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-10 gap-5 animate-in fade-in slide-in-from-top-6 duration-700">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
@@ -177,7 +177,7 @@ const { t } = useTranslation();
             disabled={isSaving}
             onClick={handleSave}
             className={cn(
-              "group relative overflow-hidden flex items-center justify-center gap-4 px-10 py-6 bg-indigo-600 text-white font-black uppercase tracking-normal text-[11px] rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-2xl border border-indigo-400 ring-1 ring-white/20 ",
+              "group relative overflow-hidden flex items-center justify-center gap-4 px-6 py-6 bg-indigo-600 text-white font-black uppercase tracking-normal text-[11px] rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-md border border-indigo-400 ring-1 ring-white/20 ",
               isSaving && "opacity-60 cursor-not-allowed"
             )}
           >
@@ -212,14 +212,14 @@ const { t } = useTranslation();
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
-                    "relative group flex items-center gap-5 h-20 px-8 rounded-xl transition-all overflow-hidden border ring-1 ring-white/5 shadow-2xl",
+                    "relative group flex items-center gap-5 h-20 px-5 rounded-xl transition-all overflow-hidden border ring-1 ring-white/5 shadow-md",
                     isActive
                       ? "bg-indigo-600 text-white border-indigo-400 shadow-xs scale-[1.02]"
                       : "bg-white/5 text-slate-500 border-white/5 hover:border-white/20 hover:bg-white/10"
                   )}
                 >
                   <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-inner border",
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-inner border",
                     isActive ? "bg-white/20 border-white/30" : "bg-black/40 border-white/5"
                   )}>
                     <Icon size={24} className={cn("transition-colors", isActive ? "text-white" : "text-slate-600 group-hover:text-indigo-400")} />
@@ -251,7 +251,7 @@ const { t } = useTranslation();
               );
             })}
             
-            <div className="mt-8 p-8 bg-black/40 border border-white/5 rounded-xl relative overflow-hidden group ring-1 ring-white/5 shadow-2xl ">
+            <div className="mt-8 p-5 bg-black/40 border border-white/5 rounded-xl relative overflow-hidden group ring-1 ring-white/5 shadow-md ">
                <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none group-hover:rotate-12 group-hover:scale-125 transition-all duration-1000">
                   <Shield size={160} className="text-indigo-500" />
                </div>
@@ -269,7 +269,7 @@ const { t } = useTranslation();
           </nav>
 
           {/* Content Pane */}
-          <section className="flex-1 w-full glass-card rounded-[4rem] p-10 md:p-16 min-h-[700px] animate-in fade-in slide-in-from-right-8 duration-1000 relative">
+          <section className="flex-1 w-full glass-card rounded-[4rem] p-5 md:p-16 min-h-[700px] animate-in fade-in slide-in-from-right-8 duration-1000 relative">
             <div className="absolute inset-0 bg-grid-white/[0.01] pointer-events-none" />
             <div className="max-w-4xl space-y-16 relative z-10">
                {/* Section Title Header */}

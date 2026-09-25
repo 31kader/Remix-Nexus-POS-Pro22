@@ -49,7 +49,7 @@ export const InventoryProductRow = React.memo(({
       <div 
         onClick={() => onEdit(product)}
         className={cn(
-          "group flex items-center justify-between gap-4 p-3 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-900 border rounded-2xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
+          "group flex items-center justify-between gap-4 p-3 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-900 border rounded-xl transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md",
           isSelected 
             ? "border-indigo-500 ring-1 ring-indigo-500/20 bg-indigo-50/20 dark:bg-slate-900" 
             : isOutOfStock

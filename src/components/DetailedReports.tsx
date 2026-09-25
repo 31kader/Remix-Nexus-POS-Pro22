@@ -22,7 +22,7 @@ const LossesReport = lazy(() => import('./reports/LossesReport').then(m => ({ de
 const GroupedSalesAndBasketsReport = lazy(() => import('./reports/GroupedSalesAndBasketsReport').then(m => ({ default: m.GroupedSalesAndBasketsReport })));
 
 const reportFallback = (
-  <div className="flex flex-col items-center justify-center min-h-[350px] p-8 space-y-3 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl">
+  <div className="flex flex-col items-center justify-center min-h-[350px] p-5 space-y-3 bg-zinc-900/40 border border-zinc-800/80 rounded-xl">
     <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin" />
     <p className="text-xs font-semibold text-zinc-400">
       Chargement du rapport…

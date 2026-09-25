@@ -4,10 +4,39 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
-import { pwaConfig } from './src/config/pwaConfig';
+import type { VitePWAOptions } from 'vite-plugin-pwa';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const pwaConfig: Partial<VitePWAOptions> = {
+  registerType: 'autoUpdate',
+  includeAssets: ['favicon.svg', 'icon.svg', 'robots.txt', 'apple-touch-icon.png'],
+  manifest: {
+    name: 'Nexus POS Pro - Système de Caisse Intelligent',
+    short_name: 'NexusPOS',
+    description: 'Logiciel de point de vente et de gestion de stock professionnel hors-ligne',
+    theme_color: '#4f46e5',
+    background_color: '#f8fafc',
+    display: 'standalone',
+    orientation: 'landscape',
+    icons: [
+      {
+        src: 'icon.svg',
+        sizes: '192x192 512x512',
+        type: 'image/svg+xml',
+        purpose: 'any maskable'
+      }
+    ]
+  },
+  workbox: {
+    globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+    maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+    cleanupOutdatedCaches: true,
+    clientsClaim: true,
+    skipWaiting: true
+  }
+};
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -54,7 +83,6 @@ export default defineConfig(({ mode }) => {
               if (id.includes('html-to-image')) return 'vendor-image-export';
               if (id.includes('@zxing')) return 'vendor-scanner-lazy';
               if (id.includes('@google/genai') || id.includes('@google/generative-ai')) return 'vendor-gemini';
-              if (id.includes('motion/react') || (id.includes('/motion/') && !id.includes('emotion'))) return 'vendor-motion';
               if (id.includes('socket.io-client') || id.includes('engine.io-client')) return 'vendor-socket';
               if (id.includes('qrcode') || id.includes('qr-code')) return 'vendor-qrcode';
               
@@ -71,6 +99,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        'motion/react': path.resolve(__dirname, './src/lib/motion-shim.tsx'),
+        'framer-motion': path.resolve(__dirname, './src/lib/motion-shim.tsx'),
       },
     },
   };

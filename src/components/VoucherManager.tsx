@@ -130,7 +130,7 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/5 p-6 rounded-2xl border border-white/10 shadow-2xl space-y-6 text-left">
+      <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-md space-y-6 text-left">
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div>
             <h3 className="text-xl font-black text-white tracking-tight uppercase">Cartes Cadeaux &amp; Bons de Réduction</h3>
@@ -171,7 +171,7 @@ export function VoucherManager({ customers = [] }: { customers?: any[] }) {
       </div>
 
       {newVoucher && (
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-top duration-500 border border-slate-700">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-xl shadow-md flex items-center gap-6 animate-in slide-in-from-top duration-500 border border-slate-700">
           <div className="w-24 h-24 bg-white p-2 rounded-xl flex-shrink-0 flex items-center justify-center">
             <QRCodeCanvas value={newVoucher.code} size={80} />
           </div>

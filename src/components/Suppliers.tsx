@@ -93,7 +93,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white/5  p-8 rounded-xl border border-white/10 shadow-2xl relative overflow-hidden group mb-8 text-left">
+      <div className="bg-white/5  p-5 rounded-xl border border-white/10 shadow-md relative overflow-hidden group mb-8 text-left">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-indigo-500/10" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
@@ -105,7 +105,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           </div>
           <Button 
             onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.25rem] px-8 py-6 font-black uppercase tracking-widest text-[11px] shadow-xs transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-400/50 cursor-pointer"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.25rem] px-5 py-6 font-black uppercase tracking-widest text-[11px] shadow-xs transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-400/50 cursor-pointer"
           >
             <Plus size={20} strokeWidth={3} /> Nouveau Partenaire
           </Button>
@@ -115,7 +115,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           <button
             onClick={() => setActiveSupplierTab('list')}
             className={cn(
-              "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
+              "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
               activeSupplierTab === 'list'
                 ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
                 : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
@@ -126,7 +126,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           <button
             onClick={() => setActiveSupplierTab('planning')}
             className={cn(
-              "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
+              "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
               activeSupplierTab === 'planning'
                 ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
                 : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"

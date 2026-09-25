@@ -116,7 +116,7 @@ export function ProductBasicInfoSection({
               <button 
                 type="button" 
                 onClick={() => openScanner('barcode')}
-                className="p-2 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white rounded-lg transition-all shadow-2xl active:scale-90 cursor-pointer"
+                className="p-2 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white rounded-lg transition-all shadow-md active:scale-90 cursor-pointer"
                 title="Scanner avec caméra"
               >
                 <Camera size={16} />
@@ -159,7 +159,7 @@ export function ProductBasicInfoSection({
               <button 
                 type="button" 
                 onClick={() => openScanner('sku')}
-                className="p-2 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white rounded-lg transition-all shadow-2xl active:scale-90 cursor-pointer"
+                className="p-2 bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-600 hover:text-white rounded-lg transition-all shadow-md active:scale-90 cursor-pointer"
                 title="Scanner SKU"
               >
                 <Camera size={16} />

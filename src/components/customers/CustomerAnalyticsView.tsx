@@ -241,7 +241,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
       <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 border border-slate-800 rounded-xl shadow-xl">
         
         {/* Tabs */}
-        <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full lg:w-auto">
+        <div className="flex items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 w-full lg:w-auto">
           <button
             type="button"
             onClick={() => setActiveTab('top')}
@@ -279,7 +279,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
         {/* Filters & Search */}
         <div className="flex items-center gap-3 w-full lg:w-auto">
           {activeTab === 'inactive' && (
-            <div className="flex items-center bg-slate-950 px-3 py-1.5 rounded-2xl border border-slate-800 text-xs font-bold text-slate-300 gap-2">
+            <div className="flex items-center bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-bold text-slate-300 gap-2">
               <span className="text-[10px] text-slate-400 uppercase tracking-widest">Inactivité :</span>
               {[30, 60, 90].map(days => (
                 <button
@@ -305,7 +305,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
               placeholder="Rechercher client..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-2xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600"
+              className="w-full bg-slate-950 border border-slate-800 text-white text-xs rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-600"
             />
           </div>
         </div>
@@ -314,7 +314,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
 
       {/* Main Content Sections */}
       {activeTab === 'top' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
               <h3 className="text-base font-black text-white uppercase  tracking-tight flex items-center gap-2">
@@ -332,7 +332,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
                 <div 
                   key={customer.id}
                   className={cn(
-                    "p-5 rounded-2xl border transition-all flex flex-col justify-between gap-4 group relative overflow-hidden",
+                    "p-5 rounded-xl border transition-all flex flex-col justify-between gap-4 group relative overflow-hidden",
                     isTop3 
                       ? "bg-gradient-to-br from-indigo-900/30 via-slate-900 to-slate-950 border-amber-500/30 hover:border-amber-500/60 shadow-lg" 
                       : "bg-slate-950/60 border-slate-800/80 hover:border-slate-700"
@@ -342,7 +342,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm",
+                        "w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm",
                         idx === 0 ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20" :
                         idx === 1 ? "bg-slate-300 text-slate-950" :
                         idx === 2 ? "bg-amber-700 text-white" :
@@ -411,7 +411,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
 
       {/* Inactive Customers View */}
       {activeTab === 'inactive' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-md space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
               <h3 className="text-base font-black text-white uppercase  tracking-tight flex items-center gap-2">
@@ -423,7 +423,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
           </div>
 
           {inactiveCustomers.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 bg-slate-950/40 rounded-2xl border border-slate-800/40">
+            <div className="text-center py-16 text-slate-400 bg-slate-950/40 rounded-xl border border-slate-800/40">
               <UserCheck className="mx-auto text-emerald-400 mb-3" size={40} />
               <p className="font-bold text-sm text-white uppercase">Excellente nouvelle !</p>
               <p className="text-xs text-slate-400 mt-1">Tous vos clients enregistrés sont venus récemment dans les {inactivityDaysThreshold} derniers jours.</p>
@@ -433,7 +433,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
               {inactiveCustomers.map(customer => (
                 <div 
                   key={customer.id}
-                  className="p-5 rounded-2xl bg-slate-950/80 border border-amber-500/20 hover:border-amber-500/40 transition-all flex flex-col justify-between gap-4 group"
+                  className="p-5 rounded-xl bg-slate-950/80 border border-amber-500/20 hover:border-amber-500/40 transition-all flex flex-col justify-between gap-4 group"
                 >
                   <div className="flex items-start justify-between">
                     <div>

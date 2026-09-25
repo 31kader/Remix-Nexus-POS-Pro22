@@ -50,12 +50,12 @@ export function BulkUpdateModal({
       maxWidth="max-w-md"
     >
       <div className="space-y-6 text-left">
-        <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-2xl text-xs font-bold leading-relaxed uppercase">
+        <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-xl text-xs font-bold leading-relaxed uppercase">
           Vous allez modifier la catégorie ou la marque de {selectedCount} articles sélectionnés.
         </div>
 
         {/* Section Catégorie */}
-        <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-2xl">
+        <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-xl">
           <label className="flex items-center gap-3 cursor-pointer">
             <input 
               type="checkbox" 
@@ -104,7 +104,7 @@ export function BulkUpdateModal({
         </div>
 
         {/* Section Marque */}
-        <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-2xl">
+        <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-xl">
           <label className="flex items-center gap-3 cursor-pointer">
             <input 
               type="checkbox" 

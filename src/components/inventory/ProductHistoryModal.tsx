@@ -64,7 +64,7 @@ export function ProductHistoryModal({
       maxWidth="max-w-4xl"
     >
       <div className="space-y-6 text-left">
-        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-2xl border border-white/5 w-fit">
+        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-fit">
           {[
             { id: 'sales', label: 'Ventes', icon: ShoppingCart },
             { id: 'returns', label: 'Retours', icon: RotateCcw },
@@ -99,7 +99,7 @@ export function ProductHistoryModal({
                     return (
                       <div key={t.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all group shadow-xl">
                         <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-lg shadow-indigo-500/5">
+                          <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-lg shadow-indigo-500/5">
                             <ShoppingCart size={24} />
                           </div>
                           <div>
@@ -120,7 +120,7 @@ export function ProductHistoryModal({
                     );
                   })
               ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-2xl border border-white/5">
+                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
                   <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                     <ShoppingCart size={32} />
                   </div>
@@ -144,7 +144,7 @@ export function ProductHistoryModal({
                     return (
                       <div key={r.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-red-500/30 transition-all group shadow-xl">
                         <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-all shadow-lg shadow-red-500/5">
+                          <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-all shadow-lg shadow-red-500/5">
                             <RotateCcw size={24} />
                           </div>
                           <div>
@@ -165,7 +165,7 @@ export function ProductHistoryModal({
                     );
                   })
               ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-2xl border border-white/5">
+                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
                   <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                     <RotateCcw size={32} />
                   </div>
@@ -190,7 +190,7 @@ export function ProductHistoryModal({
                         className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-amber-500/30 transition-all cursor-pointer group shadow-xl"
                       >
                         <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-lg shadow-amber-500/5">
+                          <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-lg shadow-amber-500/5">
                             <ShoppingBag size={24} />
                           </div>
                           <div>
@@ -211,7 +211,7 @@ export function ProductHistoryModal({
                     );
                   })
               ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-2xl border border-white/5">
+                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
                   <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                     <ShoppingBag size={32} />
                   </div>
@@ -223,7 +223,7 @@ export function ProductHistoryModal({
 
           {historyTab === 'price' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-6 bg-white/5 rounded-xl border border-white/10 shadow-2xl relative overflow-hidden">
+              <div className="flex items-center justify-between p-6 bg-white/5 rounded-xl border border-white/10 shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
                 <div className="relative z-10">
                   <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mb-2 pl-1">Prix de vente actuel</p>
@@ -238,7 +238,7 @@ export function ProductHistoryModal({
               <div className="space-y-3 pr-1">
                 {viewingHistoryProduct.priceHistory && viewingHistoryProduct.priceHistory.length > 0 ? (
                   viewingHistoryProduct.priceHistory.map((entry, idx) => (
-                    <div key={`price-history-${idx}`} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between group hover:border-indigo-500/40 transition-all">
+                    <div key={`price-history-${idx}`} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between group hover:border-indigo-500/40 transition-all">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-lg flex items-center justify-center border border-indigo-500/20">
                           <History size={18} />
@@ -298,7 +298,7 @@ export function ProductHistoryModal({
                     </div>
                   ))
                 ) : (
-                  <div className="py-12 text-center bg-white/[0.02] rounded-2xl border border-white/5">
+                  <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
                     <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
                       <History size={32} />
                     </div>

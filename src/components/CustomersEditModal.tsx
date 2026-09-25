@@ -200,7 +200,7 @@ export function CustomersEditModal({
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -240,7 +240,7 @@ export function CustomersEditModal({
         )}
 
         {modalTab === 'app' && (
-          <div className="flex flex-col gap-4 p-5 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/40">
+          <div className="flex flex-col gap-4 p-5 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-xl border border-indigo-100 dark:border-indigo-900/40">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Smartphone size={24} />

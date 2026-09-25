@@ -34,7 +34,7 @@ export const InventoryActionBar: React.FC<InventoryActionBarProps> = ({
   setViewMode
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-3 rounded-2xl shadow-sm">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-3 rounded-xl shadow-sm">
       {/* Search Box with instant clear button */}
       <div className="relative flex-1 w-full">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={17} />

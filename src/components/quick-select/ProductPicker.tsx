@@ -105,7 +105,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
               <h3 className="text-lg font-black text-white uppercase tracking-tighter ">Selection Rapide</h3>
               <p className="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest mt-0.5">Optimisé pour la vitesse</p>
             </div>
-            <button onClick={onClose} className="w-10 h-10 rounded-2xl bg-white/5 hover:bg-rose-500 hover:text-white flex items-center justify-center border border-white/5 transition-all shadow-lg">
+            <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white/5 hover:bg-rose-500 hover:text-white flex items-center justify-center border border-white/5 transition-all shadow-lg">
               <X size={20} />
             </button>
           </div>
@@ -117,7 +117,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
               placeholder="Scanner ou rechercher (50 par 50)..."
               value={pickerSearch}
               onChange={(e) => setPickerSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-16 pr-8 py-5 text-sm text-white placeholder:text-white/20 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500/50 transition-all outline-none shadow-2xl"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-16 pr-8 py-5 text-sm text-white placeholder:text-white/20 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500/50 transition-all outline-none shadow-md"
             />
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2 pb-10">
@@ -129,7 +129,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
               <>
                 {pickerResults.map(p => (
                   <button key={p.id} onClick={() => toggleFavorite(p)} className={cn("w-full flex items-center gap-4 p-4 rounded-xl transition-all border group", isFav(p) ? "bg-amber-500/20 border-amber-500/40 text-white" : "bg-white/5 border-white/5 text-white/60 hover:bg-white/[0.08] hover:border-amber-500/20 h-20")}>
-                    <div className={cn("w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border transition-all overflow-hidden", isFav(p) ? "bg-amber-500 border-amber-400" : "bg-black/40 border-white/5")}>
+                    <div className={cn("w-12 h-12 shrink-0 rounded-xl flex items-center justify-center border transition-all overflow-hidden", isFav(p) ? "bg-amber-500 border-amber-400" : "bg-black/40 border-white/5")}>
                       {isFav(p) ? <Check size={24} className="text-white" /> : <SafeImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" fallback={<Package size={24} />} />}
                     </div>
                     <div className="flex-1 text-left min-w-0">

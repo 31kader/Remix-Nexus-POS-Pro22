@@ -189,7 +189,7 @@ export function SubTabNewPurchase({
                             }
                           }
                         }}
-                        className="w-full pl-12 pr-12 py-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-2xl bg-industrial-950 text-white font-mono text-sm uppercase outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                        className="w-full pl-12 pr-12 py-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl bg-industrial-950 text-white font-mono text-sm uppercase outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
                       />
                       <button 
                         type="button" 
@@ -206,7 +206,7 @@ export function SubTabNewPurchase({
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
-                            className="absolute z-[100] left-0 right-0 mt-2 bg-industrial-950 border border-industrial-700 rounded-2xl shadow-2xl overflow-hidden max-h-80 overflow-y-auto"
+                            className="absolute z-[100] left-0 right-0 mt-2 bg-industrial-950 border border-industrial-700 rounded-xl shadow-md overflow-hidden max-h-80 overflow-y-auto"
                           >
                             {filteredProducts.map(p => (
                               <button
@@ -245,7 +245,7 @@ export function SubTabNewPurchase({
                           <motion.div 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="absolute z-[100] left-0 right-0 mt-2 p-8 bg-industrial-950 border border-industrial-700 rounded-2xl shadow-2xl text-center"
+                            className="absolute z-[100] left-0 right-0 mt-2 p-5 bg-industrial-950 border border-industrial-700 rounded-xl shadow-md text-center"
                           >
                             <p className="text-industrial-500 font-black uppercase text-xs tracking-normal">Aucun produit trouvé</p>
                             <button 
@@ -262,7 +262,7 @@ export function SubTabNewPurchase({
                   <div>
                     <label className="text-[10px] font-black text-industrial-500 uppercase tracking-widest block mb-2 px-1">Fournisseur</label>
                     <div className="flex items-center gap-2">
-                      <select value={selectedSupplierId} onChange={(e) => setSelectedSupplierId(e.target.value)} className="w-full flex-1 p-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-2xl bg-industrial-950 text-white text-sm font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-inner">
+                      <select value={selectedSupplierId} onChange={(e) => setSelectedSupplierId(e.target.value)} className="w-full flex-1 p-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl bg-industrial-950 text-white text-sm font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-inner">
                         <option value="">SÉLECTIONNER...</option>
                         {(suppliers || []).filter(Boolean).map(s => (
                           <option key={s.id} value={s.id}>
@@ -270,12 +270,12 @@ export function SubTabNewPurchase({
                           </option>
                         ))}
                       </select>
-                      <button onClick={() => setIsQuickSupplierModalOpen(true)} className="p-3 bg-industrial-800 text-indigo-400 rounded-2xl hover:bg-industrial-700 hover:text-indigo-300 transition-all border border-industrial-800 active:scale-95"><Plus size={20} /></button>
+                      <button onClick={() => setIsQuickSupplierModalOpen(true)} className="p-3 bg-industrial-800 text-indigo-400 rounded-xl hover:bg-industrial-700 hover:text-indigo-300 transition-all border border-industrial-800 active:scale-95"><Plus size={20} /></button>
                     </div>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-industrial-500 uppercase tracking-widest block mb-2 px-1">Statut Initial</label>
-                    <select value={purchaseStatus} onChange={(e) => setPurchaseStatus(e.target.value as any)} className="w-full p-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-2xl bg-industrial-950 text-white text-sm font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-inner">
+                    <select value={purchaseStatus} onChange={(e) => setPurchaseStatus(e.target.value as any)} className="w-full p-3 border border-industrial-800 hover:border-indigo-500/30 focus:border-indigo-500 rounded-xl bg-industrial-950 text-white text-sm font-black uppercase tracking-tight outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-inner">
                       <option value="draft">BROUILLON</option>
                       <option value="ordered">COMMANDÉ</option>
                       <option value="completed">REÇU (MISE EN STOCK)</option>

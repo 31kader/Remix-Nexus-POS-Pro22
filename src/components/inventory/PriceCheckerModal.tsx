@@ -30,8 +30,8 @@ export function PriceCheckerModal({
       className="max-w-md"
     >
       <div className="space-y-6">
-        <div className="flex items-center gap-4 p-6 bg-white/5 rounded-xl border border-white/10 shadow-2xl">
-          <div className="w-20 h-20 bg-black/40 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden shadow-inner">
+        <div className="flex items-center gap-4 p-6 bg-white/5 rounded-xl border border-white/10 shadow-md">
+          <div className="w-20 h-20 bg-black/40 rounded-xl flex items-center justify-center border border-white/10 overflow-hidden shadow-inner">
             {product.imageUrl ? (
               <SafeImage 
                 src={product.imageUrl} 
@@ -72,14 +72,14 @@ export function PriceCheckerModal({
               onEdit(product);
               onClose();
             }}
-            className="flex-1 py-5 industrial-button-primary rounded-2xl font-black uppercase tracking-normal text-[10px] active:scale-95"
+            className="flex-1 py-5 industrial-button-primary rounded-xl font-black uppercase tracking-normal text-[10px] active:scale-95"
           >
             Modifier
           </Button>
           <Button 
             onClick={onClose}
             variant="secondary"
-            className="flex-1 py-5 rounded-2xl font-black uppercase tracking-normal text-[10px] active:scale-95"
+            className="flex-1 py-5 rounded-xl font-black uppercase tracking-normal text-[10px] active:scale-95"
           >
             Fermer
           </Button>

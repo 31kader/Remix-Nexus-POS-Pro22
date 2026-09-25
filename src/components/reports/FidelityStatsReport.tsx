@@ -162,7 +162,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
                 ))}
                 {marketingData.transactions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-10 text-center text-slate-500">
+                    <td colSpan={6} className="p-5 text-center text-slate-500">
                       <Gift className="w-8 h-8 text-slate-300 mx-auto mb-3" />
                       <p className="font-medium">Aucun avantage client utilisé sur cette période.</p>
                     </td>

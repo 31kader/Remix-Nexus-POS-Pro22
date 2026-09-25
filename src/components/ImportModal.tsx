@@ -63,7 +63,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
 
   return (
     <div className="fixed inset-0 bg-slate-950/80  flex items-center justify-center z-50 p-4 transition-all duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-md w-full max-w-4xl p-6 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -83,7 +83,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
         <div className="flex-1 overflow-y-auto py-6 space-y-6 pr-1">
           {/* Progress Bar */}
           {isProcessing && (
-            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-3">
+            <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-3">
               <div className="flex items-center justify-between text-xs font-bold text-indigo-400 uppercase tracking-wider">
                 <span>Importation en cours...</span>
                 <span className="font-black font-mono">{Math.round(progress)}%</span>
@@ -103,7 +103,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">1. Correspondance des colonnes</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(FIELD_LABELS).map(([field, info]) => (
-                <div key={field} className="p-3 bg-slate-950/50 border border-slate-800/80 rounded-2xl flex flex-col justify-between space-y-2">
+                <div key={field} className="p-3 bg-slate-950/50 border border-slate-800/80 rounded-xl flex flex-col justify-between space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-slate-200 uppercase tracking-wider">{info.label}</span>
                     {info.required ? (
@@ -131,7 +131,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
           {/* Table Preview */}
           <div>
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">2. Aperçu des données du fichier (50 premières lignes)</h4>
-            <div className="max-h-56 overflow-auto border border-slate-800/80 rounded-2xl bg-slate-950 shadow-inner">
+            <div className="max-h-56 overflow-auto border border-slate-800/80 rounded-xl bg-slate-950 shadow-inner">
               <table className="w-full text-[11px] text-left border-collapse">
                 <thead className="bg-slate-900 sticky top-0 border-b border-slate-800">
                   <tr>
@@ -155,7 +155,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
 
           {/* Import Errors */}
           {errors.length > 0 && (
-            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-400 max-h-40 overflow-auto space-y-2">
+            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 max-h-40 overflow-auto space-y-2">
               <h4 className="font-extrabold uppercase tracking-wide flex items-center gap-2">
                 ⚠️ Erreurs détectées ({errors.length}) :
               </h4>

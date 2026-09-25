@@ -208,7 +208,7 @@ export const StockValueReport = React.memo(function StockValueReport({
               })()}
               {filteredStockProducts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-500">
+                  <td colSpan={6} className="p-6 text-center text-slate-500">
                     <Search className="w-8 h-8 text-slate-300 mx-auto mb-3" />
                     <p className="font-medium">Aucun produit ne correspond à vos filtres.</p>
                   </td>

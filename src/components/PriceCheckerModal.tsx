@@ -244,7 +244,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               placeholder="Scanner un code-barres ou rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all font-bold text-lg"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all font-bold text-lg"
               autoFocus
             />
           </div>
@@ -253,7 +253,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               <button
                 type="button"
                 onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
-                className="p-4 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                className="p-4 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
                 title="Changer de caméra"
               >
                 <RefreshCw size={24} className={cn(facingMode === "user" ? "rotate-180" : "")} />
@@ -262,7 +262,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             <button
               type="button"
               onClick={() => setIsScanning(!isScanning)}
-              className={`p-4 rounded-2xl border transition-colors flex items-center justify-center ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              className={`p-4 rounded-xl border transition-colors flex items-center justify-center ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
               title={isScanning ? "Arrêter la caméra" : "Démarrer la caméra"}
             >
               <Camera size={24} />
@@ -277,7 +277,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
         )}
 
         {isScanning && !cameraError && (
-          <div className="w-full max-w-sm mx-auto overflow-hidden rounded-2xl border-2 border-indigo-500 bg-black aspect-video flex items-center justify-center">
+          <div className="w-full max-w-sm mx-auto overflow-hidden rounded-xl border-2 border-indigo-500 bg-black aspect-video flex items-center justify-center">
             <video id="camera-reader-price" className="w-full h-full object-cover"></video>
           </div>
         )}
@@ -289,10 +289,10 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-xl overflow-hidden border border-slate-100"
+              className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-white rounded-xl overflow-hidden border border-slate-100"
             >
               {/* Image Section */}
-              <div className="aspect-square bg-slate-50 flex items-center justify-center p-8 relative">
+              <div className="aspect-square bg-slate-50 flex items-center justify-center p-5 relative">
                 <SafeImage src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain drop-shadow-lg" fallback={<Package size={100} className="text-slate-200" />} />
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1 bg-white/80  border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -302,7 +302,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               </div>
 
               {/* Info Section */}
-              <div className="p-8 flex flex-col justify-center space-y-6">
+              <div className="p-5 flex flex-col justify-center space-y-6">
                 <div>
                   <h3 className="text-3xl font-black text-slate-900 leading-tight mb-1">{foundProduct.name}</h3>
                   <div className="flex items-center gap-2">
@@ -357,7 +357,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             <motion.div 
                initial={{ opacity: 0 }} 
                animate={{ opacity: 1 }} 
-               className="text-center py-12 p-8 bg-rose-50 rounded-xl border border-dashed border-rose-200"
+               className="text-center py-12 p-5 bg-rose-50 rounded-xl border border-dashed border-rose-200"
             >
               <div className="w-16 h-16 bg-white text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <AlertCircle size={32} />
@@ -366,7 +366,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               <p className="text-slate-500 mb-6">La recherche pour <span className="font-bold">"{searchTerm}"</span> n'a donné aucun résultat.</p>
               <div className="flex flex-col items-center gap-4">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest  animate-bounce">Veuillez rescanner l'article...</p>
-                <Button variant="secondary" onClick={() => setSearchTerm('')} className="px-8">
+                <Button variant="secondary" onClick={() => setSearchTerm('')} className="px-5">
                   Réessayer
                 </Button>
               </div>

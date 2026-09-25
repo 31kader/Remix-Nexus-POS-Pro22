@@ -94,7 +94,7 @@ Fait de manière numérique de plein accord des deux parties.`}
               onTouchStart={startDrawing}
               onTouchMove={drawSign}
               onTouchEnd={endDrawing}
-              className="w-full h-80 bg-black/60 rounded-2xl border border-dashed border-indigo-500/30 cursor-crosshair shadow-inner"
+              className="w-full h-80 bg-black/60 rounded-xl border border-dashed border-indigo-500/30 cursor-crosshair shadow-inner"
             />
             <button
               type="button"
@@ -111,12 +111,12 @@ Fait de manière numérique de plein accord des deux parties.`}
         <button
           type="button"
           onClick={() => setRecruitmentTab('identity')}
-          className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+          className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer"
         >
           Précédent
         </button>
         
-        <button type="submit" className="px-8 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg hover:bg-indigo-500 transition-all cursor-pointer">
+        <button type="submit" className="px-5 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg hover:bg-indigo-500 transition-all cursor-pointer">
           {editingEmployee ? "💾 Enregistrer le profil" : "🤝 Enregistrer & Recruter"}
         </button>
       </div>

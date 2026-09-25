@@ -160,7 +160,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
             <Button 
               onClick={handleUpdate} 
               disabled={isProcessing || items.length === 0}
-              className="px-8"
+              className="px-5"
             >
               {isProcessing ? "Mise à jour..." : "Enregistrer les modifications"}
             </Button>

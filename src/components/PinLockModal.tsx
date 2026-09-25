@@ -112,10 +112,10 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#06080e]/95  flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-xl w-full max-w-sm p-7 flex flex-col items-center">
+      <div className="bg-slate-900 border border-slate-800 shadow-md rounded-xl w-full max-w-sm p-7 flex flex-col items-center">
         
         {/* Header Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+        <div className="w-16 h-16 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
           <Lock size={32} />
         </div>
 
@@ -125,7 +125,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
         </p>
 
         {/* PIN Dots Display */}
-        <div className={`flex items-center gap-4 mb-7 p-3 bg-slate-950/80 rounded-2xl border transition-all ${isError ? 'border-rose-500 bg-rose-500/10 animate-bounce' : 'border-slate-800'}`}>
+        <div className={`flex items-center gap-4 mb-7 p-3 bg-slate-950/80 rounded-xl border transition-all ${isError ? 'border-rose-500 bg-rose-500/10 animate-bounce' : 'border-slate-800'}`}>
           {[0, 1, 2, 3].map((index) => {
             const filled = pin.length > index;
             return (
@@ -148,7 +148,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-14 rounded-2xl bg-slate-800/80 hover:bg-indigo-600 hover:text-white border border-slate-700 text-xl font-black text-white transition-all active:scale-95 shadow-sm"
+              className="h-14 rounded-xl bg-slate-800/80 hover:bg-indigo-600 hover:text-white border border-slate-700 text-xl font-black text-white transition-all active:scale-95 shadow-sm"
             >
               {digit}
             </button>
@@ -157,7 +157,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="h-14 rounded-2xl bg-slate-800/40 hover:bg-slate-800 border border-slate-700/60 text-xs font-black text-slate-400 hover:text-white uppercase tracking-wider transition-all active:scale-95"
+            className="h-14 rounded-xl bg-slate-800/40 hover:bg-slate-800 border border-slate-700/60 text-xs font-black text-slate-400 hover:text-white uppercase tracking-wider transition-all active:scale-95"
           >
             Effacer
           </button>
@@ -165,7 +165,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-14 rounded-2xl bg-slate-800/80 hover:bg-indigo-600 hover:text-white border border-slate-700 text-xl font-black text-white transition-all active:scale-95 shadow-sm"
+            className="h-14 rounded-xl bg-slate-800/80 hover:bg-indigo-600 hover:text-white border border-slate-700 text-xl font-black text-white transition-all active:scale-95 shadow-sm"
           >
             0
           </button>
@@ -173,7 +173,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="h-14 rounded-2xl bg-slate-800/40 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 border border-slate-700/60 flex items-center justify-center text-slate-400 transition-all active:scale-95"
+            className="h-14 rounded-xl bg-slate-800/40 hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30 border border-slate-700/60 flex items-center justify-center text-slate-400 transition-all active:scale-95"
           >
             <Delete size={22} />
           </button>

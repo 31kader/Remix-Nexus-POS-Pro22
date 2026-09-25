@@ -63,7 +63,7 @@ export function PurchaseScanArea({
           }
         }}
         className={cn(
-          "border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer relative group",
+          "border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer relative group",
           isOfflineScanning ? "border-emerald-500 bg-emerald-500/5" :
           isScanning ? "border-indigo-500 bg-indigo-500/5" : 
           isImportMode ? "border-emerald-500/40 bg-industrial-900/50 hover:border-emerald-400 hover:bg-industrial-800" :
@@ -135,7 +135,7 @@ export function PurchaseScanArea({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-2xl flex items-center gap-4">
+        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-xl flex items-center gap-4">
           <div className={cn(
             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
             isImportMode ? "bg-emerald-500/10 text-emerald-400" : "bg-indigo-500/10 text-indigo-400"
@@ -149,7 +149,7 @@ export function PurchaseScanArea({
             </p>
           </div>
         </div>
-        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-2xl flex items-center gap-4">
+        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-xl flex items-center gap-4">
           <div className={cn(
             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
             isImportMode ? "bg-emerald-500/10 text-emerald-400" : "bg-indigo-500/10 text-indigo-400"
@@ -163,7 +163,7 @@ export function PurchaseScanArea({
             </p>
           </div>
         </div>
-        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-2xl flex items-center gap-4">
+        <div className="p-5 bg-industrial-900 border border-industrial-800 rounded-xl flex items-center gap-4">
           <div className={cn(
             "w-11 h-11 rounded-xl flex items-center justify-center shrink-0",
             isImportMode ? "bg-emerald-500/10 text-emerald-400" : "bg-indigo-500/10 text-indigo-400"

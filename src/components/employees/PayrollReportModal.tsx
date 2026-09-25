@@ -89,15 +89,15 @@ export function PayrollReportModal({
           <div className="space-y-6">
             {/* Statistics bento grid */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-4 bg-black/40 rounded-2xl border border-white/5 text-center">
+              <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-center">
                 <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.15em] mb-1">Présences</p>
                 <p className="text-lg font-black text-emerald-400 tracking-tighter">{computedPayroll.workedDays} <span className="text-[9px] text-white/30 font-bold">Jours</span></p>
               </div>
-              <div className="p-4 bg-black/40 rounded-2xl border border-white/5 text-center">
+              <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-center">
                 <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.15em] mb-1">Heures Travaillées</p>
                 <p className="text-lg font-black text-indigo-400 tracking-tighter">{computedPayroll.totalHoursWorked.toFixed(1)} <span className="text-[9px] text-white/30 font-bold">H</span></p>
               </div>
-              <div className="p-4 bg-black/40 rounded-2xl border border-white/5 text-center">
+              <div className="p-4 bg-black/40 rounded-xl border border-white/5 text-center">
                 <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.15em] mb-1">Retards Enregistrés</p>
                 <p className="text-lg font-black text-rose-500 tracking-tighter">{computedPayroll.latenessCount} <span className="text-[9px] text-white/30 font-bold">Retard(s)</span></p>
               </div>
@@ -109,7 +109,7 @@ export function PayrollReportModal({
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Bonus Column */}
-                <div className="space-y-3 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                <div className="space-y-3 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
                   <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Ajouter un Gain +</p>
                   <input 
                     type="number"
@@ -129,7 +129,7 @@ export function PayrollReportModal({
                 </div>
                 
                 {/* Penalty Column */}
-                <div className="space-y-3 p-4 bg-rose-500/5 rounded-2xl border border-rose-500/10">
+                <div className="space-y-3 p-4 bg-rose-500/5 rounded-xl border border-rose-500/10">
                   <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest">Appliquer une Retenue -</p>
                   <input 
                     type="number"
@@ -191,26 +191,26 @@ export function PayrollReportModal({
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={handlePrintPayslip}
-                className="flex items-center justify-center gap-3 py-5 rounded-2xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                className="flex items-center justify-center gap-3 py-5 rounded-xl bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-neutral-200 transition-all active:scale-[0.98] shadow-lg cursor-pointer"
               >
                 <Printer size={16} /> IMPRIMER RAPPORT (PDF)
               </button>
 
               <button 
                 onClick={handleWhatsAppShare}
-                className="flex items-center justify-center gap-3 py-5 rounded-2xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:scale-102 transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/10 border border-emerald-500/20 cursor-pointer"
+                className="flex items-center justify-center gap-3 py-5 rounded-xl bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:scale-102 transition-all active:scale-[0.98] shadow-lg shadow-emerald-500/10 border border-emerald-500/20 cursor-pointer"
               >
                 <Send size={16} /> PARTAGER WHATSAPP
               </button>
             </div>
           </div>
         ) : (
-          <p className="text-center font-black text-white/30 text-[11px] uppercase py-8 tracking-widest">Échec du chargement du bulletin de paie.</p>
+          <p className="text-center font-black text-white/30 text-[11px] uppercase py-5 tracking-widest">Échec du chargement du bulletin de paie.</p>
         )}
 
         <button 
           onClick={onClose}
-          className="w-full py-4 text-white/40 hover:text-white text-[10px] uppercase font-black tracking-widest bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 cursor-pointer"
+          className="w-full py-4 text-white/40 hover:text-white text-[10px] uppercase font-black tracking-widest bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 cursor-pointer"
         >
           Fermer le Panneau
         </button>

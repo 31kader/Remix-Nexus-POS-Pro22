@@ -22,7 +22,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onAd
 
   if (!customer) {
     return (
-      <div className="bg-slate-100 dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 rounded-xl p-6 shadow-sm dark:shadow-2xl">
+      <div className="bg-slate-100 dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 rounded-xl p-6 shadow-sm dark:shadow-md">
         <p className="text-sm text-slate-500 dark:text-white/60">Aucun client sélectionné.</p>
       </div>
     );
@@ -31,7 +31,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onAd
   return (
     <div 
       className={cn(
-        "bg-slate-100/80 dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 rounded-xl p-6 shadow-sm dark:shadow-2xl space-y-6",
+        "bg-slate-100/80 dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 rounded-xl p-6 shadow-sm dark:shadow-md space-y-6",
         isRtl ? "text-right" : "text-left"
       )} 
       dir={isRtl ? 'rtl' : 'ltr'}
@@ -63,7 +63,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onAd
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-industrial-800 p-4 rounded-2xl border border-slate-200 dark:border-transparent">
+        <div className="bg-white dark:bg-industrial-800 p-4 rounded-xl border border-slate-200 dark:border-transparent">
           <p className="text-[10px] text-slate-500 dark:text-white/40 uppercase mb-1">{t("Produits favoris")}</p>
           <div className="flex flex-wrap gap-2">
             {favoriteItems.map(item => (
@@ -71,7 +71,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onAd
             ))}
           </div>
         </div>
-        <div className="bg-white dark:bg-industrial-800 p-4 rounded-2xl border border-slate-200 dark:border-transparent">
+        <div className="bg-white dark:bg-industrial-800 p-4 rounded-xl border border-slate-200 dark:border-transparent">
           <p className="text-[10px] text-slate-500 dark:text-white/40 uppercase mb-1">{t("Anniversaire")}</p>
           <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold">
             <Cake size={16} className="text-amber-500 dark:text-amber-400" />

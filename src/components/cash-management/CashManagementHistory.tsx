@@ -34,7 +34,7 @@ export function CashManagementHistory({
           <tbody className="divide-y divide-slate-100">
             {shifts.filter(s => s.status === 'closed').length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-slate-400">
+                <td colSpan={7} className="p-6 text-center text-slate-400">
                   Aucune session clôturée pour le moment.
                 </td>
               </tr>

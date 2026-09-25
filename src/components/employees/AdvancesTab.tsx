@@ -54,7 +54,7 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
       animate={{ opacity: 1, x: 0 }}
       className="space-y-8 text-left"
     >
-      <div className="flex items-center justify-between bg-white/[0.02] p-8 rounded-xl border border-white/5">
+      <div className="flex items-center justify-between bg-white/[0.02] p-5 rounded-xl border border-white/5">
         <div>
           <h4 className="font-black text-white  uppercase tracking-wider flex items-center gap-2">
             <DollarSign size={18} className="text-emerald-400" />
@@ -64,13 +64,13 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-all shadow-xs/20 active:scale-95 group"
+          className="flex items-center gap-2 px-5 py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-all shadow-xs/20 active:scale-95 group"
         >
           <Plus size={18} /> NOUVELLE DEMANDE
         </button>
       </div>
 
-      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
+      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-md">
         <div className="overflow-x-auto font-black text-white">
           <table className="w-full text-left">
             <thead>
@@ -150,7 +150,7 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
         <form onSubmit={handleSubmit} className="p-2 space-y-8 text-white">
           <div className="space-y-3">
             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Employé Bénéficiaire *</label>
-            <select required className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})}>
+            <select required className="w-full bg-white/5 border border-white/10 rounded-xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})}>
               <option value="">Sélectionner un employé</option>
               {(employees || []).filter(Boolean).map(e => <option key={e.id} value={e.id} className="text-black">{String(e.name || 'EMPLOYÉ').toUpperCase()}</option>)}
             </select>
@@ -158,18 +158,18 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-3">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Montant ({settings.currency}) *</label>
-              <input type="number" required min="0" step="0.01" className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" value={formData.amount || ''} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value) || 0})} />
+              <input type="number" required min="0" step="0.01" className="w-full bg-white/5 border border-white/10 rounded-xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono" value={formData.amount || ''} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value) || 0})} />
             </div>
             <div className="space-y-3">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Date de Valeur</label>
-              <input type="date" required className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              <input type="date" required className="w-full bg-white/5 border border-white/10 rounded-xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
             </div>
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Justification / Motif</label>
-            <textarea className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all h-32" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} />
+            <textarea className="w-full bg-white/5 border border-white/10 rounded-xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all h-32" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} />
           </div>
-          <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-normal rounded-2xl shadow-xs/20 hover:bg-indigo-500 transition-all active:scale-[0.98]">
+          <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-normal rounded-xl shadow-xs/20 hover:bg-indigo-500 transition-all active:scale-[0.98]">
             ENREGISTRER LA DEMANDE
           </button>
         </form>

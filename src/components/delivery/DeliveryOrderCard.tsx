@@ -22,7 +22,7 @@ export function DeliveryOrderCard({
   onUpdateStatus
 }: DeliveryOrderCardProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-4 border-b border-slate-50 flex justify-between items-start bg-indigo-50/30">
         <div>
           <h3 className="font-black text-slate-800 text-lg">#{String(order.id || "").slice(0, 8).toUpperCase()}</h3>

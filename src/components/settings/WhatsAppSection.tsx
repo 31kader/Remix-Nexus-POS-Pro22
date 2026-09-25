@@ -16,7 +16,7 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Modèle de Rappel de Dette */}
         <div className="space-y-4">
           <div>
@@ -40,7 +40,7 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
               rows={4}
               value={formData.whatsappDebtReminderTemplate ?? ''}
               onChange={e => setFormData({ ...formData, whatsappDebtReminderTemplate: e.target.value })}
-              className="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white text-sm outline-none focus:border-emerald-500/50 transition-all font-medium resize-none leading-relaxed"
+              className="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-emerald-500/50 transition-all font-medium resize-none leading-relaxed"
               placeholder="Bonjour {customer_name}, votre solde chez {store_name} est de {debt_amount} {currency}..."
             />
           </div>
@@ -55,7 +55,7 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
               rows={3}
               value={formData.whatsappReceiptTemplate ?? ''}
               onChange={e => setFormData({ ...formData, whatsappReceiptTemplate: e.target.value })}
-              className="w-full bg-slate-900 border border-white/10 rounded-2xl p-4 text-white text-sm outline-none focus:border-indigo-500/50 transition-all font-medium resize-none leading-relaxed"
+              className="w-full bg-slate-900 border border-white/10 rounded-xl p-4 text-white text-sm outline-none focus:border-indigo-500/50 transition-all font-medium resize-none leading-relaxed"
               placeholder="Bonjour {customer_name}, voici votre reçu de chez {store_name} pour un total de {total} {currency}..."
             />
           </div>
@@ -63,7 +63,7 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
 
         {/* Aperçu Virtuel Smartphone */}
         <div className="bg-slate-900/60 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center">
-          <div className="w-full max-w-xs bg-slate-950 border border-white/10 rounded-xl p-4 shadow-2xl space-y-4">
+          <div className="w-full max-w-xs bg-slate-950 border border-white/10 rounded-xl p-4 shadow-md space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
@@ -77,7 +77,7 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
               <span className="text-[9px] text-white/30">12:30</span>
             </div>
 
-            <div className="bg-emerald-950/40 border border-emerald-500/20 rounded-2xl p-3 text-xs text-white/90 leading-relaxed font-sans shadow-inner">
+            <div className="bg-emerald-950/40 border border-emerald-500/20 rounded-xl p-3 text-xs text-white/90 leading-relaxed font-sans shadow-inner">
               {sampleDebtText}
             </div>
 

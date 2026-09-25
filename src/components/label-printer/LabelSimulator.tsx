@@ -43,7 +43,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
   };
 
   return (
-    <div className="space-y-5 flex flex-col h-[580px] bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl">
+    <div className="space-y-5 flex flex-col h-[580px] bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
       <div>
         <h3 className="font-bold text-white text-sm uppercase mb-1 flex items-center gap-2">
           <Maximize2 size={15} className="text-indigo-400" /> 3. Aperçu Physique Temps Réel
@@ -51,7 +51,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
         <p className="text-xs text-slate-400">Rendu exact de l'étiquette finale (Simulateur Thermique).</p>
       </div>
 
-      <div className="flex-1 flex items-center justify-center bg-slate-950 rounded-2xl border border-slate-800 p-4 overflow-auto min-h-[300px]">
+      <div className="flex-1 flex items-center justify-center bg-slate-950 rounded-xl border border-slate-800 p-4 overflow-auto min-h-[300px]">
         {/* The Physical Simulated Label */}
         <div 
           id="simulated-label-tag"

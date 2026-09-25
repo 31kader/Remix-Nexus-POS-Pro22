@@ -14,7 +14,7 @@ export function LowStockModal({ isOpen, onClose, products = [], settings }: LowS
     <Modal isOpen={isOpen} onClose={onClose} title="Alertes de Stock Bas">
       <div className="space-y-4">
         {products.length === 0 ? (
-          <p className="text-center text-slate-500 py-8">Aucun produit en stock bas.</p>
+          <p className="text-center text-slate-500 py-5">Aucun produit en stock bas.</p>
         ) : (
           <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
             {products.map(p => (

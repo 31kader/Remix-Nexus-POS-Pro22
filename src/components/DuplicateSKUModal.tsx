@@ -24,7 +24,7 @@ export function DuplicateSKUModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Doublons Détectés" size="lg">
       <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex gap-3">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-600 shadow-sm shrink-0">
             <Layers size={20} />
           </div>
@@ -83,7 +83,7 @@ export function DuplicateSKUModal({
         ))}
       </div>
       <div className="pt-4 mt-6 border-t border-slate-100 flex justify-end">
-        <Button onClick={onClose} variant="secondary" className="px-8">Fermer</Button>
+        <Button onClick={onClose} variant="secondary" className="px-5">Fermer</Button>
       </div>
     </Modal>
   );

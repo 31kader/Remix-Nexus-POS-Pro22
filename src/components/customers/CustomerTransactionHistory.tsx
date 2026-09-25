@@ -36,7 +36,7 @@ export const CustomerTransactionHistory: React.FC<Props> = ({ transactions, sett
               <div className="bg-white/5 border border-white/5 rounded-xl p-6 hover:bg-white/10 hover:border-indigo-500/30 transition-all cursor-pointer group relative overflow-hidden shadow-inner">
                 <div className="flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-5">
-                    <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-slate-700 group-hover:text-indigo-400 border border-white/5 transition-all shadow-inner">
+                    <div className="w-14 h-14 bg-slate-900 rounded-xl flex items-center justify-center text-slate-700 group-hover:text-indigo-400 border border-white/5 transition-all shadow-inner">
                       <ShoppingCart size={24} />
                     </div>
                     <div>

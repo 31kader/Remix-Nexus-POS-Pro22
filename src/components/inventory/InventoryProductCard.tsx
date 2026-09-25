@@ -48,7 +48,7 @@ export const InventoryProductCard = React.memo(({
     <div 
       onClick={() => onEdit(product)}
       className={cn(
-        "group relative bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-900 border rounded-2xl p-4 transition-all duration-300 flex flex-col justify-between cursor-pointer shadow-sm dark:shadow-md hover:shadow-xl dark:hover:shadow-2xl hover:-translate-y-1 select-none",
+        "group relative bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-900 border rounded-xl p-4 transition-all duration-300 flex flex-col justify-between cursor-pointer shadow-sm dark:shadow-md hover:shadow-xl dark:hover:shadow-md hover:-translate-y-1 select-none",
         isSelected 
           ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20 dark:bg-slate-900" 
           : isOutOfStock

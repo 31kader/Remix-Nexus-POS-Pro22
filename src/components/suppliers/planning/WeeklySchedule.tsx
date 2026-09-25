@@ -16,7 +16,7 @@ export function WeeklySchedule({
 }: WeeklyScheduleProps) {
   return (
     <>
-      <div className="p-8 bg-white/5 border border-white/5 rounded-xl ">
+      <div className="p-5 bg-white/5 border border-white/5 rounded-xl ">
         <h4 className="text-xl font-black text-indigo-400 uppercase tracking-widest mb-2  font-sans">TABLEAU DE BORD DES ACTIVITÉS FOURNISSEURS</h4>
         <p className="text-xs text-slate-400 font-mono uppercase">
           Visualisez l'agenda des visites de pré-vente, des livraisons de stock et des règlements de factures pour toute la semaine.
@@ -47,7 +47,7 @@ export function WeeklySchedule({
                     <div 
                       key={`presale-${s.id}`}
                       onClick={() => { setViewingDetailsSupplier(s); setActiveDetailsTab('products'); setIsDetailsModalOpen(true); }}
-                      className="bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-2xl p-4 hover:bg-purple-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
+                      className="bg-purple-500/10 border border-purple-500/20 text-purple-300 rounded-xl p-4 hover:bg-purple-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
                       title="Modifier ou voir les détails"
                     >
                       <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ export function WeeklySchedule({
                     <div 
                       key={`delivery-${s.id}`}
                       onClick={() => { setViewingDetailsSupplier(s); setActiveDetailsTab('products'); setIsDetailsModalOpen(true); }}
-                      className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-2xl p-4 hover:bg-emerald-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
+                      className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-xl p-4 hover:bg-emerald-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
                       title="Modifier ou voir les détails"
                     >
                       <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function WeeklySchedule({
                     <div 
                       key={`payment-${s.id}`}
                       onClick={() => { setViewingDetailsSupplier(s); setActiveDetailsTab('payments'); setIsDetailsModalOpen(true); }}
-                      className="bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-2xl p-4 hover:bg-rose-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
+                      className="bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl p-4 hover:bg-rose-500/20 transition-all cursor-pointer group flex flex-col gap-1.5"
                       title="Gérer les règlements"
                     >
                       <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export function WeeklySchedule({
                   ))}
 
                   {totalEvents === 0 && (
-                    <div className="py-8 border border-dashed border-white/5 rounded-2xl flex flex-col items-center justify-center text-center p-4">
+                    <div className="py-5 border border-dashed border-white/5 rounded-xl flex flex-col items-center justify-center text-center p-4">
                       <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Jour Libre</p>
                       <span className="text-[9px] text-white/10 font-mono mt-1">AUCUNE ACTION</span>
                     </div>

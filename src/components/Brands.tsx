@@ -157,7 +157,7 @@ export function Brands({ brands, onEdit, onDelete, onAdd }: BrandsProps) {
         ))}
         
         {brands.length === 0 && (
-          <div className="col-span-full p-8 text-center text-white/40 bg-white/5 rounded-xl border border-dashed border-white/10">
+          <div className="col-span-full p-5 text-center text-white/40 bg-white/5 rounded-xl border border-dashed border-white/10">
             Aucune marque n'a été créée.
           </div>
         )}

@@ -179,7 +179,7 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-2xl border border-slate-800 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-xl border border-slate-800 gap-4">
         <div>
           <h2 className="text-xl font-bold text-white uppercase flex items-center gap-3">
             <Printer className="text-indigo-500 animate-pulse" size={24} /> Studio de Création d'Étiquettes

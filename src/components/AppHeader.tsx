@@ -214,7 +214,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 className="fixed inset-0 z-40" 
                 onClick={() => setIsLangMenuOpen(false)}
               />
-              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-56 rounded-2xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-56 rounded-xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-md z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <p className="text-[9px] font-black tracking-widest uppercase text-slate-400 dark:text-white/40 px-3 py-1.5 border-b border-slate-100 dark:border-white/5 mb-1.5">CHOIX DE LA LANGUE</p>
                 
                 <button
@@ -295,7 +295,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 className="fixed inset-0 z-40" 
                 onClick={() => setIsThemeMenuOpen(false)}
               />
-              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 rtl:right-auto rtl:left-0 top-full mt-2 w-64 rounded-xl bg-white dark:bg-industrial-900 border border-slate-200 dark:border-industrial-800 p-2 shadow-md z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 <p className="text-[9px] font-black tracking-widest uppercase text-slate-400 dark:text-white/40 px-3 py-1.5 border-b border-slate-100 dark:border-white/5 mb-1.5">MOTEUR DE THÈMES NEXUS</p>
                 
                 {[

@@ -257,7 +257,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   return (
     <div className="space-y-6">
       {/* Studio Header Banner */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-2xl border border-slate-800 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-900 p-5 rounded-xl border border-slate-800 gap-4">
         <div>
           <h2 className="text-xl font-bold text-white uppercase flex items-center gap-3">
             <FileText className="text-indigo-500 animate-pulse" size={24} /> Studio d'Impression Catalogue A4
@@ -283,7 +283,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
               <Share2 size={15} /> Exporter / Partager
             </Button>
             {isSharePanelOpen && (
-              <div className="absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3 shadow-2xl min-w-[220px] space-y-2 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-xl p-3 shadow-md min-w-[220px] space-y-2 animate-in fade-in slide-in-from-top-2">
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest px-1 mb-2">📤 Exporter & Partager</p>
                 <button
                   onClick={() => handleShare('download')}
@@ -342,7 +342,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         
         {/* Column 1: Product Selection Selector */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[650px] space-y-3.5">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md flex flex-col h-[650px] space-y-3.5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
@@ -512,7 +512,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                 )}
 
                 {filteredProducts.length === 0 && (
-                  <div className="p-8 text-center text-slate-500 text-xs ">
+                  <div className="p-5 text-center text-slate-500 text-xs ">
                     Aucun article ne correspond à votre recherche.
                   </div>
                 )}
@@ -547,7 +547,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
               ))}
 
               {queueProducts.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-xs ">
+                <div className="p-5 text-center text-slate-500 text-xs ">
                   La file d'impression est vide. Ajoutez des articles depuis l'onglet Recherche.
                 </div>
               )}
@@ -556,7 +556,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
         </div>
 
         {/* Column 2: Layout / Print Studio Design Settings */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[650px] overflow-y-auto custom-scrollbar space-y-5">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md flex flex-col h-[650px] overflow-y-auto custom-scrollbar space-y-5">
           <div>
             <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
               <Sliders size={15} className="text-indigo-400" /> 2. Configuration Design
@@ -801,7 +801,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
         </div>
 
         {/* Columns 3 & 4: Live Paginated A4 Print Simulator Preview */}
-        <div className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-[650px] space-y-4">
+        <div className="xl:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md flex flex-col h-[650px] space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div>
               <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
@@ -872,9 +872,9 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
           </div>
 
           {/* Simulated pages stack viewport */}
-          <div className="flex-1 bg-slate-950 rounded-2xl border border-slate-800/80 p-6 overflow-auto custom-scrollbar flex flex-col items-center gap-8">
+          <div className="flex-1 bg-slate-950 rounded-xl border border-slate-800/80 p-6 overflow-auto custom-scrollbar flex flex-col items-center gap-5">
             {queueProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
+              <div className="flex flex-col items-center justify-center h-full text-center p-5 space-y-3">
                 <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center text-slate-600 border border-slate-800">
                   <FileText size={22} />
                 </div>
@@ -908,7 +908,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                       transformOrigin: 'top center',
                       marginBottom: `${(pageH * (zoom - 1))}px` // adjust flow offset caused by scale transform
                     }}
-                    className="bg-white text-black shadow-2xl rounded-sm border border-slate-400/20 relative flex flex-col justify-between shrink-0 font-sans"
+                    className="bg-white text-black shadow-md rounded-sm border border-slate-400/20 relative flex flex-col justify-between shrink-0 font-sans"
                   >
                     <div className="flex flex-col h-full justify-between">
                       {/* Catalog Title Header */}

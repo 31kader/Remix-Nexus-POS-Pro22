@@ -51,7 +51,7 @@ export function OrdersTable({
   const allFilteredSelected = safeFilteredOrders.length > 0 && safeFilteredOrders.every(o => selectedOrderIds.has(String(o.id)));
 
   return (
-    <Card className="overflow-x-auto bg-white/5  border-white/10 shadow-2xl rounded-2xl">
+    <Card className="overflow-x-auto bg-white/5  border-white/10 shadow-md rounded-xl">
       <table className="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr className="border-b border-white/10">
@@ -259,7 +259,7 @@ export function OrdersTable({
           })}
           {safeFilteredOrders.length === 0 && (
             <tr>
-              <td colSpan={9} className="p-8 text-center text-slate-400 font-medium">
+              <td colSpan={9} className="p-5 text-center text-slate-400 font-medium">
                 {orders.length === 0 ? "Aucune commande reçue" : "Aucune commande ne correspond aux filtres"}
               </td>
             </tr>

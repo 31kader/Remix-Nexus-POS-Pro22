@@ -110,7 +110,7 @@ export const CashflowReport = React.memo(function CashflowReport({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <Card id="card-cash-methods" className="p-6 bg-white/5 border-white/10 text-left">
           <h4 className="font-black text-white/60 mb-6 flex items-center gap-2 text-sm uppercase tracking-widest">
             <DollarSign size={18} className="text-emerald-400" />
@@ -177,7 +177,7 @@ export const CashflowReport = React.memo(function CashflowReport({
                 ))}
                 {flowData.timeline.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-12 text-center text-white/20">
+                    <td colSpan={4} className="p-6 text-center text-white/20">
                       <Wallet className="w-12 h-12 text-white/5 mx-auto mb-4" />
                       <p className="font-black uppercase tracking-widest text-xs">Aucun mouvement récent</p>
                     </td>

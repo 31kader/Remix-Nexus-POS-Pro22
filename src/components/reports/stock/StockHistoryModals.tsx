@@ -51,8 +51,8 @@ export function StockHistoryModals({
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Modifier l'Ajustement" className="max-w-md">
         {selectedAdjustment && (
           <form onSubmit={handleSaveEdit} className="space-y-6 pt-4">
-            <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-2xl flex items-center gap-4">
-              <div className="w-12 h-12 bg-black/40 rounded-2xl shadow-inner flex items-center justify-center border border-white/10 text-indigo-400">
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-md flex items-center gap-4">
+              <div className="w-12 h-12 bg-black/40 rounded-xl shadow-inner flex items-center justify-center border border-white/10 text-indigo-400">
                 <Package size={24} />
               </div>
               <div>
@@ -65,13 +65,13 @@ export function StockHistoryModals({
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">Ajustement Initial</p>
                   <p className="text-lg font-black text-white mt-1">
                     {selectedAdjustment.adjustment > 0 ? '+' : ''}{selectedAdjustment.adjustment}
                   </p>
                 </div>
-                <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
+                <div className="bg-indigo-500/10 p-4 rounded-xl border border-indigo-500/20">
                   <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Nouveau Stock Recalculé</p>
                   <p className="text-lg font-black text-indigo-300 mt-1">
                     {livePreviewStock} <span className="text-xs font-normal text-indigo-400/70">{activeProduct?.unit || 'U'}</span>
@@ -88,7 +88,7 @@ export function StockHistoryModals({
                   value={editedAdjustmentValue}
                   onChange={e => setEditedAdjustmentValue(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   placeholder="0.00"
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-xl font-black text-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center shadow-inner"
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-xl font-black text-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none text-center shadow-inner"
                 />
                 <p className="text-[10px] text-slate-400 pl-2">Saisir une valeur négative (ex: -5) pour réduire ou positive (ex: 5) pour augmenter le stock.</p>
               </div>
@@ -100,7 +100,7 @@ export function StockHistoryModals({
                   value={editedReason}
                   onChange={e => setEditedReason(e.target.value)}
                   placeholder="Ex: Inventaire périodique, casse, etc."
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-white/10"
+                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-sm text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-white/10"
                 />
               </div>
             </div>
@@ -121,7 +121,7 @@ export function StockHistoryModals({
       <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Annuler l'Ajustement de Stock" className="max-w-md">
         {selectedAdjustment && (
           <div className="space-y-6 pt-4">
-            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-3">
+            <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-3">
               <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={20} />
               <div>
                 <h4 className="text-sm font-bold text-rose-300">Action irréversible</h4>
@@ -129,7 +129,7 @@ export function StockHistoryModals({
               </div>
             </div>
 
-            <div className="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-2">
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-2">
               <p className="text-xs text-slate-400">Détails de l'élément :</p>
               <p className="text-sm font-bold text-white">{selectedAdjustment.productName}</p>
               <p className="text-xs text-slate-300">Date : {formatSafe(selectedAdjustment.timestamp, 'dd/MM/yyyy HH:mm')}</p>
@@ -138,7 +138,7 @@ export function StockHistoryModals({
             </div>
 
             {activeProduct && (
-              <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-2xl">
+              <div className="space-y-3 p-4 bg-white/5 border border-white/5 rounded-xl">
                 <label className="flex items-start gap-3 cursor-pointer select-none">
                   <input 
                     type="checkbox"

@@ -97,7 +97,7 @@ export function InventoryProductsTab(props: any) {
           title="Vérificateur de Prix"
         >
           <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
+            <div className="flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
               <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
                 {priceCheckResult.imageUrl ? (
                   <SafeImage 
@@ -162,7 +162,7 @@ export function InventoryProductsTab(props: any) {
           </div>
         ) : sortedProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-16 text-center gap-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500">
+            <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500">
               <Package size={32} />
             </div>
             <div>
@@ -200,7 +200,7 @@ export function InventoryProductsTab(props: any) {
           </div>
         ) : (
           /* List View (Sleek Data Rows) */
-          <div className="space-y-1 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 p-2 rounded-2xl shadow-sm">
+          <div className="space-y-1 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 p-2 rounded-xl shadow-sm">
             {/* Table Header Bar for Sorting */}
             <div className="hidden md:flex items-center justify-between gap-4 px-4 py-2.5 bg-slate-100 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/90 rounded-xl mb-2 shadow-sm">
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -246,7 +246,7 @@ export function InventoryProductsTab(props: any) {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+        <div className="flex items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
           <span className="text-xs text-slate-500 dark:text-slate-400">
             Page <strong className="text-slate-900 dark:text-white">{currentPage}</strong> sur <strong className="text-slate-900 dark:text-white">{totalPages}</strong> ({sortedProducts.length} articles)
           </span>

@@ -21,7 +21,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
             type="text" 
             value={formData.currency || ''}
             onChange={e => setFormData({ ...formData, currency: e.target.value })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
           />
         </div>
         <div className="space-y-2">
@@ -30,7 +30,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
             type="number" 
             value={formData.taxRate ?? 19}
             onChange={e => setFormData({ ...formData, taxRate: parseFloat(e.target.value) || 0 })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all font-medium"
           />
         </div>
         <div className="space-y-2">
@@ -38,7 +38,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
           <select 
             value={formData.accountingFormat}
             onChange={e => setFormData({ ...formData, accountingFormat: e.target.value as any })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50 transition-all"
           >
             <option value="csv">Standard CSV</option>
             <option value="pdf">Document PDF</option>
@@ -69,7 +69,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
 
         <div className="space-y-3">
           {formData.availableTaxes?.map((tax, idx) => (
-            <div key={idx} className="group flex items-center gap-3 bg-slate-900/50 p-2 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all">
+            <div key={idx} className="group flex items-center gap-3 bg-slate-900/50 p-2 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all">
               <input 
                 className="flex-1 bg-transparent px-3 py-2 text-white outline-none text-sm font-bold placeholder:text-slate-700" 
                 placeholder="Nom de la taxe (ex: TVA 19%)"
@@ -105,7 +105,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
           <button 
             type="button"
             onClick={() => setFormData({...formData, availableTaxes: [...(formData.availableTaxes || []), { name: '', rate: 0 }]})}
-            className="w-full h-12 border-2 border-dashed border-white/5 rounded-2xl flex items-center justify-center gap-2 text-slate-500 hover:text-emerald-500 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-[10px] font-black uppercase tracking-widest mt-2"
+            className="w-full h-12 border-2 border-dashed border-white/5 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-emerald-500 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all text-[10px] font-black uppercase tracking-widest mt-2"
           >
             <Plus size={16} />
             Ajouter un taux de taxe

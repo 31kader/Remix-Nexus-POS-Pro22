@@ -11,7 +11,7 @@ interface Props {
 
 export const CustomerInfoSidebar: React.FC<Props> = ({ customer, lastVisit }) => {
   return (
-    <div className="bg-white/5 border border-white/5 rounded-xl p-8 space-y-8 shadow-inner">
+    <div className="bg-white/5 border border-white/5 rounded-xl p-5 space-y-8 shadow-inner">
       <h3 className="font-black text-white flex items-center gap-3 uppercase  tracking-wider text-sm">
         <UserCog size={18} className="text-indigo-400" />
         Matrice Client

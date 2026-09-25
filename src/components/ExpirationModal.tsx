@@ -20,7 +20,7 @@ export function ExpirationModal({ isOpen, onClose, products = [] }: ExpirationMo
     <Modal isOpen={isOpen} onClose={onClose} title="Alertes de Péremption (DLC)">
       <div className="space-y-4">
         {products.length === 0 ? (
-          <p className="text-center text-slate-500 py-8">Aucun produit périmé ou proche de la péremption.</p>
+          <p className="text-center text-slate-500 py-5">Aucun produit périmé ou proche de la péremption.</p>
         ) : (
           <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
             {products.sort((a, b) => new Date(a.expirationDate!).getTime() - new Date(b.expirationDate!).getTime()).map(p => {

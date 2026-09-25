@@ -46,7 +46,7 @@ export function CustomerFinancialModal({
       <form onSubmit={handleTopUp} className="space-y-5 py-2">
         {/* Client summary */}
         <div className={cn(
-          "flex items-center gap-4 p-4 rounded-2xl border transition-colors",
+          "flex items-center gap-4 p-4 rounded-xl border transition-colors",
           selectedCustomer && (selectedCustomer.balance || 0) < 0 
             ? "bg-rose-500/5 border-rose-500/20" 
             : "bg-emerald-500/5 border-emerald-500/20"
@@ -81,7 +81,7 @@ export function CustomerFinancialModal({
               type="button"
               onClick={() => setFinancialOpType('encaissement')}
               className={cn(
-                "p-4 rounded-2xl border text-left flex flex-col gap-1 transition-all",
+                "p-4 rounded-xl border text-left flex flex-col gap-1 transition-all",
                 financialOpType === 'encaissement'
                   ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20"
                   : "bg-slate-900/30 border-white/5 opacity-60 hover:opacity-100"
@@ -94,7 +94,7 @@ export function CustomerFinancialModal({
               type="button"
               onClick={() => setFinancialOpType('decaissement')}
               className={cn(
-                "p-4 rounded-2xl border text-left flex flex-col gap-1 transition-all",
+                "p-4 rounded-xl border text-left flex flex-col gap-1 transition-all",
                 financialOpType === 'decaissement'
                   ? "bg-rose-500/10 border-rose-500/30 ring-2 ring-rose-500/20"
                   : "bg-slate-900/30 border-white/5 opacity-60 hover:opacity-100"
@@ -115,7 +115,7 @@ export function CustomerFinancialModal({
               step="any"
               required
               autoFocus
-              className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-4 px-5 text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
+              className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-4 px-5 text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
               placeholder="0.00"
               value={topUpAmount}
               onChange={e => setTopUpAmount(e.target.value)}
@@ -193,7 +193,7 @@ export function CustomerFinancialModal({
           <input 
             type="text"
             placeholder="Ex: Règlement ardoise, Remboursement espèces..."
-            className="w-full bg-slate-900/50 border border-white/5 rounded-2xl py-3.5 px-4 text-xs font-bold text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+            className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             value={financialNote}
             onChange={e => setFinancialNote(e.target.value)}
           />
@@ -208,7 +208,7 @@ export function CustomerFinancialModal({
             const newBalance = currentBalance + change;
 
             return (
-              <div className="bg-slate-900 border border-white/5 p-4 rounded-2xl flex justify-between items-center mt-2">
+              <div className="bg-slate-900 border border-white/5 p-4 rounded-xl flex justify-between items-center mt-2">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Nouveau Solde</span>
                 <span className={cn("text-lg font-black font-mono tracking-tighter", newBalance >= 0 ? "text-emerald-400" : "text-rose-400")}>
                   {newBalance.toFixed(2)} {settings.currency}
@@ -223,14 +223,14 @@ export function CustomerFinancialModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-slate-800 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-2xl hover:bg-slate-700 transition-all font-sans"
+            className="flex-1 bg-slate-800 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-xl hover:bg-slate-700 transition-all font-sans"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isProcessingTopUp || !topUpAmount || parseFloat(topUpAmount) <= 0}
-            className="flex-1 bg-indigo-500 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-2xl hover:bg-indigo-400 transition-all shadow-xs/30 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-indigo-500 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-xl hover:bg-indigo-400 transition-all shadow-xs/30 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessingTopUp ? 'Traitement...' : 'Valider'}
           </button>

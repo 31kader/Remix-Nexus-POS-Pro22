@@ -154,7 +154,7 @@ export function ReturnModal(props: ReturnModalProps) {
                 }
               }} 
               disabled={totalRefund === 0 || isProcessing}
-              className={cn("px-8 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", showConfirmation ? "bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20" : "")}
+              className={cn("px-5 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all", showConfirmation ? "bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20" : "")}
             >
               {isProcessing ? "Traitement..." : showConfirmation ? "Confirmer le retour" : "Valider le retour"}
             </Button>

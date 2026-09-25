@@ -36,7 +36,7 @@ export function TabIdentity({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Recto Card Capture Slot */}
         <div className="space-y-4 p-6 bg-white/5 border border-white/10 rounded-xl">
           <div className="flex items-center justify-between">
@@ -132,20 +132,20 @@ export function TabIdentity({
         <button
           type="button"
           onClick={() => setRecruitmentTab('info')}
-          className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all cursor-pointer"
+          className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all cursor-pointer"
         >
           Précédent
         </button>
         <button
           type="submit"
-          className="px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+          className="px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 cursor-pointer"
         >
           💼 Enregistrer sans signature
         </button>
         <button
           type="button"
           onClick={() => setRecruitmentTab('contract')}
-          className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all shadow-lg cursor-pointer"
+          className="px-5 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg cursor-pointer"
         >
           Suivant : Contrat ➔
         </button>

@@ -38,7 +38,7 @@ export function CameraSidebar({
           <input 
             type="text" 
             placeholder="N° Vente, Caissier..." 
-            className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/5 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs transition-all placeholder:text-slate-600 font-bold"
+            className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/5 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs transition-all placeholder:text-slate-600 font-bold"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -71,7 +71,7 @@ export function CameraSidebar({
                 key={session.id}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl relative overflow-hidden"
+                className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl relative overflow-hidden"
               >
                 <div className="absolute top-2 right-2">
                    <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
@@ -97,7 +97,7 @@ export function CameraSidebar({
               layout
               onClick={() => setSelectedTransaction(tx)}
               className={cn(
-                "p-4 rounded-2xl border transition-all cursor-pointer group relative",
+                "p-4 rounded-xl border transition-all cursor-pointer group relative",
                 selectedTransaction?.id === tx.id 
                   ? "bg-indigo-600/10 border-indigo-500/50" 
                   : "bg-black/10 border-white/5 hover:border-white/10"

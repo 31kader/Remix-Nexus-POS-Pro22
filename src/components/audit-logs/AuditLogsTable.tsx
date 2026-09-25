@@ -19,7 +19,7 @@ export function AuditLogsTable({
 }: AuditLogsTableProps) {
   if (filteredLogs.length === 0) {
     return (
-      <div className="p-12 text-center text-industrial-600  font-mono text-sm">
+      <div className="p-6 text-center text-industrial-600  font-mono text-sm">
         AUCUN JOURNAL D'AUDIT TROUVÉ.
       </div>
     );

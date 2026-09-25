@@ -17,8 +17,8 @@ export const UnauthorizedView: React.FC<UnauthorizedViewProps> = ({
 }) => {
   return (
     <div className="h-screen w-full flex items-center justify-center bg-slate-50 p-4">
-      <Card className="max-w-md w-full p-8 text-center flex flex-col items-center gap-6">
-        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center">
+      <Card className="max-w-md w-full p-5 text-center flex flex-col items-center gap-6">
+        <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center">
           <ShieldAlert size={32} />
         </div>
         <div>

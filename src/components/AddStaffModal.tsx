@@ -22,7 +22,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40  p-4 overflow-y-auto">
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 my-10"
+        className="bg-white rounded-xl shadow-md w-full max-w-md overflow-hidden border border-slate-200 my-10"
       >
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
           <div className="flex items-center gap-3">

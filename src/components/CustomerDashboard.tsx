@@ -36,7 +36,7 @@ export function CustomerDashboard({
       <header className="bg-workspace/80  border-b border-white/5 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-xs border border-indigo-400/50">
+            <div className="w-12 h-12 bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-xs border border-indigo-400/50">
               <ShoppingBag size={24} strokeWidth={2.5} />
             </div>
             <div>
@@ -46,7 +46,7 @@ export function CustomerDashboard({
           </div>
           <button 
             onClick={onLogout}
-            className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-2xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-white/5 transition-all active:scale-90"
+            className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-white/5 transition-all active:scale-90"
             title="Se déconnecter"
           >
             <LogOut size={20} />
@@ -59,13 +59,13 @@ export function CustomerDashboard({
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-indigo-600 rounded-xl p-10 text-white shadow-2xl shadow-indigo-500/20 relative overflow-hidden group"
+          className="bg-indigo-600 rounded-xl p-5 text-white shadow-md shadow-indigo-500/20 relative overflow-hidden group"
         >
           <div className="relative z-10">
             <h2 className="text-4xl font-black mb-2  tracking-tighter uppercase">Bonjour, {customer.name} !</h2>
             <p className="text-indigo-100 font-bold uppercase tracking-widest text-[10px] opacity-80">Membre Nexus Privilège • Accès Autorisé</p>
             
-            <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="space-y-2">
                 <p className="text-[9px] font-black text-indigo-300 uppercase tracking-normal">Crédits Fidélité</p>
                 <div className="flex items-center gap-2">
@@ -99,7 +99,7 @@ export function CustomerDashboard({
           <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-64 h-64 bg-indigo-400/20 rounded-full blur-[80px]"></div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Recent Transactions */}
           <div className="lg:col-span-2 space-y-6">
             <CustomerTransactionHistory transactions={customerTransactions} settings={settings} />

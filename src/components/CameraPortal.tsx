@@ -246,10 +246,10 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
   return (
     <div className="flex flex-col h-full bg-nardo text-slate-100 overflow-hidden font-sans">
       {/* Control Header */}
-      <header className="h-20 border-b border-white/5 bg-workspace/80  flex items-center justify-between px-8 shrink-0 z-20">
+      <header className="h-20 border-b border-white/5 bg-workspace/80  flex items-center justify-between px-5 shrink-0 z-20">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xs">
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-xs">
               <Camera size={24} className="text-white" />
             </div>
             <div>
@@ -263,7 +263,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
           
           <div className="h-10 w-px bg-white/5" />
           
-          <div className="flex p-1 bg-black/40 rounded-2xl border border-white/5">
+          <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
              <button 
                 onClick={() => setCurrentView('archive')}
                 className={cn(
@@ -287,7 +287,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
 
         <div className="flex items-center gap-4">
           {selectedTransaction && (
-            <div className="flex items-center gap-4 px-6 py-2 bg-black/40 border border-white/5 rounded-2xl">
+            <div className="flex items-center gap-4 px-6 py-2 bg-black/40 border border-white/5 rounded-xl">
                <div className="flex flex-col">
                   <span className="text-[9px] font-bold text-slate-500 uppercase">Durée Session</span>
                   <span className="text-sm font-black text-white font-mono">{Math.floor(timeSpent / 60)}:{(timeSpent % 60).toString().padStart(2, '0')}</span>
@@ -299,7 +299,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
           <div className="flex items-center gap-2">
             <Button 
                onClick={callManager}
-               className="h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest border-b-4 border-rose-900 active:border-b-0 active:translate-y-1 transition-all px-6"
+               className="h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-xl flex items-center gap-2 font-black text-[10px] uppercase tracking-widest border-b-4 border-rose-900 active:border-b-0 active:translate-y-1 transition-all px-6"
             >
               <Bell size={18} /> Alerte Manager
             </Button>
@@ -342,7 +342,7 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
               </div>
            ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-800">
-                <div className="w-32 h-32 bg-workspace border border-white/5 rounded-xl flex items-center justify-center mb-8 shadow-2xl">
+                <div className="w-32 h-32 bg-workspace border border-white/5 rounded-xl flex items-center justify-center mb-8 shadow-md">
                    <LayoutGrid size={48} className="opacity-10 text-indigo-500" />
                 </div>
                 <h3 className="text-lg font-black uppercase tracking-normal text-white/20">Système en Veille</h3>

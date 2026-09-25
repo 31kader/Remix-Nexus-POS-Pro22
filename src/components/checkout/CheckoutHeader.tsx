@@ -85,7 +85,7 @@ export const CheckoutHeader: React.FC<Props> = ({
     <div className="p-3 sm:p-4 md:p-5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-sm">
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 md:gap-4">
         {/* Giant High-Visibility Centered Total Banner */}
-        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border-2 border-emerald-400 dark:border-emerald-500/50 rounded-2xl px-5 py-2 shadow-lg shadow-emerald-500/10 min-w-[200px]">
+        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border-2 border-emerald-400 dark:border-emerald-500/50 rounded-xl px-5 py-2 shadow-lg shadow-emerald-500/10 min-w-[200px]">
           <div className="text-center">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-100 dark:text-emerald-300 block">TOTAL À PAYER</span>
             <span className="text-2xl lg:text-3xl font-black font-mono text-white dark:text-emerald-400 drop-shadow-sm">

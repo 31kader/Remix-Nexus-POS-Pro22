@@ -180,7 +180,7 @@ export const Sidebar = ({
         x: isMobile && !isMobileOverlayOpen ? -300 : 0
       }}
       className={cn(
-        "border-r flex flex-col h-full bg-zinc-950 border-zinc-800 shadow-2xl relative",
+        "border-r flex flex-col h-full bg-zinc-950 border-zinc-800 shadow-md relative",
         isMobile ? "fixed inset-y-0 left-0 z-[70]" : "relative z-40"
       )}
     >
@@ -328,7 +328,7 @@ export const Sidebar = ({
           </button>
         )}
 
-        <div className="flex items-center gap-3 p-3 bg-white/[0.02] hover:bg-white/[0.04] transition-colors rounded-2xl border border-white/5 shadow-inner">
+        <div className="flex items-center gap-3 p-3 bg-white/[0.02] hover:bg-white/[0.04] transition-colors rounded-xl border border-white/5 shadow-inner">
           {user.photoURL ? (
             <SafeImage 
               src={user.photoURL} 

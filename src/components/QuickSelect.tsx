@@ -77,7 +77,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
       <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center border border-amber-300 dark:border-amber-500/30">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center border border-amber-300 dark:border-amber-500/30">
               <Star className="text-amber-600 dark:text-amber-400 fill-amber-500" size={20} />
             </div>
             <div>
@@ -159,7 +159,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
       <div className="flex-1 p-3 overflow-y-auto custom-scrollbar relative">
         <div className="relative w-full h-full min-h-[300px]">
           {filteredProducts.length === 0 && searchQuery ? (
-            <div className="h-48 flex flex-col items-center justify-center text-center p-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900/40">
+            <div className="h-48 flex flex-col items-center justify-center text-center p-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900/40">
               <Search size={28} className="text-slate-300 dark:text-slate-600 mb-2" />
               <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Aucun favori trouvé</p>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Essayez un autre mot-clé</p>
@@ -170,7 +170,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
                 <div
                   key={product.id}
                   onClick={() => onAddProduct(product)}
-                  className="group relative bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-amber-500 rounded-2xl transition-all cursor-pointer overflow-hidden aspect-square flex flex-col shadow-sm hover:shadow-md hover:-translate-y-0.5"
+                  className="group relative bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 hover:border-amber-500 rounded-xl transition-all cursor-pointer overflow-hidden aspect-square flex flex-col shadow-sm hover:shadow-md hover:-translate-y-0.5"
                 >
                   {/* Top Image area */}
                   <div className="relative flex-1 bg-slate-100 dark:bg-slate-950/40 overflow-hidden flex items-center justify-center">
@@ -198,7 +198,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
               
               <button 
                 onClick={() => setShowPicker(true)} 
-                className="flex flex-col items-center justify-center bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-2 border-dashed border-amber-300 dark:border-amber-500/30 hover:border-amber-500 rounded-2xl aspect-square transition-all group p-2 text-center shadow-sm cursor-pointer"
+                className="flex flex-col items-center justify-center bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border-2 border-dashed border-amber-300 dark:border-amber-500/30 hover:border-amber-500 rounded-xl aspect-square transition-all group p-2 text-center shadow-sm cursor-pointer"
               >
                 <Plus size={22} className="text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform mb-1.5" />
                 <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-tight leading-tight">Chercher&nbsp;&amp;<br/>Ajouter</span>
@@ -208,7 +208,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
                 <button 
                   key={`empty-${i}`} 
                   onClick={() => setShowPicker(true)} 
-                  className="bg-white/60 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-2xl aspect-square flex items-center justify-center transition-all group shadow-sm cursor-pointer"
+                  className="bg-white/60 dark:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl aspect-square flex items-center justify-center transition-all group shadow-sm cursor-pointer"
                 >
                   <Plus size={18} className="text-slate-300 dark:text-slate-600 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
                 </button>
@@ -257,7 +257,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
               (settings.quickSelectGroups || []).map((group) => (
                 <div
                   key={group.id}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm"
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm"
                 >
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">{group.name}</span>
                   <button

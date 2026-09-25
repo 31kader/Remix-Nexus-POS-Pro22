@@ -121,7 +121,7 @@ export function GRNCreateForm({
           </div>
 
           {search.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden z-50">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-md overflow-hidden z-50">
               <div className="max-h-60 overflow-y-auto">
                 {filteredProducts.map((p) => {
                   const isInItems = items.some(it => it.productId === p.id);

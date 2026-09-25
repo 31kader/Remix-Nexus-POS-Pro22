@@ -391,7 +391,7 @@ export function GroupedSalesAndBasketsReport({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 shadow-xl">
+          <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 shadow-xl">
             <button
               onClick={() => { setActiveSubTab('grouped_products'); setCurrentPage(1); }}
               className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
@@ -695,7 +695,7 @@ export function GroupedSalesAndBasketsReport({
                 ))}
                 {pagedList.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-500 font-mono ">
+                    <td colSpan={7} className="p-6 text-center text-slate-500 font-mono ">
                       AUCUN PRODUIT VENDU SUR CETTE PÉRIODE
                     </td>
                   </tr>
@@ -828,7 +828,7 @@ export function GroupedSalesAndBasketsReport({
                 })}
                 {pagedList.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-500 font-mono ">
+                    <td colSpan={8} className="p-6 text-center text-slate-500 font-mono ">
                       AUCUN PANIER TROUVÉ SUR CETTE PÉRIODE
                     </td>
                   </tr>

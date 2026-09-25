@@ -87,7 +87,7 @@ export const LossesReport = React.memo(function LossesReport({
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card id="card-loss-total" className="p-8 border-l-4 border-rose-500 bg-rose-500/5  relative overflow-hidden group">
+        <Card id="card-loss-total" className="p-5 border-l-4 border-rose-500 bg-rose-500/5  relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Trash2 size={120} />
           </div>
@@ -100,21 +100,21 @@ export const LossesReport = React.memo(function LossesReport({
           <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">Basé sur le prix d'achat initial</p>
         </Card>
 
-        <Card id="card-loss-margin" className="p-8 border-l-4 border-amber-500 bg-white/5 relative overflow-hidden">
+        <Card id="card-loss-margin" className="p-5 border-l-4 border-amber-500 bg-white/5 relative overflow-hidden">
            <p className="text-[10px] font-black text-amber-500/60 uppercase tracking-normal mb-2">Impact sur la marge</p>
            <h4 className="text-3xl font-black text-white">-{((lossData.totalLossValue / (totalRevenue || 1)) * 100).toFixed(2)}%</h4>
            <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">du chiffre d'affaires total</p>
         </Card>
 
-        <Card id="card-loss-adjustments" className="p-8 border-l-4 border-indigo-500 bg-white/5 relative overflow-hidden">
+        <Card id="card-loss-adjustments" className="p-5 border-l-4 border-indigo-500 bg-white/5 relative overflow-hidden">
            <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-normal mb-2">Nombre d'ajustements</p>
            <h4 className="text-3xl font-black text-white">{lossData.formattedLosses.length}</h4>
            <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">Opérations de retrait de stock</p>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card id="card-loss-reason-chart" className="p-8 bg-white/5 border-white/10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card id="card-loss-reason-chart" className="p-5 bg-white/5 border-white/10">
           <h4 className="text-sm font-black text-white/60 mb-8 uppercase tracking-widest flex items-center gap-3">
             <LayoutGrid size={18} className="text-rose-500" /> Répartition par Raison
           </h4>
@@ -147,7 +147,7 @@ export const LossesReport = React.memo(function LossesReport({
           </div>
         </Card>
 
-        <Card id="card-loss-category-chart" className="p-8 bg-white/5 border-white/10">
+        <Card id="card-loss-category-chart" className="p-5 bg-white/5 border-white/10">
           <h4 className="text-sm font-black text-white/60 mb-8 uppercase tracking-widest flex items-center gap-3">
             <RotateCcw size={18} className="text-indigo-500" /> Répartition par Catégorie
           </h4>

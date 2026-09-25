@@ -29,7 +29,7 @@ export function Help() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 py-8">
+    <div className="max-w-4xl mx-auto space-y-8 py-5">
       <div className="text-center space-y-4">
         <h2 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">Centre d'Aide & Confidentialité</h2>
         <p className="text-lg text-slate-500 dark:text-slate-400">Tout ce que vous devez savoir pour maîtriser votre portail et sécuriser vos données.</p>
@@ -39,7 +39,7 @@ export function Help() {
         {sections.map((section, idx) => (
           <Card key={`help-section-${idx}`} className="p-6 hover:shadow-md transition-shadow">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
                 {section.icon}
               </div>
               <div className="space-y-2">
@@ -51,8 +51,8 @@ export function Help() {
         ))}
       </div>
 
-      <Card className="p-8 bg-indigo-600 text-white text-center space-y-4 shadow-xl">
-        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
+      <Card className="p-5 bg-indigo-600 text-white text-center space-y-4 shadow-xl">
+        <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2">
           <Lock size={24} className="text-white" />
         </div>
         <h3 className="text-2xl font-black tracking-tight uppercase">Politique de Confidentialité & Souveraineté des Données</h3>
@@ -76,7 +76,7 @@ export function Help() {
         maxWidth="max-w-2xl"
       >
         <div className="space-y-6 text-slate-300 text-xs leading-relaxed max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3">
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3">
             <CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-emerald-300 text-sm">Vos données vous appartiennent intégralement</p>

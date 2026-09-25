@@ -401,7 +401,7 @@ export function ProductSalesEditModal({
     >
       <div className="space-y-6 text-left py-2">
         {/* Product Overview Header */}
-        <div className="p-4 bg-slate-900/80 rounded-2xl border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-4 bg-slate-900/80 rounded-xl border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black">
               <ShoppingCart size={24} />
@@ -435,7 +435,7 @@ export function ProductSalesEditModal({
         </div>
 
         {/* Bulk Cost Regularization Banner */}
-        <div className="p-4 bg-indigo-950/40 rounded-2xl border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <Zap className="text-indigo-400 shrink-0" size={20} />
             <div>
@@ -474,11 +474,11 @@ export function ProductSalesEditModal({
           </div>
 
           {salesRows.length === 0 ? (
-            <div className="p-8 text-center bg-white/5 rounded-2xl border border-white/5 text-slate-400 text-sm">
+            <div className="p-5 text-center bg-white/5 rounded-xl border border-white/5 text-slate-400 text-sm">
               Aucune vente trouvée pour ce produit sur la période sélectionnée.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/40 custom-scrollbar max-h-[50vh]">
+            <div className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/40 custom-scrollbar max-h-[50vh]">
               <table className="w-full text-left text-xs border-collapse font-sans">
                 <thead>
                   <tr className="bg-white/5 border-b border-white/10 text-[9px] font-black uppercase tracking-widest text-slate-400 sticky top-0 bg-slate-900 z-10">

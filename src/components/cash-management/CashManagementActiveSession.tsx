@@ -23,7 +23,7 @@ export function CashManagementActiveSession({
       <Card className="lg:col-span-2 p-6 space-y-6">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
               <Wallet size={24} />
             </div>
             <div>

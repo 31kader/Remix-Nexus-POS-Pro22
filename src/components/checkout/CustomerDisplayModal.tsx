@@ -66,12 +66,12 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75  animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl text-white space-y-5">
+      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md text-white space-y-5">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
               <Tv size={22} />
             </div>
             <div>
@@ -92,7 +92,7 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
         {/* Options */}
         <div className="space-y-4">
           {/* Option A: Ouvrir nouvelle fenêtre (même PC / Câble HDMI) */}
-          <div className="p-4 bg-slate-800/60 border border-slate-700/60 rounded-2xl flex items-center justify-between gap-4">
+          <div className="p-4 bg-slate-800/60 border border-slate-700/60 rounded-xl flex items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="text-xs font-black uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
                 <span>Écran Secondaire (Câble HDMI / Même PC)</span>
@@ -111,7 +111,7 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
           </div>
 
           {/* Option B: QR Code pour Smartphone / Tablette sans fil */}
-          <div className="p-5 bg-gradient-to-br from-indigo-950/40 via-slate-800/80 to-slate-800/80 border border-indigo-500/20 rounded-2xl flex flex-col items-center text-center space-y-3.5">
+          <div className="p-5 bg-gradient-to-br from-indigo-950/40 via-slate-800/80 to-slate-800/80 border border-indigo-500/20 rounded-xl flex flex-col items-center text-center space-y-3.5">
             <div className="space-y-1">
               <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center justify-center gap-1.5">
                 <Wifi size={15} />
@@ -123,7 +123,7 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
             </div>
 
             {/* QR Code Container */}
-            <div className="p-3 bg-white rounded-2xl shadow-2xl border-2 border-indigo-400/30">
+            <div className="p-3 bg-white rounded-xl shadow-md border-2 border-indigo-400/30">
               <QRCodeSVG value={wirelessUrl} size={155} />
             </div>
 
@@ -155,7 +155,7 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
         </div>
 
         {/* Action de test en direct */}
-        <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-2xl flex items-center justify-between">
+        <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between">
           <span className="text-xs text-slate-400">Vérifier la réception en temps réel :</span>
           <button
             type="button"

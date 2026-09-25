@@ -97,7 +97,7 @@ export function ExpiryListView({
                       }
                     }}
                     className={cn(
-                      "w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 border relative group/img overflow-hidden cursor-pointer shadow-lg transition-transform hover:scale-105",
+                      "w-20 h-20 rounded-xl flex items-center justify-center shrink-0 border relative group/img overflow-hidden cursor-pointer shadow-lg transition-transform hover:scale-105",
                       product.expiryStatus === 'expired' ? "bg-rose-500/10 border-rose-500/30 text-rose-500" :
                       product.expiryStatus === 'critical' ? "bg-amber-500/10 border-amber-500/30 text-amber-500" : 
                       "bg-indigo-500/10 border-indigo-500/20 text-indigo-500"
@@ -108,7 +108,7 @@ export function ExpiryListView({
                       <>
                         <img 
                           src={productImg} 
-                          className="w-full h-full object-cover rounded-2xl transition-all group-hover/img:scale-110" 
+                          className="w-full h-full object-cover rounded-xl transition-all group-hover/img:scale-110" 
                           alt={product.name} 
                           referrerPolicy="no-referrer"
                         />
@@ -328,7 +328,7 @@ export function ExpiryListView({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-3xl w-full bg-slate-900 border border-white/15 rounded-xl overflow-hidden shadow-2xl shadow-black p-6 flex flex-col items-center"
+              className="relative max-w-3xl w-full bg-slate-900 border border-white/15 rounded-xl overflow-hidden shadow-md shadow-black p-6 flex flex-col items-center"
             >
               <button 
                 onClick={() => setPreviewImage(null)}
@@ -337,11 +337,11 @@ export function ExpiryListView({
                 <X size={20} />
               </button>
 
-              <div className="w-full max-h-[65vh] flex items-center justify-center rounded-2xl overflow-hidden bg-black/50 p-2 border border-white/5">
+              <div className="w-full max-h-[65vh] flex items-center justify-center rounded-xl overflow-hidden bg-black/50 p-2 border border-white/5">
                 <img 
                   src={previewImage.url} 
                   alt={previewImage.title}
-                  className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-2xl" 
+                  className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-md" 
                 />
               </div>
 
@@ -370,7 +370,7 @@ export function ExpiryListView({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-md w-full bg-slate-900 border border-white/20 rounded-xl shadow-2xl p-6 space-y-4"
+              className="relative max-w-md w-full bg-slate-900 border border-white/20 rounded-xl shadow-md p-6 space-y-4"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <h3 className="text-base font-extrabold text-white uppercase tracking-tight flex items-center gap-2">
@@ -398,7 +398,7 @@ export function ExpiryListView({
                     type="date"
                     value={modalDate}
                     onChange={(e) => setModalDate(e.target.value)}
-                    className="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-white text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
 
@@ -411,7 +411,7 @@ export function ExpiryListView({
                     placeholder="Ex: LOT-2026-A1"
                     value={modalBatch}
                     onChange={(e) => setModalBatch(e.target.value)}
-                    className="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-white text-sm font-bold focus:border-indigo-500 outline-none transition-all"
+                    className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-3 text-white text-sm font-bold focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -419,7 +419,7 @@ export function ExpiryListView({
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => setQuickDateProduct(null)}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-wider text-white/60 transition-all"
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-wider text-white/60 transition-all"
                 >
                   Annuler
                 </button>
@@ -429,7 +429,7 @@ export function ExpiryListView({
                       handleSaveQuickDate(quickDateProduct, modalDate, modalBatch.trim() || undefined);
                     }
                   }}
-                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 rounded-2xl text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-500/25 transition-all"
+                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-lg shadow-indigo-500/25 transition-all"
                 >
                   Enregistrer
                 </button>

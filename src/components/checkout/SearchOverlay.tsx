@@ -33,7 +33,7 @@ export const SearchOverlay = memo(function SearchOverlay({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute top-full left-0 right-0 mt-3 bg-slate-950/98 border-2 border-indigo-500/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[100] overflow-hidden max-h-[65vh] flex flex-col  ring-2 ring-white/10"
+          className="absolute top-full left-0 right-0 mt-3 bg-slate-950/98 border-2 border-indigo-500/60 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[100] overflow-hidden max-h-[65vh] flex flex-col  ring-2 ring-white/10"
         >
           <div className="p-4 px-6 border-b border-white/15 bg-slate-900 flex items-center justify-between flex-shrink-0">
             <span className="text-xs font-black text-indigo-300 uppercase tracking-widest flex items-center gap-2">
@@ -58,7 +58,7 @@ export const SearchOverlay = memo(function SearchOverlay({
                     key={p.id || `search-res-${idx}`}
                     type="button"
                     className={cn(
-                      "w-full text-left p-4 lg:p-5 rounded-2xl flex items-center gap-5 transition-all group outline-none border",
+                      "w-full text-left p-4 lg:p-5 rounded-xl flex items-center gap-5 transition-all group outline-none border",
                       isSelected 
                         ? "bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300 shadow-xs scale-[1.01]"
                         : "hover:bg-indigo-600/20 border-white/5 hover:border-indigo-500/40"
@@ -74,10 +74,10 @@ export const SearchOverlay = memo(function SearchOverlay({
                     <SafeImage
                       src={p.imageUrl}
                       alt={p.name}
-                      className="w-16 h-16 object-cover rounded-2xl border-2 border-white/15 group-hover:border-indigo-400 transition-colors shadow-lg flex-shrink-0"
-                      containerClassName="w-16 h-16 rounded-2xl flex-shrink-0"
+                      className="w-16 h-16 object-cover rounded-xl border-2 border-white/15 group-hover:border-indigo-400 transition-colors shadow-lg flex-shrink-0"
+                      containerClassName="w-16 h-16 rounded-xl flex-shrink-0"
                       fallback={
-                        <div className="w-16 h-16 bg-slate-900 rounded-2xl flex-shrink-0 flex items-center justify-center text-slate-400 border-2 border-white/15 group-hover:border-indigo-400 transition-colors shadow-lg">
+                        <div className="w-16 h-16 bg-slate-900 rounded-xl flex-shrink-0 flex items-center justify-center text-slate-400 border-2 border-white/15 group-hover:border-indigo-400 transition-colors shadow-lg">
                           <Package size={28} />
                         </div>
                       }
@@ -110,7 +110,7 @@ export const SearchOverlay = memo(function SearchOverlay({
                 );
               })
             ) : (
-              <div className="p-12 text-center space-y-3">
+              <div className="p-6 text-center space-y-3">
                 <div className="w-16 h-16 bg-slate-900 rounded-full flex items-center justify-center mx-auto text-slate-500 border border-white/10">
                   <Search size={32} />
                 </div>

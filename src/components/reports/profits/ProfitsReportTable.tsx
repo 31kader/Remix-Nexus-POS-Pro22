@@ -305,7 +305,7 @@ export const ProfitsReportTable = memo(function ProfitsReportTable({
           })}
           {productProfitData.length === 0 && (
             <tr>
-              <td colSpan={isAdmin ? 7 : 6} className="p-12 text-center text-white/20 border-t border-white/5">
+              <td colSpan={isAdmin ? 7 : 6} className="p-6 text-center text-white/20 border-t border-white/5">
                 <ShoppingBag className="w-12 h-12 text-white/5 mx-auto mb-4" />
                 <p className="font-black uppercase tracking-widest text-xs">Aucun résultat</p>
               </td>
@@ -345,13 +345,13 @@ export const ProfitsReportTable = memo(function ProfitsReportTable({
       {/* Modal d'ajustement du Bénéfice Admin pour un produit spécifique */}
       {selectedProduct && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80  animate-in fade-in duration-200">
-          <div className="bg-[#0f1117] border border-indigo-500/30 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative overflow-hidden ring-1 ring-indigo-500/20 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#0f1117] border border-indigo-500/30 rounded-xl max-w-lg w-full p-6 shadow-md space-y-6 relative overflow-hidden ring-1 ring-indigo-500/20 max-h-[90vh] overflow-y-auto">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-emerald-500 to-indigo-500"></div>
 
             {/* Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl text-indigo-400">
+                <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-xl text-indigo-400">
                   <ShieldCheck size={20} />
                 </div>
                 <div>
@@ -373,7 +373,7 @@ export const ProfitsReportTable = memo(function ProfitsReportTable({
             </div>
 
             {/* Live Profit Banner */}
-            <div className="p-4 bg-slate-900/80 rounded-2xl border border-white/5 flex items-center justify-between">
+            <div className="p-4 bg-slate-900/80 rounded-xl border border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <TrendingUp size={20} className="text-emerald-400" />
                 <div>
@@ -439,7 +439,7 @@ export const ProfitsReportTable = memo(function ProfitsReportTable({
             </div>
 
             {/* Admin Calculators */}
-            <div className="p-4 bg-indigo-950/30 rounded-2xl border border-indigo-500/20 space-y-3">
+            <div className="p-4 bg-indigo-950/30 rounded-xl border border-indigo-500/20 space-y-3">
               <h5 className="text-[11px] font-black text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Calculator size={14} /> Calculateur Direct (Mise à jour en temps réel)
               </h5>

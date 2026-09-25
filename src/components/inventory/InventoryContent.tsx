@@ -79,7 +79,7 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
           </div>
         ) : inventoryTab === 'catalog' ? (
           <div className="space-y-6">
-            <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 w-fit shadow-sm">
+            <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 w-fit shadow-sm">
               <button
                 onClick={() => setActiveCatalogSubTab('pdf')}
                 className={cn(
@@ -124,7 +124,7 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
           <div className="space-y-4">
             <SupplierSyncManager supplierSyncs={supplierSyncs} suppliers={allSuppliers} products={products} />
             
-            <div className="mt-8 p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
+            <div className="mt-8 p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
               <div>
                 <h3 className="text-slate-900 dark:text-white font-bold mb-1">Restauration Complète</h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">Si vous rencontrez des problèmes d'affichage ou que certains produits semblent manquer, forcez une récupération depuis le cloud.</p>

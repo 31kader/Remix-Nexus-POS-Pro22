@@ -52,12 +52,12 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0f172a] p-8 rounded-xl shadow-2xl border border-slate-800 w-full max-w-md relative overflow-hidden"
+        className="bg-[#0f172a] p-5 rounded-xl shadow-md border border-slate-800 w-full max-w-md relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500"></div>
         
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/20 transform rotate-3">
+          <div className="w-20 h-20 bg-indigo-600 text-white rounded-xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/20 transform rotate-3">
             <Camera size={40} />
           </div>
           <h1 className="text-3xl font-black text-white uppercase  tracking-tighter">Live Audit</h1>
@@ -72,7 +72,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
               <input 
                 type="email" 
                 required
-                className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-all placeholder:text-slate-700"
+                className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-all placeholder:text-slate-700"
                 placeholder="agent@nexus.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -87,7 +87,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
               <input 
                 type={showPassword ? "text" : "password"} 
                 required
-                className="w-full pl-12 pr-12 py-4 bg-slate-900/50 border border-slate-800 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-all placeholder:text-slate-700 font-mono"
+                className="w-full pl-12 pr-12 py-4 bg-slate-900/50 border border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-white transition-all placeholder:text-slate-700 font-mono"
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -106,7 +106,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
             <motion.div 
                initial={{ opacity: 0, x: -10 }}
                animate={{ opacity: 1, x: 0 }}
-               className="bg-rose-500/10 text-rose-400 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 border border-rose-500/20"
+               className="bg-rose-500/10 text-rose-400 p-4 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 border border-rose-500/20"
             >
               <AlertCircle size={16} />
               {error}
@@ -115,7 +115,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
 
           <Button 
             type="submit" 
-            className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-normal shadow-xl shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-500"
+            className="w-full py-5 rounded-xl font-black text-xs uppercase tracking-normal shadow-xl shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-500"
             disabled={isLoggingIn}
           >
             {isLoggingIn ? "Authentification..." : "Accéder à la Caméra"}

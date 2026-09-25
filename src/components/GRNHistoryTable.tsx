@@ -128,7 +128,7 @@ export function GRNHistoryTable({
             })}
             {filteredGRNs.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-8 text-center text-slate-500">Aucun bon de réception trouvé.</td>
+                <td colSpan={4} className="p-5 text-center text-slate-500">Aucun bon de réception trouvé.</td>
               </tr>
             )}
           </tbody>

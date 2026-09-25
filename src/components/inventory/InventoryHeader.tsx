@@ -44,7 +44,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80  p-6 rounded-xl shadow-sm dark:shadow-xl">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
               <Boxes size={22} />
             </div>
             <div>
@@ -95,7 +95,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
       {/* KPI Cards (Summary Metrics) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
             <Package size={22} />
           </div>
@@ -105,7 +105,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
             <TrendingUp size={22} />
           </div>
@@ -118,7 +118,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
             <AlertTriangle size={22} />
           </div>
@@ -128,7 +128,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-center gap-3.5 shadow-sm">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
           <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0">
             <AlertCircle size={22} />
           </div>
@@ -140,7 +140,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
       </div>
 
       {/* Navigation Tabs Bar */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl overflow-x-auto no-scrollbar shadow-inner">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-x-auto no-scrollbar shadow-inner">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = inventoryTab === tab.id;

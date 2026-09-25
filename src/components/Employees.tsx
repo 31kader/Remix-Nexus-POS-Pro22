@@ -85,7 +85,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
 
   return (
     <div className="space-y-12 text-left p-2 animate-in fade-in duration-700">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-10">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
         <div className="border-l-4 border-indigo-600 pl-8 space-y-2">
           <h2 className="text-4xl font-black text-white tracking-tighter uppercase  leading-none">
             STAFF <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">OPERATIONS</span>
@@ -94,7 +94,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-6">
-          <div className="flex bg-black/40 p-2 rounded-xl border border-white/5 shadow-2xl ring-1 ring-white/10  overflow-x-auto no-scrollbar">
+          <div className="flex bg-black/40 p-2 rounded-xl border border-white/5 shadow-md ring-1 ring-white/10  overflow-x-auto no-scrollbar">
             {[
               { id: 'info', label: 'ANALYTICS' },
               { id: 'team', label: 'ACCOUNTS' },
@@ -107,7 +107,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
                 type="button"
                 onClick={() => setHrTab(tab.id as any)} 
                 className={cn(
-                  "px-8 py-3 rounded-xl text-[10px] font-black tracking-normal transition-all whitespace-nowrap active:scale-95 ",
+                  "px-5 py-3 rounded-xl text-[10px] font-black tracking-normal transition-all whitespace-nowrap active:scale-95 ",
                   hrTab === tab.id
                     ? "bg-indigo-600 text-white shadow-xs border border-indigo-400 ring-1 ring-white/20"
                     : "text-slate-600 hover:text-white hover:bg-white/5"
@@ -121,7 +121,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
           <button
             type="button"
             onClick={() => { setEditingEmployee(null); setIsModalOpen(true); }}
-            className="group relative overflow-hidden flex items-center gap-4 px-10 py-5 bg-white text-black text-[11px] font-black uppercase tracking-normal rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-2xl border border-white/10 "
+            className="group relative overflow-hidden flex items-center gap-4 px-6 py-5 bg-white text-black text-[11px] font-black uppercase tracking-normal rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-md border border-white/10 "
           >
             <div className="absolute inset-0 bg-indigo-600 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
             <Plus size={20} className="relative z-10 transition-colors group-hover:text-white" strokeWidth={3} />
@@ -146,7 +146,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
           />
 
           {/* Grid of employees */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {employees.map((employee: Employee, idx: number) => {
               const perf = employeePerformance[employee.id] || { totalSales: 0, transactionCount: 0 };
               return (

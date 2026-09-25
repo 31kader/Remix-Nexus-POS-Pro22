@@ -52,7 +52,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
       )}
 
       {cart.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-12 text-center max-w-sm mx-auto select-none">
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-6 text-center max-w-sm mx-auto select-none">
           <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center mb-5 shadow-sm dark:shadow-xl border border-slate-200 dark:border-zinc-800">
             <ShoppingBag size={44} strokeWidth={1.5} className="text-slate-400 dark:text-zinc-600" />
           </div>

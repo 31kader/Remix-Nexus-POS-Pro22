@@ -28,7 +28,7 @@ export function ProductStockSection({
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 bg-white/5 p-6 rounded-2xl border border-white/5 shadow-xl ring-1 ring-white/5">
+    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 bg-white/5 p-6 rounded-xl border border-white/5 shadow-xl ring-1 ring-white/5">
       {/* 1. Stock actuel */}
       <div className="space-y-2 group col-span-1">
         <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">

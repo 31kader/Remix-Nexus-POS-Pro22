@@ -242,12 +242,12 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
   const selectedCustomerObj = activeCustomerId ? customerMap.get(activeCustomerId) : null;
 
   return (
-    <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-2xl overflow-hidden h-full">
+    <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-md overflow-hidden h-full">
       
       {/* Header & Filter by Customer */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 flex-shrink-0">
             <UserCheck size={20} />
           </div>
           <div>
@@ -301,7 +301,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Lignes</p>
             <p className="text-base font-black text-white font-mono mt-0.5">{stats.totalNotes}</p>
@@ -311,7 +311,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
           </div>
         </div>
 
-        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">Versements ({stats.versementsCount})</p>
             <p className="text-base font-black text-emerald-400 font-mono mt-0.5">
@@ -323,7 +323,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
           </div>
         </div>
 
-        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black text-rose-400 uppercase tracking-wider">Retraits ({stats.retraitsCount})</p>
             <p className="text-base font-black text-rose-400 font-mono mt-0.5">
@@ -335,7 +335,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
           </div>
         </div>
 
-        <div className="bg-slate-950/70 border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-black text-indigo-300 uppercase tracking-wider">Solde Règlements</p>
             <p className={cn(
@@ -352,7 +352,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
       </div>
 
       {/* Quick Entry Box */}
-      <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center gap-2.5">
+      <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2.5">
         <select
           value={targetCustomerId || activeCustomerId || ''}
           onChange={(e) => setTargetCustomerId(e.target.value)}
@@ -471,7 +471,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
       </div>
 
       {/* Panoramic Table */}
-      <div className="flex-1 overflow-auto rounded-2xl border border-slate-800 bg-slate-950/60">
+      <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/60">
         {paginatedNotes.length > 0 ? (
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>

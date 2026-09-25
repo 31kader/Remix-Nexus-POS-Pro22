@@ -340,7 +340,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
           </AnimatePresence>
 
           {editingTransaction && (
-            <div className="mx-3 mt-2.5 p-3 bg-amber-500/15 dark:bg-amber-950/40 border-2 border-amber-500/40 dark:border-amber-500/50 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="mx-3 mt-2.5 p-3 bg-amber-500/15 dark:bg-amber-950/40 border-2 border-amber-500/40 dark:border-amber-500/50 rounded-xl flex flex-wrap items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center shrink-0">
                   <Edit3 className="w-5 h-5 animate-pulse" />
@@ -407,7 +407,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 z-[101] bg-zinc-950 border-t border-zinc-800 rounded-t-[3rem] shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+                  className="fixed inset-x-0 bottom-0 z-[101] bg-zinc-950 border-t border-zinc-800 rounded-t-[3rem] shadow-md max-h-[90vh] overflow-y-auto no-scrollbar"
                 >
                   <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto my-4" />
                   <CheckoutControlsPanel
@@ -514,7 +514,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
       {/* Mobile Navigation Bar */}
       {isMobile && (
         <div className="bg-zinc-950 border-t border-zinc-800 p-4 flex items-center justify-between gap-4 z-[90]">
-          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5">
+          <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
             <button
               onClick={() => setMobileTab('cart')}
               className={cn(

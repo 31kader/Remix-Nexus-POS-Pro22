@@ -67,7 +67,7 @@ export function LoyaltySection({ formData, setFormData }: SectionProps) {
           {['Argent', 'Or', 'Platine'].map((tier, i) => (
             <div key={tier} className="bg-slate-900 border border-white/5 p-6 rounded-xl hover:translate-y-[-4px] transition-all cursor-default group">
               <div className={cn(
-                "w-12 h-12 rounded-2xl mb-4 flex items-center justify-center shadow-lg",
+                "w-12 h-12 rounded-xl mb-4 flex items-center justify-center shadow-lg",
                 i === 0 ? "bg-slate-500/20 text-slate-400" : 
                 i === 1 ? "bg-amber-500/20 text-amber-500" : "bg-purple-500/20 text-purple-500"
               )}>

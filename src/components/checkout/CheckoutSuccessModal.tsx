@@ -50,10 +50,10 @@ export function CheckoutSuccessModal({
           initial={{ opacity: 0, scale: 0.9, y: 50 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-8 py-6 rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 min-w-[380px]  ring-2 ring-emerald-500/20"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-5 py-6 rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 min-w-[380px]  ring-2 ring-emerald-500/20"
         >
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-inner">
+            <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/30 shadow-inner">
               <CheckCircle2 size={32} />
             </div>
             <div className="flex-1">
@@ -93,7 +93,7 @@ export function CheckoutSuccessModal({
             <div className="flex gap-3">
               <button 
                 onClick={() => printReceipt(lastTransaction, settings)}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 py-3.5 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-lg active:scale-95 border border-indigo-400"
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-lg active:scale-95 border border-indigo-400"
               >
                 <Printer size={16} /> Imprimer Reçu
               </button>
@@ -112,7 +112,7 @@ export function CheckoutSuccessModal({
                       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
                     }
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 py-3.5 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all border border-emerald-400 shadow-sm active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 py-3.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-white transition-all border border-emerald-400 shadow-sm active:scale-95"
                 >
                   <MessageSquare size={16} /> WhatsApp
                 </button>

@@ -94,7 +94,7 @@ export function ProductMultiExpirySection({
       {formData.useMultiExpiry && (
         <div className="space-y-5 animate-fadeIn border-t border-white/5 pt-4">
           {/* Inputs for adding new batch */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-black/30 p-4 rounded-2xl border border-white/5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-black/30 p-4 rounded-xl border border-white/5">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-white/50 uppercase tracking-widest">N° de Lot</label>
               <input 
@@ -168,11 +168,11 @@ export function ProductMultiExpirySection({
 
           {/* Batches Table List */}
           {(!formData.batches || formData.batches.length === 0) ? (
-            <div className="p-8 text-center text-white/20  border border-dashed border-white/5 rounded-2xl">
+            <div className="p-5 text-center text-white/20  border border-dashed border-white/5 rounded-xl">
               Aucun lot enregistré. Renseignez un lot pour démarrer le suivi multi-DLC.
             </div>
           ) : (
-            <div className="overflow-hidden border border-white/5 rounded-2xl">
+            <div className="overflow-hidden border border-white/5 rounded-xl">
               <table className="w-full text-left text-xs text-white">
                 <thead>
                   <tr className="bg-white/5 text-white/40 uppercase tracking-wider text-[9px] font-black">

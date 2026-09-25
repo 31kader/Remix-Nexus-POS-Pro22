@@ -244,7 +244,7 @@ export const AttendanceTab = memo(function AttendanceTab({
         handleExpressClockIn={handleExpressClockIn}
       />
 
-      <div className="flex flex-col xl:flex-row justify-between items-end gap-6 mt-12 bg-white/[0.02] p-8 rounded-xl border border-white/5">
+      <div className="flex flex-col xl:flex-row justify-between items-end gap-6 mt-12 bg-white/[0.02] p-5 rounded-xl border border-white/5">
         <div>
           <h4 className="font-black text-white  uppercase tracking-wider flex items-center gap-2">
             <History size={18} className="text-indigo-400" />
@@ -295,7 +295,7 @@ export const AttendanceTab = memo(function AttendanceTab({
         </div>
       </div>
       
-      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
+      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>

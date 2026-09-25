@@ -93,7 +93,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
           <select 
             value={formData.receiptTemplate || 'standard'}
             onChange={e => setFormData({ ...formData, receiptTemplate: e.target.value as any })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
           >
             <option value="standard">Standard NEXUS (Recommandé)</option>
             <option value="minimal">Compact Éco (Moins de papier)</option>
@@ -107,7 +107,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
           <select 
             value={formData.paperFormat || '80mm'}
             onChange={e => setFormData({ ...formData, paperFormat: e.target.value as any })}
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
           >
             <option value="80mm">Standard 80mm (Grande imprimante caisse)</option>
             <option value="60mm">Compact 58mm / 60mm (Mini imprimante mobile)</option>
@@ -128,7 +128,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
             value={formData.customReceiptMessage ?? 'Les articles soldés ne sont ni repris ni échangés.'}
             onChange={e => setFormData({ ...formData, customReceiptMessage: e.target.value })}
             placeholder="Ex: Échange possible sous 48h avec ticket"
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
           />
         </div>
 
@@ -142,7 +142,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
             value={formData.receiptSocialQrUrl ?? ''}
             onChange={e => setFormData({ ...formData, receiptSocialQrUrl: e.target.value })}
             placeholder="https://facebook.com/votrepage ou lien Google Maps"
-            className="w-full h-14 bg-slate-900 border border-white/5 rounded-2xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
+            className="w-full h-14 bg-slate-900 border border-white/5 rounded-xl px-4 text-white outline-none focus:border-indigo-500/50 transition-all font-medium"
           />
         </div>
       </div>

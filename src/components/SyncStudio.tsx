@@ -402,12 +402,12 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
   }, [activeCategory, categorisedItems, searchQuery]);
 
   return (
-    <div className="min-h-full p-4 lg:p-8 bg-[#05070a] text-slate-100 space-y-8 overflow-y-auto no-scrollbar">
+    <div className="min-h-full p-4 lg:p-5 bg-[#05070a] text-slate-100 space-y-8 overflow-y-auto no-scrollbar">
       {/* En-tête principal */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xs">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xs">
               <Activity size={24} />
             </div>
             <div>
@@ -478,7 +478,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       {/* Cartes de Diagnostic et d'État */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Carte 1 : État Réseau */}
-        <div className="p-5 rounded-2xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="p-5 rounded-xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">État Réseau</span>
             <div className={cn("p-2 rounded-xl border", isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border-rose-500/30")}>
@@ -494,7 +494,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
         </div>
 
         {/* Carte 2 : File d'attente non synchronisée */}
-        <div className="p-5 rounded-2xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="p-5 rounded-xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">En Attente de Synchro</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30">
@@ -510,7 +510,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
         </div>
 
         {/* Carte 3 : Authentification Supabase */}
-        <div className="p-5 rounded-2xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="p-5 rounded-xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Authentification Supabase</span>
             <button 
@@ -550,7 +550,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
         </div>
 
         {/* Carte 4 : Dernière Synchronisation */}
-        <div className="p-5 rounded-2xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
+        <div className="p-5 rounded-xl bg-black/40 border border-white/5 shadow-xl relative overflow-hidden group">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Dernière Synchro</span>
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
@@ -568,7 +568,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
 
       {/* Alerte si Erreur 401 détectée */}
       {authStatus === 'unauthorized' && (
-        <div className="p-5 rounded-2xl bg-rose-950/60 border-2 border-rose-500/50 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl">
+        <div className="p-5 rounded-xl bg-rose-950/60 border-2 border-rose-500/50 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/40">
               <ShieldAlert size={26} />
@@ -591,7 +591,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
 
       {/* Section Dead Letter Queue (Éléments en Échec) */}
       {failedQueue.length > 0 && (
-        <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-500/30 text-white space-y-4 shadow-xl">
+        <div className="p-5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-white space-y-4 shadow-xl">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40">
@@ -664,7 +664,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       )}
 
       {/* Barre de Filtres et Recherche de la File */}
-      <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-2xl space-y-4">
+      <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Filtres par Onglets */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -745,8 +745,8 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       {/* Liste Détaillée des Éléments Non Synchronisés */}
       <div className="space-y-3">
         {filteredList.length === 0 ? (
-          <div className="p-12 text-center bg-black/30 border border-white/5 rounded-xl space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner">
+          <div className="p-6 text-center bg-black/30 border border-white/5 rounded-xl space-y-3">
+            <div className="w-14 h-14 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 size={28} />
             </div>
             <h3 className="text-base font-black text-white uppercase ">Aucun élément en attente</h3>
@@ -762,7 +762,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             return (
               <div 
                 key={itemId}
-                className="p-4 rounded-2xl bg-black/40 border border-white/5 hover:border-indigo-500/30 transition-all space-y-3 shadow-lg ring-1 ring-white/5"
+                className="p-4 rounded-xl bg-black/40 border border-white/5 hover:border-indigo-500/30 transition-all space-y-3 shadow-lg ring-1 ring-white/5"
               >
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">

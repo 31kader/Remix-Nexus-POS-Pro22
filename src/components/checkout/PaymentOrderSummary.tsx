@@ -67,7 +67,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
     <div className="flex flex-col h-full bg-white dark:bg-black/20 select-none">
       <div className={cn(
         "flex-1 overflow-y-auto custom-scrollbar",
-        isDense ? "p-4 space-y-4" : "p-6 sm:p-8 space-y-8"
+        isDense ? "p-4 space-y-4" : "p-6 sm:p-5 space-y-8"
       )}>
         {/* Mode de Service */}
         <div className={cn(isDense ? "space-y-2" : "space-y-6")}>
@@ -95,7 +95,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 )}
               >
                 {!isDense ? (
-                  <div className={cn("p-2.5 sm:p-3 rounded-2xl transition-all group-hover:scale-110", deliveryMethod === m.id ? "bg-white/20 shadow-inner" : "bg-white dark:bg-black/40 border border-slate-200 dark:border-white/5")}>
+                  <div className={cn("p-2.5 sm:p-3 rounded-xl transition-all group-hover:scale-110", deliveryMethod === m.id ? "bg-white/20 shadow-inner" : "bg-white dark:bg-black/40 border border-slate-200 dark:border-white/5")}>
                     <m.icon size={24} className={cn("transition-colors", deliveryMethod === m.id ? "text-white" : "text-slate-600 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400")} />
                   </div>
                 ) : (
@@ -185,17 +185,17 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               placeholder="CODE COUPON / CADEAU..."
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/40 transition-all"
+              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/40 transition-all"
             />
             <button
               onClick={applyVoucher}
-              className="px-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-black text-[9px] uppercase tracking-normal text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
+              className="px-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-black text-[9px] uppercase tracking-normal text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
             >
               APPLIQUER
             </button>
           </div>
           {appliedVoucher && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-black">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-black">
               <span>{appliedVoucher.code} ({appliedVoucher.type === 'percent' ? `${appliedVoucher.value}%` : `${appliedVoucher.currentBalance ?? appliedVoucher.value} ${currency}`})</span>
               <button onClick={() => setAppliedVoucher(null)} className="hover:text-rose-500 transition-colors p-1 cursor-pointer"><X size={16} /></button>
             </div>
@@ -284,7 +284,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
         {/* Terminal de Règlement & Monnaie Rapide (Dinars Algériens) */}
         {total > 0 && setReceivedAmount && (
-          <div className="p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-2xl space-y-2.5 shadow-sm">
+          <div className="p-3 bg-white dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-xl space-y-2.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
                 <Banknote size={14} className="text-emerald-500" />

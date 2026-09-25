@@ -72,7 +72,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.inline) {
         return (
-          <div className="p-6 bg-slate-900 border border-rose-500/30 rounded-2xl text-center space-y-4 m-4">
+          <div className="p-6 bg-slate-900 border border-rose-500/30 rounded-xl text-center space-y-4 m-4">
             <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20 text-rose-500">
               <AlertTriangle size={24} />
             </div>
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 font-sans">
-          <div className="max-w-md w-full bg-slate-900 border border-white/5 rounded-xl p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in duration-500">
+          <div className="max-w-md w-full bg-slate-900 border border-white/5 rounded-xl p-5 shadow-md space-y-6 text-center animate-in fade-in zoom-in duration-500">
             <div className="w-20 h-20 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20">
               <AlertTriangle className="text-rose-500" size={40} />
             </div>
@@ -104,7 +104,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <Button 
               size="lg"
               onClick={this.handleReload}
-              className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl"
+              className="w-full h-14 bg-white text-black hover:bg-slate-200 rounded-xl flex items-center justify-center gap-3 font-black uppercase tracking-widest transition-all active:scale-95 shadow-xl"
             >
               <RefreshCcw size={20} />
               Rafraîchir la page

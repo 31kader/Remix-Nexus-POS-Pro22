@@ -9,7 +9,7 @@ interface Props {
 
 export const SupplierOrdersTab: React.FC<Props> = ({ myOrders, settings }) => {
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-5 space-y-6">
       <h2 className="text-xl font-bold text-slate-800">Historique des Commandes</h2>
       <div className="bg-white border-t border-slate-200 overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -25,7 +25,7 @@ export const SupplierOrdersTab: React.FC<Props> = ({ myOrders, settings }) => {
           <tbody className="divide-y divide-slate-100">
             {myOrders.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-12 text-center text-slate-400 ">Aucune commande trouvée</td>
+                <td colSpan={5} className="p-6 text-center text-slate-400 ">Aucune commande trouvée</td>
               </tr>
             ) : (
               myOrders.map(order => (

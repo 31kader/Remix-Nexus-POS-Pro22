@@ -49,13 +49,13 @@ export const TeamManagement = React.memo(function TeamManagement({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8 text-left"
     >
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/[0.02] p-8 rounded-xl border border-white/5">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white/[0.02] p-5 rounded-xl border border-white/5">
         <div>
           <h3 className="text-2xl font-black text-white  uppercase tracking-tighter">Gestion de l'Équipe<span className="text-indigo-500">.nexus</span></h3>
           <p className="text-[10px] text-white/30 font-black uppercase tracking-normal mt-1">Access Control & Role Allocation</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 ">
+          <div className="flex bg-white/5 p-1.5 rounded-xl border border-white/10 ">
             <button 
               onClick={() => setActiveSubTab('users')}
               className={cn(
@@ -80,7 +80,7 @@ export const TeamManagement = React.memo(function TeamManagement({
             <button 
               onClick={handlePurgeAll}
               disabled={isProcessing}
-              className="flex items-center gap-2 px-6 py-3.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
+              className="flex items-center gap-2 px-6 py-3.5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
             >
               <Trash2 size={16} />
               PURGE TOTALE
@@ -89,7 +89,7 @@ export const TeamManagement = React.memo(function TeamManagement({
 
           <button 
             onClick={() => setIsAddUserModalOpen(true)}
-            className="flex items-center gap-2 px-8 py-4 bg-white text-black rounded-2xl shadow-xl hover:bg-indigo-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-normal active:scale-95 group"
+            className="flex items-center gap-2 px-5 py-4 bg-white text-black rounded-xl shadow-xl hover:bg-indigo-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-normal active:scale-95 group"
           >
             <Plus size={18} className="group-hover:rotate-90 transition-transform duration-500" />
             AJOUTER MEMBRE

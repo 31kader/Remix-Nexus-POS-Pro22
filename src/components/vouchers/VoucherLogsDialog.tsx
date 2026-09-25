@@ -14,7 +14,7 @@ export function VoucherLogsDialog({ voucher, onClose }: VoucherLogsDialogProps) 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-[#1a1a24] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/10"
+        className="bg-[#1a1a24] rounded-xl shadow-md w-full max-w-md overflow-hidden border border-white/10"
       >
         <div className="p-6 space-y-6 text-left">
           <div className="flex items-center justify-between">
@@ -33,7 +33,7 @@ export function VoucherLogsDialog({ voucher, onClose }: VoucherLogsDialogProps) 
 
           <div className="space-y-3">
             {(!voucher.usageLogs || voucher.usageLogs.length === 0) ? (
-              <div className="p-8 text-center text-white/20  text-sm uppercase tracking-widest font-black">
+              <div className="p-5 text-center text-white/20  text-sm uppercase tracking-widest font-black">
                 Aucune utilisation enregistrée
               </div>
             ) : (

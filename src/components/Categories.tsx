@@ -193,7 +193,7 @@ export function Categories({ categories, onEdit, onDelete, onAdd }: CategoriesPr
         {rootCategories.map((category: any) => renderCategory(category))}
         
         {categories.length === 0 && (
-          <div className="p-8 text-center text-white/40 bg-white/5 rounded-xl border border-dashed border-white/10">
+          <div className="p-5 text-center text-white/40 bg-white/5 rounded-xl border border-dashed border-white/10">
             Aucune catégorie n'a été créée.
           </div>
         )}

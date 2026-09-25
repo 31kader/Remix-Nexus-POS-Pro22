@@ -116,7 +116,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
   if (step === 'updatePrices') {
     if (!lastPurchaseItems || lastPurchaseItems.length === 0 || !lastPurchaseItems.some(i => i.productId)) {
       return (
-        <Card className="p-12 text-center space-y-6 industrial-card">
+        <Card className="p-6 text-center space-y-6 industrial-card">
           <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
             <CheckCircle2 size={48} />
           </div>
@@ -134,7 +134,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
     return (
       <div className="relative">
         <div className="blur-[3px] pointer-events-none select-none transition-all duration-500">
-          <Card className="p-12 text-center space-y-6 industrial-card">
+          <Card className="p-6 text-center space-y-6 industrial-card">
             <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
               <CheckCircle2 size={48} />
             </div>
@@ -159,7 +159,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
 
   if (step === 'confirm') {
     return (
-      <Card className="p-12 text-center space-y-6 industrial-card">
+      <Card className="p-6 text-center space-y-6 industrial-card">
         <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
           <CheckCircle2 size={48} />
         </div>

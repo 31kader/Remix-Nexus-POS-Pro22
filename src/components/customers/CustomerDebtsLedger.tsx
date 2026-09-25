@@ -342,7 +342,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           
           {/* Sub-view Switcher */}
-          <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+          <div className="flex items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800">
             <button
               type="button"
               onClick={() => setTabView('debtors')}
@@ -436,14 +436,14 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher par nom ou tél..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
           <button
             type="button"
             onClick={() => setIsAddDebtModalOpen(true)}
-            className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-rose-600/20 flex items-center gap-2 shrink-0"
+            className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-rose-600/20 flex items-center gap-2 shrink-0"
           >
             <Plus size={16} />
             Ajouter une Dette
@@ -453,7 +453,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
       </div>
 
       {/* Debtors / Customer List */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-md">
         {displayList.length > 0 ? (
           <div className="divide-y divide-slate-800/80">
             {displayList.map((c: any) => {
@@ -465,7 +465,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
                   
                   {/* Left Info */}
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
                       isDebtor 
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' 
                         : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
@@ -571,7 +571,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
             <button
               type="button"
               onClick={() => setIsAddDebtModalOpen(true)}
-              className="px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-2 shadow-lg shadow-rose-600/20"
+              className="px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all inline-flex items-center gap-2 shadow-lg shadow-rose-600/20"
             >
               <Plus size={16} />
               Créer une Dette Immédiate
@@ -583,7 +583,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
       {/* MODAL : AJOUTER UNE DETTE CLIENT */}
       {isAddDebtModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#06080e]/90  flex items-center justify-center p-4 animate-in fade-in duration-200 select-none">
-          <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-xl w-full max-w-md p-6 space-y-5">
+          <div className="bg-slate-900 border border-slate-800 shadow-md rounded-xl w-full max-w-md p-6 space-y-5">
             
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">
