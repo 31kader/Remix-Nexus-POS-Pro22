@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Award, Edit2, Trash2, Plus, Download, Upload } from 'lucide-react';
 import { Brand } from '../types';
-import { Card, Button } from './ui';
+import { Card, Button, SafeImage } from './ui';
 import { exportToCSV } from '../lib/utils';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
@@ -127,14 +127,11 @@ export function Brands({ brands, onEdit, onDelete, onAdd }: BrandsProps) {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
                 {brand.logoUrl ? (
-                  <img 
+                  <SafeImage 
                     src={brand.logoUrl} 
                     alt={brand.name} 
                     className="w-full h-full object-contain" 
-                    onError={(e) => { 
-                      e.currentTarget.onerror = null; 
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(brand.name)}&background=random`; 
-                    }} 
+                    fallback={<Award size={20} />}
                   />
                 ) : (
                   <Award size={20} />

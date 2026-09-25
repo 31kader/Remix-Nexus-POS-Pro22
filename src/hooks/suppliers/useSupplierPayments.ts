@@ -98,7 +98,7 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
       });
 
       try {
-        await localDb.update('suppliers', viewingDetailsSupplier.id, updatedSupplier);
+        await localDb.update(`suppliers/${viewingDetailsSupplier.id}`, updatedSupplier);
       } catch (localErr) {
         console.warn("LocalDb supplier update:", localErr);
       }

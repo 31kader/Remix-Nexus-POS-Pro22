@@ -137,7 +137,7 @@ export function CustomerFinancialModal({
                 Régler toute la dette ({Math.abs(selectedCustomer.balance || 0).toFixed(2)})
               </button>
             )}
-            {[10, 20, 50, 100, 200, 505].map(val => (
+            {[500, 1000, 2000, 5000].map(val => (
               <button
                 key={val}
                 type="button"

@@ -2,12 +2,13 @@ import React, { useMemo } from 'react';
 import { ArrowUpRight, ArrowDownRight, Wallet, DollarSign, Calendar } from 'lucide-react';
 import { formatSafe } from '../../lib/utils';
 import { Card } from '../ui';
-import { Transaction, Expense, SupplierPayment, CompanySettings } from '../../types';
+import { Transaction, Expense, SupplierPayment, CompanySettings, ProductReturn } from '../../types';
 
 interface CashflowReportProps {
   transactions: Transaction[];
   expenses: Expense[];
   supplierPayments: SupplierPayment[];
+  returns?: ProductReturn[];
   settings: CompanySettings;
 }
 
@@ -15,30 +16,34 @@ export const CashflowReport = React.memo(function CashflowReport({
   transactions,
   expenses,
   supplierPayments,
+  returns = [],
   settings,
 }: CashflowReportProps) {
   const flowData = useMemo(() => {
     // Cash In: Transactions (sales)
-    const activeTx = transactions.filter(t => t.status !== 'returned');
-    const cashInTotal = activeTx.reduce((sum, t) => sum + t.total, 0);
+    const activeTx = transactions.filter(t => t.status !== 'returned' && t.status !== 'cancelled');
+    const cashInTotal = activeTx.reduce((sum, t) => sum + (t.total || 0), 0);
 
     // Cash In breakdown by method
     const inByMethod: Record<string, number> = {};
     activeTx.forEach(t => {
       const method = t.paymentMethod || 'Autre / Inconnu';
-      inByMethod[method] = (inByMethod[method] || 0) + t.total;
+      inByMethod[method] = (inByMethod[method] || 0) + (t.total || 0);
     });
 
     // Cash Out: Expenses
-    const expensesTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const expensesTotal = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
     // Cash Out: Supplier Payments
-    const supplierTotal = supplierPayments.reduce((sum, s) => sum + s.amount, 0);
+    const supplierTotal = supplierPayments.reduce((sum, s) => sum + (s.amount || 0), 0);
 
-    const cashOutTotal = expensesTotal + supplierTotal;
+    // Cash Out: Customer Refunds (Returns)
+    const returnsTotal = (returns || []).reduce((sum, r) => sum + (Number(r.totalRefund ?? r.refundAmount) || 0), 0);
+
+    const cashOutTotal = expensesTotal + supplierTotal + returnsTotal;
     const netCashflow = cashInTotal - cashOutTotal;
 
-    // Timeline of all transactions, expenses, supplier payments combined
+    // Timeline of all transactions, expenses, supplier payments, returns combined
     const timeline = [
       ...activeTx.map(t => ({
         type: 'in' as const,
@@ -64,6 +69,14 @@ export const CashflowReport = React.memo(function CashflowReport({
         timestamp: s.date,
         user: 'Acheteur',
       })),
+      ...(returns || []).map(r => ({
+        type: 'out' as const,
+        title: `Remboursement Client (Retour #${String(r.id || "").slice(-8)})`,
+        category: 'Retour / Remboursement',
+        amount: Number(r.totalRefund ?? r.refundAmount) || 0,
+        timestamp: r.timestamp || r.date || new Date().toISOString(),
+        user: 'Caisse',
+      })),
     ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return {
@@ -71,11 +84,12 @@ export const CashflowReport = React.memo(function CashflowReport({
       inByMethod,
       expensesTotal,
       supplierTotal,
+      returnsTotal,
       cashOutTotal,
       netCashflow,
       timeline: timeline.slice(0, 30), // Top 30 recent ops
     };
-  }, [transactions, expenses, supplierPayments]);
+  }, [transactions, expenses, supplierPayments, returns]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -91,11 +105,11 @@ export const CashflowReport = React.memo(function CashflowReport({
 
         <Card id="card-cash-out" className="p-6 border-l-4 border-l-rose-500 bg-white/5 text-left">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Sorties (Charges + Fournisseurs)</p>
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Sorties (Charges + Fournisseurs + Retours)</p>
             <ArrowDownRight className="text-rose-500" size={18} />
           </div>
           <h4 className="text-3xl font-black text-rose-400">-{flowData.cashOutTotal.toLocaleString()} {settings.currency}</h4>
-          <p className="text-xs text-white/40 mt-2">Dépenses ({flowData.expensesTotal.toLocaleString()}) & Fournisseurs ({flowData.supplierTotal.toLocaleString()})</p>
+          <p className="text-xs text-white/40 mt-2">Dépenses ({flowData.expensesTotal.toLocaleString()}), Fournisseurs ({flowData.supplierTotal.toLocaleString()}){flowData.returnsTotal > 0 ? ` & Retours (${flowData.returnsTotal.toLocaleString()})` : ''}</p>
         </Card>
 
         <Card id="card-cash-net" className={`p-6 border-l-4 bg-white/5 text-left ${flowData.netCashflow >= 0 ? "border-l-indigo-500" : "border-l-amber-500"}`}>

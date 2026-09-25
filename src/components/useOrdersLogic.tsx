@@ -151,7 +151,8 @@ export function useOrdersLogic(props: OrdersProps) {
       const { data, error } = await supabase
         .from('online_orders')
         .select('*')
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(500);
 
       if (error) throw error;
 

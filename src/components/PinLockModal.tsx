@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, Delete, UserCheck, ShieldAlert, Sparkles, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import bcrypt from 'bcryptjs';
+import { getSecureItem, setSecureItem } from '../lib/security';
 
 interface PinLockModalProps {
   isOpen: boolean;
@@ -47,7 +48,14 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
   };
 
   const verifyPin = (enteredPin: string) => {
-    const customStoredPin = localStorage.getItem('nexus_pos_master_pin');
+    let customStoredPin = getSecureItem<string>('nexus_pos_master_pin');
+    if (!customStoredPin) {
+      const rawStored = localStorage.getItem('nexus_pos_master_pin');
+      if (rawStored) {
+        customStoredPin = rawStored;
+        setSecureItem('nexus_pos_master_pin', rawStored);
+      }
+    }
     const hasCustomConfigured = !!customStoredPin || (expectedPin && expectedPin !== '0000');
 
     let isValid = false;
@@ -59,7 +67,8 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
         isValid = true;
         try {
           const hashed = bcrypt.hashSync(enteredPin, 10);
-          localStorage.setItem('nexus_pos_master_pin', hashed);
+          setSecureItem('nexus_pos_master_pin', hashed);
+          localStorage.removeItem('nexus_pos_master_pin');
         } catch (_) {}
       }
     }

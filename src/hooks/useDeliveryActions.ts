@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
+import { enqueueStockAdjustment } from '../services/SyncService';
 import { Customer } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
 
@@ -109,6 +110,25 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
           };
           await localDb.insert(txRef, transaction);
           updates.syncedToPos = true;
+
+          // Décrémenter le stock des articles vendus pour éviter les stocks fantômes
+          for (const item of (order.items || [])) {
+            const prodId = item.productId || item.id;
+            const qty = Number(item.quantity || 1);
+            if (prodId && qty > 0) {
+              enqueueStockAdjustment(prodId, -qty);
+              const existingProd = allProducts.find((p: any) => p && p.id === prodId);
+              if (existingProd) {
+                const newStock = (Number(existingProd.stock) || 0) - qty;
+                await localDb.update(`products/${prodId}`, {
+                  stock: newStock,
+                  updatedAt: new Date().toISOString()
+                });
+              } else {
+                await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+              }
+            }
+          }
         }
 
         // Update customer's loyalty points

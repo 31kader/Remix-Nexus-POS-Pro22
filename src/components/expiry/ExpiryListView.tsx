@@ -19,6 +19,7 @@ import { fr } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { Product } from '../../types';
+import { SafeImage } from '../ui';
 
 interface ExpiryListViewProps {
   paginatedProducts: any[];
@@ -106,7 +107,7 @@ export function ExpiryListView({
                   >
                     {productImg ? (
                       <>
-                        <img 
+                        <SafeImage 
                           src={productImg} 
                           className="w-full h-full object-cover rounded-xl transition-all group-hover/img:scale-110" 
                           alt={product.name} 
@@ -327,7 +328,7 @@ export function ExpiryListView({
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
               className="relative max-w-3xl w-full bg-slate-900 border border-white/15 rounded-xl overflow-hidden shadow-md shadow-black p-6 flex flex-col items-center"
             >
               <button 
@@ -338,7 +339,7 @@ export function ExpiryListView({
               </button>
 
               <div className="w-full max-h-[65vh] flex items-center justify-center rounded-xl overflow-hidden bg-black/50 p-2 border border-white/5">
-                <img 
+                <SafeImage 
                   src={previewImage.url} 
                   alt={previewImage.title}
                   className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-md" 
@@ -369,7 +370,7 @@ export function ExpiryListView({
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
               className="relative max-w-md w-full bg-slate-900 border border-white/20 rounded-xl shadow-md p-6 space-y-4"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">

@@ -117,7 +117,7 @@ export async function restoreBackupArchive(file: File): Promise<boolean> {
 
         if (backup.settings) {
           useCoreStore.getState().setSettings(backup.settings);
-          await localDb.insert('settings', backup.settings);
+          await localDb.insert('settings/company', backup.settings);
         }
 
         if (backup.products && Array.isArray(backup.products)) {

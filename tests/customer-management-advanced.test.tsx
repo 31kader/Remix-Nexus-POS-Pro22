@@ -302,7 +302,7 @@ describe('Advanced Customer Management Tests', () => {
     expect((cleaned as any).address).toBeUndefined();
     expect((cleaned as any).city).toBeUndefined();
     expect((cleaned as any).is_wholesale).toBeUndefined();
-    expect((cleaned as any).credit_limit).toBeUndefined();
+    expect((cleaned as any).credit_limit).toBe(50000);
 
     // Verify all keys are in TABLE_COLUMNS.customers
     Object.keys(cleaned).forEach(col => {

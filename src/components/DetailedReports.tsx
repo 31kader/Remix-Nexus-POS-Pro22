@@ -66,14 +66,18 @@ export const DetailedReports = memo(function DetailedReports({
 
   const exportAccountingCSV = () => {
     const headers = ['Date', 'Transaction ID', 'Total', 'Tax', 'Payment Method', 'Status'];
-    const rows = transactions.map(t => [
-      formatSafe(t.timestamp, 'yyyy-MM-dd HH:mm:ss'),
-      t.id,
-      t.total.toFixed(2),
-      (t.total * (settings.taxRate / 100)).toFixed(2),
-      t.paymentMethod || 'N/A',
-      t.status || 'completed'
-    ]);
+    const vatRate = Number(settings.taxRate || 19) / 100;
+    const rows = transactions.map(t => {
+      const taxAmount = (t.total || 0) - ((t.total || 0) / (1 + vatRate));
+      return [
+        formatSafe(t.timestamp, 'yyyy-MM-dd HH:mm:ss'),
+        t.id,
+        (t.total || 0).toFixed(2),
+        taxAmount.toFixed(2),
+        t.paymentMethod || 'N/A',
+        t.status || 'completed'
+      ];
+    });
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -87,9 +91,27 @@ export const DetailedReports = memo(function DetailedReports({
     document.body.removeChild(link);
   };
 
+  const returnsByTx = useMemo(() => {
+    const map = new Map<string, number>();
+    (returns || []).forEach(r => {
+      if (r?.transactionId) {
+        map.set(r.transactionId, (map.get(r.transactionId) || 0) + (Number(r.totalRefund ?? r.refundAmount) || 0));
+      }
+    });
+    return map;
+  }, [returns]);
+
   const totalRevenue = useMemo(() => {
-    return transactions.reduce((sum, t) => sum + (t.status === 'returned' || t.status === 'cancelled' ? 0 : (t.total || 0)), 0);
-  }, [transactions]);
+    return transactions.reduce((sum, t) => {
+      if (t.status === 'returned' || t.status === 'cancelled') return sum;
+      let amount = t.total || 0;
+      if (t.status === 'partially_returned') {
+        const refunded = returnsByTx.get(t.id) ?? Number(t.amountReturned) ?? 0;
+        amount = Math.max(0, amount - refunded);
+      }
+      return sum + amount;
+    }, 0);
+  }, [transactions, returnsByTx]);
 
   const reportTabs = [
     { id: 'charts', label: "Vue d'ensemble", icon: BarChart3 },
@@ -197,6 +219,7 @@ export const DetailedReports = memo(function DetailedReports({
             transactions={transactions}
             expenses={expenses}
             supplierPayments={supplierPayments}
+            returns={returns}
             settings={settings}
           />
         ) : reportsTab === 'stock_value' ? (

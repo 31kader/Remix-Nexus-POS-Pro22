@@ -35,9 +35,29 @@ export function useCashManagementLogic({
     const shiftTransactions = (transactions || []).filter(t => 
       t && t.timestamp && new Date(t.timestamp) >= new Date(activeShift.openedAt) && t.status !== 'returned' && t.status !== 'cancelled'
     );
-    const shiftExpenses = (expenses || []).filter(e => 
-      e && e.date && new Date(e.date) >= new Date(activeShift.openedAt)
-    );
+    const openedAtDate = new Date(activeShift.openedAt);
+    const openedTimestamp = !isNaN(openedAtDate.getTime()) ? openedAtDate.getTime() : 0;
+    const openedDayUtc = !isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString().slice(0, 10) : '';
+    const openedDayLocal = !isNaN(openedAtDate.getTime())
+      ? `${openedAtDate.getFullYear()}-${String(openedAtDate.getMonth() + 1).padStart(2, '0')}-${String(openedAtDate.getDate()).padStart(2, '0')}`
+      : '';
+
+    const shiftExpenses = (expenses || []).filter(e => {
+      if (!e || !e.date) return false;
+      // Seules les dépenses en espèces impactent le tiroir-caisse attendu
+      const isCash = !e.paymentMethod || e.paymentMethod === 'cash';
+      if (!isCash) return false;
+
+      // Si e.date contient une heure (format ISO complet)
+      if (typeof e.date === 'string' && e.date.includes('T')) {
+        const expTime = new Date(e.date).getTime();
+        return !isNaN(expTime) && expTime >= openedTimestamp;
+      }
+
+      // Si e.date est un format jour YYYY-MM-DD
+      const expDateStr = String(e.date).trim().slice(0, 10);
+      return expDateStr >= openedDayLocal || expDateStr >= openedDayUtc;
+    });
 
     const totalSales = shiftTransactions.reduce((sum, t) => sum + (Number(t.total) || 0), 0);
     const totalCashSales = shiftTransactions.filter(t => t.paymentMethod === 'cash').reduce((sum, t) => sum + (Number(t.total) || 0), 0);

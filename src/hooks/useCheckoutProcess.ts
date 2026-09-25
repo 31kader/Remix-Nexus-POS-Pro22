@@ -80,11 +80,15 @@ export function useCheckoutProcess({
     
     if (method === 'balance') {
       if (!selectedCustomer) {
-        toast.error("Veuillez sélectionner un client pour payer par solde.");
+        toast.error("Veuillez sélectionner un client pour payer par solde / dette.");
         return;
       }
-      if (total > 0 && (selectedCustomer.balance || 0) < total) {
-        toast.error("Solde insuffisant.");
+      const currentBalance = Number(selectedCustomer.balance) || 0;
+      const creditLimit = Number(selectedCustomer.creditLimit) || 0;
+      // Si une limite de crédit est fixée (> 0), vérifier que le nouveau solde ne descend pas sous -creditLimit
+      if (creditLimit > 0 && (currentBalance - total) < -creditLimit) {
+        const currencySymbol = settings?.currency || 'DA';
+        toast.error(`Plafond de dette dépassé. Limite autorisée : ${creditLimit.toFixed(2)} ${currencySymbol}`);
         return;
       }
     }

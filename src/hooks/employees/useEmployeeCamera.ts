@@ -74,9 +74,20 @@ export function useEmployeeCamera({ setFormData, isModalOpen }: UseEmployeeCamer
     stopCamera();
   };
 
+  const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, section: 'recto' | 'verso') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        toast.error("Format de fichier non autorisé. Formats acceptés : JPEG, PNG, WEBP.");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("Fichier trop volumineux. La taille maximale autorisée est de 5 Mo.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;

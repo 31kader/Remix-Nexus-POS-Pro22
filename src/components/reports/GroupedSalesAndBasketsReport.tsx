@@ -9,7 +9,7 @@ import {
 } from 'date-fns';
 import { Card, Button } from '../ui';
 import { Transaction, Product, Category, CompanySettings, Employee } from '../../types';
-import { formatPrice, formatSafe, exportToExcel, exportToCSV, cn } from '../../lib/utils';
+import { formatPrice, formatSafe, exportToExcel, exportToCSV, cn, calculateItemPrice } from '../../lib/utils';
 
 // Helper ultra-sécurisé pour désérialiser les items stockés en JSON string ou Array
 function parseTransactionItems(itemsField: any): any[] {
@@ -162,7 +162,7 @@ export function GroupedSalesAndBasketsReport({
         const matchedProduct = resolveProduct(item);
         const prodId = matchedProduct?.id || (item as any).productId || item.id || item.name;
         const qty = Number(item.quantity) || 1;
-        const itemPrice = Number(item.price) || 0;
+        const itemPrice = calculateItemPrice(item, t.isWholesale);
         const revenue = qty * itemPrice;
         
         // Coût unitaire certifié
@@ -241,7 +241,7 @@ export function GroupedSalesAndBasketsReport({
       items.forEach(item => {
         const qty = Number(item.quantity) || 1;
         totalItemsCount += qty;
-        const itemPrice = Number(item.price) || 0;
+        const itemPrice = calculateItemPrice(item, t.isWholesale);
         itemsTotalRevenue += (itemPrice * qty);
 
         const matchedProduct = resolveProduct(item);

@@ -45,7 +45,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
   const [directoryLayout, setDirectoryLayout] = useState<'split' | 'table'>('split');
   const [isDetailExpanded, setIsDetailExpanded] = useState<boolean>(false);
   const [tablePage, setTablePage] = useState<number>(1);
-  const TABLE_PAGE_SIZE = 20;
+  const TABLE_PAGE_SIZE = 50;
   const excelInputRef = useRef<HTMLInputElement>(null);
 
   const {

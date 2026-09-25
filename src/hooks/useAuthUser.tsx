@@ -15,7 +15,16 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
     // initialize user from offline cache once
     if (!user) {
       const sessionOffline = getSecureItem('nexus_active_offline_session');
-      const sessionOnline = getSecureItem('nexus_active_online_session');
+      let sessionOnline: any = null;
+      try {
+        const rawSession = sessionStorage.getItem('nexus_active_online_session');
+        if (rawSession) {
+          sessionOnline = JSON.parse(rawSession);
+        }
+      } catch (_) {}
+      if (!sessionOnline) {
+        sessionOnline = getSecureItem('nexus_active_online_session');
+      }
       const session = sessionOffline || sessionOnline;
       if (session) {
         try {
@@ -214,7 +223,8 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
             employeeId: employeeId || null,
             isOffline: false
           };
-          localStorage.setItem('nexus_active_online_session', JSON.stringify(sessionToCache));
+          sessionStorage.setItem('nexus_active_online_session', JSON.stringify(sessionToCache));
+          try { localStorage.removeItem('nexus_active_online_session'); } catch (_) {}
         } catch (cacheErr) {
           console.warn("Failed to cache online session:", cacheErr);
         }

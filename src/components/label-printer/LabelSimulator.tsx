@@ -4,6 +4,7 @@ import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Product, CompanySettings } from '../../types';
 import { LabelPrinterState } from './types';
+import { SafeImage } from '../ui/SafeImage';
 
 interface LabelSimulatorProps {
   state: LabelPrinterState;
@@ -91,7 +92,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '6px', margin: '4px 0 2px 0', width: '100%' }}>
                   {state.showImage && (previewProduct.imageUrl || previewProduct.image) && (
                     <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: '4px', border: '1px solid #ddd', overflow: 'hidden', flexShrink: 0 }}>
-                      <img 
+                      <SafeImage 
                         src={previewProduct.imageUrl || previewProduct.image} 
                         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
                         referrerPolicy="no-referrer"
@@ -237,7 +238,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
               
               {state.showImage && (previewProduct.imageUrl || previewProduct.image) && (
                 <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', borderRadius: '4px', margin: '4px 0', border: '1px solid #eee', overflow: 'hidden' }}>
-                  <img 
+                  <SafeImage 
                     src={previewProduct.imageUrl || previewProduct.image} 
                     style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
                     referrerPolicy="no-referrer"

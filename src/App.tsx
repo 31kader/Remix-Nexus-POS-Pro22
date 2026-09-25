@@ -88,7 +88,19 @@ export default function App() {
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
   const [loading, setLoading] = useState(() => {
     const cachedOffline = localStorage.getItem('nexus_active_offline_session');
-    const cachedOnline = localStorage.getItem('nexus_active_online_session');
+    let cachedOnline: string | null = null;
+    try {
+      cachedOnline = sessionStorage.getItem('nexus_active_online_session');
+      if (!cachedOnline) {
+        cachedOnline = localStorage.getItem('nexus_active_online_session');
+        if (cachedOnline) {
+          sessionStorage.setItem('nexus_active_online_session', cachedOnline);
+          localStorage.removeItem('nexus_active_online_session');
+        }
+      }
+    } catch (_) {
+      cachedOnline = localStorage.getItem('nexus_active_online_session');
+    }
     return !(cachedOffline || cachedOnline);
   });
 

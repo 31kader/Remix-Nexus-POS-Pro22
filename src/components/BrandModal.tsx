@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Button } from './ui';
+import { Modal, Button, SafeImage } from './ui';
 import { Sparkles, Upload, AlignLeft } from 'lucide-react';
 import { callGeminiAI } from '../services/geminiService';
 import { uploadImageBlobToStorage } from '../supabase';
@@ -76,7 +76,7 @@ export function BrandModal({
               type="button" 
               onClick={generateAIInfo}
               disabled={isGenerating || !name}
-              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/20 rounded-full text-[9px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-[0.15em] disabled:opacity-30  group/ia shadow-md"
+              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/10 border border-indigo-500/20 rounded-full text-[9px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-[0.15em] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer group/ia shadow-md"
             >
               <Sparkles size={12} className={cn("group-hover/ia:rotate-12 transition-transform", isGenerating ? "animate-pulse" : "")} />
               {isGenerating ? "SYNTÉSIS..." : "GÉNÉRER PAR IA"}
@@ -109,14 +109,11 @@ export function BrandModal({
               </div>
               {logo && (
                 <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-xl overflow-hidden shadow-md flex items-center justify-center p-2 shrink-0 group-hover:scale-110 transition-transform duration-500">
-                  <img 
+                  <SafeImage 
                     src={logo} 
                     alt="Preview" 
                     className="w-full h-full object-contain" 
-                    onError={(e) => { 
-                      e.currentTarget.onerror = null; 
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'B')}&background=6366f1&color=fff&bold=true`;
-                    }} 
+                    fallback={<span className="text-[10px] font-bold text-white/40">{(name || 'B').charAt(0).toUpperCase()}</span>}
                   />
                 </div>
               )}

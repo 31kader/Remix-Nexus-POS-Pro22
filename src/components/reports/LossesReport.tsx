@@ -102,7 +102,9 @@ export const LossesReport = React.memo(function LossesReport({
 
         <Card id="card-loss-margin" className="p-5 border-l-4 border-amber-500 bg-white/5 relative overflow-hidden">
            <p className="text-[10px] font-black text-amber-500/60 uppercase tracking-normal mb-2">Impact sur la marge</p>
-           <h4 className="text-3xl font-black text-white">-{((lossData.totalLossValue / (totalRevenue || 1)) * 100).toFixed(2)}%</h4>
+           <h4 className="text-3xl font-black text-white">
+             {totalRevenue > 0 ? `-${((lossData.totalLossValue / totalRevenue) * 100).toFixed(2)}%` : '0.00%'}
+           </h4>
            <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">du chiffre d'affaires total</p>
         </Card>
 

@@ -111,6 +111,7 @@ export function useCategoryBrand() {
       toast.error("Impossible de supprimer une catégorie contenant des sous-catégories.");
       return;
     }
+    if (!window.confirm("Voulez-vous vraiment supprimer cette catégorie ?")) return;
     try {
       await localDb.delete(`categories/${targetCategory.id}`);
       

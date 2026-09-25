@@ -1,5 +1,15 @@
 import { formatSafe, calculateItemPrice, formatPrice } from '../lib/utils';
 import { Product, CompanySettings } from '../types';
+import QRCode from 'qrcode';
+
+export async function generateReceiptQrCode(url: string): Promise<string> {
+  if (!url) return '';
+  return await QRCode.toDataURL(url, {
+    margin: 1,
+    width: 120,
+    errorCorrectionLevel: 'M'
+  });
+}
 
 export function escapeHtml(str: any): string {
   if (str === null || str === undefined) return '';
@@ -44,6 +54,15 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
   const subtotalBeforeDiscounts = ( (t.total || 0) + (t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0) );
   const totalSavings = ((t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0));
   const paperWidth = settings.paperFormat === '60mm' ? '58mm' : settings.paperFormat === 'A4' ? '210mm' : '80mm';
+
+  let socialQrDataUrl = '';
+  if (settings.receiptSocialQrUrl) {
+    try {
+      socialQrDataUrl = await generateReceiptQrCode(settings.receiptSocialQrUrl);
+    } catch (e) {
+      console.error('Offline receipt QR generation error:', e);
+    }
+  }
 
   const itemsHtml = (t.items || []).map((item: any) => {
     const unitPrice = calculateItemPrice(item, t.isWholesale);
@@ -286,9 +305,9 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
             <div class="thanks">MERCI DE VOTRE VISITE !</div>
             <div style="font-size: 10px; font-weight: 800;">${escapeHtml(settings.footerText || 'À bientôt !')}</div>
             ${settings.customReceiptMessage ? `<div style="font-size: 8px; color: #222; margin-top: 6px; font-style: italic; border-top: 1px dashed #999; padding-top: 4px;">${escapeHtml(settings.customReceiptMessage)}</div>` : ''}
-            ${settings.receiptSocialQrUrl ? `
+            ${socialQrDataUrl ? `
             <div style="margin-top: 6px;">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(settings.receiptSocialQrUrl)}" style="width: 60px; height: 60px; margin: 0 auto; display: block;" alt="QR" onerror="this.style.display='none'" />
+              <img src="${socialQrDataUrl}" style="width: 60px; height: 60px; margin: 0 auto; display: block;" alt="QR" />
               <div style="font-size: 7px; color: #333; margin-top: 2px; text-transform: uppercase;">Suivez-nous</div>
             </div>
             ` : ''}

@@ -122,7 +122,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'
   ],
   customers: [
-    'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 
+    'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'credit_limit', 'loyalty_card_number', 
     'total_spent', 'last_visit', 'notes', 'is_app_user', 'join_date', 
     'favorite_items', 'alerts', 'cashier_notes', 'updated_at',
     'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash'
@@ -132,7 +132,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'customer_id', 'customer_name', 'cashier_id', 'cashier_name', 'employee_id', 'employee_name', 'amount_received', 'amount_returned',
     'status', 'promotion_id', 'points_earned', 
     'discount_amount', 'points_discount', 'balance_used', 'voucher_discount', 
-    'is_wholesale', 'online_order_id', 'items',
+    'is_wholesale', 'online_order_id', 'items', 'notes',
     'audit_status', 'audited_by', 'audited_at', 'audit_duration', 'audit_note',
     'is_edited', 'edited_at', 'edited_by', 'original_total', 'terminal_id', 'terminal_name'
   ],
@@ -247,7 +247,8 @@ export const CONFLICT_MAPS: Record<string, string[][]> = {
     ['updated_at', 'updatedAt'],
     ['created_at', 'createdAt'],
     ['last_purchase_date', 'lastPurchaseDate'],
-    ['purchase_count', 'purchaseCount']
+    ['purchase_count', 'purchaseCount'],
+    ['credit_limit', 'creditLimit']
   ],
   users: [
     ['display_name', 'displayName', 'name'],

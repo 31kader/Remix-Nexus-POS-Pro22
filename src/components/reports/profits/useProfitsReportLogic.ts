@@ -181,6 +181,7 @@ export function useProfitsReportLogic({
         const tDate = new Date(ret.timestamp);
         if (isNaN(tDate.getTime())) return;
         if (profitFilterDate === 'today' && !isToday(tDate)) return;
+        if (profitFilterDate === 'yesterday' && !isYesterday(tDate)) return;
         if (profitFilterDate === 'week' && !isThisWeek(tDate, { weekStartsOn: 1 })) return;
         if (profitFilterDate === 'month' && !isThisMonth(tDate)) return;
         if (profitFilterDate === 'year' && !isThisYear(tDate)) return;

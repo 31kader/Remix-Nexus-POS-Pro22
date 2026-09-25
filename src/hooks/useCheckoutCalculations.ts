@@ -142,6 +142,7 @@ export function useCheckoutCalculations({
     selectedCustomer,
     useLoyaltyPoints,
     appliedVoucher,
-    settings
+    settings,
+    globalDiscount
   ]);
 }

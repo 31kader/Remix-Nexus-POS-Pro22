@@ -225,7 +225,7 @@ export function useOrderActions({
         const currentList = useTransactionStore.getState().onlineOrders;
         idbSet('nexus_online_orders_cache', currentList).catch(() => {});
 
-        // When delivered, create local completed transaction for POS sales history
+        // When delivered, create local completed transaction for POS sales history and decrement stock
         if (newStatus === 'delivered' && order.status !== 'delivered') {
           const tid = generateUniqueId();
           const transaction: Transaction = {
@@ -245,6 +245,16 @@ export function useOrderActions({
 
           await localDb.insert(`transactions/${tid}`, transaction);
           useTransactionStore.getState().setTransactions(prev => [transaction, ...(Array.isArray(prev) ? prev : [])]);
+
+          // Déstockage des articles vendus pour éviter les stocks fantômes
+          for (const item of (order.items || [])) {
+            const prodId = (item as any).productId || (item as any).id;
+            const qty = Number(item.quantity || 1);
+            if (prodId && qty > 0) {
+              enqueueStockAdjustment(prodId, -qty);
+              await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+            }
+          }
         }
 
         toast.success(`Statut synchronisé sur Supabase ✅ : ${statusLabels[newStatus] || newStatus}`);
@@ -283,6 +293,16 @@ export function useOrderActions({
           };
           await localDb.insert(`transactions/${tid}`, transaction);
           useTransactionStore.getState().setTransactions(prev => [transaction, ...(Array.isArray(prev) ? prev : [])]);
+
+          // Déstockage des articles vendus pour éviter les stocks fantômes
+          for (const item of (order.items || [])) {
+            const prodId = (item as any).productId || (item as any).id;
+            const qty = Number(item.quantity || 1);
+            if (prodId && qty > 0) {
+              enqueueStockAdjustment(prodId, -qty);
+              await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+            }
+          }
         }
 
         toast.info(`Statut enregistré hors-ligne : ${statusLabels[newStatus] || newStatus} (synchronisation automatique dès reconnexion).`);
@@ -299,6 +319,36 @@ export function useOrderActions({
       })
     );
     await localDb.update(`onlineOrders/${orderId}`, { status: newStatus });
+
+    if (newStatus === 'delivered' && order.status !== 'delivered') {
+      const tid = generateUniqueId();
+      const transaction: Transaction = {
+        id: tid,
+        userId: user?.id || user?.uid || 'online_system',
+        items: (order.items || []) as any,
+        total: order.total || 0,
+        timestamp: new Date().toISOString(),
+        paymentMethod: (order.paymentMethod as any) || 'cash',
+        status: 'completed',
+        employeeName: 'Commande en Ligne',
+        customerName: order.customerName || 'Client en Ligne',
+        customerId: order.customerId,
+        onlineOrderId: String(order.id),
+        notes: `Commande en Ligne #${order.externalOrderId || String(order.id || "").slice(0, 8)}`
+      };
+      await localDb.insert(`transactions/${tid}`, transaction);
+      useTransactionStore.getState().setTransactions(prev => [transaction, ...(Array.isArray(prev) ? prev : [])]);
+
+      for (const item of (order.items || [])) {
+        const prodId = (item as any).productId || (item as any).id;
+        const qty = Number(item.quantity || 1);
+        if (prodId && qty > 0) {
+          enqueueStockAdjustment(prodId, -qty);
+          await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+        }
+      }
+    }
+
     toast.success(`Statut local mis à jour : ${statusLabels[newStatus] || newStatus}`);
   };
 
@@ -309,6 +359,22 @@ export function useOrderActions({
     if (newStatus === 'cancelled') {
       for (const o of targetOrders) {
         await rollbackCancelledOrderTransactions(o);
+      }
+    }
+
+    // Si les commandes sont livrées en lot, décrémenter le stock des articles
+    if (newStatus === 'delivered') {
+      for (const o of targetOrders) {
+        if (o.status !== 'delivered') {
+          for (const item of (o.items || [])) {
+            const prodId = (item as any).productId || (item as any).id;
+            const qty = Number(item.quantity || 1);
+            if (prodId && qty > 0) {
+              enqueueStockAdjustment(prodId, -qty);
+              await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
+            }
+          }
+        }
       }
     }
 
