@@ -32,7 +32,7 @@ export function EmployeeCard({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: idx * 0.05 }}
     >
-      <Card className="relative overflow-hidden group border-white/5 bg-white/5 backdrop-blur-md rounded-[2.5rem] shadow-xl hover:shadow-2xl hover:border-white/10 transition-all duration-500">
+      <Card className="relative overflow-hidden group border-white/5 bg-white/5  rounded-xl shadow-xl hover:shadow-2xl hover:border-white/10 transition-all duration-500">
         <div className="p-8">
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center gap-4">
@@ -41,7 +41,7 @@ export function EmployeeCard({
               </div>
               <div>
                 <h4 className="font-black text-white uppercase tracking-wider text-base">{employee.name}</h4>
-                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-0.5 italic">{employee.role}</p>
+                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-0.5 ">{employee.role}</p>
               </div>
             </div>
             <span className={cn("px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-xl", 
@@ -66,8 +66,8 @@ export function EmployeeCard({
             </div>
           </div>
 
-          <div className="bg-black/40 rounded-[1.5rem] p-6 border border-white/5 space-y-4 mb-8 text-white text-left">
-            <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Sales Performance Report</p>
+          <div className="bg-black/40 rounded-xl p-6 border border-white/5 space-y-4 mb-8 text-white text-left">
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-normal">Sales Performance Report</p>
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Ventes</p>

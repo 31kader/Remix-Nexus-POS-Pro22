@@ -19,7 +19,7 @@ export function CameraActionSidebar({
   handleAddNote
 }: CameraActionSidebarProps) {
   return (
-    <div className="w-96 border-l border-white/5 bg-workspace/30 backdrop-blur-xl p-8 space-y-10 overflow-y-auto custom-scrollbar">
+    <div className="w-96 border-l border-white/5 bg-workspace/30  p-8 space-y-10 overflow-y-auto custom-scrollbar">
        <section>
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
              <MessageSquare size={14} className="text-indigo-400" /> Ordres Flash
@@ -46,7 +46,7 @@ export function CameraActionSidebar({
           <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
              <Cpu size={14} className="text-indigo-400" /> Analyse IA Matcher
           </h3>
-          <div className="p-6 bg-indigo-500/5 border border-indigo-500/20 rounded-[2rem] space-y-6">
+          <div className="p-6 bg-indigo-500/5 border border-indigo-500/20 rounded-xl space-y-6">
              <div className="flex gap-3">
                 <div className="flex-1 aspect-square bg-black rounded-2xl border border-white/10 flex items-center justify-center">
                    <Activity className="text-indigo-500/20" />
@@ -60,7 +60,7 @@ export function CameraActionSidebar({
                    setAiAnalysisLoading(true);
                    setTimeout(() => setAiAnalysisLoading(false), 1000);
                 }}
-                className="w-full bg-indigo-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-neon-indigo"
+                className="w-full bg-indigo-600 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xs"
              >
                 {aiAnalysisLoading ? "Matching..." : "Lancer ID-Verify"}
              </Button>

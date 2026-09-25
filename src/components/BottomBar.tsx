@@ -52,7 +52,7 @@ interface BottomBarProps {
 
 export const BottomBar = ({ activeTab, setActiveTab }: BottomBarProps) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-workspace/90 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-4 z-40 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-workspace/90  border-t border-white/5 flex items-center justify-around px-4 z-40 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
       <BottomNavItem 
         icon={<ShoppingCart size={24} />} 
         label="Caisse" 

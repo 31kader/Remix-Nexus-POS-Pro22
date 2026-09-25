@@ -25,7 +25,7 @@ export const SupplierOrdersTab: React.FC<Props> = ({ myOrders, settings }) => {
           <tbody className="divide-y divide-slate-100">
             {myOrders.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-12 text-center text-slate-400 italic">Aucune commande trouvée</td>
+                <td colSpan={5} className="p-12 text-center text-slate-400 ">Aucune commande trouvée</td>
               </tr>
             ) : (
               myOrders.map(order => (

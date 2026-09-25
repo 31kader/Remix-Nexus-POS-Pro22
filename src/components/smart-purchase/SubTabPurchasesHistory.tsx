@@ -90,7 +90,7 @@ export function SubTabPurchasesHistory({
               ))}
               {filteredPurchases.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-24 text-center text-industrial-600 italic font-mono uppercase tracking-widest text-sm">Aucun achat trouvé.</td>
+                  <td colSpan={7} className="p-24 text-center text-industrial-600  font-mono uppercase tracking-widest text-sm">Aucun achat trouvé.</td>
                 </tr>
               )}
             </tbody>

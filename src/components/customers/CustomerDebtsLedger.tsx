@@ -277,7 +277,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Debts */}
-        <div className="p-5 bg-gradient-to-br from-rose-500/15 via-rose-500/5 to-slate-900 border border-rose-500/25 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-rose-500/15 via-rose-500/5 to-slate-900 border border-rose-500/25 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-rose-400 tracking-wider">
             <span>Total Dettes Globales</span>
             <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -291,7 +291,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
         </div>
 
         {/* Total Debtors */}
-        <div className="p-5 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-slate-900 border border-amber-500/25 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-slate-900 border border-amber-500/25 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-amber-400 tracking-wider">
             <span>Comptes Débiteurs</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -305,7 +305,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
         </div>
 
         {/* Biggest Debt */}
-        <div className="p-5 bg-gradient-to-br from-indigo-500/15 via-indigo-500/5 to-slate-900 border border-indigo-500/25 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-indigo-500/15 via-indigo-500/5 to-slate-900 border border-indigo-500/25 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-indigo-400 tracking-wider">
             <span>Plus Forte Dette</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
@@ -321,7 +321,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
         </div>
 
         {/* Up to date customers */}
-        <div className="p-5 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-slate-900 border border-emerald-500/25 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-slate-900 border border-emerald-500/25 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-emerald-400 tracking-wider">
             <span>Comptes à Jour / Crédits</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -337,7 +337,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
       </div>
 
       {/* Control & Search Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 border border-slate-800 rounded-3xl shadow-xl">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 border border-slate-800 rounded-xl shadow-xl">
         
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           
@@ -453,7 +453,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
       </div>
 
       {/* Debtors / Customer List */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
         {displayList.length > 0 ? (
           <div className="divide-y divide-slate-800/80">
             {displayList.map((c: any) => {
@@ -557,7 +557,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
           </div>
         ) : (
           <div className="p-16 text-center text-slate-400 space-y-4">
-            <div className="w-16 h-16 rounded-3xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto text-slate-400">
+            <div className="w-16 h-16 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto text-slate-400">
               <CreditCard size={32} />
             </div>
             <div>
@@ -582,8 +582,8 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
 
       {/* MODAL : AJOUTER UNE DETTE CLIENT */}
       {isAddDebtModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#06080e]/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 select-none">
-          <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl w-full max-w-md p-6 space-y-5">
+        <div className="fixed inset-0 z-50 bg-[#06080e]/90  flex items-center justify-center p-4 animate-in fade-in duration-200 select-none">
+          <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-xl w-full max-w-md p-6 space-y-5">
             
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center gap-3">

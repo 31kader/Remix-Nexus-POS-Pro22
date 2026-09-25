@@ -1,18 +1,16 @@
-
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { X, Eye, ChevronUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 export const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false, type = 'button' }: any) => {
-  const base = "px-4 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
+  const base = "px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors duration-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer";
   const variants: any = {
-    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-[0_4px_12px_rgba(79,70,229,0.2)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.3)]",
-    secondary: "bg-industrial-800 text-industrial-400 border-2 border-industrial-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400",
-    outline: "border border-slate-700 hover:bg-white/5 text-slate-300",
-    danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-[0_4px_12px_rgba(244,63,94,0.3)]",
-    ghost: "text-slate-400 hover:bg-slate-800/60 hover:text-white",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-[0_4px_12px_rgba(5,150,105,0.3)]"
+    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs",
+    secondary: "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700",
+    outline: "border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300",
+    danger: "bg-rose-600 text-white hover:bg-rose-700 shadow-xs",
+    ghost: "text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white",
+    success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs"
   };
   return (
     <button 
@@ -38,8 +36,8 @@ export const Card = ({ children, className = "", onClick }: any) => (
       }
     }} 
     className={cn(
-      "bg-workspace/40 backdrop-blur-xl rounded-[2rem] border border-white/5 shadow-2xl overflow-hidden transition-all duration-500 group",
-      onClick && "cursor-pointer hover:border-indigo-500/40 hover:shadow-neon-indigo hover:-translate-y-1 active:scale-[0.99]",
+      "bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xs overflow-hidden transition-colors duration-100 group",
+      onClick && "cursor-pointer hover:border-indigo-500/50",
       className
     )}
   >
@@ -53,21 +51,20 @@ export const BlurCard = ({ children, title, className, borderClass }: { children
     <Card 
       onClick={() => setIsVisible(!isVisible)}
       className={cn(
-        "relative p-6 bg-workspace overflow-hidden cursor-pointer group transition-all duration-300",
+        "relative p-4 bg-white dark:bg-zinc-900 overflow-hidden cursor-pointer group",
         borderClass,
         className
       )}
     >
-      <p className="text-[10px] font-black text-industrial-500 uppercase tracking-widest mb-1 group-hover:text-indigo-500 transition-colors">{title}</p>
+      <p className="text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-1 group-hover:text-indigo-600">{title}</p>
       <div className={cn(
-        "transition-all duration-500",
-        !isVisible ? "blur-[8px] scale-95 opacity-50 select-none pointer-events-none" : "blur-0 scale-100 opacity-100"
+        !isVisible ? "blur-[6px] opacity-40 select-none pointer-events-none" : "blur-0 opacity-100"
       )}>
         {children}
       </div>
       {!isVisible && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/5 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-industrial-900 border border-industrial-700 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-tighter flex items-center gap-2">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
+          <div className="bg-slate-900 text-white text-xs font-semibold px-3 py-1 rounded-md flex items-center gap-1.5">
             <Eye size={12} /> Cliquer pour voir
           </div>
         </div>
@@ -76,7 +73,7 @@ export const BlurCard = ({ children, title, className, borderClass }: { children
   );
 };
 
-export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg", padding = "p-6", maxHeight = "max-h-[90vh]", headerAction, className = "" }: any) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg", padding = "p-5", maxHeight = "max-h-[90vh]", headerAction, className = "" }: any) => {
   const modalRef = React.useRef<HTMLDivElement>(null);
 
   const safeClose = React.useCallback(() => {
@@ -138,38 +135,34 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 lg:p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-      <motion.div 
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 lg:p-4 bg-slate-950/50">
+      <div 
         ref={modalRef}
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className={cn("bg-[#05070a] lg:rounded-[2rem] shadow-2xl w-full h-full lg:h-auto overflow-hidden border border-white/5 ring-1 ring-white/5", maxWidth, className)}
+        className={cn("bg-white dark:bg-zinc-900 lg:rounded-xl shadow-lg w-full h-full lg:h-auto overflow-hidden border border-slate-200 dark:border-zinc-800", maxWidth, className)}
       >
         {title && (
-          <div className="px-6 lg:px-8 py-4 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-xl">
-            <h3 className="text-xl font-black tracking-tight uppercase tracking-widest text-[10px] lg:text-xs text-white/80 italic">{title}</h3>
-            <div className="flex items-center gap-3">
+          <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50 dark:bg-zinc-900">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
+            <div className="flex items-center gap-2.5">
               {headerAction && (
-                <div className="border-r border-white/10 pr-3 mr-1 flex items-center">
+                <div className="border-r border-slate-200 dark:border-zinc-800 pr-2.5 mr-1 flex items-center">
                    {headerAction}
                 </div>
               )}
               <button 
                 type="button" 
                 onClick={safeClose} 
-                className="p-2 hover:bg-rose-500/10 hover:text-rose-500 rounded-xl transition-all text-slate-500 active:scale-90 border border-transparent hover:border-rose-500/20"
+                className="p-1.5 hover:bg-rose-500/10 hover:text-rose-600 rounded-lg text-slate-500 dark:text-zinc-400 border border-transparent cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
           </div>
         )}
-        <div className={cn("overflow-y-auto custom-scrollbar h-[calc(100%-60px)] lg:h-auto", maxHeight, padding)}>
+        <div className={cn("overflow-y-auto custom-scrollbar h-[calc(100%-54px)] lg:h-auto", maxHeight, padding)}>
           {children}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
@@ -215,9 +208,9 @@ export const ConfirmDialog = ({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title}>
-      <div className="space-y-6">
-        <p className="text-industrial-400">{message}</p>
-        <div className="flex gap-3 justify-end">
+      <div className="space-y-5">
+        <p className="text-sm text-slate-700 dark:text-zinc-300">{message}</p>
+        <div className="flex gap-2.5 justify-end">
           <Button onClick={handleClose} variant="secondary">{cancelText}</Button>
           <Button onClick={handleConfirm} variant={variant}>{confirmText}</Button>
         </div>
@@ -243,8 +236,8 @@ export const SortableHeader = ({
   return (
     <th 
       className={cn(
-        "p-4 text-[11px] font-bold text-industrial-500 uppercase tracking-wider cursor-pointer hover:text-indigo-400 transition-colors group",
-        isActive && "text-indigo-600 bg-indigo-500/5",
+        "px-3 py-2 text-xs font-semibold text-slate-600 dark:text-zinc-400 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 group",
+        isActive && "text-indigo-600 bg-indigo-50 dark:bg-indigo-500/10",
         className
       )}
       onClick={() => onSort(sortKey)}
@@ -252,16 +245,16 @@ export const SortableHeader = ({
       <div className="flex items-center gap-1.5">
         {label}
         <div className={cn(
-          "flex flex-col -space-y-1 transition-all duration-200",
+          "flex flex-col -space-y-1",
           isActive ? "opacity-100" : "opacity-0 group-hover:opacity-40"
         )}>
           <ChevronUp 
             size={10} 
-            className={cn(isActive && currentSort.direction === 'asc' ? "text-indigo-600" : "text-industrial-700")} 
+            className={cn(isActive && currentSort.direction === 'asc' ? "text-indigo-600" : "text-slate-400")} 
           />
           <ChevronUp 
             size={10} 
-            className={cn("rotate-180", isActive && currentSort.direction === 'desc' ? "text-indigo-600" : "text-industrial-700")} 
+            className={cn("rotate-180", isActive && currentSort.direction === 'desc' ? "text-indigo-600" : "text-slate-400")} 
           />
         </div>
       </div>
@@ -270,3 +263,4 @@ export const SortableHeader = ({
 };
 
 export { SafeImage } from './SafeImage';
+

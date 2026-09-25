@@ -68,7 +68,7 @@ Fait de manière numérique de plein accord des deux parties.`}
       </div>
 
       {/* Signature Canvas Pad Container */}
-      <div className="p-6 bg-white/5 border border-white/10 rounded-[2rem] space-y-4">
+      <div className="p-6 bg-white/5 border border-white/10 rounded-xl space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 font-black">Signature Numérique</p>
           <button type="button" onClick={clearCanvas} className="text-[9px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-wider cursor-pointer">Effacer</button>

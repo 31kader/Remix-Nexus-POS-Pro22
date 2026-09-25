@@ -63,7 +63,7 @@ export function PurchaseScanArea({
           }
         }}
         className={cn(
-          "border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer relative group",
+          "border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer relative group",
           isOfflineScanning ? "border-emerald-500 bg-emerald-500/5" :
           isScanning ? "border-indigo-500 bg-indigo-500/5" : 
           isImportMode ? "border-emerald-500/40 bg-industrial-900/50 hover:border-emerald-400 hover:bg-industrial-800" :
@@ -89,7 +89,7 @@ export function PurchaseScanArea({
         ) : (
           <div className="space-y-4">
             <div className={cn(
-              "w-20 h-20 rounded-3xl flex items-center justify-center mx-auto border transition-transform group-hover:scale-110",
+              "w-20 h-20 rounded-xl flex items-center justify-center mx-auto border transition-transform group-hover:scale-110",
               isImportMode ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-industrial-800 border-industrial-700 text-industrial-400 group-hover:text-indigo-400"
             )}>
               {isImportMode ? (

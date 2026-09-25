@@ -51,13 +51,13 @@ export function StockHistoryModals({
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Modifier l'Ajustement" className="max-w-md">
         {selectedAdjustment && (
           <form onSubmit={handleSaveEdit} className="space-y-6 pt-4">
-            <div className="bg-white/5 p-6 rounded-3xl border border-white/10 shadow-2xl flex items-center gap-4">
+            <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-2xl flex items-center gap-4">
               <div className="w-12 h-12 bg-black/40 rounded-2xl shadow-inner flex items-center justify-center border border-white/10 text-indigo-400">
                 <Package size={24} />
               </div>
               <div>
                 <h4 className="font-black text-white uppercase tracking-widest leading-tight">{selectedAdjustment.productName}</h4>
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mt-1">
                   Stock Actuel: <span className="text-indigo-400">{(activeProduct?.stock || 0)} {activeProduct?.unit || 'unité'}</span>
                 </p>
               </div>
@@ -80,7 +80,7 @@ export function StockHistoryModals({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] pl-2">Nouvel Ajustement Quantité</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-normal pl-2">Nouvel Ajustement Quantité</label>
                 <input 
                   required
                   type="number"
@@ -94,7 +94,7 @@ export function StockHistoryModals({
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] pl-2">Motif de l'ajustement</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-normal pl-2">Motif de l'ajustement</label>
                 <textarea 
                   rows={2}
                   value={editedReason}

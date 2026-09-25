@@ -161,7 +161,7 @@ export const Sidebar = ({
       <button 
         tabIndex={-1}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] hover:text-white/60 transition-colors mb-2 cursor-pointer group"
+        className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-black text-white/30 uppercase tracking-normal hover:text-white/60 transition-colors mb-2 cursor-pointer group"
       >
         <span className="flex items-center gap-1.5">
           <span className="w-1 h-1 bg-indigo-500 rounded-full opacity-50" />
@@ -204,13 +204,13 @@ export const Sidebar = ({
         </div>
         {(isSidebarOpen || isMobile) && (
           <div className="flex flex-col">
-            <span className="font-black text-lg truncate text-white tracking-tighter uppercase italic flex items-center gap-1.5">
+            <span className="font-black text-lg truncate text-white tracking-tighter uppercase  flex items-center gap-1.5">
               NEXUS 
-              <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md not-italic tracking-normal normal-case">
+              <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md not- tracking-normal normal-case">
                 v1.2.14
               </span>
             </span>
-            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mt-0.5">Systems Guard</span>
+            <span className="text-[8px] font-black text-white/30 uppercase tracking-normal mt-0.5">Systems Guard</span>
           </div>
         )}
       </div>
@@ -347,7 +347,7 @@ export const Sidebar = ({
           )}
           {(isSidebarOpen || isMobile) && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black truncate text-white uppercase tracking-tight italic">{user.displayName}</p>
+              <p className="text-xs font-black truncate text-white uppercase tracking-tight ">{user.displayName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#10b981]" />
                 <p className="text-[8px] text-slate-500 truncate uppercase font-bold tracking-widest">{profile?.role || 'User'}</p>

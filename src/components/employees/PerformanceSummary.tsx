@@ -20,15 +20,15 @@ export function PerformanceSummary({
   settings
 }: PerformanceSummaryProps) {
   return (
-    <Card className="overflow-hidden border-white/5 bg-white/5 backdrop-blur-md rounded-[2.5rem] shadow-2xl">
+    <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
       <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-neon-indigo/20">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20">
             <TrendingUp size={24} />
           </div>
           <div>
-            <h4 className="font-black text-white uppercase tracking-wider text-sm italic">Résumé des Performances</h4>
-            <p className="text-[10px] font-black text-white/30 tracking-[0.2em] uppercase mt-0.5">Sales Metrics & Efficiency</p>
+            <h4 className="font-black text-white uppercase tracking-wider text-sm ">Résumé des Performances</h4>
+            <p className="text-[10px] font-black text-white/30 tracking-normal uppercase mt-0.5">Sales Metrics & Efficiency</p>
           </div>
         </div>
       </div>
@@ -37,10 +37,10 @@ export function PerformanceSummary({
         <table className="w-full text-left">
           <thead>
             <tr className="bg-white/5 text-white/40 uppercase">
-              <SortableHeader label="EMPLOYÉ" sortKey="name" currentSort={sortConfig} onSort={() => requestSort('name')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]" />
-              <SortableHeader label="TRANSACTIONS" sortKey="transactions" currentSort={sortConfig} onSort={() => requestSort('transactions')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-center justify-center" />
-              <SortableHeader label="TOTAL VENTES" sortKey="revenue" currentSort={sortConfig} onSort={() => requestSort('revenue')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right justify-end" />
-              <SortableHeader label="MOYENNE / VENTE" sortKey="average" currentSort={sortConfig} onSort={() => requestSort('average')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right justify-end" />
+              <SortableHeader label="EMPLOYÉ" sortKey="name" currentSort={sortConfig} onSort={() => requestSort('name')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal" />
+              <SortableHeader label="TRANSACTIONS" sortKey="transactions" currentSort={sortConfig} onSort={() => requestSort('transactions')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-center justify-center" />
+              <SortableHeader label="TOTAL VENTES" sortKey="revenue" currentSort={sortConfig} onSort={() => requestSort('revenue')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-right justify-end" />
+              <SortableHeader label="MOYENNE / VENTE" sortKey="average" currentSort={sortConfig} onSort={() => requestSort('average')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-right justify-end" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">

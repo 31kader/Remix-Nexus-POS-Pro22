@@ -54,7 +54,7 @@ export function PurchaseCartTable({
         <tbody className="divide-y divide-industrial-800/60">
           {cart.length === 0 ? (
             <tr>
-              <td colSpan={7} className="py-20 text-center text-industrial-600 font-black uppercase tracking-widest text-xs italic">
+              <td colSpan={7} className="py-20 text-center text-industrial-600 font-black uppercase tracking-widest text-xs ">
                 Panier vide. Scannez un bon ou ajoutez des articles.
               </td>
             </tr>

@@ -153,7 +153,7 @@ export function InventoryProductsTab(props: any) {
       {/* Main Content Area */}
       <div className="min-h-[500px]">
         {isSyncing ? (
-          <div className="flex flex-col items-center justify-center p-20 text-center gap-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+          <div className="flex flex-col items-center justify-center p-20 text-center gap-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             <Loader2 size={40} className="text-indigo-500 animate-spin" />
             <div>
               <p className="text-slate-900 dark:text-white font-bold text-sm">Chargement des données...</p>
@@ -161,7 +161,7 @@ export function InventoryProductsTab(props: any) {
             </div>
           </div>
         ) : sortedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-16 text-center gap-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm">
+          <div className="flex flex-col items-center justify-center p-16 text-center gap-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500">
               <Package size={32} />
             </div>

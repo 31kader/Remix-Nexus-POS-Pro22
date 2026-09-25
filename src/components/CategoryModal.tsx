@@ -36,29 +36,29 @@ export function CategoryModal({
       title={editingCategory ? "CONFIGURATION CATÉGORIE" : "DÉPLOYER NOUVELLE CATÉGORIE"}
       maxWidth="max-w-lg"
     >
-      <div className="space-y-8 bg-[#05070a] p-8 rounded-[3rem] ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
+      <div className="space-y-8 bg-[#05070a] p-8 rounded-xl ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic ml-1">NOM DE LA CLASSIFICATION *</label>
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1">NOM DE LA CLASSIFICATION *</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase italic"
+            className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase "
             placeholder="EX: ÉLECTRONIQUE, ALIMENTATION..."
           />
         </div>
 
         <div className="space-y-4">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic ml-1 flex items-center gap-2">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-2">
             <FolderTree size={12} /> ARCHITECTURE PARENTE
           </label>
           <div className="relative group">
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-[0.2em] outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none italic"
+              className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-normal outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
             >
               <option value="" className="bg-[#0a0c10] text-slate-700">RACINE DU SYSTÈME (MAIN)</option>
               {getHierarchicalCategories(categories.filter((c: Category) => c.id !== editingCategory?.id)).map((c: any) => (
@@ -73,15 +73,15 @@ export function CategoryModal({
         
         {setImageUrl && (
           <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic ml-1">ASSET VISUEL</label>
-            <div className="flex gap-6 items-center bg-black/20 p-6 rounded-[2rem] border border-white/5 ring-1 ring-white/5 shadow-inner">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1">ASSET VISUEL</label>
+            <div className="flex gap-6 items-center bg-black/20 p-6 rounded-xl border border-white/5 ring-1 ring-white/5 shadow-inner">
               <div className="w-24 h-24 rounded-2xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative group shadow-2xl">
                 {imageUrl ? (
                   <>
                     <SafeImage src={imageUrl} alt="Aperçu" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     <button 
                       onClick={() => setImageUrl('')}
-                      className="absolute inset-0 bg-rose-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all backdrop-blur-sm"
+                      className="absolute inset-0 bg-rose-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all "
                     >
                       <Trash2 size={24} />
                     </button>
@@ -94,13 +94,13 @@ export function CategoryModal({
                 <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 shadow-inner">
                   <button 
                     onClick={() => setActiveTab('url')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'url' ? 'bg-indigo-600 text-white shadow-neon-indigo italic' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'url' ? 'bg-indigo-600 text-white shadow-xs ' : 'text-slate-600 hover:text-slate-400'}`}
                   >
                     <LinkIcon size={12} /> URL CLOUD
                   </button>
                   <button 
                     onClick={() => setActiveTab('upload')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'upload' ? 'bg-indigo-600 text-white shadow-neon-indigo italic' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'upload' ? 'bg-indigo-600 text-white shadow-xs ' : 'text-slate-600 hover:text-slate-400'}`}
                   >
                     <Upload size={12} /> LOCAL DISK
                   </button>
@@ -112,7 +112,7 @@ export function CategoryModal({
                     value={imageUrl || ''}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="HTTPS://ASSETS.NEXUS.CLOUD/..."
-                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-black italic outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-slate-800"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-black  outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-slate-800"
                   />
                 ) : (
                   <div className="relative group">
@@ -184,7 +184,7 @@ export function CategoryModal({
                       }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
-                    <div className="w-full py-3 bg-black/40 border border-white/10 rounded-xl text-[9px] font-black text-slate-600 flex justify-center items-center gap-3 group-hover:bg-indigo-600/10 group-hover:text-indigo-400 transition-all shadow-inner italic">
+                    <div className="w-full py-3 bg-black/40 border border-white/10 rounded-xl text-[9px] font-black text-slate-600 flex justify-center items-center gap-3 group-hover:bg-indigo-600/10 group-hover:text-indigo-400 transition-all shadow-inner ">
                       <Upload size={14} strokeWidth={3} />
                       INITIALISER UPLOAD DISQUE
                     </div>
@@ -198,7 +198,7 @@ export function CategoryModal({
         <div className="flex gap-4 pt-4">
           <button
             onClick={onSave}
-            className="flex-1 py-5 rounded-[1.5rem] bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-[0.3em] shadow-neon-indigo border border-indigo-400 ring-1 ring-white/20 transition-all active:scale-95 italic relative overflow-hidden group"
+            className="flex-1 py-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-normal shadow-xs border border-indigo-400 ring-1 ring-white/20 transition-all active:scale-95  relative overflow-hidden group"
           >
             <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
             VALIDER DATA
@@ -206,7 +206,7 @@ export function CategoryModal({
           {editingCategory && (
             <button
               onClick={onDelete}
-              className="flex-1 py-5 rounded-[1.5rem] bg-rose-600/10 border border-rose-500/20 text-rose-500 hover:bg-rose-600 hover:text-white text-[10px] font-black uppercase tracking-[0.3em] transition-all active:scale-95 italic"
+              className="flex-1 py-5 rounded-xl bg-rose-600/10 border border-rose-500/20 text-rose-500 hover:bg-rose-600 hover:text-white text-[10px] font-black uppercase tracking-normal transition-all active:scale-95 "
             >
               PURGER / DELETE
             </button>

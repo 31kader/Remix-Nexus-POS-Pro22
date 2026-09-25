@@ -39,7 +39,7 @@ export function ProductMultiExpirySection({
   setNewBatchStock
 }: ProductMultiExpirySectionProps) {
   return (
-    <div className="border border-white/5 bg-white/[0.02] p-6 rounded-[2rem] space-y-4">
+    <div className="border border-white/5 bg-white/[0.02] p-6 rounded-xl space-y-4">
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-0.5">
           <h4 className="text-xs font-black text-indigo-400 uppercase tracking-[0.15em] flex items-center gap-2">
@@ -168,7 +168,7 @@ export function ProductMultiExpirySection({
 
           {/* Batches Table List */}
           {(!formData.batches || formData.batches.length === 0) ? (
-            <div className="p-8 text-center text-white/20 italic border border-dashed border-white/5 rounded-2xl">
+            <div className="p-8 text-center text-white/20  border border-dashed border-white/5 rounded-2xl">
               Aucun lot enregistré. Renseignez un lot pour démarrer le suivi multi-DLC.
             </div>
           ) : (

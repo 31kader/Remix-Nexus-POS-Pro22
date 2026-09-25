@@ -87,11 +87,11 @@ export const LossesReport = React.memo(function LossesReport({
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card id="card-loss-total" className="p-8 border-l-4 border-rose-500 bg-rose-500/5 backdrop-blur-xl relative overflow-hidden group">
+        <Card id="card-loss-total" className="p-8 border-l-4 border-rose-500 bg-rose-500/5  relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <Trash2 size={120} />
           </div>
-          <p className="text-[10px] font-black text-rose-500/60 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+          <p className="text-[10px] font-black text-rose-500/60 uppercase tracking-normal mb-2 flex items-center gap-2">
             <AlertTriangle size={14} /> Valeur Totale des Pertes
           </p>
           <h4 className="text-4xl font-black text-rose-500 tracking-tighter">
@@ -101,13 +101,13 @@ export const LossesReport = React.memo(function LossesReport({
         </Card>
 
         <Card id="card-loss-margin" className="p-8 border-l-4 border-amber-500 bg-white/5 relative overflow-hidden">
-           <p className="text-[10px] font-black text-amber-500/60 uppercase tracking-[0.2em] mb-2">Impact sur la marge</p>
+           <p className="text-[10px] font-black text-amber-500/60 uppercase tracking-normal mb-2">Impact sur la marge</p>
            <h4 className="text-3xl font-black text-white">-{((lossData.totalLossValue / (totalRevenue || 1)) * 100).toFixed(2)}%</h4>
            <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">du chiffre d'affaires total</p>
         </Card>
 
         <Card id="card-loss-adjustments" className="p-8 border-l-4 border-indigo-500 bg-white/5 relative overflow-hidden">
-           <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-[0.2em] mb-2">Nombre d'ajustements</p>
+           <p className="text-[10px] font-black text-indigo-500/60 uppercase tracking-normal mb-2">Nombre d'ajustements</p>
            <h4 className="text-3xl font-black text-white">{lossData.formattedLosses.length}</h4>
            <p className="text-[10px] text-white/30 mt-4 uppercase font-black tracking-widest">Opérations de retrait de stock</p>
         </Card>
@@ -183,7 +183,7 @@ export const LossesReport = React.memo(function LossesReport({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-white/20">
+              <tr className="bg-white/5 text-[10px] font-black uppercase tracking-normal text-white/20">
                 <th className="p-4">Date</th>
                 <th className="p-4">Produit</th>
                 <th className="p-4 text-center">Quantité</th>
@@ -216,7 +216,7 @@ export const LossesReport = React.memo(function LossesReport({
                       {adj.reason}
                     </span>
                   </td>
-                  <td className="p-4 text-white/40 text-[10px] font-black uppercase tracking-widest italic text-right">
+                  <td className="p-4 text-white/40 text-[10px] font-black uppercase tracking-widest  text-right">
                     {adj.userName || 'Inconnu'}
                   </td>
                 </tr>

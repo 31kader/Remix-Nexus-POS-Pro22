@@ -29,7 +29,7 @@ export function MonthlyCalendar({
   const activeMonthName = format(currentCalendarMonth, 'MMMM yyyy', { locale: fr });
 
   return (
-    <div className="xl:col-span-5 bg-white/5 backdrop-blur-md border border-white/5 rounded-[2.5rem] p-6 space-y-6">
+    <div className="xl:col-span-5 bg-white/5  border border-white/5 rounded-xl p-6 space-y-6">
       <div className="flex justify-between items-center pb-4 border-b border-white/5">
         <div>
           <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2 font-sans">

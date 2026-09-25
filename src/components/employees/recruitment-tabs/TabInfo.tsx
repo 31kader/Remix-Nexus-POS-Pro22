@@ -60,10 +60,10 @@ export function TabInfo({
         </div>
       </div>
 
-      <div className="p-8 bg-emerald-500/[0.02] rounded-[2rem] border border-emerald-500/10 space-y-6 relative overflow-hidden">
+      <div className="p-8 bg-emerald-500/[0.02] rounded-xl border border-emerald-500/10 space-y-6 relative overflow-hidden">
          <div className="flex items-center gap-3 text-emerald-400 mb-2 relative z-10 font-black">
             <UserCog size={16} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Rémunération & Contrat (Nexus Payroll)</span>
+            <span className="text-[10px] font-black uppercase tracking-normal">Rémunération & Contrat (Nexus Payroll)</span>
          </div>
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10 w-full">
             <div className="space-y-3">

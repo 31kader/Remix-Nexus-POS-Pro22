@@ -289,13 +289,13 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-3xl overflow-hidden border border-slate-100"
+              className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white rounded-xl overflow-hidden border border-slate-100"
             >
               {/* Image Section */}
               <div className="aspect-square bg-slate-50 flex items-center justify-center p-8 relative">
                 <SafeImage src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain drop-shadow-lg" fallback={<Package size={100} className="text-slate-200" />} />
                 <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1 bg-white/80 backdrop-blur-sm border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <span className="px-3 py-1 bg-white/80  border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     {categories.find(c => c.id === foundProduct.categoryId)?.name || 'Général'}
                   </span>
                 </div>
@@ -357,7 +357,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             <motion.div 
                initial={{ opacity: 0 }} 
                animate={{ opacity: 1 }} 
-               className="text-center py-12 p-8 bg-rose-50 rounded-3xl border border-dashed border-rose-200"
+               className="text-center py-12 p-8 bg-rose-50 rounded-xl border border-dashed border-rose-200"
             >
               <div className="w-16 h-16 bg-white text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <AlertCircle size={32} />
@@ -365,7 +365,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               <p className="text-rose-600 font-black text-2xl uppercase mb-2">ARTICLE N'EXISTE PAS</p>
               <p className="text-slate-500 mb-6">La recherche pour <span className="font-bold">"{searchTerm}"</span> n'a donné aucun résultat.</p>
               <div className="flex flex-col items-center gap-4">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest italic animate-bounce">Veuillez rescanner l'article...</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest  animate-bounce">Veuillez rescanner l'article...</p>
                 <Button variant="secondary" onClick={() => setSearchTerm('')} className="px-8">
                   Réessayer
                 </Button>

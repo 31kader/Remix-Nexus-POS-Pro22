@@ -177,7 +177,7 @@ export function CustomerFinancialModal({
                 className={cn(
                   "py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider text-center transition-all",
                   financialMethod === m.id
-                    ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 font-black shadow-neon-indigo/10"
+                    ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 font-black shadow-xs/10"
                     : "bg-slate-900 text-slate-400 border-white/5 hover:text-white"
                 )}
               >
@@ -230,7 +230,7 @@ export function CustomerFinancialModal({
           <button
             type="submit"
             disabled={isProcessingTopUp || !topUpAmount || parseFloat(topUpAmount) <= 0}
-            className="flex-1 bg-indigo-500 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-2xl hover:bg-indigo-400 transition-all shadow-neon-indigo/30 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-indigo-500 text-white font-extrabold uppercase tracking-widest text-[11px] py-4 rounded-2xl hover:bg-indigo-400 transition-all shadow-xs/30 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessingTopUp ? 'Traitement...' : 'Valider'}
           </button>

@@ -246,14 +246,14 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
   return (
     <div className="flex flex-col h-full bg-nardo text-slate-100 overflow-hidden font-sans">
       {/* Control Header */}
-      <header className="h-20 border-b border-white/5 bg-workspace/80 backdrop-blur-xl flex items-center justify-between px-8 shrink-0 z-20">
+      <header className="h-20 border-b border-white/5 bg-workspace/80  flex items-center justify-between px-8 shrink-0 z-20">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-neon-indigo">
+            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xs">
               <Camera size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">Nexus Guard <span className="text-indigo-400">Pro</span></h1>
+              <h1 className="text-xl font-black tracking-tighter text-white uppercase ">Nexus Guard <span className="text-indigo-400">Pro</span></h1>
               <div className="flex items-center gap-2">
                 <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Poste Audit: {user.displayName}</p>
@@ -342,10 +342,10 @@ export function CameraPortal({ settings, user }: CameraPortalProps) {
               </div>
            ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-800">
-                <div className="w-32 h-32 bg-workspace border border-white/5 rounded-[3rem] flex items-center justify-center mb-8 shadow-2xl">
+                <div className="w-32 h-32 bg-workspace border border-white/5 rounded-xl flex items-center justify-center mb-8 shadow-2xl">
                    <LayoutGrid size={48} className="opacity-10 text-indigo-500" />
                 </div>
-                <h3 className="text-lg font-black uppercase tracking-[0.3em] text-white/20">Système en Veille</h3>
+                <h3 className="text-lg font-black uppercase tracking-normal text-white/20">Système en Veille</h3>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mt-2">Sélectionnez une session pour monitoring</p>
               </div>
            )}

@@ -62,8 +62,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl w-full max-w-4xl p-6 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-950/80  flex items-center justify-center z-50 p-4 transition-all duration-300">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -94,7 +94,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-[11px] text-slate-400 text-center italic">Veuillez ne pas fermer cette fenêtre.</p>
+              <p className="text-[11px] text-slate-400 text-center ">Veuillez ne pas fermer cette fenêtre.</p>
             </div>
           )}
 
@@ -165,7 +165,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, heade
                     <span className="text-rose-300 font-extrabold">Ligne {e.row} :</span> {e.message}
                   </p>
                 ))}
-                {errors.length > 50 && <p className="italic text-slate-500">Et {errors.length - 50} autres erreurs...</p>}
+                {errors.length > 50 && <p className=" text-slate-500">Et {errors.length - 50} autres erreurs...</p>}
               </div>
             </div>
           )}

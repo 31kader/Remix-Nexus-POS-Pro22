@@ -27,7 +27,7 @@ export function SubTabDebts({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="p-8 bg-indigo-500/5 industrial-card border-indigo-500/20">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-3xl flex items-center justify-center border border-rose-500/20 shadow-lg shadow-rose-500/10"><Wallet size={32}/></div>
+            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-xl flex items-center justify-center border border-rose-500/20 shadow-lg shadow-rose-500/10"><Wallet size={32}/></div>
             <div>
               <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Dette Totale Fournisseurs</p>
               <p className="text-4xl font-black text-white font-mono">{safeSuppliers.reduce((sum, s) => sum + (Number(s.balance) || 0), 0).toFixed(2)} {currency}</p>
@@ -36,7 +36,7 @@ export function SubTabDebts({
         </Card>
         <Card className="p-8 bg-emerald-500/5 industrial-card border-emerald-500/20">
           <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-3xl flex items-center justify-center border border-emerald-500/20 shadow-lg shadow-emerald-500/10"><CheckCircle2 size={32}/></div>
+            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-lg shadow-emerald-500/10"><CheckCircle2 size={32}/></div>
             <div>
               <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">Fournisseurs à jour</p>
               <p className="text-4xl font-black text-white font-mono">{safeSuppliers.filter(s => (Number(s.balance) || 0) <= 0).length}</p>
@@ -82,7 +82,7 @@ export function SubTabDebts({
                   </tr>
                 ))}
                 {safeSuppliers.filter(s => (Number(s.balance) || 0) > 0).length === 0 && (
-                  <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono italic uppercase text-xs">Aucune dette fournisseur.</td></tr>
+                  <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono  uppercase text-xs">Aucune dette fournisseur.</td></tr>
                 )}
               </tbody>
             </table>
@@ -109,7 +109,7 @@ export function SubTabDebts({
                   </tr>
                 ))}
                 {safeSupplierPayments.length === 0 && (
-                  <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono italic uppercase text-xs">Aucun versement enregistré.</td></tr>
+                  <tr><td colSpan={3} className="p-12 text-center text-industrial-600 font-mono  uppercase text-xs">Aucun versement enregistré.</td></tr>
                 )}
               </tbody>
             </table>

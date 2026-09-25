@@ -127,13 +127,13 @@ export function TeamManagementUsersTab({
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="p-8 bg-indigo-500/5 border border-indigo-500/10 rounded-[2.5rem] flex gap-6 relative overflow-hidden group"
+        className="p-8 bg-indigo-500/5 border border-indigo-500/10 rounded-xl flex gap-6 relative overflow-hidden group"
       >
-        <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-neon-indigo/20 shrink-0">
+        <div className="w-14 h-14 bg-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20 shrink-0">
           <ShieldCheck size={28} />
         </div>
         <div className="text-[11px] font-black tracking-widest uppercase relative z-10">
-          <p className="text-indigo-400 mb-2 italic">Différence entre "Personnel" et "Accès"</p>
+          <p className="text-indigo-400 mb-2 ">Différence entre "Personnel" et "Accès"</p>
           <p className="text-white/60 leading-relaxed max-w-2xl">
             L'onglet <span className="text-white">Personnel</span> gère l'aspect administratif, tandis que les <span className="text-white">Comptes</span> définissent qui peut s'authentifier et avec quel niveau de pouvoir.
           </p>
@@ -141,17 +141,17 @@ export function TeamManagementUsersTab({
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] -mr-32 -mt-32 pointer-events-none" />
       </motion.div>
 
-      <Card className="overflow-hidden bg-white/5 border-white/5 backdrop-blur-md rounded-[2.5rem] shadow-2xl">
+      <Card className="overflow-hidden bg-white/5 border-white/5  rounded-xl shadow-2xl">
         <div className="overflow-x-auto text-white">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-white/5 text-white/30 uppercase border-b border-white/5">
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">UTILISATEUR</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">IDENTIFIANTS</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">MOT DE PASSE</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">RÔLE & ACCÈS</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">STATUT</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em] text-right">ACTIONS</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">UTILISATEUR</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">IDENTIFIANTS</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">MOT DE PASSE</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">RÔLE & ACCÈS</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">STATUT</th>
+                <th className="p-6 text-[10px] font-black tracking-normal text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -173,19 +173,19 @@ export function TeamManagementUsersTab({
                         </div>
                         <div>
                            <span className="font-black text-white uppercase tracking-widest block">{u.displayName || u.email || 'Utilisateur'}</span>
-                           <span className="text-[9px] text-white/20 tracking-[0.2em]">UID: {u.uid?.slice(0, 12)}...</span>
+                           <span className="text-[9px] text-white/20 tracking-normal">UID: {u.uid?.slice(0, 12)}...</span>
                         </div>
                       </div>
                     </td>
                     <td className="p-6">
                       <div className="flex flex-col gap-1">
                         {u.email && <span className="text-[11px] font-black text-white/60 tracking-widest">{u.email}</span>}
-                        {u.phone && <span className="text-[10px] font-black text-indigo-400 tracking-[0.2em]">TEL: {u.phone}</span>}
-                        {!u.email && !u.phone && <span className="text-[9px] text-white/20 italic tracking-widest font-black uppercase">Aucun identifiant</span>}
+                        {u.phone && <span className="text-[10px] font-black text-indigo-400 tracking-normal">TEL: {u.phone}</span>}
+                        {!u.email && !u.phone && <span className="text-[9px] text-white/20  tracking-widest font-black uppercase">Aucun identifiant</span>}
                       </div>
                     </td>
                     <td className="p-6">
-                      <div className="flex items-center gap-2 text-[9px] font-black text-white/20 uppercase tracking-widest italic">
+                      <div className="flex items-center gap-2 text-[9px] font-black text-white/20 uppercase tracking-widest ">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
                         Masqué (hash sécurisé)
                       </div>
@@ -207,7 +207,7 @@ export function TeamManagementUsersTab({
                     </td>
                     <td className="p-6">
                       <span className={cn(
-                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] shadow-xl border",
+                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-normal shadow-xl border",
                         employee?.status === 'inactive' ? "bg-rose-500/10 text-rose-500 border-rose-500/20" : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                       )}>
                         {employee?.status?.toUpperCase() || 'ACTIF'}
@@ -265,13 +265,13 @@ export function TeamManagementUsersTab({
           title="IDENTITY PROFILE"
         >
           <div className="p-2 space-y-8 text-left text-white">
-             <div className="flex items-center gap-6 bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
-               <div className="w-20 h-20 bg-indigo-600 text-white rounded-[1.8rem] flex items-center justify-center font-black text-3xl shadow-neon-indigo/40 border border-indigo-400/30">
+             <div className="flex items-center gap-6 bg-white/5 p-8 rounded-xl border border-white/10">
+               <div className="w-20 h-20 bg-indigo-600 text-white rounded-[1.8rem] flex items-center justify-center font-black text-3xl shadow-xs/40 border border-indigo-400/30">
                  {(viewedUser.displayName || viewedUser.email || 'U').charAt(0).toUpperCase()}
                </div>
                <div>
-                  <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter">{viewedUser.displayName || viewedUser.email || 'Utilisateur'}</h4>
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mt-1">{viewedUser.role}</p>
+                  <h4 className="text-2xl font-black text-white  uppercase tracking-tighter">{viewedUser.displayName || viewedUser.email || 'Utilisateur'}</h4>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-normal mt-1">{viewedUser.role}</p>
                </div>
              </div>
 
@@ -281,14 +281,14 @@ export function TeamManagementUsersTab({
                  { label: 'Verified Email', value: viewedUser.email || 'N/A' },
                  { label: 'Last Authentication', value: viewedUser.lastLogin ? format(new Date(viewedUser.lastLogin), 'dd MMMM yyyy @ HH:mm', { locale: fr }).toUpperCase() : 'NEVER REGISTERED' }
                ].map((item, i) => (
-                 <div key={i} className="p-5 bg-black/40 border border-white/10 rounded-[1.5rem] flex items-center justify-between">
+                 <div key={i} className="p-5 bg-black/40 border border-white/10 rounded-xl flex items-center justify-between">
                     <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">{item.label}</span>
                     <span className={cn("text-xs font-black text-white tracking-widest uppercase", item.mono && "font-mono text-indigo-400 tracking-normal")}>{item.value}</span>
                  </div>
                ))}
              </div>
 
-             <button className="w-full py-5 rounded-[1.5rem] bg-white/10 text-white font-black text-[11px] uppercase tracking-[0.3em] hover:bg-white/20 transition-all border border-white/10 shadow-xl" onClick={() => setViewedUser(null)}>
+             <button className="w-full py-5 rounded-xl bg-white/10 text-white font-black text-[11px] uppercase tracking-normal hover:bg-white/20 transition-all border border-white/10 shadow-xl" onClick={() => setViewedUser(null)}>
                CLOSE PROFILE
              </button>
           </div>
@@ -304,14 +304,14 @@ export function TeamManagementUsersTab({
         >
           <div className="space-y-6 text-left text-white">
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Utilisateur</p>
+              <p className="text-[10px] font-black uppercase tracking-normal text-white/30">Utilisateur</p>
               <p className="text-sm font-black uppercase tracking-widest text-white">
                 {pinEditorUser.displayName || pinEditorUser.email || pinEditorUser.phone || 'Utilisateur'}
               </p>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Nouveau mot de passe / PIN</label>
+              <label className="text-[10px] font-black uppercase tracking-normal text-white/30">Nouveau mot de passe / PIN</label>
               <input
                 autoFocus
                 value={pinValue}

@@ -28,7 +28,7 @@ export function ReminderForm({
   suppliers
 }: ReminderFormProps) {
   return (
-    <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-6 backdrop-blur-md">
+    <div className="bg-white/5 border border-white/5 rounded-xl p-6 ">
       <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest border-b border-white/5 pb-3 mb-4 flex items-center gap-2 font-sans">
         <Plus size={16} /> Planifier un Rappel
       </h4>

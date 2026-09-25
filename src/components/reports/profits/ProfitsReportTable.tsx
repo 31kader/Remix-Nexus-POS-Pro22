@@ -344,8 +344,8 @@ export const ProfitsReportTable = memo(function ProfitsReportTable({
 
       {/* Modal d'ajustement du Bénéfice Admin pour un produit spécifique */}
       {selectedProduct && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#0f1117] border border-indigo-500/30 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative overflow-hidden ring-1 ring-indigo-500/20 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80  animate-in fade-in duration-200">
+          <div className="bg-[#0f1117] border border-indigo-500/30 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative overflow-hidden ring-1 ring-indigo-500/20 max-h-[90vh] overflow-y-auto">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-emerald-500 to-indigo-500"></div>
 
             {/* Header */}

@@ -106,7 +106,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
           
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
             <div className="flex items-center gap-6 text-left">
-              <div className="w-20 h-20 bg-indigo-600 text-white rounded-[2rem] flex items-center justify-center text-3xl font-black shadow-2xl relative group overflow-hidden">
+              <div className="w-20 h-20 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-3xl font-black shadow-2xl relative group overflow-hidden">
                 <span className="relative z-10">{viewingDetailsSupplier.name.charAt(0).toUpperCase()}</span>
               </div>
               <div>
@@ -128,7 +128,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
             </div>
 
             <div className="flex items-center gap-4 text-left">
-              <div className="bg-white/5 p-5 px-8 rounded-3xl border border-white/10 shadow-2xl flex flex-col justify-center min-w-[200px]">
+              <div className="bg-white/5 p-5 px-8 rounded-xl border border-white/10 shadow-2xl flex flex-col justify-center min-w-[200px]">
                 <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-1">Dette Globale</p>
                 <p className="text-3xl font-black text-rose-500 leading-none font-mono">
                   {Number(viewingDetailsSupplier.balance || 0).toFixed(2)} <span className="text-sm font-medium">{settings.currency}</span>
@@ -136,16 +136,16 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
               </div>
               <Button 
                 onClick={() => { setPaymentData({...paymentData, amount: viewingDetailsSupplier.balance || 0}); setIsPaymentModalOpen(true); }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 h-20 rounded-[2rem] flex flex-col items-center justify-center shadow-2xl shadow-indigo-500/20 transition-all hover:-translate-y-1 active:translate-y-0 text-left"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 h-20 rounded-xl flex flex-col items-center justify-center shadow-2xl shadow-indigo-500/20 transition-all hover:-translate-y-1 active:translate-y-0 text-left"
               >
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 opacity-70">Effectuer</span>
+                <span className="text-[10px] font-black uppercase tracking-normal mb-1 opacity-70">Effectuer</span>
                 <span className="text-lg font-black whitespace-nowrap">VERSEMENT</span>
               </Button>
             </div>
           </div>
 
           {/* Navigation */}
-          <div className="flex flex-wrap gap-2 p-1.5 bg-white/5 backdrop-blur-md rounded-2xl w-fit border border-white/10">
+          <div className="flex flex-wrap gap-2 p-1.5 bg-white/5  rounded-2xl w-fit border border-white/10">
             {[
               { id: 'products', label: 'Catalogue', icon: Package },
               { id: 'damaged', label: 'Dommages', icon: AlertTriangle },
@@ -197,7 +197,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                   .map(p => {
                     const remaining = Number(p.total || 0) - Number(p.paidAmount || 0);
                     return (
-                      <div key={p.id} className="bg-white p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-slate-200 hover:border-indigo-400 hover:shadow-2xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group text-left">
+                      <div key={p.id} className="bg-white p-6 sm:p-8 rounded-xl sm:rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-2xl transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group text-left">
                         <div className="flex items-center gap-4 sm:gap-8">
                           <div className="w-12 h-12 sm:w-16 h-16 bg-slate-50 text-slate-300 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">
                             <FileText size={32} />
@@ -225,11 +225,11 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                         
                         <div className="flex items-center gap-6 sm:gap-12 self-end md:self-auto text-left">
                           <div className="text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-1">Total</p>
                             <p className="text-lg sm:text-xl font-black text-slate-900 tracking-tight font-mono">{Number(p.total || 0).toFixed(2)}</p>
                           </div>
                           <div className="text-right pr-4 sm:pr-6 border-r border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Reste</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-1">Reste</p>
                             <p className={cn("text-lg sm:text-xl font-black tracking-tight font-mono", remaining > 0 ? "text-rose-600" : "text-emerald-500")}>
                               {Number(remaining || 0).toFixed(2)}
                             </p>
@@ -264,9 +264,9 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
           {activeDetailsTab === 'payments' && (
             <div className="space-y-10 text-left">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-emerald-600 p-8 sm:p-10 rounded-[2rem] sm:rounded-[3rem] text-white shadow-2xl flex flex-col justify-between relative overflow-hidden group text-left">
+                <div className="bg-emerald-600 p-8 sm:p-10 rounded-xl sm:rounded-xl text-white shadow-2xl flex flex-col justify-between relative overflow-hidden group text-left">
                   <div className="relative z-10">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-70 mb-4">Total Versement</p>
+                    <p className="text-[10px] font-black uppercase tracking-normal opacity-70 mb-4">Total Versement</p>
                     <p className="text-4xl sm:text-6xl font-black mb-1 tracking-tighter font-mono">
                       {Number(supplierPayments
                         .filter(pm => pm.supplierId === viewingDetailsSupplier.id)
@@ -276,24 +276,24 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                   </div>
                 </div>
 
-                <div className="bg-white p-8 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-slate-200 shadow-xl flex flex-col justify-between text-left">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Actions Financières</p>
+                <div className="bg-white p-8 sm:p-10 rounded-xl sm:rounded-xl border border-slate-200 shadow-xl flex flex-col justify-between text-left">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-4">Actions Financières</p>
                   <Button 
                     onClick={() => { setPaymentData({...paymentData, amount: 0, date: new Date().toISOString()}); setIsPaymentModalOpen(true); }}
-                    className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 sm:py-5 rounded-2xl sm:rounded-3xl shadow-2xl transition-all cursor-pointer text-center"
+                    className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 sm:py-5 rounded-2xl sm:rounded-xl shadow-2xl transition-all cursor-pointer text-center"
                   >
                     NOUVEAU VERSEMENT
                   </Button>
                 </div>
               </div>
 
-              <div className="overflow-x-auto bg-white rounded-[1.5rem] sm:rounded-[3rem] border border-slate-200 shadow-sm text-left">
+              <div className="overflow-x-auto bg-white rounded-xl sm:rounded-xl border border-slate-200 shadow-sm text-left">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Date</th>
-                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] font-sans">Montant</th>
-                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Actions</th>
+                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-normal">Date</th>
+                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-normal font-sans">Montant</th>
+                      <th className="px-6 sm:px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-normal">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 text-slate-800">

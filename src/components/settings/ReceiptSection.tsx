@@ -42,7 +42,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* 🖥️ Isolation Multi-Postes (Terminal ID) */}
-      <div className="p-6 bg-slate-900/90 border border-indigo-500/20 rounded-3xl space-y-4">
+      <div className="p-6 bg-slate-900/90 border border-indigo-500/20 rounded-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
@@ -150,7 +150,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
       {/* Pilotage Tiroir-Caisse & Options d'Impression */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Tiroir-Caisse ESC/POS */}
-        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-3xl group hover:border-emerald-500/30 transition-all">
+        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-xl group hover:border-emerald-500/30 transition-all">
           <div className="space-y-1">
             <p className="text-xs font-bold text-white uppercase">Tiroir-Caisse Automatique</p>
             <p className="text-[10px] text-slate-400">Ouvre le tiroir sur règlement espèces</p>
@@ -178,7 +178,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
         </div>
 
         {/* Impression Silencieuse */}
-        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-3xl group hover:border-amber-500/30 transition-all">
+        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-xl group hover:border-amber-500/30 transition-all">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
               <Printer size={20} />
@@ -202,7 +202,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
 
       {/* Options d'Affichage Logo & Économies */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-3xl group hover:border-indigo-500/30 transition-all">
+        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-xl group hover:border-indigo-500/30 transition-all">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
               <Image size={20} />
@@ -223,7 +223,7 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
           </label>
         </div>
 
-        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-3xl group hover:border-emerald-500/30 transition-all">
+        <div className="flex items-center justify-between p-5 bg-slate-900 border border-white/5 rounded-xl group hover:border-emerald-500/30 transition-all">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
               <Sparkles size={20} />

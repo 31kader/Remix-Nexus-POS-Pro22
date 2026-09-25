@@ -37,7 +37,7 @@ export function ProductClassificationSection({
       {/* Ligne 1 : Marque & Fournisseur */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex justify-between items-center group ml-1">
+          <label className="text-[9px] font-black text-slate-500 uppercase tracking-normal  flex justify-between items-center group ml-1">
             MARQUE CORPORATE
             {setActiveTab && (
               <button 
@@ -59,7 +59,7 @@ export function ProductClassificationSection({
 
         {/* Fournisseur */}
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex justify-between items-center group ml-1">
+          <label className="text-[9px] font-black text-slate-500 uppercase tracking-normal  flex justify-between items-center group ml-1">
             <span className="flex items-center gap-1.5">
               <Truck size={12} className="text-indigo-400" />
               FOURNISSEUR PRINCIPAL
@@ -77,7 +77,7 @@ export function ProductClassificationSection({
           <div className="relative group">
             <input
               list="product-suppliers-datalist"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase "
               placeholder="CHOISIR OU TAPER FOURNISSEUR..."
               value={formData.supplier || ''}
               onChange={e => setFormData({ ...formData, supplier: e.target.value })}
@@ -96,7 +96,7 @@ export function ProductClassificationSection({
       {/* Ligne 2 : Catégorie Maître & Sous-catégorie */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] italic flex justify-between items-center ml-1">
+          <label className="text-[9px] font-black text-slate-500 uppercase tracking-normal  flex justify-between items-center ml-1">
             CATÉGORIE MAÎTRE
             {setActiveTab && (
               <button 
@@ -110,11 +110,11 @@ export function ProductClassificationSection({
           </label>
           <div className="relative group">
             <select
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
               value={parentCatId}
               onChange={e => { setParentCatId(e.target.value); setSubCatId(''); }}
             >
-              <option value="" className="bg-[#0a0c10] text-slate-700 italic">AUCUNE SÉLECTION</option>
+              <option value="" className="bg-[#0a0c10] text-slate-700 ">AUCUNE SÉLECTION</option>
               {categories.filter(c => !c.parentId).map((c: any) => (
                 <option key={c.id} value={c.id} className="bg-[#0a0c10] text-white">
                   {String(c.name || 'CATÉGORIE').toUpperCase()}
@@ -125,21 +125,21 @@ export function ProductClassificationSection({
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[0.2em] italic ml-1 flex items-center gap-2">
+          <label className="text-[9px] font-black text-indigo-400/60 uppercase tracking-normal  ml-1 flex items-center gap-2">
             <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />
             RAMIFICATION / SOUS-CATÉGORIE *
           </label>
           <div className="relative group">
             <select
               className={cn(
-                "w-full bg-black/40 border rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 transition-all shadow-inner cursor-pointer appearance-none italic",
+                "w-full bg-black/40 border rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 transition-all shadow-inner cursor-pointer appearance-none ",
                 parentCatId ? "border-indigo-500/40 focus:ring-indigo-500/10" : "border-white/5 opacity-30 cursor-not-allowed"
               )}
               value={subCatId}
               disabled={!parentCatId}
               onChange={e => setSubCatId(e.target.value)}
             >
-              <option value="" className="bg-[#0a0c10] text-slate-700 italic">SÉLECTIONNER RAMIFICATION</option>
+              <option value="" className="bg-[#0a0c10] text-slate-700 ">SÉLECTIONNER RAMIFICATION</option>
               {categories.filter(c => c.parentId === parentCatId).map((c: any) => (
                 <option key={c.id} value={c.id} className="bg-[#0a0c10] text-white">
                   {String(c.name || 'CATÉGORIE').toUpperCase()}
@@ -154,10 +154,10 @@ export function ProductClassificationSection({
       {/* Ligne 3 : État Opérationnel, Emplacement Logistique & Réf Interne */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 bg-black/20 p-6 rounded-2xl border border-white/5 ring-1 ring-white/5">
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">ÉTAT OPÉRATIONNEL</label>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">ÉTAT OPÉRATIONNEL</label>
           <div className="relative group">
             <select
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-[10px] font-black uppercase tracking-[0.15em] outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
               value={formData.status}
               onChange={e => setFormData({...formData, status: e.target.value as any})}
             >
@@ -170,11 +170,11 @@ export function ProductClassificationSection({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1 flex items-center gap-2">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1 flex items-center gap-2">
             <MapPin size={10} className="text-indigo-400" /> EMPLACEMENT LOGISTIQUE
           </label>
           <input 
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase tracking-widest italic"
+            className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase tracking-widest "
             placeholder="RAYON, STOCK..."
             value={formData.location} 
             onChange={e => setFormData({...formData, location: e.target.value.toUpperCase()})} 
@@ -182,11 +182,11 @@ export function ProductClassificationSection({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1 flex items-center gap-2">
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1 flex items-center gap-2">
             <Link2 size={10} className="text-indigo-400" /> CODE MODÈLE / RÉF INTERNE
           </label>
           <input 
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase tracking-widest italic"
+            className="w-full bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-white text-xs font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase tracking-widest "
             placeholder="RÉF INTERNE..."
             value={formData.reference} 
             onChange={e => setFormData({...formData, reference: e.target.value})} 

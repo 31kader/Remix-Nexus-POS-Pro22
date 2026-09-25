@@ -33,15 +33,15 @@ export function CustomerDashboard({
   return (
     <div className="min-h-screen bg-nardo flex flex-col font-sans selection:bg-indigo-500/30 selection:text-white">
       {/* Header */}
-      <header className="bg-workspace/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-50">
+      <header className="bg-workspace/80  border-b border-white/5 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-neon-indigo border border-indigo-400/50">
+            <div className="w-12 h-12 bg-indigo-500 text-white rounded-2xl flex items-center justify-center shadow-xs border border-indigo-400/50">
               <ShoppingBag size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="font-black text-white uppercase italic tracking-tighter text-xl leading-none">Nexus <span className="text-indigo-400">Portal</span></h1>
-              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">{settings.name}</p>
+              <h1 className="font-black text-white uppercase  tracking-tighter text-xl leading-none">Nexus <span className="text-indigo-400">Portal</span></h1>
+              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-normal mt-1">{settings.name}</p>
             </div>
           </div>
           <button 
@@ -59,36 +59,36 @@ export function CustomerDashboard({
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-indigo-600 rounded-[3rem] p-10 text-white shadow-2xl shadow-indigo-500/20 relative overflow-hidden group"
+          className="bg-indigo-600 rounded-xl p-10 text-white shadow-2xl shadow-indigo-500/20 relative overflow-hidden group"
         >
           <div className="relative z-10">
-            <h2 className="text-4xl font-black mb-2 italic tracking-tighter uppercase">Bonjour, {customer.name} !</h2>
+            <h2 className="text-4xl font-black mb-2  tracking-tighter uppercase">Bonjour, {customer.name} !</h2>
             <p className="text-indigo-100 font-bold uppercase tracking-widest text-[10px] opacity-80">Membre Nexus Privilège • Accès Autorisé</p>
             
             <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em]">Crédits Fidélité</p>
+                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-normal">Crédits Fidélité</p>
                 <div className="flex items-center gap-2">
                   <Award className="text-amber-400 w-7 h-7 drop-shadow-md" />
                   <p className="text-4xl font-black tracking-tighter">{customer.loyaltyPoints}</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em]">Valeur Nexus</p>
+                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-normal">Valeur Nexus</p>
                 <div className="flex items-baseline gap-1">
                   <p className="text-4xl font-black tracking-tighter">{(customer.loyaltyPoints * (settings.loyaltyPointValue || 0.01)).toFixed(2)}</p>
                   <span className="text-xs font-black opacity-60 uppercase">{settings.currency}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em]">Volume Total</p>
+                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-normal">Volume Total</p>
                 <div className="flex items-baseline gap-1">
                    <p className="text-4xl font-black tracking-tighter">{stats.totalSpent.toFixed(0)}</p>
                    <span className="text-xs font-black opacity-60 uppercase">{settings.currency}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.2em]">Opérations</p>
+                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-normal">Opérations</p>
                 <p className="text-4xl font-black tracking-tighter">{customerTransactions.length}</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ export function CustomerDashboard({
       {/* Footer */}
       <footer className="bg-workspace/40 border-t border-white/5 py-10 mt-16">
         <div className="max-w-5xl mx-auto px-6 text-center space-y-4">
-          <p className="text-xs font-black text-white uppercase italic tracking-[0.3em]">{settings.name}</p>
+          <p className="text-xs font-black text-white uppercase  tracking-normal">{settings.name}</p>
           <div className="flex items-center justify-center gap-4 opacity-30">
              <div className="h-px w-12 bg-slate-500"></div>
              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Nexus System Core &copy; {new Date().getFullYear()}</p>

@@ -32,7 +32,7 @@ export function SupplierList({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
       {suppliers.map((supplier: Supplier) => (
-        <Card key={supplier.id} className="p-8 bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl rounded-[2.5rem] hover:bg-white/10 transition-all group overflow-hidden relative active:scale-[0.98] text-left">
+        <Card key={supplier.id} className="p-8 bg-white/5  border border-white/5 shadow-2xl rounded-xl hover:bg-white/10 transition-all group overflow-hidden relative active:scale-[0.98] text-left">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
           
           <div className="flex justify-between items-start mb-8 text-left">
@@ -41,10 +41,10 @@ export function SupplierList({
                 <Truck size={28} strokeWidth={2.5} />
               </div>
               <div className="text-left">
-                <h4 className="font-black text-white text-xl tracking-tighter uppercase italic flex flex-wrap items-center gap-3">
+                <h4 className="font-black text-white text-xl tracking-tighter uppercase  flex flex-wrap items-center gap-3">
                   {supplier.name}
                   {supplier.hasFullInventoryAccess && (
-                    <span className="px-3 py-1 bg-indigo-600 text-white text-[8px] font-black uppercase tracking-[0.2em] rounded-full shadow-neon-indigo border border-indigo-400/50">Nexus Access</span>
+                    <span className="px-3 py-1 bg-indigo-600 text-white text-[8px] font-black uppercase tracking-normal rounded-full shadow-xs border border-indigo-400/50">Nexus Access</span>
                   )}
                 </h4>
                 
@@ -61,7 +61,7 @@ export function SupplierList({
                   );
                 })()}
 
-                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mt-1.5">{supplier.contactName || 'CONTACT NON DÉFINI'}</p>
+                <p className="text-[10px] font-black text-white/20 uppercase tracking-normal mt-1.5">{supplier.contactName || 'CONTACT NON DÉFINI'}</p>
               </div>
             </div>
             {supplier.feedUrl && (
@@ -91,7 +91,7 @@ export function SupplierList({
               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/20 group-hover/item:text-indigo-400 transition-colors"><Mail size={14} /></div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[8px] font-black text-white/20 uppercase tracking-widest leading-none mb-1">MAIL</span>
-                <span className="text-[11px] font-black text-white/60 tracking-widest truncate uppercase italic">{supplier.email || '—'}</span>
+                <span className="text-[11px] font-black text-white/60 tracking-widest truncate uppercase ">{supplier.email || '—'}</span>
               </div>
             </div>
           </div>
@@ -99,8 +99,8 @@ export function SupplierList({
           {((supplier.preSaleDays && supplier.preSaleDays.length > 0) || 
             (supplier.deliveryDays && supplier.deliveryDays.length > 0) || 
             (supplier.paymentDays && supplier.paymentDays.length > 0)) && (
-            <div className="mb-8 p-4 bg-black/40 rounded-3xl border border-white/5 space-y-2 text-left">
-              <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] block">📌 Agenda opérationnel</span>
+            <div className="mb-8 p-4 bg-black/40 rounded-xl border border-white/5 space-y-2 text-left">
+              <span className="text-[8px] font-black text-white/30 uppercase tracking-normal block">📌 Agenda opérationnel</span>
               <div className="space-y-1.5 text-[10px]">
                 {supplier.preSaleDays && supplier.preSaleDays.length > 0 && (
                   <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ export function SupplierList({
             </div>
             <Button 
               variant="ghost" 
-              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black uppercase tracking-[0.2em] text-[10px] px-8 rounded-2xl h-12 group-hover:border-indigo-500/50 transition-all cursor-pointer" 
+              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-black uppercase tracking-normal text-[10px] px-8 rounded-2xl h-12 group-hover:border-indigo-500/50 transition-all cursor-pointer" 
               onClick={() => { setEditingSupplier(supplier); setIsModalOpen(true); }}
             >
               MODIFIER

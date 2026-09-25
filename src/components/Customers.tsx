@@ -115,7 +115,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
             className={cn(
               "p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group h-[74px]",
               selectedCustomerId === customer.id 
-                ? "bg-indigo-600/20 border-indigo-500/40 shadow-neon-indigo" 
+                ? "bg-indigo-600/20 border-indigo-500/40 shadow-xs" 
                 : "bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10"
             )}
           >
@@ -379,11 +379,11 @@ export const Customers = memo(function Customers(props: CustomersProps) {
           }}
         />
       ) : directoryLayout === 'table' ? (
-        <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-xl p-6 shadow-2xl overflow-hidden">
           {/* Table Header Controls */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tight flex items-center gap-2.5">
+              <h3 className="text-xl font-black text-white  uppercase tracking-tight flex items-center gap-2.5">
                 <TableIcon className="text-indigo-400" size={22} /> Grand Tableau des Clients
               </h3>
               <p className="text-xs text-slate-400 font-medium mt-0.5">
@@ -583,7 +583,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
                               </a>
                             </div>
                           ) : (
-                            <span className="text-slate-600 italic text-[11px]">Pas de téléphone</span>
+                            <span className="text-slate-600  text-[11px]">Pas de téléphone</span>
                           )}
                           {cust.email && (
                             <p className="text-[10px] text-slate-400 truncate max-w-[160px] mt-0.5">{cust.email}</p>
@@ -736,12 +736,12 @@ export const Customers = memo(function Customers(props: CustomersProps) {
         <div className="flex-1 flex flex-col md:flex-row gap-5 overflow-hidden">
           {/* Left Panel: Customer List */}
           <div className={cn(
-            "w-full md:w-1/3 flex flex-col gap-3 bg-white/5 backdrop-blur-xl p-5 rounded-[2rem] shadow-neon-indigo/5 border border-white/5 h-1/2 md:h-full overflow-hidden transition-all duration-300",
+            "w-full md:w-1/3 flex flex-col gap-3 bg-white/5  p-5 rounded-xl shadow-xs/5 border border-white/5 h-1/2 md:h-full overflow-hidden transition-all duration-300",
             isDetailExpanded && "hidden md:hidden"
           )}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black text-white italic tracking-tight uppercase">Répertoire</h3>
+                <h3 className="text-xl font-black text-white  tracking-tight uppercase">Répertoire</h3>
                 <p className="text-xs text-slate-400 font-black uppercase tracking-wider">{filteredCustomers.length} affiché(s) / {customers.length}</p>
               </div>
               <button
@@ -888,7 +888,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
 
           {/* Right Panel: Detail View */}
           <div className={cn(
-            "bg-workspace rounded-[2.5rem] shadow-neon-indigo/5 border border-white/5 flex flex-col overflow-hidden transition-all duration-300",
+            "bg-workspace rounded-xl shadow-xs/5 border border-white/5 flex flex-col overflow-hidden transition-all duration-300",
             isDetailExpanded ? "w-full h-full" : "w-full md:w-2/3 h-1/2 md:h-full"
           )}>
             {selectedCustomer ? (
@@ -1082,10 +1082,10 @@ export const Customers = memo(function Customers(props: CustomersProps) {
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-600">
-                <div className="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center mb-8 border border-white/5 shadow-inner">
+                <div className="w-24 h-24 bg-slate-900 rounded-xl flex items-center justify-center mb-8 border border-white/5 shadow-inner">
                   <UserIcon size={48} className="text-slate-700" />
                 </div>
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tight mb-3">Aucun client sélectionné</h3>
+                <h3 className="text-xl font-black text-white  uppercase tracking-tight mb-3">Aucun client sélectionné</h3>
                 <p className="max-w-xs text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">Sélectionnez un client dans la liste pour voir son solde de points, son historique et générer sa carte de fidélité.</p>
               </div>
             )}

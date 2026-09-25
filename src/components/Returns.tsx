@@ -135,7 +135,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
       </div>
 
       {/* Date Filters & Search Bar */}
-      <Card className="p-4 bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-3">
+      <Card className="p-4 bg-slate-900/60 border border-slate-800/80  space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -252,7 +252,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
                         {returnTypeMapped === 'refund' ? 'Remboursement' : 'Note de Crédit'}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-slate-400 italic">
+                    <td className="p-4 text-xs text-slate-400 ">
                       "{r.reason || r.notes || 'Aucune raison indiquée'}"
                     </td>
                     <td className="p-4 font-black text-emerald-400 font-mono">{formatPrice(refundVal)} {settings?.currency || 'DA'}</td>
@@ -270,7 +270,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
               })}
               {filteredReturns.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-slate-500 font-mono italic">AUCUN RETOUR CORRESPONDANT</td>
+                  <td colSpan={6} className="p-12 text-center text-slate-500 font-mono ">AUCUN RETOUR CORRESPONDANT</td>
                 </tr>
               )}
             </tbody>
@@ -376,8 +376,8 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
       })() : []);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md ${isOpen ? 'block' : 'hidden'}`}>
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70  ${isOpen ? 'block' : 'hidden'}`}>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-6 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div>
             <h4 className="text-lg font-black text-white uppercase tracking-wider">Détails du Retour</h4>
@@ -426,7 +426,7 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
           {returnRecord.reason && (
             <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800">
               <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Motif</span>
-              <p className="text-slate-300 italic">"{returnRecord.reason}"</p>
+              <p className="text-slate-300 ">"{returnRecord.reason}"</p>
             </div>
           )}
         </div>

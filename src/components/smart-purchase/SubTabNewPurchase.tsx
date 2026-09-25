@@ -247,7 +247,7 @@ export function SubTabNewPurchase({
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute z-[100] left-0 right-0 mt-2 p-8 bg-industrial-950 border border-industrial-700 rounded-2xl shadow-2xl text-center"
                           >
-                            <p className="text-industrial-500 font-black uppercase text-xs tracking-[0.2em]">Aucun produit trouvé</p>
+                            <p className="text-industrial-500 font-black uppercase text-xs tracking-normal">Aucun produit trouvé</p>
                             <button 
                               onClick={() => { setEditingProduct(null); setIsProductModalOpen(true); }}
                               className="mt-4 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:underline"

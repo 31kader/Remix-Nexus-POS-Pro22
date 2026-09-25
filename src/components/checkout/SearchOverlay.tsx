@@ -33,7 +33,7 @@ export const SearchOverlay = memo(function SearchOverlay({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute top-full left-0 right-0 mt-3 bg-slate-950/98 border-2 border-indigo-500/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[100] overflow-hidden max-h-[65vh] flex flex-col backdrop-blur-3xl ring-2 ring-white/10"
+          className="absolute top-full left-0 right-0 mt-3 bg-slate-950/98 border-2 border-indigo-500/60 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-[100] overflow-hidden max-h-[65vh] flex flex-col  ring-2 ring-white/10"
         >
           <div className="p-4 px-6 border-b border-white/15 bg-slate-900 flex items-center justify-between flex-shrink-0">
             <span className="text-xs font-black text-indigo-300 uppercase tracking-widest flex items-center gap-2">
@@ -60,7 +60,7 @@ export const SearchOverlay = memo(function SearchOverlay({
                     className={cn(
                       "w-full text-left p-4 lg:p-5 rounded-2xl flex items-center gap-5 transition-all group outline-none border",
                       isSelected 
-                        ? "bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300 shadow-neon-indigo scale-[1.01]"
+                        ? "bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300 shadow-xs scale-[1.01]"
                         : "hover:bg-indigo-600/20 border-white/5 hover:border-indigo-500/40"
                     )}
                     onClick={(e) => {

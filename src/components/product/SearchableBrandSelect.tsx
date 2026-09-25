@@ -49,16 +49,16 @@ export function SearchableBrandSelect({
         </div>
       </div>
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-hidden flex flex-col backdrop-blur-xl">
+        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-hidden flex flex-col ">
           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-white/5">
-             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] px-1 flex-1">Marques ({filteredBrands.length})</span>
+             <span className="text-[10px] font-black text-white uppercase tracking-normal px-1 flex-1">Marques ({filteredBrands.length})</span>
              {onManage && (
                <button type="button" onClick={onManage} className="text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest px-2 transition-colors">Gérer</button>
              )}
           </div>
           <div className="overflow-y-auto custom-scrollbar flex-1">
           {filteredBrands.length === 0 ? (
-            <div className="p-8 text-center text-white/20 italic">
+            <div className="p-8 text-center text-white/20 ">
               <Award size={24} className="mx-auto mb-2 opacity-10" />
               <p className="text-xs font-bold uppercase tracking-widest">Aucune marque</p>
             </div>

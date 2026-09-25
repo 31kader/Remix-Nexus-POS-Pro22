@@ -132,26 +132,26 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-neon-indigo">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-xs">
                <Package size={20} className="text-white" />
             </div>
-            <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Gestion <span className="text-indigo-400">Stocks</span></h3>
+            <h3 className="text-3xl font-black text-white uppercase tracking-tighter ">Gestion <span className="text-indigo-400">Stocks</span></h3>
           </div>
-          <p className="text-xs font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Vérification de l'inventaire physique & Réconciliation</p>
+          <p className="text-xs font-black text-slate-500 uppercase tracking-normal ml-1">Vérification de l'inventaire physique & Réconciliation</p>
         </div>
-        <Button onClick={startNewAudit} className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[11px] tracking-widest shadow-neon-indigo active:translate-y-1 transition-all">
+        <Button onClick={startNewAudit} className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[11px] tracking-widest shadow-xs active:translate-y-1 transition-all">
           <Plus size={20} /> Lancer un audit
         </Button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {audits.length === 0 ? (
-          <div className="col-span-full py-20 bg-workspace/50 border border-dashed border-white/10 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-600">
+          <div className="col-span-full py-20 bg-workspace/50 border border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center text-slate-600">
              <Package size={48} className="mb-4 opacity-20" />
              <p className="text-sm font-black uppercase tracking-widest">Aucun historique d'audit</p>
           </div>
         ) : audits.map((audit) => (
-          <Card key={audit.id} className="p-8 bg-workspace/80 border-white/5 backdrop-blur-xl relative overflow-hidden group hover:border-indigo-500/30 transition-all">
+          <Card key={audit.id} className="p-8 bg-workspace/80 border-white/5  relative overflow-hidden group hover:border-indigo-500/30 transition-all">
             <div className="absolute top-0 right-0 p-4">
                <span className={cn(
                  "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
@@ -163,7 +163,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
 
             <div className="mb-8">
               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Audit du</h4>
-              <p className="text-lg font-black text-white italic">{formatSafe(audit.startDate, 'dd MMMM yyyy HH:mm')}</p>
+              <p className="text-lg font-black text-white ">{formatSafe(audit.startDate, 'dd MMMM yyyy HH:mm')}</p>
             </div>
             
             <div className="flex justify-between items-end">
@@ -231,7 +231,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                     </div>
                     <div>
                       <p className="text-sm font-black text-white uppercase tracking-tight">{p.name}</p>
-                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{p.sku} • Stock: <span className="text-slate-400 font-mono italic">{p.stock}</span></p>
+                      <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">{p.sku} • Stock: <span className="text-slate-400 font-mono ">{p.stock}</span></p>
                     </div>
                   </div>
                   <div className="w-8 h-8 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -249,12 +249,12 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
               <h4 className="text-xs font-black text-slate-500 uppercase tracking-[0.25em] flex items-center gap-2">
                 <Package size={16} className="text-indigo-400" /> Liste de pointage ({auditItems.length})
               </h4>
-              <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full uppercase italic">Vérification Manuelle</span>
+              <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full uppercase ">Vérification Manuelle</span>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
               {auditItems.map(item => (
-                <div key={item.productId} className="p-6 bg-black/20 rounded-3xl border border-white/5 space-y-6 relative group overflow-hidden">
+                <div key={item.productId} className="p-6 bg-black/20 rounded-xl border border-white/5 space-y-6 relative group overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 translate-x-10 group-hover:translate-x-0 transition-transform">
                     <button 
                       onClick={() => setAuditItems(auditItems.filter(i => i.productId !== item.productId))} 
@@ -268,11 +268,11 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                   
                   <div className="grid grid-cols-3 gap-6">
                     <div className="bg-black/20 p-3 rounded-2xl border border-white/5">
-                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 italic">Système</p>
+                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 ">Système</p>
                       <p className="text-lg font-black text-slate-400 font-mono">{item.expectedStock}</p>
                     </div>
                     <div className="bg-indigo-500/5 p-3 rounded-2xl border border-indigo-500/20">
-                      <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 italic">Réel</p>
+                      <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 ">Réel</p>
                       <input 
                         type="number"
                         className="w-full bg-transparent text-lg font-black text-white font-mono outline-none focus:text-indigo-400 transition-colors"
@@ -285,7 +285,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
                       "p-3 rounded-2xl border flex flex-col justify-center",
                       item.discrepancy < 0 ? "bg-rose-500/5 border-rose-500/20" : item.discrepancy > 0 ? "bg-emerald-500/5 border-emerald-500/20" : "bg-black/20 border-white/5"
                     )}>
-                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 italic">Écart</p>
+                      <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1 ">Écart</p>
                       <p className={cn("text-lg font-black font-mono", item.discrepancy < 0 ? "text-rose-500" : item.discrepancy > 0 ? "text-emerald-500" : "text-slate-500")}>
                         {item.discrepancy > 0 ? `+${item.discrepancy}` : item.discrepancy}
                       </p>
@@ -305,7 +305,7 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
             <div className="pt-6 border-t border-white/5">
               <Button 
                 onClick={completeAudit} 
-                className="w-full py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-neon-indigo shadow-lg active:scale-[0.98] transition-all disabled:opacity-20 disabled:grayscale" 
+                className="w-full py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-normal shadow-xs shadow-lg active:scale-[0.98] transition-all disabled:opacity-20 disabled:grayscale" 
                 disabled={auditItems.length === 0}
               >
                 Valider et synchroniser l'inventaire

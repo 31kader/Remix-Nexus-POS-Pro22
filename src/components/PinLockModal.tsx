@@ -111,8 +111,8 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#06080e]/95 backdrop-blur-md flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-3xl w-full max-w-sm p-7 flex flex-col items-center">
+    <div className="fixed inset-0 z-50 bg-[#06080e]/95  flex items-center justify-center p-4 select-none animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-800 shadow-2xl rounded-xl w-full max-w-sm p-7 flex flex-col items-center">
         
         {/* Header Icon */}
         <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
@@ -179,7 +179,7 @@ export const PinLockModal: React.FC<PinLockModalProps> = ({
           </button>
         </div>
 
-        <p className="text-[11px] text-slate-500 mt-6 text-center italic">
+        <p className="text-[11px] text-slate-500 mt-6 text-center ">
           PIN par défaut : <span className="font-mono font-bold text-slate-400">0000</span>
         </p>
 

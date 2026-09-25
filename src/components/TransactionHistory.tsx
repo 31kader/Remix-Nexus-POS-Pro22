@@ -91,7 +91,7 @@ export function TransactionHistory(props: TransactionHistoryProps) {
         </div>
       </div>
 
-      <Card className="p-4 bg-slate-900/40 border border-slate-800/60 backdrop-blur-sm space-y-4">
+      <Card className="p-4 bg-slate-900/40 border border-slate-800/60  space-y-4">
         <div className="flex items-center gap-2 pb-2 border-b border-slate-800/40">
           <Filter size={16} className="text-indigo-400" />
           <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">Filtres de recherche avancés</h4>

@@ -31,7 +31,7 @@ export function ReminderList({
   setIsDetailsModalOpen
 }: ReminderListProps) {
   return (
-    <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-6 backdrop-blur-md space-y-4">
+    <div className="bg-white/5 border border-white/5 rounded-xl p-6  space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
         <div>
           <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1.5 font-sans">
@@ -116,7 +116,7 @@ export function ReminderList({
                     </p>
                   </div>
                   {r.notes && (
-                    <p className="text-[10px] text-white/40 leading-relaxed font-black mt-1 uppercase tracking-wider italic">
+                    <p className="text-[10px] text-white/40 leading-relaxed font-black mt-1 uppercase tracking-wider ">
                       "{r.notes}"
                     </p>
                   )}

@@ -10,7 +10,7 @@ interface VoucherLogsDialogProps {
 
 export function VoucherLogsDialog({ voucher, onClose }: VoucherLogsDialogProps) {
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 ">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -33,7 +33,7 @@ export function VoucherLogsDialog({ voucher, onClose }: VoucherLogsDialogProps) 
 
           <div className="space-y-3">
             {(!voucher.usageLogs || voucher.usageLogs.length === 0) ? (
-              <div className="p-8 text-center text-white/20 italic text-sm uppercase tracking-widest font-black">
+              <div className="p-8 text-center text-white/20  text-sm uppercase tracking-widest font-black">
                 Aucune utilisation enregistrée
               </div>
             ) : (

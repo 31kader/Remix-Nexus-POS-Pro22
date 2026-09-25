@@ -70,7 +70,7 @@ export function PromotionPerformanceModal({
                 </div>
               ))}
             {usageCount === 0 && (
-              <div className="text-center py-12 text-slate-400 italic">
+              <div className="text-center py-12 text-slate-400 ">
                 Cette promotion n'a pas encore été utilisée.
               </div>
             )}

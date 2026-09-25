@@ -29,12 +29,12 @@ export function TeamManagementPermissionsTab({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: idx * 0.05 }}
           >
-            <Card className="p-8 border-white/5 bg-white/5 backdrop-blur-md rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
+            <Card className="p-8 border-white/5 bg-white/5  rounded-xl shadow-2xl relative overflow-hidden group">
               <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/10">
                 <div className="flex items-center gap-4">
                   <div className={cn(
                     "w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xl transition-transform duration-500 group-hover:rotate-12",
-                    role === 'admin' ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/20 shadow-neon-indigo/20" : 
+                    role === 'admin' ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/20 shadow-xs/20" : 
                     role === 'manager' ? "bg-amber-500/20 text-amber-400 border-amber-500/20" : 
                     "bg-white/5 text-white/40 border-white/10"
                   )}>
@@ -42,7 +42,7 @@ export function TeamManagementPermissionsTab({
                   </div>
                   <div>
                     <h4 className="font-black text-white uppercase tracking-widest text-lg">{role}</h4>
-                    <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.22em] mt-0.5 italic">Nexus Permission Profile</p>
+                    <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.22em] mt-0.5 ">Nexus Permission Profile</p>
                   </div>
                 </div>
               </div>
@@ -56,7 +56,7 @@ export function TeamManagementPermissionsTab({
                       onClick={() => handleTogglePermission(role, key)}
                       className={cn(
                         "relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none disabled:opacity-30 active:scale-90",
-                        permissions[key] ? "bg-indigo-600 shadow-neon-indigo/40" : "bg-white/10 border border-white/10"
+                        permissions[key] ? "bg-indigo-600 shadow-xs/40" : "bg-white/10 border border-white/10"
                       )}
                     >
                       <span className={cn(
@@ -70,7 +70,7 @@ export function TeamManagementPermissionsTab({
               
               {role === 'admin' && (
                 <div className="mt-8 p-6 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-loose text-center italic">
+                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-loose text-center ">
                      ACCÈS NO-LIMIT : Le rôle Administrateur est protégé par le noyau Nexus System. Toutes les permissions sont actives nativement.
                   </p>
                 </div>

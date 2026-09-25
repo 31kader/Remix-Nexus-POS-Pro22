@@ -144,7 +144,7 @@ export const CashflowReport = React.memo(function CashflowReport({
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-white/20">
+                <tr className="bg-white/5 text-[10px] font-black uppercase tracking-normal text-white/20">
                   <th className="p-4">Date</th>
                   <th className="p-4">Description</th>
                   <th className="p-4">Type / Catégorie</th>

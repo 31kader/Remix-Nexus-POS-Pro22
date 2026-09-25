@@ -100,7 +100,7 @@ export function PromotionsGrid({
         );
       })}
       {filteredPromotions.length === 0 && (
-        <div className="col-span-full py-20 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+        <div className="col-span-full py-20 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
           <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <Tag size={32} />
           </div>

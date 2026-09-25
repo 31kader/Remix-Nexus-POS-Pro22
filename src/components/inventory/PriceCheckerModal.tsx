@@ -30,7 +30,7 @@ export function PriceCheckerModal({
       className="max-w-md"
     >
       <div className="space-y-6">
-        <div className="flex items-center gap-4 p-6 bg-white/5 rounded-3xl border border-white/10 shadow-2xl">
+        <div className="flex items-center gap-4 p-6 bg-white/5 rounded-xl border border-white/10 shadow-2xl">
           <div className="w-20 h-20 bg-black/40 rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden shadow-inner">
             {product.imageUrl ? (
               <SafeImage 
@@ -50,7 +50,7 @@ export function PriceCheckerModal({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="p-6 bg-emerald-500/5 rounded-3xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
+          <div className="p-6 bg-emerald-500/5 rounded-xl border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                <ShoppingCart size={12} /> Vente
             </p>
@@ -58,7 +58,7 @@ export function PriceCheckerModal({
               {formatPrice(product.price)} <span className="text-xs text-emerald-400 uppercase tracking-widest ml-1">{settings.currency}</span>
             </p>
           </div>
-          <div className="p-6 bg-indigo-500/5 rounded-3xl border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
+          <div className="p-6 bg-indigo-500/5 rounded-xl border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
             <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                <Package size={12} /> Stock
             </p>
@@ -72,14 +72,14 @@ export function PriceCheckerModal({
               onEdit(product);
               onClose();
             }}
-            className="flex-1 py-5 industrial-button-primary rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] active:scale-95"
+            className="flex-1 py-5 industrial-button-primary rounded-2xl font-black uppercase tracking-normal text-[10px] active:scale-95"
           >
             Modifier
           </Button>
           <Button 
             onClick={onClose}
             variant="secondary"
-            className="flex-1 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] active:scale-95"
+            className="flex-1 py-5 rounded-2xl font-black uppercase tracking-normal text-[10px] active:scale-95"
           >
             Fermer
           </Button>

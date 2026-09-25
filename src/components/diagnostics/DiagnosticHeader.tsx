@@ -17,7 +17,7 @@ export function DiagnosticHeader({
   tablesLoading
 }: DiagnosticHeaderProps) {
   return (
-    <Card className="p-6 border-indigo-500/20 bg-indigo-950/20 backdrop-blur-xl">
+    <Card className="p-6 border-indigo-500/20 bg-indigo-950/20 ">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className={`p-3 rounded-2xl ${isSupabaseConfigured ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>

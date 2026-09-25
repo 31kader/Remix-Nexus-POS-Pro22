@@ -65,8 +65,8 @@ export const CustomerDisplayModal: React.FC<CustomerDisplayModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl text-white space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75  animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl text-white space-y-5">
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">

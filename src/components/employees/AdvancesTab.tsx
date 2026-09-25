@@ -54,33 +54,33 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
       animate={{ opacity: 1, x: 0 }}
       className="space-y-8 text-left"
     >
-      <div className="flex items-center justify-between bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5">
+      <div className="flex items-center justify-between bg-white/[0.02] p-8 rounded-xl border border-white/5">
         <div>
-          <h4 className="font-black text-white italic uppercase tracking-wider flex items-center gap-2">
+          <h4 className="font-black text-white  uppercase tracking-wider flex items-center gap-2">
             <DollarSign size={18} className="text-emerald-400" />
             Gestion des Acomptes
           </h4>
-          <p className="text-[10px] font-black text-white/30 tracking-[0.2em] mt-1 uppercase">EMPLOYEE ADVANCE PAYMENTS</p>
+          <p className="text-[10px] font-black text-white/30 tracking-normal mt-1 uppercase">EMPLOYEE ADVANCE PAYMENTS</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-[1.5rem] hover:bg-emerald-600 transition-all shadow-neon-emerald/20 active:scale-95 group"
+          className="flex items-center gap-2 px-8 py-4 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-all shadow-xs/20 active:scale-95 group"
         >
           <Plus size={18} /> NOUVELLE DEMANDE
         </button>
       </div>
 
-      <Card className="overflow-hidden border-white/5 bg-white/5 backdrop-blur-md rounded-[2.5rem] shadow-2xl">
+      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
         <div className="overflow-x-auto font-black text-white">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-white/5 text-white/30 uppercase border-b border-white/5">
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">EMPLOYÉ</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">DATE</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em] text-right">MONTANT</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">MOTIF</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">STATUT</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em] text-right">ACTIONS</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">EMPLOYÉ</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">DATE</th>
+                <th className="p-6 text-[10px] font-black tracking-normal text-right">MONTANT</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">MOTIF</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">STATUT</th>
+                <th className="p-6 text-[10px] font-black tracking-normal text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -100,10 +100,10 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
                       <span className="text-lg font-black text-white tracking-tighter">{record.amount.toFixed(2)}</span>
                        <span className="text-[10px] font-black text-white/20 ml-1 uppercase">{settings.currency}</span>
                     </td>
-                    <td className="p-6 text-[11px] text-white/60 max-w-[200px] truncate font-black tracking-widest italic opacity-40 uppercase">{record.reason || 'SANS MOTIF'}</td>
+                    <td className="p-6 text-[11px] text-white/60 max-w-[200px] truncate font-black tracking-widest  opacity-40 uppercase">{record.reason || 'SANS MOTIF'}</td>
                     <td className="p-6">
                       <span className={cn(
-                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border shadow-xl flex items-center gap-2 w-fit",
+                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-normal border shadow-xl flex items-center gap-2 w-fit",
                         record.status === 'paid' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                         record.status === 'approved' ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
                         "bg-amber-500/10 text-amber-400 border-amber-500/20"
@@ -169,7 +169,7 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
             <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">Justification / Motif</label>
             <textarea className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-indigo-500 transition-all h-32" value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} />
           </div>
-          <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl shadow-neon-indigo/20 hover:bg-indigo-500 transition-all active:scale-[0.98]">
+          <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-normal rounded-2xl shadow-xs/20 hover:bg-indigo-500 transition-all active:scale-[0.98]">
             ENREGISTRER LA DEMANDE
           </button>
         </form>

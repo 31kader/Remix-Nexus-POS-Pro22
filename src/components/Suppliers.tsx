@@ -93,19 +93,19 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
   
   return (
     <div className="space-y-6">
-      <div className="bg-white/5 backdrop-blur-md p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden group mb-8 text-left">
+      <div className="bg-white/5  p-8 rounded-xl border border-white/10 shadow-2xl relative overflow-hidden group mb-8 text-left">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-indigo-500/10" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            <h3 className="text-3xl font-black text-white tracking-widest uppercase italic">Suppliers<span className="text-indigo-500">.hub</span></h3>
-            <div className="text-[10px] font-black text-white/40 flex items-center gap-2 uppercase tracking-[0.2em] mt-1 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 w-fit">
+            <h3 className="text-3xl font-black text-white tracking-widest uppercase ">Suppliers<span className="text-indigo-500">.hub</span></h3>
+            <div className="text-[10px] font-black text-white/40 flex items-center gap-2 uppercase tracking-normal mt-1 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 w-fit">
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Réseau de {suppliers.length} partenaires commerciaux
             </div>
           </div>
           <Button 
             onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.25rem] px-8 py-6 font-black uppercase tracking-widest text-[11px] shadow-neon-indigo transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-400/50 cursor-pointer"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.25rem] px-8 py-6 font-black uppercase tracking-widest text-[11px] shadow-xs transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-400/50 cursor-pointer"
           >
             <Plus size={20} strokeWidth={3} /> Nouveau Partenaire
           </Button>
@@ -117,7 +117,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
             className={cn(
               "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
               activeSupplierTab === 'list'
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-neon-indigo scale-105"
+                ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
                 : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
             )}
           >
@@ -128,7 +128,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
             className={cn(
               "px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
               activeSupplierTab === 'planning'
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-neon-indigo scale-105"
+                ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
                 : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
             )}
           >

@@ -106,7 +106,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                   )}
                 </div>
                 {state.customText && (
-                  <div style={{ fontSize: `${state.customTextSize}px`, fontWeight: state.customTextBold ? 'bold' : 'normal', fontStyle: state.customTextItalic ? 'italic' : 'normal', color: '#333333', lineBreak: 'anywhere' }}>
+                  <div style={{ fontSize: `${state.customTextSize}px`, fontWeight: state.customTextBold ? 'bold' : 'normal', fontStyle: state.customTextItalic ? '' : 'normal', color: '#333333', lineBreak: 'anywhere' }}>
                     {state.customText}
                   </div>
                 )}
@@ -164,7 +164,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                     </div>
                   )}
                   {state.customText && (
-                    <div style={{ fontSize: `${state.customTextSize}px`, fontWeight: state.customTextBold ? 'bold' : 'normal', fontStyle: state.customTextItalic ? 'italic' : 'normal', color: '#64748b', marginTop: '2px' }}>
+                    <div style={{ fontSize: `${state.customTextSize}px`, fontWeight: state.customTextBold ? 'bold' : 'normal', fontStyle: state.customTextItalic ? '' : 'normal', color: '#64748b', marginTop: '2px' }}>
                       {state.customText}
                     </div>
                   )}
@@ -281,7 +281,7 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                 <div style={{
                   fontSize: `${state.customTextSize}px`,
                   fontWeight: state.customTextBold ? 'bold' : 'normal',
-                  fontStyle: state.customTextItalic ? 'italic' : 'normal',
+                  fontStyle: state.customTextItalic ? '' : 'normal',
                   textAlign: state.customTextAlign,
                   alignSelf: state.customTextAlign === 'center' ? 'center' : state.customTextAlign === 'left' ? 'flex-start' : 'flex-end',
                   marginTop: '4px',

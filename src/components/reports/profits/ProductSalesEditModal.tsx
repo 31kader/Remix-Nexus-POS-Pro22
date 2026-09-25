@@ -456,7 +456,7 @@ export function ProductSalesEditModal({
             <Button
               onClick={handleApplyBulkCost}
               disabled={isProcessingBulk || !bulkCost}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black uppercase tracking-wider py-2 px-4 rounded-xl cursor-pointer shadow-neon-indigo/30"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black uppercase tracking-wider py-2 px-4 rounded-xl cursor-pointer shadow-xs/30"
             >
               {isProcessingBulk ? "Application..." : "Appliquer à tout"}
             </Button>
@@ -470,7 +470,7 @@ export function ProductSalesEditModal({
               <Receipt size={15} className="text-indigo-400" />
               Historique des Ventes de ce Produit ({salesRows.length} tickets)
             </h5>
-            <span className="text-[10px] text-slate-400 italic">Modifiez le prix, le coût, la date ou supprimez une ligne erronée</span>
+            <span className="text-[10px] text-slate-400 ">Modifiez le prix, le coût, la date ou supprimez une ligne erronée</span>
           </div>
 
           {salesRows.length === 0 ? (

@@ -31,7 +31,7 @@ export function CameraSidebar({
   settings
 }: CameraSidebarProps) {
   return (
-    <div className="w-80 border-r border-white/5 flex flex-col h-full bg-workspace/50 backdrop-blur-md">
+    <div className="w-80 border-r border-white/5 flex flex-col h-full bg-workspace/50 ">
       <div className="p-6 border-b border-white/5 space-y-4">
         <div className="relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />

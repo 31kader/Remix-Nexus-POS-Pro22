@@ -197,7 +197,7 @@ export const StockValueReport = React.memo(function StockValueReport({
                 if (!catData || catData.qty === 0) return null;
                 return (
                   <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/30">
-                    <td className="p-4 font-bold text-slate-400 text-sm italic">Sans Catégorie</td>
+                    <td className="p-4 font-bold text-slate-400 text-sm ">Sans Catégorie</td>
                     <td className="p-4 text-center text-sm font-medium text-slate-600">{catData.qty}</td>
                     <td className="p-4 text-right text-sm font-mono text-slate-500">{catData.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>
                     <td className="p-4 text-right text-sm font-bold text-indigo-400">{catData.wholesale.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}</td>

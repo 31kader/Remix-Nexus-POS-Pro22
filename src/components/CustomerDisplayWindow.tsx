@@ -276,7 +276,7 @@ export const CustomerDisplayWindow: React.FC = () => {
       <div className="flex-1 p-8 grid grid-cols-12 gap-8 overflow-hidden">
         
         {/* Left Section: Items List or Welcome Banner */}
-        <div className="col-span-8 bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 flex flex-col overflow-hidden shadow-2xl">
+        <div className="col-span-8 bg-slate-900/60 border border-slate-800/80 rounded-xl p-6 flex flex-col overflow-hidden shadow-2xl">
           {hasItems ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between pb-4 border-b border-slate-800 text-xs font-black text-slate-400 uppercase tracking-wider">
@@ -318,7 +318,7 @@ export const CustomerDisplayWindow: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-12 space-y-4">
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] animate-pulse">
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] animate-pulse">
                 <Sparkles size={48} />
               </div>
               <h2 className="text-3xl font-black text-white uppercase tracking-tight">Bienvenue !</h2>
@@ -333,7 +333,7 @@ export const CustomerDisplayWindow: React.FC = () => {
         <div className="col-span-4 flex flex-col gap-6">
           
           {/* Main Total Card */}
-          <div className="bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+          <div className="bg-gradient-to-br from-indigo-950/80 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-xl p-6 shadow-2xl flex flex-col justify-between">
             <div>
               <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-1">Total à Payer</p>
               <h3 className="text-5xl font-black font-mono text-white tracking-tight">
@@ -350,7 +350,7 @@ export const CustomerDisplayWindow: React.FC = () => {
           </div>
 
           {/* Change & Payment details */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-4 flex-1 flex flex-col justify-center">
+          <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-6 space-y-4 flex-1 flex flex-col justify-center">
             {displayState.amountPaid > 0 && (
               <div className="flex items-center justify-between text-slate-300 font-medium">
                 <span className="text-xs uppercase font-bold text-slate-400">Montant Versé :</span>

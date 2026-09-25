@@ -188,20 +188,20 @@ export function StockAdjustmentModal({
       title="CALIBRATION DES STOCKS"
       maxWidth="max-w-xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-10 pt-4 bg-[#05070a] p-8 rounded-[3rem] ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
+      <form onSubmit={handleSubmit} className="space-y-10 pt-4 bg-[#05070a] p-8 rounded-xl ring-1 ring-white/5 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
 
-        <div className="bg-white/5 p-6 rounded-[2rem] border border-white/10 shadow-2xl flex items-center justify-between ring-1 ring-white/5 relative group">
+        <div className="bg-white/5 p-6 rounded-xl border border-white/10 shadow-2xl flex items-center justify-between ring-1 ring-white/5 relative group">
           <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
           <div className="flex items-center gap-6 relative z-10">
-            <div className="w-16 h-16 bg-black/60 rounded-3xl shadow-inner flex items-center justify-center border border-white/10 group-hover:scale-105 transition-transform duration-500">
+            <div className="w-16 h-16 bg-black/60 rounded-xl shadow-inner flex items-center justify-center border border-white/10 group-hover:scale-105 transition-transform duration-500">
               <Package className="text-indigo-400/60" size={32} />
             </div>
             <div>
-              <h4 className="text-xl font-black text-white uppercase tracking-tighter italic leading-none">{product.name}</h4>
+              <h4 className="text-xl font-black text-white uppercase tracking-tighter  leading-none">{product.name}</h4>
               <div className="flex items-center gap-3 mt-2">
                  <div className="bg-black/40 px-2 py-0.5 rounded-lg border border-white/5 shadow-inner">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] italic">ACTUEL: <span className="text-indigo-400">{product.stock || 0} {product.unit || 'UNITÉS'}</span></p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-normal ">ACTUEL: <span className="text-indigo-400">{product.stock || 0} {product.unit || 'UNITÉS'}</span></p>
                  </div>
               </div>
             </div>
@@ -210,9 +210,9 @@ export function StockAdjustmentModal({
 
         <div className="space-y-10">
           <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic ml-1 flex items-center gap-3">
-               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-neon-indigo animate-pulse" />
-               NOUVEAU COMPTAGE RÉEL {product.useMultiExpiry && <span className="text-indigo-400 lowercase italic">(AUTO-SUM)</span>}
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-3">
+               <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-xs animate-pulse" />
+               NOUVEAU COMPTAGE RÉEL {product.useMultiExpiry && <span className="text-indigo-400 lowercase ">(AUTO-SUM)</span>}
             </label>
             <div className="relative group">
               <input 
@@ -224,21 +224,21 @@ export function StockAdjustmentModal({
                 onChange={e => setNewStock(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0.00"
                 className={cn(
-                  "w-full p-8 bg-black/40 border rounded-[2rem] text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner italic font-mono tracking-tighter",
+                  "w-full p-8 bg-black/40 border rounded-xl text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner  font-mono tracking-tighter",
                   product.useMultiExpiry
                     ? "opacity-40 border-indigo-500/20 text-indigo-400 cursor-not-allowed bg-indigo-600/5 ring-1 ring-indigo-500/20"
                     : "border-white/10 group-hover:border-white/20 focus:ring-indigo-500/5 focus:border-indigo-500/40"
                 )}
               />
-              <div className="absolute right-10 top-1/2 -translate-y-1/2 text-[11px] text-slate-700 font-black uppercase tracking-[0.4em] pointer-events-none group-focus-within:text-indigo-500/50 transition-colors italic">{product.unit || 'PCS'}</div>
+              <div className="absolute right-10 top-1/2 -translate-y-1/2 text-[11px] text-slate-700 font-black uppercase tracking-normal pointer-events-none group-focus-within:text-indigo-500/50 transition-colors ">{product.unit || 'PCS'}</div>
             </div>
           </div>
 
           {product.useMultiExpiry && localBatches && localBatches.length > 0 && (
-            <div className="space-y-5 bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] ring-1 ring-white/5 shadow-2xl">
+            <div className="space-y-5 bg-white/[0.02] border border-white/5 p-6 rounded-xl ring-1 ring-white/5 shadow-2xl">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] italic">
+                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-normal ">
                   DÉTAIL DES STOCKS PAR LOTS (DLC)
                 </span>
               </div>
@@ -246,8 +246,8 @@ export function StockAdjustmentModal({
                 {localBatches.map((batch, index) => (
                   <div key={batch.id || index} className="flex items-center justify-between gap-4 bg-black/40 p-5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all group/item shadow-inner">
                     <div className="flex-1">
-                      <span className="font-mono text-xs font-black text-indigo-400 block tracking-widest uppercase italic">{batch.batchNumber}</span>
-                      <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1 block italic opacity-60">
+                      <span className="font-mono text-xs font-black text-indigo-400 block tracking-widest uppercase ">{batch.batchNumber}</span>
+                      <span className="text-[10px] text-slate-500 font-black uppercase tracking-normal mt-1 block  opacity-60">
                         EXP: {new Date(batch.expirationDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
                       </span>
                     </div>
@@ -257,7 +257,7 @@ export function StockAdjustmentModal({
                         step="0.01"
                         value={batch.stock}
                         onChange={e => handleLocalBatchStockChange(index, e.target.value)}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-3 text-center text-sm font-black font-mono text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/40 transition-all italic shadow-inner"
+                        className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-3 text-center text-sm font-black font-mono text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/40 transition-all  shadow-inner"
                       />
                     </div>
                   </div>
@@ -267,7 +267,7 @@ export function StockAdjustmentModal({
           )}
 
           <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] italic ml-1 flex items-center gap-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-2">
               <AlignLeft size={12} /> JUSTIFICATION DE L'OPÉRATION
             </label>
             <textarea 
@@ -275,12 +275,12 @@ export function StockAdjustmentModal({
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="NOTES D'INVENTAIRE..."
-              className="w-full p-6 bg-black/40 border border-white/10 rounded-[1.5rem] text-xs font-black text-white outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-800 uppercase italic tracking-widest"
+              className="w-full p-6 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-800 uppercase  tracking-widest"
             />
           </div>
 
           {isLossCheckboxVisible && (
-            <div className="bg-rose-600/5 hover:bg-rose-600/10 border border-rose-500/20 p-6 rounded-[2rem] transition-all flex items-start gap-5 mx-1 ring-1 ring-rose-500/10 shadow-2xl animate-in zoom-in-95">
+            <div className="bg-rose-600/5 hover:bg-rose-600/10 border border-rose-500/20 p-6 rounded-xl transition-all flex items-start gap-5 mx-1 ring-1 ring-rose-500/10 shadow-2xl animate-in zoom-in-95">
               <div className="relative">
                 <input
                   id="check-loss"
@@ -291,8 +291,8 @@ export function StockAdjustmentModal({
                 />
               </div>
               <label htmlFor="check-loss" className="flex-1 cursor-pointer select-none">
-                <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] italic leading-none">RÉPERTORIER COMME PERTE SÈCHE</p>
-                <p className="text-[10px] text-slate-500 mt-2 font-medium leading-relaxed italic opacity-80 uppercase tracking-widest">Activer pour imputer cet écart négatif au rapport des rebuts et déduire la valeur du profit brut.</p>
+                <p className="text-[10px] font-black text-rose-500 uppercase tracking-normal  leading-none">RÉPERTORIER COMME PERTE SÈCHE</p>
+                <p className="text-[10px] text-slate-500 mt-2 font-medium leading-relaxed  opacity-80 uppercase tracking-widest">Activer pour imputer cet écart négatif au rapport des rebuts et déduire la valeur du profit brut.</p>
               </label>
             </div>
           )}
@@ -302,7 +302,7 @@ export function StockAdjustmentModal({
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full py-7 rounded-[2rem] text-sm font-black uppercase tracking-[0.4em] bg-indigo-600 hover:bg-indigo-500 text-white shadow-neon-indigo transition-all active:scale-95 border border-indigo-400 ring-1 ring-white/20 italic group relative overflow-hidden"
+            className="w-full py-7 rounded-xl text-sm font-black uppercase tracking-normal bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all active:scale-95 border border-indigo-400 ring-1 ring-white/20  group relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
             {isProcessing ? "PROCESSING..." : "CONFIRMER CALIBRAGE SYSTÈME"}

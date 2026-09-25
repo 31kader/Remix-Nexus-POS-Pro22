@@ -12,7 +12,7 @@ export function ChartTooltip({ active, x, y, content }: TooltipProps) {
   if (!active) return null;
   return (
     <div
-      className="absolute z-50 pointer-events-none px-4 py-3 bg-slate-950/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl text-xs text-white"
+      className="absolute z-50 pointer-events-none px-4 py-3 bg-slate-950/95  border border-white/10 rounded-2xl shadow-2xl text-xs text-white"
       style={{
         left: `${x}px`,
         top: `${y - 10}px`,
@@ -579,7 +579,7 @@ export function CustomPieChart({
           {/* Center text for donut chart */}
           <circle cx={center} cy={center} r={innerRadius - 2} fill="#09090b" className="opacity-90" />
           <g className="pointer-events-none">
-            <text x={center} y={center - 5} textAnchor="middle" className="fill-white/40 text-[10px] font-black uppercase tracking-[0.2em]">Total</text>
+            <text x={center} y={center - 5} textAnchor="middle" className="fill-white/40 text-[10px] font-black uppercase tracking-normal">Total</text>
             <text x={center} y={center + 15} textAnchor="middle" className="fill-white text-base font-black font-mono tracking-tighter">
               {total >= 1000 ? `${(total / 1000).toFixed(1)}k` : total.toFixed(0)}
             </text>

@@ -506,13 +506,13 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                 })}
 
                 {filteredProducts.length > 30 && (
-                  <div className="p-2 text-center text-[10px] text-slate-500 font-mono italic bg-slate-950/50 rounded-xl border border-slate-800">
+                  <div className="p-2 text-center text-[10px] text-slate-500 font-mono  bg-slate-950/50 rounded-xl border border-slate-800">
                     Affichage des 30 premiers articles. Affinez votre recherche pour cibler des articles spécifiques.
                   </div>
                 )}
 
                 {filteredProducts.length === 0 && (
-                  <div className="p-8 text-center text-slate-500 text-xs italic">
+                  <div className="p-8 text-center text-slate-500 text-xs ">
                     Aucun article ne correspond à votre recherche.
                   </div>
                 )}
@@ -547,7 +547,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
               ))}
 
               {queueProducts.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-xs italic">
+                <div className="p-8 text-center text-slate-500 text-xs ">
                   La file d'impression est vide. Ajoutez des articles depuis l'onglet Recherche.
                 </div>
               )}

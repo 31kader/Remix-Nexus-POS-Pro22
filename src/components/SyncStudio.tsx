@@ -407,11 +407,11 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/5 pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-neon-indigo">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-xs">
               <Activity size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black uppercase tracking-wider text-white italic">
+              <h1 className="text-2xl font-black uppercase tracking-wider text-white ">
                 Studio de Synchronisation
               </h1>
               <p className="text-xs font-semibold text-slate-400 mt-0.5">
@@ -485,7 +485,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
               {isOnline ? <Cloud size={18} /> : <CloudOff size={18} />}
             </div>
           </div>
-          <p className="text-xl font-black text-white mt-3 italic uppercase">
+          <p className="text-xl font-black text-white mt-3  uppercase">
             {isOnline ? "Connecté (En Ligne)" : "Hors-Ligne (Offline)"}
           </p>
           <p className="text-[10px] font-bold text-slate-500 mt-1">
@@ -525,23 +525,23 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             {authStatus === 'ok' && (
               <>
                 <CheckCircle2 size={20} className="text-emerald-400" />
-                <span className="text-base font-black text-emerald-400 uppercase italic">Valide (200 OK)</span>
+                <span className="text-base font-black text-emerald-400 uppercase ">Valide (200 OK)</span>
               </>
             )}
             {authStatus === 'unauthorized' && (
               <>
                 <ShieldAlert size={20} className="text-rose-400 animate-pulse" />
-                <span className="text-base font-black text-rose-400 uppercase italic">Erreur 401 (Non Autorisé)</span>
+                <span className="text-base font-black text-rose-400 uppercase ">Erreur 401 (Non Autorisé)</span>
               </>
             )}
             {authStatus === 'error' && (
               <>
                 <AlertTriangle size={20} className="text-amber-400" />
-                <span className="text-base font-black text-amber-400 uppercase italic">Alerte Serveur</span>
+                <span className="text-base font-black text-amber-400 uppercase ">Alerte Serveur</span>
               </>
             )}
             {authStatus === 'checking' && (
-              <span className="text-sm font-bold text-slate-400 uppercase italic">Test en cours...</span>
+              <span className="text-sm font-bold text-slate-400 uppercase ">Test en cours...</span>
             )}
           </div>
           <p className="text-[10px] font-bold text-slate-500 mt-1 truncate">
@@ -672,7 +672,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
               onClick={() => setActiveCategory('all')}
               className={cn(
                 "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2",
-                activeCategory === 'all' ? "bg-indigo-600 text-white shadow-neon-indigo" : "bg-black/40 text-slate-400 hover:text-white"
+                activeCategory === 'all' ? "bg-indigo-600 text-white shadow-xs" : "bg-black/40 text-slate-400 hover:text-white"
               )}
             >
               <span>Tous</span>
@@ -683,7 +683,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
               onClick={() => setActiveCategory('transactions')}
               className={cn(
                 "px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2",
-                activeCategory === 'transactions' ? "bg-emerald-600 text-white shadow-neon-cyan" : "bg-black/40 text-slate-400 hover:text-white"
+                activeCategory === 'transactions' ? "bg-emerald-600 text-white shadow-xs" : "bg-black/40 text-slate-400 hover:text-white"
               )}
             >
               <ShoppingCart size={14} />
@@ -745,11 +745,11 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       {/* Liste Détaillée des Éléments Non Synchronisés */}
       <div className="space-y-3">
         {filteredList.length === 0 ? (
-          <div className="p-12 text-center bg-black/30 border border-white/5 rounded-3xl space-y-3">
+          <div className="p-12 text-center bg-black/30 border border-white/5 rounded-xl space-y-3">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 size={28} />
             </div>
-            <h3 className="text-base font-black text-white uppercase italic">Aucun élément en attente</h3>
+            <h3 className="text-base font-black text-white uppercase ">Aucun élément en attente</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
               Toutes les transactions, modifications de produits et données de cette catégorie sont parfaitement synchronisées avec la base de données.
             </p>
@@ -778,7 +778,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
                     </span>
 
                     <div>
-                      <h4 className="text-sm font-bold text-white uppercase italic">
+                      <h4 className="text-sm font-bold text-white uppercase ">
                         {details?.name || details?.customerName || item.recordId || "Élément sans nom"}
                       </h4>
                       <p className="text-[10px] font-mono text-slate-500 mt-0.5">

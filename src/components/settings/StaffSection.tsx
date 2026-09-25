@@ -35,7 +35,7 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-3xl">
+      <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-xl">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
             <Timer size={24} />
@@ -64,7 +64,7 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {['manager', 'cashier', 'delivery', 'camera_agent'].map(role => (
-            <div key={role} className="bg-slate-900 border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+            <div key={role} className="bg-slate-900 border border-white/5 rounded-xl overflow-hidden shadow-xl">
               <div className={cn(
                 "px-6 py-4 border-l-4 flex items-center justify-between bg-white/[0.02]",
                 role === 'manager' ? "border-amber-500" : 
@@ -109,7 +109,7 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
             <Activity size={18} className="text-indigo-500" />
             Maintenance du personnel
           </h4>
-          <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1">
               <p className="text-xs font-black text-rose-500 uppercase tracking-widest">Réinitialisation d'urgence</p>
               <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">Supprimer tous les comptes personnels sauf l'administrateur principal</p>

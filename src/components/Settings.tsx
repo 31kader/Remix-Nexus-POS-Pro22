@@ -167,17 +167,17 @@ const { t } = useTranslation();
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="text-[8px] font-black uppercase tracking-[0.2em] text-indigo-400">System Admin v1.2.14</span>
+              <span className="text-[8px] font-black uppercase tracking-normal text-indigo-400">System Admin v1.2.14</span>
             </div>
-            <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none italic">NEXUS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">CONFIG</span></h1>
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] ml-1">Terminal de Contrôle Centralisé</p>
+            <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none ">NEXUS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">CONFIG</span></h1>
+            <p className="text-[10px] font-black text-slate-600 uppercase tracking-normal ml-1">Terminal de Contrôle Centralisé</p>
           </div>
           
           <button 
             disabled={isSaving}
             onClick={handleSave}
             className={cn(
-              "group relative overflow-hidden flex items-center justify-center gap-4 px-10 py-6 bg-indigo-600 text-white font-black uppercase tracking-[0.2em] text-[11px] rounded-[1.75rem] transition-all hover:shadow-neon-indigo active:scale-95 shadow-2xl border border-indigo-400 ring-1 ring-white/20 italic",
+              "group relative overflow-hidden flex items-center justify-center gap-4 px-10 py-6 bg-indigo-600 text-white font-black uppercase tracking-normal text-[11px] rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-2xl border border-indigo-400 ring-1 ring-white/20 ",
               isSaving && "opacity-60 cursor-not-allowed"
             )}
           >
@@ -212,9 +212,9 @@ const { t } = useTranslation();
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
-                    "relative group flex items-center gap-5 h-20 px-8 rounded-[2rem] transition-all overflow-hidden border ring-1 ring-white/5 shadow-2xl",
+                    "relative group flex items-center gap-5 h-20 px-8 rounded-xl transition-all overflow-hidden border ring-1 ring-white/5 shadow-2xl",
                     isActive
-                      ? "bg-indigo-600 text-white border-indigo-400 shadow-neon-indigo scale-[1.02]"
+                      ? "bg-indigo-600 text-white border-indigo-400 shadow-xs scale-[1.02]"
                       : "bg-white/5 text-slate-500 border-white/5 hover:border-white/20 hover:bg-white/10"
                   )}
                 >
@@ -227,13 +227,13 @@ const { t } = useTranslation();
                   
                   <div className="flex flex-col items-start">
                     <span className={cn(
-                      "text-[11px] font-black uppercase tracking-[0.2em] transition-colors italic",
+                      "text-[11px] font-black uppercase tracking-normal transition-colors ",
                       isActive ? "text-white" : "text-slate-500 group-hover:text-white"
                     )}>
                       {item.label}
                     </span>
                     <span className={cn(
-                      "text-[8px] font-black uppercase tracking-[0.3em] mt-1",
+                      "text-[8px] font-black uppercase tracking-normal mt-1",
                       isActive ? "text-white/40" : "text-slate-700"
                     )}>
                       MODULE_{item.id.toUpperCase()}
@@ -251,17 +251,17 @@ const { t } = useTranslation();
               );
             })}
             
-            <div className="mt-8 p-8 bg-black/40 border border-white/5 rounded-[3rem] relative overflow-hidden group ring-1 ring-white/5 shadow-2xl backdrop-blur-3xl">
+            <div className="mt-8 p-8 bg-black/40 border border-white/5 rounded-xl relative overflow-hidden group ring-1 ring-white/5 shadow-2xl ">
                <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none group-hover:rotate-12 group-hover:scale-125 transition-all duration-1000">
                   <Shield size={160} className="text-indigo-500" />
                </div>
                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-neon-cyan" />
-                  <p className="text-[10px] font-black text-white uppercase tracking-[0.3em] italic">NEXUS SECURE</p>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-xs" />
+                  <p className="text-[10px] font-black text-white uppercase tracking-normal ">NEXUS SECURE</p>
                </div>
                <p className="text-[9px] font-black text-slate-500 uppercase leading-relaxed tracking-widest">Le moteur de règles RLS et les audits IA protègent l'intégrité de vos données en temps réel.</p>
                <div className="flex gap-2 mt-6">
-                  <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-neon-indigo" />
+                  <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-xs" />
                   <div className="h-1 w-4 bg-white/10 rounded-full" />
                   <div className="h-1 w-4 bg-white/10 rounded-full" />
                </div>
@@ -276,10 +276,10 @@ const { t } = useTranslation();
                {menuItems.map(item => item.id === activeSection && (
                   <div key={item.id} className="space-y-4 border-l-4 border-indigo-600 pl-8">
                     <div className="flex items-center gap-5">
-                      <item.icon className="text-indigo-500 shadow-neon-indigo" size={32} />
-                      <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">{item.label}</h2>
+                      <item.icon className="text-indigo-500 shadow-xs" size={32} />
+                      <h2 className="text-4xl font-black text-white uppercase tracking-tighter ">{item.label}</h2>
                     </div>
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] italic">INSTANCE_ID: <span className="text-indigo-400/60 font-mono tracking-normal not-italic">{item.id}_cluster_v4</span></p>
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-normal ">INSTANCE_ID: <span className="text-indigo-400/60 font-mono tracking-normal not-">{item.id}_cluster_v4</span></p>
                   </div>
                ))}
 

@@ -47,7 +47,7 @@ export function PurchaseSummaryFooter({
   return (
     <div className="p-8 bg-industrial-950 border-t border-industrial-800 grid grid-cols-1 md:grid-cols-2 gap-12">
       <div className="space-y-6">
-        <div className="p-6 bg-industrial-900 border border-industrial-800 rounded-3xl shadow-xl space-y-4">
+        <div className="p-6 bg-industrial-900 border border-industrial-800 rounded-xl shadow-xl space-y-4">
           <h5 className="text-[10px] font-black text-industrial-500 uppercase tracking-widest border-b border-industrial-800 pb-2">Réglage de Paiement</h5>
           <div className="grid grid-cols-2 gap-6">
             <div>
@@ -76,7 +76,7 @@ export function PurchaseSummaryFooter({
         </div>
       </div>
 
-      <div className="space-y-4 bg-industrial-900 border border-industrial-800 p-8 rounded-3xl shadow-xl">
+      <div className="space-y-4 bg-industrial-900 border border-industrial-800 p-8 rounded-xl shadow-xl">
         <div className="flex justify-between text-[10px] font-black uppercase text-industrial-500 tracking-widest">
           <span>Sous-total HT</span>
           <span className="text-white font-mono">{((cart || []).reduce((sum, item) => sum + ((Number(item.costPrice) || 0) * (Number(item.quantity) || 0) * (1 - (Number(item.discount) || 0) / 100)), 0) || 0).toFixed(2)} {settings?.currency || 'DA'}</span>

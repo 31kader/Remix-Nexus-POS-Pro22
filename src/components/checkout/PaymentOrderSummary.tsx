@@ -88,9 +88,9 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                   "flex items-center justify-center border transition-all active:scale-95 group relative shadow-sm cursor-pointer",
                   isDense 
                     ? "gap-1.5 py-2.5 px-2 rounded-xl text-[10px] font-bold" 
-                    : "flex-col gap-3 p-4 sm:p-5 rounded-[2rem] text-[9px] font-black tracking-[0.2em]",
+                    : "flex-col gap-3 p-4 sm:p-5 rounded-xl text-[9px] font-black tracking-normal",
                   deliveryMethod === m.id 
-                    ? "bg-indigo-600 text-white border-indigo-400 shadow-neon-indigo ring-1 ring-white/20"
+                    ? "bg-indigo-600 text-white border-indigo-400 shadow-xs ring-1 ring-white/20"
                     : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:border-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
@@ -101,7 +101,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 ) : (
                   <m.icon size={15} className="shrink-0" />
                 )}
-                <span className={cn(isDense ? "truncate" : "uppercase tracking-[0.2em]")}>{m.label}</span>
+                <span className={cn(isDense ? "truncate" : "uppercase tracking-normal")}>{m.label}</span>
               </button>
             ))}
           </div>
@@ -109,8 +109,8 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
         {/* Remise Globale Panier */}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-[0.3em] flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-neon-cyan" />
+          <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-normal flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs" />
             Remise Globale (Panier)
           </h4>
           <div className="flex gap-2">
@@ -185,11 +185,11 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               placeholder="CODE COUPON / CADEAU..."
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/40 transition-all"
+              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/40 transition-all"
             />
             <button
               onClick={applyVoucher}
-              className="px-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-black text-[9px] uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
+              className="px-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl font-black text-[9px] uppercase tracking-normal text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
             >
               APPLIQUER
             </button>
@@ -205,26 +205,26 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
       <div className="p-4 sm:p-5 bg-slate-50 dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 space-y-4 shadow-xl">
         <div className="space-y-3">
-          <div className="flex justify-between text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] px-2 italic">
+          <div className="flex justify-between text-slate-500 text-[10px] font-black uppercase tracking-normal px-2 ">
             <span>SOUS-TOTAL BRUT</span>
             <span className="font-mono text-slate-700 dark:text-slate-400 tracking-tighter">{(isNaN(subtotal) ? 0 : subtotal).toFixed(2)} {currency}</span>
           </div>
 
           <div className="space-y-2 px-2">
             {(discountAmount || 0) > 0 && (
-              <div className="flex justify-between text-rose-500 text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-right-2">
+              <div className="flex justify-between text-rose-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
                 <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-rose-500" /> REMISES TOTALES</span>
                 <span className="font-mono tracking-tighter">-{(isNaN(discountAmount) ? 0 : discountAmount).toFixed(2)} {currency}</span>
               </div>
             )}
             {(pointsDiscount || 0) > 0 && (
-              <div className="flex justify-between text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-right-2">
+              <div className="flex justify-between text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
                 <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-amber-500" /> FIDÉLITÉ DÉDUITE</span>
                 <span className="font-mono tracking-tighter">-{(isNaN(pointsDiscount) ? 0 : pointsDiscount).toFixed(2)} {currency}</span>
               </div>
             )}
             {(voucherDiscount || 0) > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] animate-in fade-in slide-in-from-right-2">
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
                 <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-emerald-500" /> COUPON / CADEAU</span>
                 <span className="font-mono tracking-tighter">-{(isNaN(voucherDiscount) ? 0 : voucherDiscount).toFixed(2)} {currency}</span>
               </div>
@@ -233,10 +233,10 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
           <div className={cn(
             "flex justify-between items-center border-t border-slate-200 dark:border-white/5 font-black",
-            isDense ? "pt-3.5 text-3xl" : "pt-6 text-4xl italic tracking-tighter"
+            isDense ? "pt-3.5 text-3xl" : "pt-6 text-4xl  tracking-tighter"
           )}>
             <span className={cn(
-              "text-[10px] uppercase tracking-widest font-black flex flex-col not-italic",
+              "text-[10px] uppercase tracking-widest font-black flex flex-col not-",
               total < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-500/80"
             )}>
               {total < 0 ? "À REMBOURSER" : "TOTAL NET"}
@@ -394,7 +394,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
               isDense 
                 ? "py-3 px-3.5 rounded-xl text-xs" 
-                : "flex-col justify-center gap-3 py-6 px-4 rounded-[2rem] text-[10px] tracking-[0.2em] relative overflow-hidden",
+                : "flex-col justify-center gap-3 py-6 px-4 rounded-xl text-[10px] tracking-normal relative overflow-hidden",
               editingTransaction
                 ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 hover:bg-amber-100"
                 : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/50 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
@@ -422,7 +422,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
               isDense 
                 ? "py-3 px-3.5 rounded-xl text-xs" 
-                : "flex-col justify-center gap-3 py-6 px-4 rounded-[2rem] text-[10px] tracking-[0.2em] relative overflow-hidden",
+                : "flex-col justify-center gap-3 py-6 px-4 rounded-xl text-[10px] tracking-normal relative overflow-hidden",
               editingTransaction
                 ? "bg-amber-100/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300"
                 : "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
@@ -451,7 +451,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
             "w-full text-white font-black uppercase transition-all flex items-center justify-center gap-3 shadow-md active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
             isDense 
               ? "py-3.5 rounded-xl text-xs tracking-wider" 
-              : "py-5 sm:py-6 rounded-[2rem] text-[11px] tracking-[0.3em] italic shadow-lg",
+              : "py-5 sm:py-6 rounded-xl text-[11px] tracking-normal  shadow-lg",
             editingTransaction
               ? "bg-amber-600 hover:bg-amber-700"
               : total < 0

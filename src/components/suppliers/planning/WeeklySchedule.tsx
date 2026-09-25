@@ -16,8 +16,8 @@ export function WeeklySchedule({
 }: WeeklyScheduleProps) {
   return (
     <>
-      <div className="p-8 bg-white/5 border border-white/5 rounded-[2.5rem] backdrop-blur-md">
-        <h4 className="text-xl font-black text-indigo-400 uppercase tracking-widest mb-2 italic font-sans">TABLEAU DE BORD DES ACTIVITÉS FOURNISSEURS</h4>
+      <div className="p-8 bg-white/5 border border-white/5 rounded-xl ">
+        <h4 className="text-xl font-black text-indigo-400 uppercase tracking-widest mb-2  font-sans">TABLEAU DE BORD DES ACTIVITÉS FOURNISSEURS</h4>
         <p className="text-xs text-slate-400 font-mono uppercase">
           Visualisez l'agenda des visites de pré-vente, des livraisons de stock et des règlements de factures pour toute la semaine.
         </p>
@@ -31,10 +31,10 @@ export function WeeklySchedule({
           const totalEvents = preSaleSuppliers.length + deliverySuppliers.length + paymentSuppliers.length;
 
           return (
-            <div key={day} className="bg-white/5 backdrop-blur-md border border-white/5 rounded-[2.5rem] p-6 hover:border-indigo-500/30 transition-all flex flex-col justify-between">
+            <div key={day} className="bg-white/5  border border-white/5 rounded-xl p-6 hover:border-indigo-500/30 transition-all flex flex-col justify-between">
               <div>
                 <div className="flex justify-between items-center mb-6 pb-3 border-b border-white/5">
-                  <h4 className="font-black text-white text-lg tracking-wider uppercase italic font-sans">{day}</h4>
+                  <h4 className="font-black text-white text-lg tracking-wider uppercase  font-sans">{day}</h4>
                   {totalEvents > 0 && (
                     <span className="bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border border-indigo-500/30">
                       {totalEvents} {totalEvents === 1 ? 'Action' : 'Actions'}
@@ -56,7 +56,7 @@ export function WeeklySchedule({
                       </div>
                       <p className="text-sm font-black text-white group-hover:text-purple-200 transition-colors uppercase">{s.name}</p>
                       {s.planningNotes && (
-                        <p className="text-[10px] text-purple-300/60 font-mono italic truncate mt-1">
+                        <p className="text-[10px] text-purple-300/60 font-mono  truncate mt-1">
                           "{s.planningNotes}"
                         </p>
                       )}
@@ -76,7 +76,7 @@ export function WeeklySchedule({
                       </div>
                       <p className="text-sm font-black text-white group-hover:text-emerald-200 transition-colors uppercase">{s.name}</p>
                       {s.planningNotes && (
-                        <p className="text-[10px] text-emerald-300/60 font-mono italic truncate mt-1">
+                        <p className="text-[10px] text-emerald-300/60 font-mono  truncate mt-1">
                           "{s.planningNotes}"
                         </p>
                       )}
@@ -96,7 +96,7 @@ export function WeeklySchedule({
                       </div>
                       <p className="text-sm font-black text-white group-hover:text-rose-200 transition-colors uppercase">{s.name}</p>
                       {s.planningNotes && (
-                        <p className="text-[10px] text-rose-300/60 font-mono italic truncate mt-1">
+                        <p className="text-[10px] text-rose-300/60 font-mono  truncate mt-1">
                           "{s.planningNotes}"
                         </p>
                       )}

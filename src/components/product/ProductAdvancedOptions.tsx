@@ -20,10 +20,10 @@ export function ProductAdvancedOptions({
 }: ProductAdvancedOptionsProps) {
   return (
     <div className="border-t border-white/5 pt-8 space-y-6">
-      <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.3em]">Options Avancées & Frais</h4>
+      <h4 className="text-[11px] font-black text-indigo-400 uppercase tracking-normal">Options Avancées & Frais</h4>
       
       <div className="space-y-4">
-        <p className="text-[9px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+        <p className="text-[9px] font-black text-white uppercase tracking-normal flex items-center gap-2">
           <span className="w-4 h-px bg-white/10"></span>
           Frais Opérationnels Spécifiques (Marge Net)
         </p>
@@ -59,7 +59,7 @@ export function ProductAdvancedOptions({
             />
           </div>
         </div>
-        <p className="text-[9px] text-white/30 italic pl-2 tracking-wide font-medium">Si vide, les frais généraux définis dans les paramètres seront utilisés.</p>
+        <p className="text-[9px] text-white/30  pl-2 tracking-wide font-medium">Si vide, les frais généraux définis dans les paramètres seront utilisés.</p>
       </div>
 
       <div className="flex items-center gap-4 p-4 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
@@ -70,7 +70,7 @@ export function ProductAdvancedOptions({
       </div>
 
       {formData.isBundle && (
-        <div className="bg-indigo-600/5 p-6 rounded-3xl border border-indigo-500/20 space-y-4 shadow-inner">
+        <div className="bg-indigo-600/5 p-6 rounded-xl border border-indigo-500/20 space-y-4 shadow-inner">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-indigo-400" />
             <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Composants du lot</p>
@@ -138,7 +138,7 @@ export function ProductAdvancedOptions({
       </div>
 
       <div className="space-y-6 pt-6 border-t border-white/5">
-        <p className="text-[11px] font-black text-white uppercase tracking-[0.3em]">Remises Quantitatives</p>
+        <p className="text-[11px] font-black text-white uppercase tracking-normal">Remises Quantitatives</p>
         
         <div className="space-y-4">
           <p className="text-[10px] font-black text-white uppercase tracking-widest pl-2">Paliers de remises par quantité</p>

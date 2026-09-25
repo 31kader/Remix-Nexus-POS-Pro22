@@ -41,7 +41,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Row: Title, Subtitle, and Main Action Buttons */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 backdrop-blur-xl p-6 rounded-3xl shadow-sm dark:shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80  p-6 rounded-xl shadow-sm dark:shadow-xl">
         <div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">

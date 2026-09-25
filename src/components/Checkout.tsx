@@ -519,7 +519,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
               onClick={() => setMobileTab('cart')}
               className={cn(
                 "p-3 rounded-xl transition-all",
-                mobileTab === 'cart' ? "bg-indigo-600 text-white shadow-neon-indigo" : "text-slate-500"
+                mobileTab === 'cart' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-500"
               )}
             >
               <ShoppingCart size={20} />
@@ -528,7 +528,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
               onClick={() => setMobileTab('catalog')}
               className={cn(
                 "p-3 rounded-xl transition-all",
-                mobileTab === 'catalog' ? "bg-indigo-600 text-white shadow-neon-indigo" : "text-slate-500"
+                mobileTab === 'catalog' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-500"
               )}
             >
               <LayoutGrid size={20} />
@@ -539,7 +539,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
              <button
                disabled={cart.length === 0}
                onClick={() => setIsPaymentSheetOpen(true)}
-               className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-900 disabled:text-slate-700 text-white py-4 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-neon-cyan active:scale-95 transition-all flex items-center justify-center gap-3 italic"
+               className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-900 disabled:text-slate-700 text-white py-4 rounded-xl font-black text-xs uppercase tracking-normal shadow-xs active:scale-95 transition-all flex items-center justify-center gap-3 "
              >
                {formatPrice(displayTotal, 2)} {settings.currency} <ArrowRight size={18} />
              </button>

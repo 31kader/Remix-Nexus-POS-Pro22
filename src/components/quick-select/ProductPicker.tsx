@@ -98,11 +98,11 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="absolute inset-0 z-[100] bg-slate-950/95 backdrop-blur-3xl p-4 flex flex-col"
+          className="absolute inset-0 z-[100] bg-slate-950/95  p-4 flex flex-col"
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">Selection Rapide</h3>
+              <h3 className="text-lg font-black text-white uppercase tracking-tighter ">Selection Rapide</h3>
               <p className="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest mt-0.5">Optimisé pour la vitesse</p>
             </div>
             <button onClick={onClose} className="w-10 h-10 rounded-2xl bg-white/5 hover:bg-rose-500 hover:text-white flex items-center justify-center border border-white/5 transition-all shadow-lg">
@@ -117,7 +117,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
               placeholder="Scanner ou rechercher (50 par 50)..."
               value={pickerSearch}
               onChange={(e) => setPickerSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-[2.5rem] pl-16 pr-8 py-5 text-sm text-white placeholder:text-white/20 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500/50 transition-all outline-none shadow-2xl"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-16 pr-8 py-5 text-sm text-white placeholder:text-white/20 focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500/50 transition-all outline-none shadow-2xl"
             />
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2 pb-10">
@@ -128,7 +128,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
             ) : pickerResults.length > 0 ? (
               <>
                 {pickerResults.map(p => (
-                  <button key={p.id} onClick={() => toggleFavorite(p)} className={cn("w-full flex items-center gap-4 p-4 rounded-3xl transition-all border group", isFav(p) ? "bg-amber-500/20 border-amber-500/40 text-white" : "bg-white/5 border-white/5 text-white/60 hover:bg-white/[0.08] hover:border-amber-500/20 h-20")}>
+                  <button key={p.id} onClick={() => toggleFavorite(p)} className={cn("w-full flex items-center gap-4 p-4 rounded-xl transition-all border group", isFav(p) ? "bg-amber-500/20 border-amber-500/40 text-white" : "bg-white/5 border-white/5 text-white/60 hover:bg-white/[0.08] hover:border-amber-500/20 h-20")}>
                     <div className={cn("w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center border transition-all overflow-hidden", isFav(p) ? "bg-amber-500 border-amber-400" : "bg-black/40 border-white/5")}>
                       {isFav(p) ? <Check size={24} className="text-white" /> : <SafeImage src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" fallback={<Package size={24} />} />}
                     </div>
@@ -137,7 +137,7 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
                       <div className="text-[10px] font-mono opacity-40 mt-0.5 tracking-tighter">{p.sku || 'SANS SKU'}</div>
                     </div>
                     <div className="text-right flex flex-col items-end justify-center">
-                      <div className="text-sm font-black text-white italic whitespace-nowrap">{p.price.toLocaleString()} {currency}</div>
+                      <div className="text-sm font-black text-white  whitespace-nowrap">{p.price.toLocaleString()} {currency}</div>
                       <div className={cn("text-[9px] font-black mt-1 uppercase tracking-widest transition-colors", isFav(p) ? "text-amber-500" : "text-white/30 group-hover:text-amber-500")}>
                         {isFav(p) ? 'FAVORI ✓' : 'AJOUTER +'}
                       </div>
@@ -153,12 +153,12 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
             ) : pickerSearch ? (
               <div className="flex flex-col items-center justify-center h-64 opacity-20 transform scale-75">
                 <Search size={64} className="mb-4" />
-                <p className="text-sm font-black uppercase tracking-[0.4em]">Pas d'articles trouvés</p>
+                <p className="text-sm font-black uppercase tracking-normal">Pas d'articles trouvés</p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-96 opacity-20 text-center px-12">
                 <Star size={80} className="mb-6 animate-pulse text-amber-500" />
-                <p className="text-xs font-black uppercase tracking-[0.3em] leading-relaxed">Saisissez le nom d'un article pour l'ajouter aux favoris.</p>
+                <p className="text-xs font-black uppercase tracking-normal leading-relaxed">Saisissez le nom d'un article pour l'ajouter aux favoris.</p>
               </div>
             )}
           </div>

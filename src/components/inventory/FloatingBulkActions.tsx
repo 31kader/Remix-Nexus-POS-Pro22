@@ -18,7 +18,7 @@ export function FloatingBulkActions({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-indigo-500/30 backdrop-blur-md px-6 py-4 rounded-3xl flex items-center gap-6 shadow-2xl z-50 animate-in slide-in-from-bottom duration-300">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-indigo-500/30  px-6 py-4 rounded-xl flex items-center gap-6 shadow-2xl z-50 animate-in slide-in-from-bottom duration-300">
       <div className="flex flex-col text-left">
         <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Éléments sélectionnés</span>
         <span className="text-sm font-black text-white">{selectedCount} {selectedCount === 1 ? 'produit' : 'produits'}</span>

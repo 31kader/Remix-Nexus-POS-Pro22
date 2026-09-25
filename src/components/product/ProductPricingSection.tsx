@@ -68,13 +68,13 @@ export function ProductPricingSection({
 
         {/* Prix de vente détail */}
         <div className="space-y-2 group">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">PRIX DE VENTE (DÉTAIL) *</label>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">PRIX DE VENTE (DÉTAIL) *</label>
           <div className="relative">
             <input
               required
               type="number"
               step="0.01"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all shadow-inner group-hover:border-white/20 italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/40 transition-all shadow-inner group-hover:border-white/20 "
               value={formData.price}
               onChange={e => setFormData({...formData, price: e.target.value})}
             />
@@ -84,13 +84,13 @@ export function ProductPricingSection({
 
         {/* Prix de gros */}
         <div className="space-y-2 group">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">PRIX DE GROS</label>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">PRIX DE GROS</label>
           <div className="relative">
             <input
               type="number"
               step="0.01"
               placeholder="0.00"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500/40 transition-all shadow-inner group-hover:border-white/20 italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-sky-500/5 focus:border-sky-500/40 transition-all shadow-inner group-hover:border-white/20 "
               value={formData.wholesalePrice}
               onChange={e => setFormData({...formData, wholesalePrice: e.target.value})}
             />
@@ -100,12 +100,12 @@ export function ProductPricingSection({
 
         {/* Prix d'achat */}
         <div className="space-y-2 group">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">PRIX D'ACHAT</label>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">PRIX D'ACHAT</label>
           <div className="relative">
             <input
               type="number"
               step="0.01"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/40 transition-all shadow-inner group-hover:border-white/20 italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/40 transition-all shadow-inner group-hover:border-white/20 "
               value={formData.costPrice}
               onChange={e => {
                 const newCost = e.target.value;
@@ -128,7 +128,7 @@ export function ProductPricingSection({
         {/* Tarif en ligne */}
         <div className="space-y-2 group">
           <div className="flex items-center justify-between">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">TARIF EN LIGNE</label>
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">TARIF EN LIGNE</label>
             {costPrice > 0 && (
               <button
                 type="button"
@@ -144,7 +144,7 @@ export function ProductPricingSection({
             <input
               type="number"
               step="0.01"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 "
               value={formData.onlinePrice}
               onChange={e => setFormData({...formData, onlinePrice: e.target.value})}
             />
@@ -154,11 +154,11 @@ export function ProductPricingSection({
 
         {/* Taxe / TVA */}
         <div className="space-y-2 group">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">TAXE / TVA</label>
+          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">TAXE / TVA</label>
           <div className="relative">
             <input
               type="number"
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500/40 transition-all shadow-inner group-hover:border-white/20 italic"
+              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black font-mono placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-purple-500/5 focus:border-purple-500/40 transition-all shadow-inner group-hover:border-white/20 "
               value={formData.taxRate}
               onChange={e => setFormData({...formData, taxRate: e.target.value})}
             />

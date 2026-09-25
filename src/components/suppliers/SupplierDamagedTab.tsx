@@ -57,24 +57,24 @@ export function SupplierDamagedTab({
     <div className="space-y-6 text-left">
       {/* Claims Metrics Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-[1.5rem] shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-xl">
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">💸 Valeur Totale des Pertes</span>
           <p className="text-2xl font-black text-rose-400 font-mono">{totalLoss.toFixed(2)} {settings.currency}</p>
-          <span className="text-[10px] text-slate-500 font-mono italic">{supplierDamaged.length} articles défectueux enregistrés</span>
+          <span className="text-[10px] text-slate-500 font-mono ">{supplierDamaged.length} articles défectueux enregistrés</span>
         </div>
-        <div className="bg-emerald-950/40 border border-emerald-900/30 p-6 rounded-[1.5rem] shadow-xl">
+        <div className="bg-emerald-950/40 border border-emerald-900/30 p-6 rounded-xl shadow-xl">
           <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest block mb-1">💵 Remboursé / Résolu</span>
           <p className="text-2xl font-black text-emerald-450 font-mono">{totalRecovered.toFixed(2)} {settings.currency}</p>
-          <span className="text-[10px] text-emerald-600 font-mono italic">Pertes récupérées de ce fournisseur</span>
+          <span className="text-[10px] text-emerald-600 font-mono ">Pertes récupérées de ce fournisseur</span>
         </div>
-        <div className="bg-amber-950/40 border border-amber-900/30 p-6 rounded-[1.5rem] shadow-xl">
+        <div className="bg-amber-950/40 border border-amber-900/30 p-6 rounded-xl shadow-xl">
           <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-1">⏳ Dossiers en Cours / À Réclamer</span>
           <p className="text-2xl font-black text-amber-500 font-mono">{totalPendingClaim.toFixed(2)} {settings.currency}</p>
-          <span className="text-[10px] text-amber-500 font-mono italic">Montants réclamés ou en attente d'action</span>
+          <span className="text-[10px] text-amber-500 font-mono ">Montants réclamés ou en attente d'action</span>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm p-6 space-y-4 text-slate-900 text-left animate-fade-in">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm p-6 space-y-4 text-slate-900 text-left animate-fade-in">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
           <div>
             <h4 className="text-base font-black text-slate-900 uppercase tracking-wider font-sans">Suivi des Réclamations & Pertes</h4>
@@ -152,7 +152,7 @@ export function SupplierDamagedTab({
                       <td className="px-6 py-4 font-mono text-xs font-black text-rose-500">
                         {(record.quantity * itemCost).toFixed(2)} {settings.currency}
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-500 italic max-w-[150px] truncate" title={record.reason}>
+                      <td className="px-6 py-4 text-xs text-slate-500  max-w-[150px] truncate" title={record.reason}>
                         {record.reason}
                       </td>
                       <td className="px-6 py-4">

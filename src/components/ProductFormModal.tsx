@@ -70,7 +70,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
       type="button"
       onClick={(e) => { e.preventDefault(); handleSubmit(e as any); }}
       disabled={!!skuError}
-      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-neon-indigo border border-indigo-400/50 cursor-pointer"
+      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-xs border border-indigo-400/50 cursor-pointer"
     >
       <RefreshCw size={12} className={isGlobalLoading ? "animate-spin" : ""} />
       {editingProduct ? "ENREGISTRER" : "CRÉER"}
@@ -87,7 +87,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
         maxHeight="max-h-[95vh]"
         padding="p-0"
         headerAction={headerAction}
-        className="lg:rounded-[2rem] border border-white/10 shadow-2xl"
+        className="lg:rounded-xl border border-white/10 shadow-2xl"
       >
         <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full bg-[#05070a] relative">
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-10 xl:p-12 space-y-8 sm:space-y-10 lg:space-y-12 pb-32">
@@ -152,7 +152,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
                   />
 
                   <div className="space-y-3 pt-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal flex items-center justify-between">
                       Description Smart-IA
                       <button
                         type="button"
@@ -168,7 +168,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Tags & Indexation</label>
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal">Tags & Indexation</label>
                     <input className="w-full bg-black/40 border border-white/5 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-indigo-500/40 transition-all placeholder:text-slate-800 shadow-inner" placeholder="Tags..." value={formData.tags} onChange={e => setFormData({...formData, tags: e.target.value})} />
                   </div>
                 </div>
@@ -190,8 +190,8 @@ export function ProductFormModal(props: ProductFormModalProps) {
               <div className="space-y-6">
                  {(setIsPurchaseHistoryModalOpen || setIsSalesHistoryModalOpen) && (
                     <div className="flex gap-4">
-                      {setIsPurchaseHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-[0.2em] text-[10px] font-black rounded-2xl" onClick={() => setIsPurchaseHistoryModalOpen(true)}>Historique Achats</Button>}
-                      {setIsSalesHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-[0.2em] text-[10px] font-black rounded-2xl" onClick={() => setIsSalesHistoryModalOpen(true)}>Historique Ventes</Button>}
+                      {setIsPurchaseHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-2xl" onClick={() => setIsPurchaseHistoryModalOpen(true)}>Historique Achats</Button>}
+                      {setIsSalesHistoryModalOpen && <Button type="button" variant="secondary" className="flex-1 py-4 uppercase tracking-normal text-[10px] font-black rounded-2xl" onClick={() => setIsSalesHistoryModalOpen(true)}>Historique Ventes</Button>}
                     </div>
                   )}
                   <ProductAdvancedOptions
@@ -206,7 +206,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
           </div>
 
           {/* Barre d'action inférieure visible et claire */}
-          <div className="p-4 sm:p-5 bg-slate-900/95 backdrop-blur-md border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 z-10">
+          <div className="p-4 sm:p-5 bg-slate-900/95  border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 z-10">
             <div className="flex-1 w-full">
               {skuError ? (
                 <div className="flex items-center gap-2 text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-2 rounded-xl text-xs font-semibold">

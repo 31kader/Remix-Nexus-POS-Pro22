@@ -51,7 +51,7 @@ export function OrdersTable({
   const allFilteredSelected = safeFilteredOrders.length > 0 && safeFilteredOrders.every(o => selectedOrderIds.has(String(o.id)));
 
   return (
-    <Card className="overflow-x-auto bg-white/5 backdrop-blur-md border-white/10 shadow-2xl rounded-2xl">
+    <Card className="overflow-x-auto bg-white/5  border-white/10 shadow-2xl rounded-2xl">
       <table className="w-full text-left border-collapse min-w-[1000px]">
         <thead>
           <tr className="border-b border-white/10">

@@ -9,7 +9,7 @@ const StockHistory = lazy(() => import('../StockHistory').then(m => ({ default: 
 const LabelPrinter = lazy(() => import('../LabelPrinter').then(m => ({ default: m.LabelPrinter })));
 const CatalogPrinter = lazy(() => import('../CatalogPrinter').then(m => ({ default: m.CatalogPrinter })));
 const MarketingPosters = lazy(() => import('../MarketingPosters').then(m => ({ default: m.MarketingPosters })));
-const LossReport = lazy(() => import('../LossReport').then(m => ({ default: m.LossReport })));
+const LossesReport = lazy(() => import('../reports/LossesReport').then(m => ({ default: m.LossesReport })));
 const SupplierSyncManager = lazy(() => import('../SupplierSyncManager').then(m => ({ default: m.SupplierSyncManager })));
 
 interface InventoryContentProps {
@@ -113,11 +113,12 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
             </div>
           </div>
         ) : inventoryTab === 'losses' ? (
-          <LossReport 
-            damagedRecords={damagedRecords} 
+          <LossesReport 
+            stockAdjustments={stockAdjustments || []}
             products={products} 
             categories={productTabProps.categories || []}
-            onPrintReport={() => window.print()}
+            settings={settings}
+            totalRevenue={0}
           />
         ) : (
           <div className="space-y-4">

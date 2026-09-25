@@ -67,7 +67,7 @@ export const CartItemRow = memo(({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate uppercase italic">{item.name}</h5>
+              <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate uppercase ">{item.name}</h5>
               {item.quantity < 0 && (
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm shrink-0">
                   RETOUR
@@ -189,7 +189,7 @@ export const CartItemRow = memo(({
                 <span className={cn("text-[9px] font-bold uppercase tracking-wider", item.lineDiscount ? "text-amber-600 dark:text-amber-500/60" : "text-slate-400 dark:text-slate-500")}>{settings.currency}</span>
               </div>
               {item.lineDiscount && (
-                <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mt-0.5 italic">
+                <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mt-0.5 ">
                   OFF: -{item.lineDiscount.value}{item.lineDiscount.type === 'percentage' ? '%' : settings.currency}
                 </p>
               )}

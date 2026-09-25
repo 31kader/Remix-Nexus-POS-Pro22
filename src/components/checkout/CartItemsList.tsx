@@ -2,7 +2,6 @@ import React, { RefObject } from 'react';
 import { LayoutList, ShoppingBag, Zap, Trash2 } from 'lucide-react';
 import { CartItem, Product, CompanySettings, RolePermissions } from '../../types';
 import { CartItemRow } from './CartItemRow';
-import { DenseCartItemsTable } from './DenseCartItemsTable';
 import { cn } from '../../lib/utils';
 
 interface Props {
@@ -33,8 +32,6 @@ export const CartItemsList: React.FC<Props> = (props) => {
     isWholesale, permissions, settings, products, quantityInputRefs
   } = props;
 
-  const isDense = Boolean(settings?.fastModeEnabled);
-
   // Article actif : soit celui explicitement sélectionné, soit le dernier article du panier
   const activeItem = cart.find(
     item => (item.cartItemId && item.cartItemId === selectedItemId) || item.id === selectedItemId
@@ -47,11 +44,6 @@ export const CartItemsList: React.FC<Props> = (props) => {
           <span className="flex items-center gap-2">
             <LayoutList size={14} className="opacity-70 text-indigo-600 dark:text-indigo-400"/> 
             Articles : <span className="text-slate-900 dark:text-white font-extrabold">{cart.length}</span>
-            {isDense && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                <Zap size={10} className="fill-amber-500 text-amber-500" /> VUE HAUTE DENSITÉ
-              </span>
-            )}
           </span>
           <span>
             Pièces : <span className="text-slate-900 dark:text-white font-extrabold">{cart.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</span>
@@ -61,30 +53,12 @@ export const CartItemsList: React.FC<Props> = (props) => {
 
       {cart.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-12 text-center max-w-sm mx-auto select-none">
-          <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl flex items-center justify-center mb-5 shadow-sm dark:shadow-xl border border-slate-200 dark:border-zinc-800">
+          <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-xl flex items-center justify-center mb-5 shadow-sm dark:shadow-xl border border-slate-200 dark:border-zinc-800">
             <ShoppingBag size={44} strokeWidth={1.5} className="text-slate-400 dark:text-zinc-600" />
           </div>
           <h4 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wider mb-1">Panier Vide</h4>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Scannez un code-barres ou choisissez un article</p>
         </div>
-      ) : isDense ? (
-        <DenseCartItemsTable
-          cart={cart}
-          selectedItemId={selectedItemId}
-          setSelectedItemId={setSelectedItemId}
-          removeFromCart={removeFromCart}
-          setQuantity={setQuantity}
-          setEditingProduct={setEditingProduct}
-          setIsProductModalOpen={setIsProductModalOpen}
-          setDiscountingItemId={setDiscountingItemId}
-          setPrice={setPrice}
-          isWholesale={isWholesale}
-          permissions={permissions}
-          settings={settings}
-          products={products}
-          quantityInputRefs={quantityInputRefs}
-          cartEndRef={cartEndRef}
-        />
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-zinc-950">
           <div className="p-3 space-y-2">

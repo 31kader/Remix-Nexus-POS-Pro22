@@ -52,7 +52,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0f172a] p-8 rounded-3xl shadow-2xl border border-slate-800 w-full max-w-md relative overflow-hidden"
+        className="bg-[#0f172a] p-8 rounded-xl shadow-2xl border border-slate-800 w-full max-w-md relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500"></div>
         
@@ -60,7 +60,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
           <div className="w-20 h-20 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/20 transform rotate-3">
             <Camera size={40} />
           </div>
-          <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter">Live Audit</h1>
+          <h1 className="text-3xl font-black text-white uppercase  tracking-tighter">Live Audit</h1>
           <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-2">Portail Agent de Surveillance</p>
         </div>
 
@@ -115,7 +115,7 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
 
           <Button 
             type="submit" 
-            className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-500"
+            className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-normal shadow-xl shadow-indigo-600/10 bg-indigo-600 hover:bg-indigo-500"
             disabled={isLoggingIn}
           >
             {isLoggingIn ? "Authentification..." : "Accéder à la Caméra"}

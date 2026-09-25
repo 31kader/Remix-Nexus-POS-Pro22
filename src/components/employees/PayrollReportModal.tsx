@@ -54,7 +54,7 @@ export function PayrollReportModal({
     >
       <div className="p-2 space-y-6 text-white text-left animate-fade-in">
         <div className="p-6 bg-white/5 rounded-[1.8rem] border border-white/10 space-y-4">
-          <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em]">Configuration du Salarié</p>
+          <p className="text-[9px] font-black text-indigo-400 uppercase tracking-normal">Configuration du Salarié</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-[9px] font-black text-white/40 uppercase tracking-widest">Salarié à auditer</label>
@@ -105,7 +105,7 @@ export function PayrollReportModal({
 
             {/* Adjustments: Adds custom prime and deduction */}
             <div className="p-6 bg-white/[0.02] rounded-[1.8rem] border border-white/5 space-y-4">
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 leading-none">Ajustements Manuels Éphémères</p>
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-normal mb-2 leading-none">Ajustements Manuels Éphémères</p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Bonus Column */}
@@ -152,7 +152,7 @@ export function PayrollReportModal({
 
             {/* Salary breakdown card */}
             <div className="p-6 bg-black/60 rounded-[1.8rem] border border-white/10 space-y-4">
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Calculateur de Paie en direct</p>
+              <p className="text-[9px] font-black text-white/30 uppercase tracking-normal mb-1">Calculateur de Paie en direct</p>
               
               <div className="space-y-3 text-[11px] font-black uppercase tracking-widest">
                 <div className="flex justify-between text-white/50">

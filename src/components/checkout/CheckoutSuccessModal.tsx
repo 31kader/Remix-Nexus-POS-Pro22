@@ -50,7 +50,7 @@ export function CheckoutSuccessModal({
           initial={{ opacity: 0, scale: 0.9, y: 50 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-8 py-6 rounded-[2.5rem] shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 min-w-[380px] backdrop-blur-2xl ring-2 ring-emerald-500/20"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-8 py-6 rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 min-w-[380px]  ring-2 ring-emerald-500/20"
         >
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/30 shadow-inner">
@@ -72,9 +72,9 @@ export function CheckoutSuccessModal({
             </button>
           </div>
           
-          <div className="bg-slate-900/90 rounded-3xl p-4 border border-white/5 shadow-inner">
+          <div className="bg-slate-900/90 rounded-xl p-4 border border-white/5 shadow-inner">
              <div className="flex justify-between items-baseline mb-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">N° Transaction</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-normal">N° Transaction</span>
                 <span className="text-[10px] font-mono font-black text-indigo-400">#{(lastTransaction?.id || 'NX-0000').slice(-8).toUpperCase()}</span>
              </div>
              <div className="flex justify-between items-end">

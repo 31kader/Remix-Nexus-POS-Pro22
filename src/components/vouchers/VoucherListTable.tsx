@@ -54,7 +54,7 @@ export function VoucherListTable({
           <tbody className="divide-y divide-white/5 bg-white/[0.01]">
             {filteredVouchers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-white/20 italic text-xs uppercase tracking-widest">
+                <td colSpan={5} className="p-8 text-center text-white/20  text-xs uppercase tracking-widest">
                   Aucun bon trouvé
                 </td>
               </tr>

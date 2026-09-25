@@ -12,7 +12,7 @@ interface CustomerDigitalCardProps {
 export function CustomerDigitalCard({ selectedCustomer, settings }: CustomerDigitalCardProps) {
   return (
     <div className="flex flex-col items-center max-w-md mx-auto space-y-6">
-      <div id={`loyalty-card-export-${selectedCustomer.id}`} className="w-full space-y-6 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-2xl relative">
+      <div id={`loyalty-card-export-${selectedCustomer.id}`} className="w-full space-y-6 bg-slate-900 border border-slate-800 p-6 rounded-xl shadow-2xl relative">
         <div id="loyalty-card-preview" className="w-full aspect-[1.586/1] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden transition-transform hover:scale-[1.02]">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24 blur-2xl" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/20 rounded-full -ml-16 -mb-16 blur-xl" />

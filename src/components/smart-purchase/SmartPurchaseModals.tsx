@@ -243,7 +243,7 @@ export function SmartPurchaseModals({
                 </button>
               ))}
             {products.filter(p => !quickCreateSearchFilter || (p?.name && p.name.toLowerCase().includes(quickCreateSearchFilter.toLowerCase()))).length === 0 && (
-              <p className="p-4 text-center text-xs text-industrial-500 italic">Aucun produit ne correspond à la recherche.</p>
+              <p className="p-4 text-center text-xs text-industrial-500 ">Aucun produit ne correspond à la recherche.</p>
             )}
           </div>
         </div>

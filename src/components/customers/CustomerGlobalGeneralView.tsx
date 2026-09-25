@@ -242,7 +242,7 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
   const selectedCustomerObj = activeCustomerId ? customerMap.get(activeCustomerId) : null;
 
   return (
-    <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-3xl p-5 shadow-2xl overflow-hidden h-full">
+    <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-2xl overflow-hidden h-full">
       
       {/* Header & Filter by Customer */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">

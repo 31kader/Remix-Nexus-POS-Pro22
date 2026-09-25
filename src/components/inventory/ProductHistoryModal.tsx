@@ -97,14 +97,14 @@ export function ProductHistoryModal({
                     const items = getRecordItems(t);
                     const item = items.find(i => i && (i.id === viewingHistoryProduct.id || i.productId === viewingHistoryProduct.id));
                     return (
-                      <div key={t.id} className="p-6 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all group shadow-xl">
+                      <div key={t.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all group shadow-xl">
                         <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-lg shadow-indigo-500/5">
                             <ShoppingCart size={24} />
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                                <p className="font-black text-white italic uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
+                                <p className="font-black text-white  uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
                                 <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
                              </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(t.timestamp || (t as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
@@ -142,14 +142,14 @@ export function ProductHistoryModal({
                     const itemQty = item?.quantity || 0;
                     const returnDate = r.timestamp || r.date || new Date().toISOString();
                     return (
-                      <div key={r.id} className="p-6 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-between hover:bg-white/10 hover:border-red-500/30 transition-all group shadow-xl">
+                      <div key={r.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-red-500/30 transition-all group shadow-xl">
                         <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-all shadow-lg shadow-red-500/5">
                             <RotateCcw size={24} />
                           </div>
                           <div>
                              <div className="flex items-center gap-3">
-                                <p className="font-black text-white italic uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
+                                <p className="font-black text-white  uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
                                 <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded border border-red-500/20">Retourné</span>
                              </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(returnDate), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
@@ -187,7 +187,7 @@ export function ProductHistoryModal({
                       <div 
                         key={p.id} 
                         onClick={() => setViewingPurchaseVoucher(p)}
-                        className="p-6 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-between hover:bg-white/10 hover:border-amber-500/30 transition-all cursor-pointer group shadow-xl"
+                        className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-amber-500/30 transition-all cursor-pointer group shadow-xl"
                       >
                         <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-lg shadow-amber-500/5">
@@ -195,11 +195,11 @@ export function ProductHistoryModal({
                           </div>
                           <div>
                             <div className="flex items-center gap-3">
-                              <p className="font-black text-white italic uppercase text-xs tracking-widest">Achat - {p.supplierName}</p>
+                              <p className="font-black text-white  uppercase text-xs tracking-widest">Achat - {p.supplierName}</p>
                               <Eye size={14} className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(p.date || (p as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-                            {p.invoiceNumber && <p className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Fiche: {p.invoiceNumber}</p>}
+                            {p.invoiceNumber && <p className="text-[9px] font-black text-indigo-400 uppercase tracking-normal mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Fiche: {p.invoiceNumber}</p>}
                           </div>
                         </div>
                         <div className="text-right">
@@ -223,14 +223,14 @@ export function ProductHistoryModal({
 
           {historyTab === 'price' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
+              <div className="flex items-center justify-between p-6 bg-white/5 rounded-xl border border-white/10 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
                 <div className="relative z-10">
-                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 pl-1">Prix de vente actuel</p>
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mb-2 pl-1">Prix de vente actuel</p>
                   <p className="text-3xl font-black text-white tabular-nums">{(viewingHistoryProduct.price || 0).toFixed(2)} <span className="text-xs text-emerald-400 font-black uppercase tracking-widest ml-1">{settings.currency}</span></p>
                 </div>
                 <div className="text-right relative z-10">
-                  <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 pr-1">Coût d'achat actuel</p>
+                  <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mb-2 pr-1">Coût d'achat actuel</p>
                   <p className="text-3xl font-black text-white tabular-nums">{(viewingHistoryProduct.costPrice || 0).toFixed(2)} <span className="text-xs text-rose-400 font-black uppercase tracking-widest ml-1">{settings.currency}</span></p>
                 </div>
               </div>

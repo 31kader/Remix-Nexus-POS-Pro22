@@ -136,7 +136,7 @@ export function StockHistoryTable({
                     className={cn(
                       "w-8 h-8 rounded-lg text-xs font-bold transition-all",
                       currentPage === pageNum 
-                        ? "bg-indigo-600 text-white shadow-neon-indigo border border-indigo-400/50" 
+                        ? "bg-indigo-600 text-white shadow-xs border border-indigo-400/50" 
                         : "text-slate-400 hover:bg-white/5"
                     )}
                   >

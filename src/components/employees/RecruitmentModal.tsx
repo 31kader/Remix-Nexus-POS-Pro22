@@ -60,14 +60,14 @@ export function RecruitmentModal({
     <Modal isOpen={isOpen} onClose={onClose} title={editingEmployee ? "MODIFIER L'EMPLOYÉ" : "RECRUTEMENT NEXUS"} maxWidth="max-w-5xl" maxHeight="max-h-[94vh]">
       <form onSubmit={handleSubmit} className="p-3 space-y-8 text-left">
         {/* Wizard Navigation Tab bar */}
-        <div className="flex bg-zinc-900 p-1.5 rounded-[1.8rem] border border-white/10 backdrop-blur-md overflow-x-auto gap-1">
+        <div className="flex bg-zinc-900 p-1.5 rounded-[1.8rem] border border-white/10  overflow-x-auto gap-1">
           <button
             type="button"
             onClick={() => { stopCamera(); setRecruitmentTab('info'); }}
             className={cn(
               "flex-1 px-4 py-3 rounded-[1.3rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap text-center text-white cursor-pointer",
               recruitmentTab === 'info' 
-                ? "bg-indigo-600 shadow-neon-indigo border border-indigo-500/20" 
+                ? "bg-indigo-600 shadow-xs border border-indigo-500/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             )}
           >
@@ -79,7 +79,7 @@ export function RecruitmentModal({
             className={cn(
               "flex-1 px-4 py-3 rounded-[1.3rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap text-center text-white cursor-pointer",
               recruitmentTab === 'identity' 
-                ? "bg-indigo-600 shadow-neon-indigo border border-indigo-500/20" 
+                ? "bg-indigo-600 shadow-xs border border-indigo-500/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             )}
           >
@@ -91,7 +91,7 @@ export function RecruitmentModal({
             className={cn(
               "flex-1 px-4 py-3 rounded-[1.3rem] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap text-center text-white cursor-pointer",
               recruitmentTab === 'contract' 
-                ? "bg-indigo-600 shadow-neon-indigo border border-indigo-500/20" 
+                ? "bg-indigo-600 shadow-xs border border-indigo-500/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             )}
           >

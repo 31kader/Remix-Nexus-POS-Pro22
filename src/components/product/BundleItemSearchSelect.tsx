@@ -51,16 +51,16 @@ export function BundleItemSearchSelect({
         )}
       </div>
       {isOpen && (
-        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-hidden flex flex-col backdrop-blur-xl">
+        <div className="absolute z-[100] w-full mt-2 bg-workspace border border-white/10 rounded-2xl shadow-2xl max-h-80 overflow-hidden flex flex-col ">
           <div className="p-3 border-b border-white/5 flex items-center justify-between bg-white/5">
-             <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] px-1">Résultats ({filteredProducts.length})</span>
+             <span className="text-[10px] font-black text-white uppercase tracking-normal px-1">Résultats ({filteredProducts.length})</span>
              <button type="button" className="text-white/20 hover:text-white transition-colors p-1" onClick={() => { onChange(''); setIsOpen(false); }}>
                <X size={16} />
              </button>
           </div>
           <div className="overflow-y-auto custom-scrollbar flex-1">
           {filteredProducts.length === 0 ? (
-            <div className="p-8 text-center text-white/20 italic">
+            <div className="p-8 text-center text-white/20 ">
               <Package size={24} className="mx-auto mb-2 opacity-10" />
               <p className="text-xs font-bold uppercase tracking-widest">Aucun produit</p>
             </div>

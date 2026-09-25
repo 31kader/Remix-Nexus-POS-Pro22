@@ -34,7 +34,7 @@ export function ExpiryControls({
   handleBatchDiscount
 }: ExpiryControlsProps) {
   return (
-    <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 p-4 rounded-3xl border border-white/10">
+    <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
       <div className="flex items-center gap-2 bg-black/40 p-1 rounded-2xl border border-white/5">
         <button 
           onClick={() => setView('list')}

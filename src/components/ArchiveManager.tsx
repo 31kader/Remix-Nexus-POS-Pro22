@@ -408,7 +408,7 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
       </div>
 
       {statusMessage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 ">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className={`p-4 ${statusMessage.type === 'error' ? 'bg-rose-50 border-b border-rose-100' : statusMessage.type === 'success' ? 'bg-emerald-50 border-b border-emerald-100' : 'bg-indigo-50 border-b border-indigo-100'}`}>
               <h3 className={`text-lg font-bold flex items-center gap-2 ${statusMessage.type === 'error' ? 'text-rose-800' : statusMessage.type === 'success' ? 'text-emerald-800' : 'text-indigo-800'}`}>

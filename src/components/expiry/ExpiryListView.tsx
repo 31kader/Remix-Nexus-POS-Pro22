@@ -81,7 +81,7 @@ export function ExpiryListView({
                 exit={{ opacity: 0, scale: 0.95 }}
                 key={product.id}
                 className={cn(
-                  "group relative bg-white/5 border rounded-3xl p-5 hover:bg-white/[0.08] transition-all",
+                  "group relative bg-white/5 border rounded-xl p-5 hover:bg-white/[0.08] transition-all",
                   product.expiryStatus === 'expired' ? "border-rose-500/40 bg-rose-500/[0.03]" : 
                   product.expiryStatus === 'critical' ? "border-amber-500/40 bg-amber-500/[0.03]" : 
                   product.expiryStatus === 'warning' ? "border-indigo-500/30" :
@@ -237,7 +237,7 @@ export function ExpiryListView({
         </AnimatePresence>
 
         {paginatedProducts.length === 0 && (
-          <div className="lg:col-span-2 py-20 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/10 rounded-3xl bg-white/[0.02]">
+          <div className="lg:col-span-2 py-20 flex flex-col items-center justify-center text-white/30 border border-dashed border-white/10 rounded-xl bg-white/[0.02]">
             <CheckCircle2 size={48} className="mb-4 text-emerald-500/50" />
             <p className="font-black uppercase tracking-widest text-sm text-white/60">Aucun produit ne correspond aux filtres</p>
             <p className="text-xs text-white/30 mt-1">Modifiez vos critères de recherche ou sélectionnez un autre statut.</p>
@@ -247,7 +247,7 @@ export function ExpiryListView({
 
       {/* 📄 Barre de Pagination Complète */}
       {totalCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/5 p-4 rounded-3xl border border-white/10 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/5 p-4 rounded-xl border border-white/10 shadow-xl">
           <div className="flex items-center gap-3">
             <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
               Affichage <span className="text-white font-black">{startIndex} - {endIndex}</span> sur <span className="text-indigo-400 font-black">{totalCount}</span> articles
@@ -320,7 +320,7 @@ export function ExpiryListView({
       <AnimatePresence>
         {previewImage && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 "
             onClick={() => setPreviewImage(null)}
           >
             <motion.div 
@@ -328,7 +328,7 @@ export function ExpiryListView({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.85, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-3xl w-full bg-slate-900 border border-white/15 rounded-3xl overflow-hidden shadow-2xl shadow-black p-6 flex flex-col items-center"
+              className="relative max-w-3xl w-full bg-slate-900 border border-white/15 rounded-xl overflow-hidden shadow-2xl shadow-black p-6 flex flex-col items-center"
             >
               <button 
                 onClick={() => setPreviewImage(null)}
@@ -362,7 +362,7 @@ export function ExpiryListView({
       <AnimatePresence>
         {quickDateProduct && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 "
             onClick={() => setQuickDateProduct(null)}
           >
             <motion.div 
@@ -370,7 +370,7 @@ export function ExpiryListView({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-w-md w-full bg-slate-900 border border-white/20 rounded-3xl shadow-2xl p-6 space-y-4"
+              className="relative max-w-md w-full bg-slate-900 border border-white/20 rounded-xl shadow-2xl p-6 space-y-4"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <h3 className="text-base font-extrabold text-white uppercase tracking-tight flex items-center gap-2">

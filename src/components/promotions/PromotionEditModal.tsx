@@ -178,7 +178,7 @@ export function PromotionEditModal({
                 {cat.name}
               </label>
             ))}
-            {categories.length === 0 && <p className="text-[10px] text-slate-400 italic">Aucune catégorie définie dans l'inventaire</p>}
+            {categories.length === 0 && <p className="text-[10px] text-slate-400 ">Aucune catégorie définie dans l'inventaire</p>}
           </div>
         </div>
 
@@ -202,7 +202,7 @@ export function PromotionEditModal({
                 <span className="text-slate-400 font-mono text-[10px]">{prod.sku || String(prod.id || "").slice(-4)}</span>
               </label>
             ))}
-            {products.length === 0 && <p className="text-[10px] text-slate-400 italic">Aucun produit dans l'inventaire</p>}
+            {products.length === 0 && <p className="text-[10px] text-slate-400 ">Aucun produit dans l'inventaire</p>}
           </div>
         </div>
 

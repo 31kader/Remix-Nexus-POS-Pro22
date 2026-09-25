@@ -778,7 +778,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
               <div 
                 ref={previewRef}
                 className={cn(
-                  "rounded-3xl shadow-2xl p-7 flex flex-col justify-between transition-all duration-300 relative overflow-hidden select-none border",
+                  "rounded-xl shadow-2xl p-7 flex flex-col justify-between transition-all duration-300 relative overflow-hidden select-none border",
                   `bg-gradient-to-br ${activeTheme.bgGradient}`,
                   activeTheme.textPrimary,
                   activeTheme.border,
@@ -801,7 +801,7 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
                     {currentBadgeText}
                   </div>
                   {showOldPrice && safeOldPrice > safePrice && (
-                    <div className="bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl text-[10px] font-black text-amber-300 border border-white/10">
+                    <div className="bg-black/30  px-2.5 py-1 rounded-xl text-[10px] font-black text-amber-300 border border-white/10">
                       -{Math.round(((safeOldPrice - safePrice) / safeOldPrice) * 100)}%
                     </div>
                   )}

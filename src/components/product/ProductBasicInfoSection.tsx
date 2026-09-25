@@ -49,13 +49,13 @@ export function ProductBasicInfoSection({
     <div className="space-y-5">
       {/* Ligne 1 : Désignation de l'article */}
       <div className="space-y-2">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic ml-1">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-normal  ml-1">
           DÉSIGNATION ARTICLE *
         </label>
         <div className="relative group">
           <input
             required
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase italic"
+            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-sm font-black placeholder:text-slate-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner group-hover:border-white/20 uppercase "
             placeholder="NOM DU PRODUIT..."
             value={formData.name}
             onChange={e => setFormData({...formData, name: e.target.value})}
@@ -87,7 +87,7 @@ export function ProductBasicInfoSection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Code-barres EAN */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1 flex items-center gap-1.5">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-normal  ml-1 flex items-center gap-1.5">
             <Barcode size={13} className="text-indigo-400" />
             CODE-BARRES EAN (SCANNER)
           </label>
@@ -127,7 +127,7 @@ export function ProductBasicInfoSection({
 
         {/* Référence interne / SKU */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] italic ml-1">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-normal  ml-1">
             RÉFÉRENCE / SKU INTERNE
           </label>
           <div className="relative group">
@@ -166,7 +166,7 @@ export function ProductBasicInfoSection({
               </button>
             </div>
           </div>
-          {skuError && <p className="text-[9px] font-black text-rose-500 animate-pulse tracking-widest mt-1 ml-2 italic">{skuError.toUpperCase()}</p>}
+          {skuError && <p className="text-[9px] font-black text-rose-500 animate-pulse tracking-widest mt-1 ml-2 ">{skuError.toUpperCase()}</p>}
         </div>
       </div>
 

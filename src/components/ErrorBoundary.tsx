@@ -91,13 +91,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 font-sans">
-          <div className="max-w-md w-full bg-slate-900 border border-white/5 rounded-[2.5rem] p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in duration-500">
-            <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mx-auto border border-rose-500/20">
+          <div className="max-w-md w-full bg-slate-900 border border-white/5 rounded-xl p-8 shadow-2xl space-y-6 text-center animate-in fade-in zoom-in duration-500">
+            <div className="w-20 h-20 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20">
               <AlertTriangle className="text-rose-500" size={40} />
             </div>
             
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">System Crash Intercepted</h2>
+              <h2 className="text-2xl font-black text-white  uppercase tracking-tight">System Crash Intercepted</h2>
               <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Une erreur d'affichage temporaire est survenue.</p>
             </div>
 
@@ -137,7 +137,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <p className="text-[8px] font-black text-white/5 uppercase tracking-[0.3em]">Nexus POS Pro v1.2.14 Safety Layer</p>
+            <p className="text-[8px] font-black text-white/5 uppercase tracking-normal">Nexus POS Pro v1.2.14 Safety Layer</p>
           </div>
         </div>
       );

@@ -11,8 +11,8 @@ interface Props {
 
 export const CustomerInfoSidebar: React.FC<Props> = ({ customer, lastVisit }) => {
   return (
-    <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8 space-y-8 shadow-inner">
-      <h3 className="font-black text-white flex items-center gap-3 uppercase italic tracking-wider text-sm">
+    <div className="bg-white/5 border border-white/5 rounded-xl p-8 space-y-8 shadow-inner">
+      <h3 className="font-black text-white flex items-center gap-3 uppercase  tracking-wider text-sm">
         <UserCog size={18} className="text-indigo-400" />
         Matrice Client
       </h3>
@@ -23,7 +23,7 @@ export const CustomerInfoSidebar: React.FC<Props> = ({ customer, lastVisit }) =>
             <Mail size={16} />
           </div>
           <div>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Passerelle Mail</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-normal mb-1">Passerelle Mail</p>
             <p className="text-xs font-black text-white tracking-wide">{customer.email || 'N/A'}</p>
           </div>
         </div>
@@ -33,7 +33,7 @@ export const CustomerInfoSidebar: React.FC<Props> = ({ customer, lastVisit }) =>
             <Phone size={16} />
           </div>
           <div>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Liaison Com</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-normal mb-1">Liaison Com</p>
             <p className="text-xs font-black text-white tracking-widest">{customer.phone || 'N/A'}</p>
           </div>
         </div>
@@ -43,7 +43,7 @@ export const CustomerInfoSidebar: React.FC<Props> = ({ customer, lastVisit }) =>
             <Calendar size={16} />
           </div>
           <div>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Dernière Sync</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-normal mb-1">Dernière Sync</p>
             <p className="text-xs font-black text-white tracking-widest">
               {lastVisit 
                 ? format(lastVisit, 'dd MMM yyyy', { locale: fr }).toUpperCase()

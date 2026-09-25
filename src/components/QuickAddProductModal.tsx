@@ -133,11 +133,11 @@ export function QuickAddProductModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 ">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full space-y-6"
+        className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full space-y-6"
       >
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-lg ring-4 ring-indigo-50">

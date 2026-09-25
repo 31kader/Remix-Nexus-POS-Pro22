@@ -469,19 +469,19 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
 
   const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   const fallbackUI = (
-    <div className="flex flex-col items-center justify-center min-h-[400px] h-full bg-slate-900/40 border border-slate-800/60 rounded-3xl p-8 text-center space-y-6">
-      <div className="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto border border-rose-500/20">
-        <AlertTriangle className="text-rose-500" size={32} />
+    <div className="flex flex-col items-center justify-center min-h-[400px] h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-8 text-center space-y-4">
+      <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20">
+        <AlertTriangle className="text-rose-500" size={24} />
       </div>
-      <div className="space-y-2">
-        <h3 className="text-lg font-black text-white uppercase italic">Erreur dans le module {tabName}</h3>
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest max-w-sm mx-auto">
+      <div className="space-y-1">
+        <h3 className="text-base font-bold text-slate-900 dark:text-white">Erreur dans le module {tabName}</h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
           Ce module a rencontré une erreur d'affichage inattendue. Vous pouvez continuer d'utiliser les autres sections de l'application.
         </p>
       </div>
       <Button
         onClick={() => window.location.reload()}
-        className="px-6 py-3 bg-white text-black hover:bg-slate-200 rounded-xl font-black uppercase tracking-widest text-xs shadow-md transition-all active:scale-95"
+        className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-semibold text-xs"
       >
         Recharger l'application
       </Button>
@@ -489,21 +489,12 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
   );
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2 }}
-        className="h-full w-full"
-      >
-        <ErrorBoundary key={activeTab}>
-          <Suspense fallback={loadingFallback}>
-            {renderTabContent()}
-          </Suspense>
-        </ErrorBoundary>
-      </motion.div>
-    </AnimatePresence>
+    <div key={activeTab} className="h-full w-full">
+      <ErrorBoundary key={activeTab}>
+        <Suspense fallback={loadingFallback}>
+          {renderTabContent()}
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   );
 };

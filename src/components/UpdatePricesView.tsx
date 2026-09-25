@@ -50,7 +50,7 @@ export function UpdatePricesView({ items, onComplete, settings, products }: Upda
             className="relative w-full max-w-2xl h-full bg-industrial-950 border-l border-industrial-800 flex flex-col shadow-2xl z-10 overflow-hidden"
           >
             {/* Top Header */}
-            <div className="p-6 border-b border-industrial-800/80 bg-industrial-900/60 backdrop-blur-md flex items-start justify-between">
+            <div className="p-6 border-b border-industrial-800/80 bg-industrial-900/60  flex items-start justify-between">
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center gap-2.5">
                   <span className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg flex items-center gap-1">
@@ -96,7 +96,7 @@ export function UpdatePricesView({ items, onComplete, settings, products }: Upda
             </div>
 
             {/* Bottom Footer Section */}
-            <div className="p-6 border-t border-industrial-800 bg-industrial-900/90 backdrop-blur-md flex flex-col sm:flex-row gap-4">
+            <div className="p-6 border-t border-industrial-800 bg-industrial-900/90  flex flex-col sm:flex-row gap-4">
               <Button 
                 variant="secondary" 
                 onClick={handleClose} 

@@ -85,7 +85,7 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
         onKeyDown={handleKeyDown}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-transparent border-none outline-none text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500/50 rounded-lg italic font-mono"
+        className="w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-transparent border-none outline-none text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500/50 rounded-lg  font-mono"
       />
     );
   }

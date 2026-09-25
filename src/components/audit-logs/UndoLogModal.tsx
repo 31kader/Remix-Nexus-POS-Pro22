@@ -82,7 +82,7 @@ export function UndoLogModal({
               </label>
             </div>
 
-            <div className="text-[10px] text-industrial-500 leading-relaxed italic">
+            <div className="text-[10px] text-industrial-500 leading-relaxed ">
               {cancellingLog && (cancellingLog as any).isCancelled
                 ? "Note: La transaction sera réactivée et marquée comme finalisée."
                 : "Note: La transaction sera automatiquement mise en statut \"Retournée/Remboursée\" dans votre base."
@@ -90,7 +90,7 @@ export function UndoLogModal({
             </div>
           </div>
         ) : (
-          <div className="p-4 bg-industrial-900 text-industrial-500 rounded-2xl border border-industrial-800 text-xs italic">
+          <div className="p-4 bg-industrial-900 text-industrial-500 rounded-2xl border border-industrial-800 text-xs ">
             Aucune transaction POS correspondante trouvée automatiquement. L'annulation marquera simplement l'événement comme "ANNULÉ" visuellement sans restaurer de stock physique.
           </div>
         )}

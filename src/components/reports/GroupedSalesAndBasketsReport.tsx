@@ -396,7 +396,7 @@ export function GroupedSalesAndBasketsReport({
               onClick={() => { setActiveSubTab('grouped_products'); setCurrentPage(1); }}
               className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
                 activeSubTab === 'grouped_products'
-                  ? 'bg-indigo-600 text-white shadow-neon-indigo'
+                  ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -406,7 +406,7 @@ export function GroupedSalesAndBasketsReport({
               onClick={() => { setActiveSubTab('basket_profits'); setCurrentPage(1); }}
               className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
                 activeSubTab === 'basket_profits'
-                  ? 'bg-emerald-600 text-white shadow-neon-emerald'
+                  ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -426,7 +426,7 @@ export function GroupedSalesAndBasketsReport({
       {/* KPI Cards */}
       {activeSubTab === 'grouped_products' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Articles Cumulés</span>
               <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
@@ -437,7 +437,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">sur {groupedTotals.uniqueProducts} références uniques</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Chiffre d'Affaires</span>
               <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
@@ -448,7 +448,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">Total des ventes consolidées</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Bénéfice Net Produit</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -459,7 +459,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">Marge brute dégagée</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Taux de Marge Moyen</span>
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -472,7 +472,7 @@ export function GroupedSalesAndBasketsReport({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Panier Moyen (CA)</span>
               <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
@@ -483,7 +483,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">sur {basketTotals.totalBaskets} paniers validés</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Bénéfice Moyen / Panier</span>
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -494,7 +494,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">Profit net moyen par client</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Marge Moyenne Panier</span>
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
@@ -505,7 +505,7 @@ export function GroupedSalesAndBasketsReport({
             <p className="text-[10px] text-slate-500 mt-1">Taux de rentabilité par ticket</p>
           </Card>
 
-          <Card className="p-5 bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <Card className="p-5 bg-slate-900/60 border border-slate-800 ">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Panier Record Profit</span>
               <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
@@ -519,7 +519,7 @@ export function GroupedSalesAndBasketsReport({
       )}
 
       {/* Filters Bar */}
-      <Card className="p-4 bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-4">
+      <Card className="p-4 bg-slate-900/60 border border-slate-800  space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Quick Date Filters */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -639,7 +639,7 @@ export function GroupedSalesAndBasketsReport({
       </Card>
 
       {/* Main Table */}
-      <Card className="overflow-hidden bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+      <Card className="overflow-hidden bg-slate-900/60 border border-slate-800 ">
         <div className="w-full overflow-x-auto">
           {activeSubTab === 'grouped_products' ? (
             <table className="w-full text-left border-collapse min-w-[850px]">
@@ -695,7 +695,7 @@ export function GroupedSalesAndBasketsReport({
                 ))}
                 {pagedList.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-slate-500 font-mono italic">
+                    <td colSpan={7} className="p-12 text-center text-slate-500 font-mono ">
                       AUCUN PRODUIT VENDU SUR CETTE PÉRIODE
                     </td>
                   </tr>
@@ -828,7 +828,7 @@ export function GroupedSalesAndBasketsReport({
                 })}
                 {pagedList.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-500 font-mono italic">
+                    <td colSpan={8} className="p-12 text-center text-slate-500 font-mono ">
                       AUCUN PANIER TROUVÉ SUR CETTE PÉRIODE
                     </td>
                   </tr>

@@ -23,19 +23,19 @@ export function SessionInitialCard({
   setActiveTab
 }: SessionInitialCardProps) {
   return (
-    <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-6 text-center">
+    <div className="absolute inset-0 z-50 bg-black/90  flex items-center justify-center p-6 text-center">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="max-w-md w-full"
       >
-        <Card className="p-8 space-y-8 bg-slate-900/50 border-white/5 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+        <Card className="p-8 space-y-8 bg-slate-900/50 border-white/5  shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
           <div className="space-y-4">
-            <div className="w-20 h-20 bg-indigo-500/20 text-indigo-400 rounded-3xl flex items-center justify-center mx-auto rotate-12 group-hover:rotate-0 transition-transform">
+            <div className="w-20 h-20 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center mx-auto rotate-12 group-hover:rotate-0 transition-transform">
               <Wallet size={40} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Session Close</h3>
+              <h3 className="text-3xl font-black text-white uppercase tracking-tighter ">Session Close</h3>
               <p className="text-slate-400 text-sm font-medium">
                 Initialisez votre fond de caisse pour commencer à vendre.
               </p>

@@ -200,7 +200,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       {/* Main Login Card */}
-      <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative">
+      <div className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-8 shadow-2xl space-y-6 relative">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 shadow-md shadow-indigo-600/30 text-white mb-1">

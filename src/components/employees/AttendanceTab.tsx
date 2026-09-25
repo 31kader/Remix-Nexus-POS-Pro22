@@ -244,18 +244,18 @@ export const AttendanceTab = memo(function AttendanceTab({
         handleExpressClockIn={handleExpressClockIn}
       />
 
-      <div className="flex flex-col xl:flex-row justify-between items-end gap-6 mt-12 bg-white/[0.02] p-8 rounded-[2.5rem] border border-white/5">
+      <div className="flex flex-col xl:flex-row justify-between items-end gap-6 mt-12 bg-white/[0.02] p-8 rounded-xl border border-white/5">
         <div>
-          <h4 className="font-black text-white italic uppercase tracking-wider flex items-center gap-2">
+          <h4 className="font-black text-white  uppercase tracking-wider flex items-center gap-2">
             <History size={18} className="text-indigo-400" />
             Historique de Pointage
           </h4>
-          <p className="text-[10px] font-black text-white/30 tracking-[0.2em] mt-1 uppercase">ARCHIVE & VERIFIED RECORDS</p>
+          <p className="text-[10px] font-black text-white/30 tracking-normal mt-1 uppercase">ARCHIVE & VERIFIED RECORDS</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
           <div className="flex flex-col gap-2 shrink-0">
-            <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Période</label>
+            <label className="text-[9px] font-black text-white/20 uppercase tracking-normal ml-2">Période</label>
             <input 
               type="month" 
               className="px-6 py-3 bg-black/40 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
@@ -265,7 +265,7 @@ export const AttendanceTab = memo(function AttendanceTab({
           </div>
           
           <div className="flex flex-col gap-2 shrink-0">
-            <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em] ml-2">Employé</label>
+            <label className="text-[9px] font-black text-white/20 uppercase tracking-normal ml-2">Employé</label>
             <select
               className="px-6 py-3 bg-black/40 border border-white/10 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               value={selectedEmployeeFilter}
@@ -295,18 +295,18 @@ export const AttendanceTab = memo(function AttendanceTab({
         </div>
       </div>
       
-      <Card className="overflow-hidden border-white/5 bg-white/5 backdrop-blur-md rounded-[2.5rem] shadow-2xl">
+      <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="bg-white/5 text-white/30 uppercase border-b border-white/5">
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">EMPLOYÉ</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">DATE</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">ARRIVÉE</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">DÉPART</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">DURÉE</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em]">STATUT</th>
-                <th className="p-6 text-[10px] font-black tracking-[0.2em] text-right">ACTIONS</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">EMPLOYÉ</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">DATE</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">ARRIVÉE</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">DÉPART</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">DURÉE</th>
+                <th className="p-6 text-[10px] font-black tracking-normal">STATUT</th>
+                <th className="p-6 text-[10px] font-black tracking-normal text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -333,7 +333,7 @@ export const AttendanceTab = memo(function AttendanceTab({
                         </div>
                         <div className="flex flex-col">
                            <span className="uppercase tracking-widest">{emp?.name || record.employeeName || 'Inconnu'}</span>
-                           <span className="text-[9px] text-white/20 tracking-[0.2em]">ID: {record.employeeId.slice(0, 8)}</span>
+                           <span className="text-[9px] text-white/20 tracking-normal">ID: {record.employeeId.slice(0, 8)}</span>
                         </div>
                       </div>
                     </td>
@@ -349,12 +349,12 @@ export const AttendanceTab = memo(function AttendanceTab({
                             {formatSafe(record.clockOut, 'HH:mm')}
                          </span>
                        ) : (
-                         <span className="text-[10px] font-black text-white/20 uppercase tracking-widest italic animate-pulse">Running...</span>
+                         <span className="text-[10px] font-black text-white/20 uppercase tracking-widest  animate-pulse">Running...</span>
                        )}
                     </td>
                     <td className="p-6 text-base font-black text-indigo-400 tracking-tighter">{hoursWorked}</td>
                     <td className="p-6">
-                      <span className={cn("px-4 py-1.5 text-[9px] font-black rounded-full uppercase tracking-[0.2em] border shadow-xl flex items-center gap-2 w-fit", 
+                      <span className={cn("px-4 py-1.5 text-[9px] font-black rounded-full uppercase tracking-normal border shadow-xl flex items-center gap-2 w-fit", 
                         record.status === 'present' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                         record.status === 'late' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                         "bg-rose-500/10 text-rose-400 border-rose-500/20"
@@ -380,11 +380,11 @@ export const AttendanceTab = memo(function AttendanceTab({
                 <tr>
                   <td colSpan={7} className="p-20 text-center">
                     <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center text-white/20 mb-4">
+                      <div className="w-16 h-16 rounded-xl bg-white/5 flex items-center justify-center text-white/20 mb-4">
                         <Calendar size={32} />
                       </div>
                       <p className="font-black text-white uppercase tracking-widest">Aucun pointage archivé</p>
-                      <p className="text-[10px] font-black text-white/30 uppercase mt-2 tracking-widest italic">Nexus pointage system v4.0</p>
+                      <p className="text-[10px] font-black text-white/30 uppercase mt-2 tracking-widest ">Nexus pointage system v4.0</p>
                     </div>
                   </td>
                 </tr>

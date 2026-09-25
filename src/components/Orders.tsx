@@ -109,7 +109,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
             <Plus size={16} /> + Nouvelle Commande
           </Button>
 
-          <div className="flex items-center gap-4 bg-white/5 backdrop-blur-md p-3 rounded-xl border border-white/10 shadow-sm">
+          <div className="flex items-center gap-4 bg-white/5  p-3 rounded-xl border border-white/10 shadow-sm">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${autoSync ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/20'}`} />
               <span className="text-xs font-black uppercase tracking-widest text-white/60">Synchro Auto</span>
@@ -162,7 +162,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
       </div>
 
       {/* Advanced Filter Bar */}
-      <Card className="p-4 bg-slate-900/60 border border-slate-800/80 backdrop-blur-md space-y-3">
+      <Card className="p-4 bg-slate-900/60 border border-slate-800/80  space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search Input */}
           <div className="relative flex-1 min-w-[240px]">
@@ -243,7 +243,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
 
       {/* Floating Bulk Action Bar */}
       {selectedOrderIds && selectedOrderIds.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-indigo-950/80 border border-indigo-500/40 rounded-2xl backdrop-blur-md shadow-2xl animate-in fade-in slide-in-from-top-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-indigo-950/80 border border-indigo-500/40 rounded-2xl  shadow-2xl animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
             <span className="text-sm font-black text-white">
@@ -320,7 +320,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
 
       {/* Confirmation de suppression */}
       {orderToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 ">
           <Card className="max-w-md w-full p-6 bg-slate-900 border-slate-800 shadow-2xl">
             <h3 className="text-xl font-bold text-white mb-4">Confirmer la suppression</h3>
             <p className="text-slate-400 mb-6">

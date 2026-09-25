@@ -38,7 +38,7 @@ export function EditOrderItems({ order, onSave, onCancel, settings }: EditOrderI
       <h4 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Modifier les articles</h4>
       <div className="space-y-2">
         {(items || []).map((item, idx) => (
-          <div key={`order-item-${idx}`} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl backdrop-blur-md">
+          <div key={`order-item-${idx}`} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl ">
             <div className="flex-1 text-left">
               <p className="text-sm font-bold text-white tracking-tight">{item.name}</p>
               <p className="text-xs text-white/40 font-mono mt-0.5">{(item.price || 0).toFixed(2)} {settings?.currency || 'DA'} x {item.quantity}</p>
@@ -122,7 +122,7 @@ export function OrderDetailModal({
           />
         ) : (
           <>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-6 backdrop-blur-md">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/5 rounded-2xl p-6 ">
               <div>
                 <p className="text-sm font-bold text-white tracking-tight">{selectedOrder.customerName || 'Client Inconnu'}</p>
                 <div className="flex items-center gap-3 mt-1">
@@ -164,7 +164,7 @@ export function OrderDetailModal({
             </div>
 
             {selectedOrder.deliveryMethod === 'delivery' && (
-              <div className="bg-white/5 border border-white/5 rounded-2xl p-6 backdrop-blur-md text-left">
+              <div className="bg-white/5 border border-white/5 rounded-2xl p-6  text-left">
                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                   <MapPin size={12} className="text-indigo-400" /> Adresse de livraison
                 </p>
@@ -172,7 +172,7 @@ export function OrderDetailModal({
                   <div>
                     <p className="text-sm font-medium text-white/90">{selectedOrder.shippingAddress || 'N/A'}</p>
                     {selectedOrder.deliveryNotes && (
-                      <p className="text-xs text-amber-400/80 mt-1 italic">Note: {selectedOrder.deliveryNotes}</p>
+                      <p className="text-xs text-amber-400/80 mt-1 ">Note: {selectedOrder.deliveryNotes}</p>
                     )}
                   </div>
                   <a
@@ -187,7 +187,7 @@ export function OrderDetailModal({
               </div>
             )}
 
-            <div className="bg-white/5 border rounded-2xl p-6 shadow-2xl text-center border-white/10 backdrop-blur-md">
+            <div className="bg-white/5 border rounded-2xl p-6 shadow-2xl text-center border-white/10 ">
               <p className="text-xs font-black text-white/60 uppercase tracking-widest text-left mb-4 flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-indigo-400"><Package size={14}/> Articles Commandés</span>
                 <span className="text-[10px] font-black text-white/20">Vérifier avant emballage</span>

@@ -180,7 +180,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Total Client Revenue */}
-        <div className="p-5 bg-gradient-to-br from-indigo-500/20 via-indigo-500/5 to-slate-900 border border-indigo-500/30 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-indigo-500/20 via-indigo-500/5 to-slate-900 border border-indigo-500/30 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-indigo-400 tracking-wider">
             <span>CA Cumulé Clients</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
@@ -194,7 +194,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
         </div>
 
         {/* Average Basket */}
-        <div className="p-5 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-slate-900 border border-emerald-500/30 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-slate-900 border border-emerald-500/30 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-emerald-400 tracking-wider">
             <span>Panier Moyen Client</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -208,7 +208,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
         </div>
 
         {/* Inactive Customers Alert */}
-        <div className="p-5 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-slate-900 border border-amber-500/30 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-slate-900 border border-amber-500/30 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-amber-400 tracking-wider">
             <span>Clients Inactifs ({inactivityDaysThreshold}j+)</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -222,7 +222,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
         </div>
 
         {/* Loyalty Points Total */}
-        <div className="p-5 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-slate-900 border border-purple-500/30 rounded-3xl shadow-xl">
+        <div className="p-5 bg-gradient-to-br from-purple-500/20 via-purple-500/5 to-slate-900 border border-purple-500/30 rounded-xl shadow-xl">
           <div className="flex items-center justify-between text-xs font-black uppercase text-purple-400 tracking-wider">
             <span>Points Fidélité Actifs</span>
             <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
@@ -238,7 +238,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
       </div>
 
       {/* Navigation & Action Bar */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 border border-slate-800 rounded-3xl shadow-xl">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-900/80 p-4 border border-slate-800 rounded-xl shadow-xl">
         
         {/* Tabs */}
         <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 w-full lg:w-auto">
@@ -314,10 +314,10 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
 
       {/* Main Content Sections */}
       {activeTab === 'top' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
-              <h3 className="text-base font-black text-white uppercase italic tracking-tight flex items-center gap-2">
+              <h3 className="text-base font-black text-white uppercase  tracking-tight flex items-center gap-2">
                 <Award className="text-amber-400" size={20} />
                 Classement des Meilleurs Clients ({topCustomers.length})
               </h3>
@@ -411,10 +411,10 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
 
       {/* Inactive Customers View */}
       {activeTab === 'inactive' && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-2xl space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
-              <h3 className="text-base font-black text-white uppercase italic tracking-tight flex items-center gap-2">
+              <h3 className="text-base font-black text-white uppercase  tracking-tight flex items-center gap-2">
                 <Clock className="text-amber-400" size={20} />
                 Clients Inactifs depuis +{inactivityDaysThreshold} jours ({inactiveCustomers.length})
               </h3>
@@ -477,7 +477,7 @@ export const CustomerAnalyticsView: React.FC<CustomerAnalyticsViewProps> = ({
                         Relancer
                       </button>
                     ) : (
-                      <span className="text-[10px] text-slate-500 italic">Pas de numéro</span>
+                      <span className="text-[10px] text-slate-500 ">Pas de numéro</span>
                     )}
                   </div>
                 </div>

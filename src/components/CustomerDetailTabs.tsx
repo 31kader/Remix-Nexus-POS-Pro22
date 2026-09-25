@@ -540,7 +540,7 @@ export function CustomerDetailTabs({
                               </a>
                             </div>
                           ) : (
-                            <span className="text-slate-500 italic">Non renseigné</span>
+                            <span className="text-slate-500 ">Non renseigné</span>
                           )}
                         </td>
                       </tr>
@@ -552,7 +552,7 @@ export function CustomerDetailTabs({
                               {selectedCustomer.email}
                             </a>
                           ) : (
-                            <span className="text-slate-500 italic">Non renseigné</span>
+                            <span className="text-slate-500 ">Non renseigné</span>
                           )}
                         </td>
                       </tr>
@@ -560,7 +560,7 @@ export function CustomerDetailTabs({
                         <td className="py-2.5 px-3.5 text-slate-400 font-bold uppercase text-[11px]">Adresse / Ville</td>
                         <td className="py-2.5 px-3.5 font-medium text-slate-300">
                           {[selectedCustomer.address, selectedCustomer.city].filter(Boolean).join(', ') || (
-                            <span className="text-slate-500 italic">Non renseignée</span>
+                            <span className="text-slate-500 ">Non renseignée</span>
                           )}
                         </td>
                       </tr>
@@ -573,7 +573,7 @@ export function CustomerDetailTabs({
                               {formatSafe(selectedCustomer.joinDate, 'dd MMMM yyyy', { locale: fr })}
                             </span>
                           ) : (
-                            <span className="text-slate-500 italic">Inconnue</span>
+                            <span className="text-slate-500 ">Inconnue</span>
                           )}
                         </td>
                       </tr>
@@ -633,7 +633,7 @@ export function CustomerDetailTabs({
                               <Smartphone size={10} /> Compte Actif
                             </span>
                           ) : (
-                            <span className="text-slate-500 italic text-xs">Non enregistré sur l'App</span>
+                            <span className="text-slate-500  text-xs">Non enregistré sur l'App</span>
                           )}
                         </td>
                       </tr>
@@ -668,7 +668,7 @@ export function CustomerDetailTabs({
                 <h5 className="text-xs font-black text-amber-400 uppercase tracking-wider flex items-center gap-2 mb-1.5">
                   <Quote size={14} /> Note Interne sur le Client
                 </h5>
-                <p className="text-xs font-medium text-amber-200/90 leading-relaxed italic">
+                <p className="text-xs font-medium text-amber-200/90 leading-relaxed ">
                   "{selectedCustomer.notes}"
                 </p>
               </div>

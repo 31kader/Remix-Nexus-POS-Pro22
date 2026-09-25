@@ -62,8 +62,8 @@ export function WhatsAppSection({ formData, setFormData }: SectionProps) {
         </div>
 
         {/* Aperçu Virtuel Smartphone */}
-        <div className="bg-slate-900/60 border border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center">
-          <div className="w-full max-w-xs bg-slate-950 border border-white/10 rounded-[2rem] p-4 shadow-2xl space-y-4">
+        <div className="bg-slate-900/60 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center">
+          <div className="w-full max-w-xs bg-slate-950 border border-white/10 rounded-xl p-4 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">

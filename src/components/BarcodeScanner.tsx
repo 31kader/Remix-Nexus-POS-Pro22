@@ -184,7 +184,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full h-full md:max-w-3xl md:h-[80vh] bg-slate-950 md:rounded-[2.5rem] shadow-neon-indigo border border-white/5 overflow-hidden flex flex-col ring-1 ring-white/10 relative"
+        className="w-full h-full md:max-w-3xl md:h-[80vh] bg-slate-950 md:rounded-xl shadow-xs border border-white/5 overflow-hidden flex flex-col ring-1 ring-white/10 relative"
       >
         <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black select-none z-20">
           <div className="flex items-center gap-4">
@@ -192,7 +192,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
               <Camera size={20} />
             </div>
             <div>
-              <h3 className="font-black text-white text-xs uppercase tracking-[0.2em] mb-0.5">Scanner Principal</h3>
+              <h3 className="font-black text-white text-xs uppercase tracking-normal mb-0.5">Scanner Principal</h3>
               <p className="text-[10px] text-indigo-400/60 font-black uppercase tracking-widest">Système de Vision Actif</p>
             </div>
           </div>
@@ -200,7 +200,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
             {torchAvailable && (
               <button 
                 onClick={toggleTorch}
-                className={`h-11 w-11 rounded-2xl border transition-all flex items-center justify-center ${torchEnabled ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-neon-indigo' : 'hover:bg-white/5 border-white/10 text-slate-500'}`}
+                className={`h-11 w-11 rounded-2xl border transition-all flex items-center justify-center ${torchEnabled ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-xs' : 'hover:bg-white/5 border-white/10 text-slate-500'}`}
               >
                 {torchEnabled ? <Zap size={20} fill="currentColor" /> : <ZapOff size={20} />}
               </button>
@@ -259,7 +259,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
                  </div>
 
                  {/* Helpful tooltip during scan */}
-                 <div className="absolute bottom-6 bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+                 <div className="absolute bottom-6 bg-black/60  px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                     <span className="text-[11px] text-white font-bold tracking-wider uppercase">Visez un code-barres</span>
                  </div>
@@ -272,15 +272,15 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="absolute inset-0 z-30 flex items-center justify-center bg-indigo-600/40 backdrop-blur-md"
+                    className="absolute inset-0 z-30 flex items-center justify-center bg-indigo-600/40 "
                   >
-                    <div className="bg-slate-900/90 px-8 py-6 rounded-[2.5rem] shadow-neon-cyan border border-emerald-500/30 flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 bg-emerald-500/10 rounded-[1.5rem] text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-inner">
+                    <div className="bg-slate-900/90 px-8 py-6 rounded-xl shadow-xs border border-emerald-500/30 flex flex-col items-center gap-4">
+                      <div className="w-16 h-16 bg-emerald-500/10 rounded-xl text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-inner">
                         <CheckCircle2 size={36} />
                       </div>
                       <div className="text-center">
-                        <span className="block text-2xl font-black text-white font-mono tracking-[0.2em] mb-1">{lastScanned}</span>
-                        <span className="text-[10px] text-emerald-400/60 font-black uppercase tracking-[0.3em]">Code Validé</span>
+                        <span className="block text-2xl font-black text-white font-mono tracking-normal mb-1">{lastScanned}</span>
+                        <span className="text-[10px] text-emerald-400/60 font-black uppercase tracking-normal">Code Validé</span>
                       </div>
                     </div>
                   </motion.div>

@@ -17,7 +17,7 @@ export function LoyaltySection({ formData, setFormData }: SectionProps) {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 bg-slate-900 border border-white/5 rounded-3xl aspect-[1.8/1] flex flex-col justify-between group hover:border-rose-500/30 transition-all">
+        <div className="p-6 bg-slate-900 border border-white/5 rounded-xl aspect-[1.8/1] flex flex-col justify-between group hover:border-rose-500/30 transition-all">
           <div className="space-y-1">
             <p className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
               <Plus size={14} className="text-rose-500" />
@@ -36,7 +36,7 @@ export function LoyaltySection({ formData, setFormData }: SectionProps) {
           </div>
         </div>
 
-        <div className="p-6 bg-slate-900 border border-white/5 rounded-3xl aspect-[1.8/1] flex flex-col justify-between group hover:border-emerald-500/30 transition-all">
+        <div className="p-6 bg-slate-900 border border-white/5 rounded-xl aspect-[1.8/1] flex flex-col justify-between group hover:border-emerald-500/30 transition-all">
           <div className="space-y-1">
             <p className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
               <ArrowRight size={14} className="text-emerald-500" />
@@ -65,7 +65,7 @@ export function LoyaltySection({ formData, setFormData }: SectionProps) {
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {['Argent', 'Or', 'Platine'].map((tier, i) => (
-            <div key={tier} className="bg-slate-900 border border-white/5 p-6 rounded-3xl hover:translate-y-[-4px] transition-all cursor-default group">
+            <div key={tier} className="bg-slate-900 border border-white/5 p-6 rounded-xl hover:translate-y-[-4px] transition-all cursor-default group">
               <div className={cn(
                 "w-12 h-12 rounded-2xl mb-4 flex items-center justify-center shadow-lg",
                 i === 0 ? "bg-slate-500/20 text-slate-400" : 
