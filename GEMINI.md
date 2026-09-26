@@ -48,3 +48,9 @@
 - Les modals et panneaux latéraux DOIVENT supporter le mode sombre (`dark:bg-...`, `dark:text-...`)
 - Les boutons avec attribut `disabled` DOIVENT avoir les styles visuels d'inactivité (`disabled:opacity-50 disabled:cursor-not-allowed`)
 - Éviter `overflow-hidden` strict sur les conteneurs ayant des infobulles/popups en positionnement `absolute`
+
+## Règles de Résilience & Simulation Admin (Anti-Coupure Internet / Tokens)
+- **Sauvegarde incrémentale obligatoire** : Lors de tout audit, test E2E ou mission `/teamwork-preview`, chaque étape ou module analysé DOIT être immédiatement enregistré sur disque dans un fichier Markdown persistant (ex: `SIMULATION_ADMIN_A_Z_RAPPORT.md`) avant de passer à l'étape suivante.
+- **Reprise sur incident** : En cas de coupure Internet ou de redémarrage serveur, toujours lire le fichier de rapport incrémental existant et reprendre exactement à la dernière étape non cochée sans recommencer depuis zéro.
+- **Vérification Supabase de bout en bout** : Toute simulation Admin de A à Z doit vérifier la correspondance exacte entre le store local (`IndexedDB` / `SyncService`), `TABLE_COLUMNS` (`src/lib/db-converters.ts`) et le schéma/API réel du projet Supabase (`unlwfvldqxfccgrrgbwf`).
+

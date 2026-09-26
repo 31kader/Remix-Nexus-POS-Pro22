@@ -92,6 +92,11 @@ export function convertKeysToCamel(obj: any): any {
       newObj.total = newObj.totalAmount;
     }
 
+    // Map auditNote back to notes for transactions if notes is absent
+    if (newObj.auditNote !== undefined && newObj.notes === undefined) {
+      newObj.notes = newObj.auditNote;
+    }
+
     // Safe auto-parse for cashierNotes if received as JSON string from Supabase
     if (newObj.cashierNotes && typeof newObj.cashierNotes === 'string') {
       const trimmed = newObj.cashierNotes.trim();
@@ -122,7 +127,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'
   ],
   customers: [
-    'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'credit_limit', 'loyalty_card_number', 
+    'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 
     'total_spent', 'last_visit', 'notes', 'is_app_user', 'join_date', 
     'favorite_items', 'alerts', 'cashier_notes', 'updated_at',
     'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash'
@@ -132,7 +137,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'customer_id', 'customer_name', 'cashier_id', 'cashier_name', 'employee_id', 'employee_name', 'amount_received', 'amount_returned',
     'status', 'promotion_id', 'points_earned', 
     'discount_amount', 'points_discount', 'balance_used', 'voucher_discount', 
-    'is_wholesale', 'online_order_id', 'items', 'notes',
+    'is_wholesale', 'online_order_id', 'items',
     'audit_status', 'audited_by', 'audited_at', 'audit_duration', 'audit_note',
     'is_edited', 'edited_at', 'edited_by', 'original_total', 'terminal_id', 'terminal_name'
   ],
@@ -303,6 +308,11 @@ export function preparePayload(table: string, id: string, data: any) {
   if (table === 'damaged_items') {
     if (combined.userId && !combined.reported_by) combined.reported_by = combined.userId;
     if (combined.reported_by && !combined.userId) combined.userId = combined.reported_by;
+  }
+  if (table === 'transactions') {
+    if (combined.notes && !combined.auditNote && !combined.audit_note) {
+      combined.audit_note = combined.notes;
+    }
   }
   const payload = { id, ...combined };
   
