@@ -25,7 +25,7 @@ export function DuplicateSKUModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Doublons Détectés" size="lg">
       <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-600 shadow-sm shrink-0">
+          <div className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-full flex items-center justify-center text-amber-600 shadow-sm shrink-0">
             <Layers size={20} />
           </div>
           <div className="text-sm">
@@ -38,8 +38,8 @@ export function DuplicateSKUModal({
         </div>
 
         {groups.map((group, idx) => (
-          <Card key={group.sku} className="p-4 border-slate-200 hover:border-slate-300 transition-all bg-slate-50/30">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+          <Card key={group.sku} className="p-4 border-slate-200 dark:border-zinc-800 hover:border-slate-300 transition-all bg-slate-50/30">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black bg-slate-900 text-white px-2 py-0.5 rounded uppercase">SKU: {group.sku}</span>
                 <span className="text-xs font-bold text-slate-400">{(group.products || []).length} produits trouvés</span>
@@ -51,9 +51,9 @@ export function DuplicateSKUModal({
             
             <div className="space-y-3">
               {(group.products || []).map(p => (
-                <div key={p.id} className="bg-white p-3 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm">
+                <div key={p.id} className="bg-white dark:bg-zinc-900 p-3 rounded-xl border border-slate-100 dark:border-zinc-800 flex items-center justify-between shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 dark:border-zinc-800">
                       {p.imageUrl ? (
                         <SafeImage 
                           src={p.imageUrl} 
@@ -82,7 +82,7 @@ export function DuplicateSKUModal({
           </Card>
         ))}
       </div>
-      <div className="pt-4 mt-6 border-t border-slate-100 flex justify-end">
+      <div className="pt-4 mt-6 border-t border-slate-100 dark:border-zinc-800 flex justify-end">
         <Button onClick={onClose} variant="secondary" className="px-5">Fermer</Button>
       </div>
     </Modal>

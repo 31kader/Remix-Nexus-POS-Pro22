@@ -244,7 +244,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               placeholder="Scanner un code-barres ou rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all font-bold text-lg"
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all font-bold text-lg"
               autoFocus
             />
           </div>
@@ -253,7 +253,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               <button
                 type="button"
                 onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
-                className="p-4 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
                 title="Changer de caméra"
               >
                 <RefreshCw size={24} className={cn(facingMode === "user" ? "rotate-180" : "")} />
@@ -262,7 +262,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             <button
               type="button"
               onClick={() => setIsScanning(!isScanning)}
-              className={`p-4 rounded-xl border transition-colors flex items-center justify-center ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              className={`p-4 rounded-xl border transition-colors flex items-center justify-center ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 dark:border-zinc-800 text-slate-600 hover:bg-slate-100'}`}
               title={isScanning ? "Arrêter la caméra" : "Démarrer la caméra"}
             >
               <Camera size={24} />
@@ -289,13 +289,13 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-white rounded-xl overflow-hidden border border-slate-100"
+              className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-slate-100 dark:border-zinc-800"
             >
               {/* Image Section */}
               <div className="aspect-square bg-slate-50 flex items-center justify-center p-5 relative">
                 <SafeImage src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain drop-shadow-lg" fallback={<Package size={100} className="text-slate-200" />} />
                 <div className="absolute top-4 left-4">
-                  <span className="px-3 py-1 bg-white/80  border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  <span className="px-3 py-1 bg-white/80  border border-slate-100 dark:border-zinc-800 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     {categories.find(c => c.id === foundProduct.categoryId)?.name || 'Général'}
                   </span>
                 </div>
@@ -335,11 +335,11 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
 
                 {/* Quantity Discounts */}
                 {foundProduct.quantityDiscounts && foundProduct.quantityDiscounts.length > 0 && (
-                  <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-3">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tarifs Quantité</p>
                     <div className="grid grid-cols-2 gap-3">
                       {foundProduct.quantityDiscounts.map((d, i) => (
-                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center">
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 dark:border-zinc-800 flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-600">x{d.minQuantity}</span>
                           <span className="text-sm font-black text-indigo-600">{d.discountPrice.toFixed(2)}{settings.currency}</span>
                         </div>
@@ -359,7 +359,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
                animate={{ opacity: 1 }} 
                className="text-center py-12 p-5 bg-rose-50 rounded-xl border border-dashed border-rose-200"
             >
-              <div className="w-16 h-16 bg-white text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+              <div className="w-16 h-16 bg-white dark:bg-zinc-900 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <AlertCircle size={32} />
               </div>
               <p className="text-rose-600 font-black text-2xl uppercase mb-2">ARTICLE N'EXISTE PAS</p>

@@ -158,7 +158,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                 className={cn(
                   "flex items-center gap-3 px-4 sm:px-5 py-3 rounded-xl text-sm font-black transition-all duration-300 cursor-pointer",
                   activeDetailsTab === tab.id 
-                    ? "bg-white text-black shadow-lg" 
+                    ? "bg-white dark:bg-zinc-900 text-black shadow-lg" 
                     : "text-white/40 hover:text-white hover:bg-white/5"
                 )}
               >
@@ -197,7 +197,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                   .map(p => {
                     const remaining = Number(p.total || 0) - Number(p.paidAmount || 0);
                     return (
-                      <div key={p.id} className="bg-white p-6 sm:p-5 rounded-xl sm:rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group text-left">
+                      <div key={p.id} className="bg-white dark:bg-zinc-900 p-6 sm:p-5 rounded-xl sm:rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-indigo-400 hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group text-left">
                         <div className="flex items-center gap-4 sm:gap-5">
                           <div className="w-12 h-12 sm:w-16 h-16 bg-slate-50 text-slate-300 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-400 transition-colors">
                             <FileText size={32} />
@@ -228,7 +228,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-1">Total</p>
                             <p className="text-lg sm:text-xl font-black text-slate-900 tracking-tight font-mono">{Number(p.total || 0).toFixed(2)}</p>
                           </div>
-                          <div className="text-right pr-4 sm:pr-6 border-r border-slate-100">
+                          <div className="text-right pr-4 sm:pr-6 border-r border-slate-100 dark:border-zinc-800">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-1">Reste</p>
                             <p className={cn("text-lg sm:text-xl font-black tracking-tight font-mono", remaining > 0 ? "text-rose-600" : "text-emerald-500")}>
                               {Number(remaining || 0).toFixed(2)}
@@ -236,7 +236,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                           </div>
                           <Button 
                             onClick={() => { onClose(); setViewingPurchaseVoucher(p); }}
-                            className="bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900 font-black rounded-xl h-12 sm:h-14 px-4 sm:px-5 shadow-sm text-xs sm:text-sm cursor-pointer"
+                            className="bg-slate-50 hover:bg-slate-100 border-slate-200 dark:border-zinc-800 text-slate-900 font-black rounded-xl h-12 sm:h-14 px-4 sm:px-5 shadow-sm text-xs sm:text-sm cursor-pointer"
                           >
                             VOIR
                           </Button>
@@ -276,7 +276,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                   </div>
                 </div>
 
-                <div className="bg-white p-5 sm:p-5 rounded-xl sm:rounded-xl border border-slate-200 shadow-xl flex flex-col justify-between text-left">
+                <div className="bg-white dark:bg-zinc-900 p-5 sm:p-5 rounded-xl sm:rounded-xl border border-slate-200 dark:border-zinc-800 shadow-xl flex flex-col justify-between text-left">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-normal mb-4">Actions Financières</p>
                   <Button 
                     onClick={() => { setPaymentData({...paymentData, amount: 0, date: new Date().toISOString()}); setIsPaymentModalOpen(true); }}
@@ -287,7 +287,7 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                 </div>
               </div>
 
-              <div className="overflow-x-auto bg-white rounded-xl sm:rounded-xl border border-slate-200 shadow-sm text-left">
+              <div className="overflow-x-auto bg-white dark:bg-zinc-900 rounded-xl sm:rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm text-left">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">

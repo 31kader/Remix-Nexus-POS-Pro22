@@ -196,7 +196,7 @@ export function ProductHistoryModal({
                           <div>
                             <div className="flex items-center gap-3">
                               <p className="font-black text-white  uppercase text-xs tracking-widest">Achat - {p.supplierName}</p>
-                              <Eye size={14} className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Eye size={14} className="text-amber-400 opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity" />
                             </div>
                             <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(p.date || (p as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
                             {p.invoiceNumber && <p className="text-[9px] font-black text-indigo-400 uppercase tracking-normal mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Fiche: {p.invoiceNumber}</p>}
@@ -256,7 +256,7 @@ export function ProductHistoryModal({
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-600 hover:bg-indigo-700 text-white border-none py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-pointer"
+                        className="opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity bg-indigo-600 hover:bg-indigo-700 text-white border-none py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-pointer"
                         onClick={async () => {
                           if (!viewingHistoryProduct) return;
                           try {

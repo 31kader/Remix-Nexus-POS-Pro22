@@ -25,8 +25,8 @@ export const SupplierOrderForm = ({
 
   return (
     <div className="space-y-8">
-      <div className="bg-white p-5 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div className="bg-white dark:bg-zinc-900 p-5 space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-slate-800">Nouveau Bon de Commande</h2>
           </div>
@@ -38,7 +38,7 @@ export const SupplierOrderForm = ({
             <input 
               type="text" 
               placeholder="Ex: BC-2024-001" 
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none"
+              className="w-full p-3 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none"
               value={orderNumber}
               onChange={e => setOrderNumber(e.target.value)}
             />
@@ -52,7 +52,7 @@ export const SupplierOrderForm = ({
             <input
               type="text"
               placeholder="Rechercher un produit..."
-              className="w-full p-3 pl-10 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors"
+              className="w-full p-3 pl-10 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:border-indigo-500 transition-colors"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -60,7 +60,7 @@ export const SupplierOrderForm = ({
             />
           </div>
           {isSearchFocused && searchQuery && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-slate-100 shadow-xl rounded-xl mt-2 z-50 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-xl rounded-xl mt-2 z-50 max-h-60 overflow-y-auto">
               {filteredProducts.map((product: Product) => (
                 <button
                   key={product.id}
@@ -80,19 +80,19 @@ export const SupplierOrderForm = ({
 
         {/* Add Item Form if product selected */}
         {selectedProduct && (
-          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 dark:border-zinc-800">
             <div className="font-bold">{selectedProduct.name}</div>
             <input
               type="number"
               value={quantity}
               onChange={e => setQuantity(Number(e.target.value))}
-              className="w-20 p-2 border border-slate-200 rounded-lg"
+              className="w-20 p-2 border border-slate-200 dark:border-zinc-800 rounded-lg"
             />
             <input
               type="number"
               value={costPrice}
               onChange={e => setCostPrice(Number(e.target.value))}
-              className="w-24 p-2 border border-slate-200 rounded-lg"
+              className="w-24 p-2 border border-slate-200 dark:border-zinc-800 rounded-lg"
             />
             <Button onClick={handleAddItem} variant="primary">
               <Plus size={16} /> Ajouter
@@ -104,7 +104,7 @@ export const SupplierOrderForm = ({
         )}
 
         {/* Items List */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
+        <div className="border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
@@ -116,7 +116,7 @@ export const SupplierOrderForm = ({
             </thead>
             <tbody>
               {items.map((item: any, idx: number) => (
-                <tr key={idx} className="border-t border-slate-100">
+                <tr key={idx} className="border-t border-slate-100 dark:border-zinc-800">
                   <td className="p-3 text-sm font-bold text-slate-800">{item.productName}</td>
                   <td className="p-3 text-right text-sm">{item.quantity}</td>
                   <td className="p-3 text-right text-sm">{Number(item.price || 0).toFixed(2)}</td>
@@ -124,7 +124,7 @@ export const SupplierOrderForm = ({
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-slate-50 border-t border-slate-200">
+            <tfoot className="bg-slate-50 border-t border-slate-200 dark:border-zinc-800">
               <tr>
                 <td colSpan={3} className="p-3 text-right font-bold">Total</td>
                 <td className="p-3 text-right font-bold">{Number(total || 0).toFixed(2)}</td>

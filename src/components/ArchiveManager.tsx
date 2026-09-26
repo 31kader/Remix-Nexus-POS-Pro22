@@ -324,11 +324,11 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
                   type="date" 
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="w-full p-2.5 border border-rose-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 bg-white" 
+                  className="w-full p-2.5 border border-rose-200 rounded-lg outline-none focus:ring-2 focus:ring-rose-500 bg-white dark:bg-zinc-900" 
                 />
               </div>
 
-              <label className="flex items-center gap-2 bg-white border border-rose-200 p-3 rounded-lg cursor-pointer hover:bg-rose-50 transition-colors">
+              <label className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-rose-200 p-3 rounded-lg cursor-pointer hover:bg-rose-50 transition-colors">
                 <input 
                   type="checkbox" 
                   checked={deleteAfterArchive} 
@@ -341,7 +341,7 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
                 </div>
               </label>
 
-              <label className="flex items-center gap-2 bg-white border border-indigo-200 p-3 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors">
+              <label className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-indigo-200 p-3 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors">
                 <input 
                   type="checkbox" 
                   checked={compressArchive} 
@@ -381,7 +381,7 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
               </p>
             </div>
 
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-emerald-300 rounded-xl bg-white p-6 mt-4">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed border-emerald-300 rounded-xl bg-white dark:bg-zinc-900 p-6 mt-4">
               <Upload className="text-emerald-400 mb-2" size={32} />
               <p className="text-sm font-medium text-emerald-800 mb-4 text-center">
                 Sélectionnez le fichier d'archive (.json ou .json.gz)
@@ -409,7 +409,7 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
 
       {statusMessage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 ">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className={`p-4 ${statusMessage.type === 'error' ? 'bg-rose-50 border-b border-rose-100' : statusMessage.type === 'success' ? 'bg-emerald-50 border-b border-emerald-100' : 'bg-indigo-50 border-b border-indigo-100'}`}>
               <h3 className={`text-lg font-bold flex items-center gap-2 ${statusMessage.type === 'error' ? 'text-rose-800' : statusMessage.type === 'success' ? 'text-emerald-800' : 'text-indigo-800'}`}>
                 {statusMessage.type === 'error' && <ShieldAlert size={20} />}
@@ -421,10 +421,10 @@ export function ArchiveManager({ user, settings }: ArchiveManagerProps) {
             <div className="p-6">
               <p className="text-slate-600 text-sm">{statusMessage.message}</p>
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 dark:border-zinc-800 flex justify-end gap-3">
               <Button 
                 onClick={() => setStatusMessage(null)}
-                className="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+                className="bg-white dark:bg-zinc-900 text-slate-700 hover:bg-slate-100 border border-slate-200 dark:border-zinc-800"
               >
                 {statusMessage.confirmAction ? 'Annuler' : 'Fermer'}
               </Button>

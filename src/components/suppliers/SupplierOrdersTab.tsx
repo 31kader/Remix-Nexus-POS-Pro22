@@ -11,10 +11,10 @@ export const SupplierOrdersTab: React.FC<Props> = ({ myOrders, settings }) => {
   return (
     <div className="p-5 space-y-6">
       <h2 className="text-xl font-bold text-slate-800">Historique des Commandes</h2>
-      <div className="bg-white border-t border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50">
-            <tr className="border-b border-slate-200">
+            <tr className="border-b border-slate-200 dark:border-zinc-800">
               <th className="p-4 text-xs font-bold text-slate-500 uppercase">Date</th>
               <th className="p-4 text-xs font-bold text-slate-500 uppercase">N° Commande</th>
               <th className="p-4 text-xs font-bold text-slate-500 uppercase">Articles</th>

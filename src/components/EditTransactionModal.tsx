@@ -101,11 +101,11 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Modifier la commande (En attente)">
       <div className="space-y-6">
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 dark:border-zinc-800">
           <p className="text-xs font-bold text-slate-500 uppercase mb-4">Articles de la commande</p>
           <div className="space-y-4">
             {items.map((item, idx) => (
-              <div key={`edit-item-${idx}`} className="flex items-center justify-between gap-4 p-3 bg-white rounded-lg border border-slate-100">
+              <div key={`edit-item-${idx}`} className="flex items-center justify-between gap-4 p-3 bg-white dark:bg-zinc-900 rounded-lg border border-slate-100 dark:border-zinc-800">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-slate-800">{item.name}</p>
                   <p className="text-xs text-slate-500">{item.price.toFixed(2)} {settings.currency} / unité</p>
@@ -150,7 +150,7 @@ export function EditTransactionModal({ isOpen, onClose, transaction, products, s
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+        <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-500 uppercase font-bold">Nouveau Total</p>
             <p className="text-2xl font-black text-slate-900">{total.toFixed(2)} {settings.currency}</p>

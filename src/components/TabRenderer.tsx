@@ -104,10 +104,12 @@ const ExpiryManagerTab: React.FC<any> = (props) => {
 const InventorySettingsTab: React.FC<any> = (props) => {
   const categories = useCoreStore(s => s.categories);
   const brands = useCoreStore(s => s.brands);
+  const products = useCoreStore(s => s.products);
   return (
     <InventorySettings
       categories={categories || []}
       brands={brands || []}
+      products={products || []}
       onAddCategory={props.onAddCategory}
       onEditCategory={props.onEditCategory}
       onDeleteCategory={props.onDeleteCategory}

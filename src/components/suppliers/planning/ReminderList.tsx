@@ -163,7 +163,7 @@ export function ReminderList({
                       handleDeleteReminder(r.supplierId, r.id);
                     }
                   }}
-                  className="text-white/20 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 flex-shrink-0 ml-4 h-fit cursor-pointer"
+                  className="text-white/20 hover:text-rose-500 transition-colors p-1.5 rounded-lg hover:bg-rose-500/10 opacity-100 sm:opacity-60 group-hover:opacity-100 flex-shrink-0 ml-4 h-fit cursor-pointer"
                   title="Supprimer ce rappel"
                 >
                   <Trash size={12} />

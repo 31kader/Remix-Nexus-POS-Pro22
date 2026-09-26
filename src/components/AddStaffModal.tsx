@@ -22,9 +22,9 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40  p-4 overflow-y-auto">
       <div
-        className="bg-white rounded-xl shadow-md w-full max-w-md overflow-hidden border border-slate-200 my-10"
+        className="bg-white dark:bg-zinc-900 rounded-xl shadow-md w-full max-w-md overflow-hidden border border-slate-200 dark:border-zinc-800 my-10"
       >
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="p-6 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
               <UserPlus size={20}   />
@@ -50,7 +50,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                 <input 
                   type="text" 
                   placeholder="Ex: Ahmed Ben"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={name}
                   onChange={e => setName(e.target.value)}
                   />
@@ -60,7 +60,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                 <input 
                   type="tel" 
                   placeholder="05XXXXXXXX"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   />
@@ -76,7 +76,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                 <input 
                   type="email" 
                   placeholder="email@gmail.com"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   />
@@ -86,7 +86,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                 <input 
                   type="password" 
                   placeholder="Minimum 4 caractères"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 font-medium transition-all"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   />
@@ -109,7 +109,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
                   onClick={() => setRole(r.id)}
                   className={cn(
                     "px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all border",
-                    role === r.id ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                    role === r.id ? "bg-indigo-600 border-indigo-600 text-white shadow-md" : "bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-500 hover:bg-slate-50"
                   )}
                 >
                   {r.label}
@@ -119,7 +119,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
           </div>
         </div>
 
-        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+        <div className="p-6 bg-slate-50 border-t border-slate-100 dark:border-zinc-800 flex gap-3">
           <Button variant="outline" className="flex-1" onClick={onClose}>Annuler</Button>
           <Button 
             className="flex-1 bg-indigo-600 hover:bg-indigo-700"

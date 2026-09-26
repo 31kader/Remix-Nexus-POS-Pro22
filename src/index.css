@@ -208,6 +208,14 @@ table tbody td {
 }
 
 /* --------------------------------------------------------------------------
+   3b. Garde-fous globaux Mode Sombre (Dark, Emerald, Gold, Nardo)
+   -------------------------------------------------------------------------- */
+html.dark [class*="text-slate-900"]:not([class*="dark:text-"]):not([class*="bg-white"] *),
+html.dark [class*="text-slate-800"]:not([class*="dark:text-"]):not([class*="bg-white"] *) {
+  color: #f8fafc !important;
+}
+
+/* --------------------------------------------------------------------------
    4. Thème Clair Propre (Complete, High-Contrast Clean Light Mode)
    -------------------------------------------------------------------------- */
 html.light {
@@ -243,6 +251,8 @@ html.light body,
 
 /* Universal Background & Subtle Border Depth Overrides (Slate + Zinc + Industrial) */
 html.light [class*="bg-[#05070a]"],
+html.light [class*="bg-[#0a0c10]"],
+html.light [class*="bg-[#0d1117]"],
 html.light [class*="bg-[#0a0c12]"],
 html.light [class*="bg-[#080a10]"],
 html.light [class*="bg-[#08080c]"],
@@ -273,10 +283,29 @@ html.light [class*="bg-zinc-800"],
 html.light [class*="bg-industrial-800"],
 html.light [class*="bg-white/5"],
 html.light [class*="bg-white/10"],
+html.light [class*="bg-black/20"],
+html.light [class*="bg-black/30"],
 html.light [class*="bg-black/40"],
-html.light [class*="bg-black/50"] {
+html.light [class*="bg-black/50"],
+html.light [class*="bg-black/60"] {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
+}
+
+html.light input:not([id="direct-barcode-input"]),
+html.light select,
+html.light textarea,
+html.light option {
+  color: #0f172a !important;
+}
+
+html.light option {
+  background-color: #ffffff !important;
+}
+
+html.light input:not([id="direct-barcode-input"])::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
 }
 
 html.light [class*="border-slate-800"],

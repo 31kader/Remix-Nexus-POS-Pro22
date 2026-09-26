@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
-import { Modal, Button } from './ui';
+import React, { useState } from 'react';
+import { Modal } from './ui';
 import { SafeImage } from './ui/SafeImage';
 import { Category } from '../types';
 import { getHierarchicalCategories } from '../lib/utils';
 import { Image as ImageIcon, Upload, Link as LinkIcon, Trash2, FolderTree, ChevronDown } from 'lucide-react';
 import { uploadImageBlobToStorage } from '../supabase';
+import { toast } from 'sonner';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -21,107 +22,151 @@ interface CategoryModalProps {
   editingCategory: Category | null;
 }
 
-export function CategoryModal({ 
-  isOpen, onClose, onSave, onDelete, 
-  name, setName, parentId, setParentId, 
-  imageUrl, setImageUrl,
-  categories, editingCategory 
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+export function CategoryModal({
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
+  name,
+  setName,
+  parentId,
+  setParentId,
+  imageUrl,
+  setImageUrl,
+  categories,
+  editingCategory
 }: CategoryModalProps) {
   const [activeTab, setActiveTab] = useState<'url' | 'upload'>('url');
-  
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingCategory ? "CONFIGURATION CATÉGORIE" : "DÉPLOYER NOUVELLE CATÉGORIE"}
+      title={editingCategory ? 'Modifier la Catégorie' : 'Nouvelle Catégorie'}
       maxWidth="max-w-lg"
     >
-      <div className="space-y-8 bg-[#05070a] p-5 rounded-xl ring-1 ring-white/5 shadow-md relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent"></div>
-
-        <div className="space-y-4">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1">NOM DE LA CLASSIFICATION *</label>
+      <div className="space-y-5 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-tight block">
+            Nom de la Catégorie *
+          </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-6 text-white text-base font-black placeholder:text-slate-800 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner uppercase "
-            placeholder="EX: ÉLECTRONIQUE, ALIMENTATION..."
+            className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-xl py-3 px-4 text-slate-900 dark:text-white text-sm font-bold placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            placeholder="Ex: Alimentation, Boissons, Hygiène..."
           />
         </div>
 
-        <div className="space-y-4">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-2">
-            <FolderTree size={12} /> ARCHITECTURE PARENTE
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-tight flex items-center gap-1.5">
+            <FolderTree size={14} className="text-indigo-500" /> Catégorie Parente (Optionnel)
           </label>
-          <div className="relative group">
+          <div className="relative">
             <select
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-6 text-white text-[11px] font-black uppercase tracking-normal outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner cursor-pointer appearance-none "
+              className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-xl py-3 px-4 pr-10 text-slate-900 dark:text-white text-xs sm:text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all cursor-pointer appearance-none"
             >
-              <option value="" className="bg-[#0a0c10] text-slate-700">RACINE DU SYSTÈME (MAIN)</option>
-              {getHierarchicalCategories(categories.filter((c: Category) => c.id !== editingCategory?.id)).map((c: any) => (
-                <option key={c.id} value={c.id} className="bg-[#0a0c10] text-white">
-                  {'—'.repeat(c.level)} {String(c.name || 'CATÉGORIE').toUpperCase()}
+              <option value="" className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white">
+                — Catégorie Principale (Racine) —
+              </option>
+              {getHierarchicalCategories(
+                categories.filter((c: Category) => c.id !== editingCategory?.id)
+              ).map((c: any) => (
+                <option
+                  key={c.id}
+                  value={c.id}
+                  className="bg-white dark:bg-zinc-900 text-slate-900 dark:text-white"
+                >
+                  {'—'.repeat(c.level)} {String(c.name || 'Catégorie')}
                 </option>
               ))}
             </select>
-            <ChevronDown size={14} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-700 pointer-events-none" />
+            <ChevronDown
+              size={16}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-zinc-400 pointer-events-none"
+            />
           </div>
         </div>
-        
+
         {setImageUrl && (
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1">ASSET VISUEL</label>
-            <div className="flex gap-6 items-center bg-black/20 p-6 rounded-xl border border-white/5 ring-1 ring-white/5 shadow-inner">
-              <div className="w-24 h-24 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative group shadow-md">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-tight block">
+              Illustration / Icône (Optionnel)
+            </label>
+            <div className="flex gap-4 items-center bg-slate-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-slate-200 dark:border-zinc-700">
+              <div className="w-20 h-20 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden shrink-0 relative group">
                 {imageUrl ? (
                   <>
-                    <SafeImage src={imageUrl} alt="Aperçu" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <button 
+                    <SafeImage
+                      src={imageUrl}
+                      alt="Aperçu"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
                       onClick={() => setImageUrl('')}
-                      className="absolute inset-0 bg-rose-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-all "
+                      className="absolute inset-0 bg-rose-600/75 opacity-90 sm:opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity cursor-pointer"
+                      title="Supprimer l'image"
                     >
-                      <Trash2 size={24} />
+                      <Trash2 size={20} />
                     </button>
                   </>
                 ) : (
-                  <ImageIcon size={32} className="text-slate-800" />
+                  <ImageIcon size={28} className="text-slate-400 dark:text-zinc-600" />
                 )}
               </div>
-              <div className="flex-1 space-y-4">
-                <div className="flex bg-black/40 p-1 rounded-xl border border-white/5 shadow-inner">
-                  <button 
+
+              <div className="flex-1 space-y-3 min-w-0">
+                <div className="flex bg-slate-200/70 dark:bg-zinc-900 p-1 rounded-lg border border-slate-200 dark:border-zinc-700">
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('url')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'url' ? 'bg-indigo-600 text-white shadow-xs ' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                      activeTab === 'url'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
-                    <LinkIcon size={12} /> URL CLOUD
+                    <LinkIcon size={12} /> Lien URL
                   </button>
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('upload')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'upload' ? 'bg-indigo-600 text-white shadow-xs ' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                      activeTab === 'upload'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
                   >
-                    <Upload size={12} /> LOCAL DISK
+                    <Upload size={12} /> Fichier local
                   </button>
                 </div>
-                
+
                 {activeTab === 'url' ? (
                   <input
                     type="url"
                     value={imageUrl || ''}
                     onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="HTTPS://ASSETS.NEXUS.CLOUD/..."
-                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white text-[10px] font-black  outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-inner placeholder:text-slate-800"
+                    placeholder="https://exemple.com/image.webp"
+                    className="w-full bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 rounded-lg py-2 px-3 text-slate-900 dark:text-white text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
                   />
                 ) : (
                   <div className="relative group">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
+                            toast.error('Format image non supporté (JPEG, PNG, WebP ou GIF uniquement).');
+                            return;
+                          }
                           const reader = new FileReader();
                           reader.onloadend = () => {
                             const img = document.createElement('img');
@@ -143,38 +188,49 @@ export function CategoryModal({
                                   height = MAX_HEIGHT;
                                 }
                               }
-                              
+
                               canvas.width = width;
                               canvas.height = height;
                               const ctx = canvas.getContext('2d');
                               ctx?.drawImage(img, 0, 0, width, height);
-                              
-                              // Convert to WebP with 0.5 quality for maximum compression, fallback to JPEG if needed
+
                               let dataUrl = canvas.toDataURL('image/webp', 0.5);
-                              const targetType = dataUrl.startsWith('data:image/webp') ? 'image/webp' : 'image/jpeg';
+                              const targetType = dataUrl.startsWith('data:image/webp')
+                                ? 'image/webp'
+                                : 'image/jpeg';
                               if (targetType === 'image/jpeg') {
                                 dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-                              } 
-                              
+                              }
+
                               if (setImageUrl) {
-                                // Upload blob to active Supabase storage bucket, falling back to dataUrl
-                                canvas.toBlob(async (blob) => {
-                                  if (!blob) {
-                                    setImageUrl(dataUrl);
-                                    return;
-                                  }
-                                  try {
-                                    const publicUrl = await uploadImageBlobToStorage(blob, 'categories', targetType);
-                                    if (publicUrl) {
-                                      setImageUrl(publicUrl);
-                                    } else {
+                                canvas.toBlob(
+                                  async (blob) => {
+                                    if (!blob) {
+                                      setImageUrl(dataUrl);
+                                      return;
+                                    }
+                                    try {
+                                      const publicUrl = await uploadImageBlobToStorage(
+                                        blob,
+                                        'categories',
+                                        targetType
+                                      );
+                                      if (publicUrl) {
+                                        setImageUrl(publicUrl);
+                                      } else {
+                                        setImageUrl(dataUrl);
+                                      }
+                                    } catch (err) {
+                                      console.warn(
+                                        '[Category storage upload] Failed, using offline dataUrl',
+                                        err
+                                      );
                                       setImageUrl(dataUrl);
                                     }
-                                  } catch (err) {
-                                    console.warn("[Category storage upload] Failed, using offline dataUrl", err);
-                                    setImageUrl(dataUrl);
-                                  }
-                                }, targetType, 0.5);
+                                  },
+                                  targetType,
+                                  0.5
+                                );
                               }
                             };
                             img.src = reader.result as string;
@@ -184,9 +240,9 @@ export function CategoryModal({
                       }}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
-                    <div className="w-full py-3 bg-black/40 border border-white/10 rounded-xl text-[9px] font-black text-slate-600 flex justify-center items-center gap-3 group-hover:bg-indigo-600/10 group-hover:text-indigo-400 transition-all shadow-inner ">
-                      <Upload size={14} strokeWidth={3} />
-                      INITIALISER UPLOAD DISQUE
+                    <div className="w-full py-2.5 px-3 bg-white dark:bg-zinc-900 border border-dashed border-slate-300 dark:border-zinc-700 rounded-lg text-xs font-bold text-slate-600 dark:text-zinc-300 flex justify-center items-center gap-2 group-hover:border-indigo-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <Upload size={14} />
+                      Choisir une image sur l'appareil
                     </div>
                   </div>
                 )}
@@ -195,20 +251,21 @@ export function CategoryModal({
           </div>
         )}
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-3 pt-2">
           <button
+            type="button"
             onClick={onSave}
-            className="flex-1 py-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-normal shadow-xs border border-indigo-400 ring-1 ring-white/20 transition-all active:scale-95  relative overflow-hidden group"
+            className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer"
           >
-            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
-            VALIDER DATA
+            Enregistrer la catégorie
           </button>
-          {editingCategory && (
+          {editingCategory && onDelete && (
             <button
+              type="button"
               onClick={onDelete}
-              className="flex-1 py-5 rounded-xl bg-rose-600/10 border border-rose-500/20 text-rose-500 hover:bg-rose-600 hover:text-white text-[10px] font-black uppercase tracking-normal transition-all active:scale-95 "
+              className="px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer"
             >
-              PURGER / DELETE
+              Supprimer
             </button>
           )}
         </div>

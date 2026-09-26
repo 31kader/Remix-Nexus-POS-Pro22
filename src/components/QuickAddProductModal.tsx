@@ -137,7 +137,7 @@ export function QuickAddProductModal({
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-md p-5 max-w-sm w-full space-y-6"
+        className="bg-white dark:bg-zinc-900 rounded-xl shadow-md p-5 max-w-sm w-full space-y-6"
       >
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-lg ring-4 ring-indigo-50">
@@ -162,7 +162,7 @@ export function QuickAddProductModal({
               required
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
+              className="w-full p-4 bg-slate-50 border-2 border-slate-100 dark:border-zinc-800 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
               placeholder="Ex: Nouveauté"
             />
           </div>
@@ -175,7 +175,7 @@ export function QuickAddProductModal({
                 step="0.01"
                 value={price}
                 onChange={e => setPrice(e.target.value)}
-                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
+                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 dark:border-zinc-800 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
                 placeholder="0.00"
               />
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
@@ -190,7 +190,7 @@ export function QuickAddProductModal({
                 step="0.01"
                 value={costPrice}
                 onChange={e => setCostPrice(e.target.value)}
-                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
+                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 dark:border-zinc-800 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-slate-800"
                 placeholder="0.00 (Optionnel)"
               />
               <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
@@ -203,7 +203,7 @@ export function QuickAddProductModal({
               <input 
                 value={location}
                 onChange={e => setLocation(e.target.value)}
-                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-indigo-600"
+                className="w-full p-4 pl-12 bg-slate-50 border-2 border-slate-100 dark:border-zinc-800 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-indigo-600"
                 placeholder="Ex: A-01"
               />
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />

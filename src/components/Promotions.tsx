@@ -55,7 +55,7 @@ export const Promotions = memo(function Promotions({
             <input 
               type="text"
               placeholder="Rechercher une offre..."
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm w-64 text-slate-800"
+              className="pl-10 pr-4 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm w-64 text-slate-800"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

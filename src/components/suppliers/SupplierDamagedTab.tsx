@@ -74,8 +74,8 @@ export function SupplierDamagedTab({
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm p-6 space-y-4 text-slate-900 text-left animate-fade-in">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 overflow-hidden shadow-sm p-6 space-y-4 text-slate-900 text-left animate-fade-in">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-zinc-800 pb-5">
           <div>
             <h4 className="text-base font-black text-slate-900 uppercase tracking-wider font-sans">Suivi des Réclamations & Pertes</h4>
             <p className="text-xs text-slate-400 mt-1">Gérez le statut des articles défectueux à retourner ou à réclamer auprès de ce fournisseur.</p>
@@ -120,13 +120,13 @@ export function SupplierDamagedTab({
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Date</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Produit</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 text-center">Qté</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 font-sans">Coût U.</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 font-sans">Total Perte</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Motif</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Statut Réclamation</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800">Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800">Produit</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800 text-center">Qté</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800 font-sans">Coût U.</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800 font-sans">Total Perte</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800">Motif</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-zinc-800">Statut Réclamation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150">

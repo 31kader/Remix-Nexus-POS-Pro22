@@ -182,7 +182,7 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
                     {/* Top Action Row: Unfavorite/X button */}
                     <button 
                       onClick={(e) => { e.stopPropagation(); toggleFavorite(product); }} 
-                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-600 hover:scale-110 shadow-md z-10 cursor-pointer"
+                      className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center opacity-100 sm:opacity-60 group-hover:opacity-100 transition-all hover:bg-rose-600 hover:scale-110 shadow-md z-10 cursor-pointer"
                     >
                       <X size={12} strokeWidth={3} />
                     </button>
