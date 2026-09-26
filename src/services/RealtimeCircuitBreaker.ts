@@ -252,8 +252,26 @@ export function getSafeWebSocketTransport(circuitBreaker: RealtimeCircuitBreaker
     }
 
     public close(code?: number, reason?: string): void {
-      if (this.ws) {
-        this.ws.close(code, reason);
+      if (!this.ws) return;
+      const sock = this.ws;
+      this.ws = null;
+      this.onopen = null;
+      this.onmessage = null;
+      this.onerror = null;
+
+      if (sock.readyState === 0) {
+        // 🛡️ Si le WebSocket est encore en cours de handshake TLS (CONNECTING),
+        // appeler sock.close() immédiatement provoque l'erreur Chrome "WebSocket connection to 'wss://...' failed".
+        // On attend la fin du handshake pour le fermer proprement.
+        sock.onopen = () => {
+          try { sock.close(code || 1000, reason); } catch (_) {}
+        };
+        sock.onerror = () => {};
+        sock.onclose = () => {};
+      } else if (sock.readyState === 1) {
+        try {
+          sock.close(code || 1000, reason);
+        } catch (_) {}
       }
     }
   };
