@@ -1,0 +1,43 @@
+name: Build & Attach Windows EXE & Android APK to Release v1.2.14
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web + Electron Windows Installer (.exe)
+        run: |
+          npm run build
+          npx electron-builder --win --x64 --publish never
+
+      - name: Upload Windows .EXE & Android .APK to GitHub Release v1.2.14
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.2.14
+          name: "Nexus POS Pro v1.2.14 (Windows .EXE + Android .APK + iPhone iOS)"
+          files: |
+            release/NexusPOSPro-1.2.14-Setup.exe
+            release/NexusPOSPro-1.2.14-Portable.exe
+            release/NexusPOSPro-1.2.14.apk
+            release/NexusPOSPro-1.2.14-iPhone.mobileconfig
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
