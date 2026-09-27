@@ -1,38 +1,23 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
-import { motion } from 'motion/react';
-import { 
-  Plus, Phone, Mail, UserCog, TrendingUp, Trash2, Lock, Printer, Camera, FileText, Image, CheckSquare
-} from 'lucide-react';
-import { format } from 'date-fns';
-import bcrypt from 'bcryptjs';
-import { supabase } from '../supabase';
-import { auth } from '../services/AuthService';
-import { handleDatabaseError, OperationType } from '../lib/db-compat';
-import { convertKeysToSnake } from '../lib/db-converters';
-import { 
-  Employee, Transaction, AttendanceRecord, AdvanceRecord, 
-  CompanySettings, UserProfile
-} from '../types';
-import { Card, ConfirmDialog, SortableHeader } from './ui';
+import React, { memo, Suspense, lazy } from 'react';
+import { Plus, Users, Shield, Clock, Wallet } from 'lucide-react';
+import { Employee } from '../types';
+import { ConfirmDialog } from './ui';
 import { cn } from '../lib/utils';
-import { getApiUrl } from '../lib/api';
-
-// Import modular employee sub-tabs and components
-import { AttendanceTab } from './employees/AttendanceTab';
-import { AdvancesTab } from './employees/AdvancesTab';
-import { TeamManagement } from './employees/TeamManagement';
 import { PerformanceSummary } from './employees/PerformanceSummary';
 import { EmployeeCard } from './employees/EmployeeCard';
-import { RecruitmentModal } from './employees/RecruitmentModal';
+import { TeamManagement } from './employees/TeamManagement';
+import { useEmployeesLogic, EmployeesProps } from './useEmployeesLogic';
 
+// Lazy load secondary tabs and recruitment modal to keep initial opening ultra-fast
+const AttendanceTab = lazy(() => import('./employees/AttendanceTab').then(m => ({ default: m.AttendanceTab })));
+const AdvancesTab = lazy(() => import('./employees/AdvancesTab').then(m => ({ default: m.AdvancesTab })));
+const RecruitmentModal = lazy(() => import('./employees/RecruitmentModal').then(m => ({ default: m.RecruitmentModal })));
 
 export { TeamManagement };
-import { useEmployeesLogic, EmployeesProps } from './useEmployeesLogic';
 
 export const Employees = memo(function Employees(props: EmployeesProps) {
   const { 
     employees, 
-    transactions, 
     attendance, 
     advances, 
     settings, 
@@ -47,7 +32,6 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
     isDeleteConfirmOpen,
     setIsDeleteConfirmOpen,
     employeeToDelete,
-    setEmployeeToDelete,
     editingEmployee,
     setEditingEmployee,
     hrTab,
@@ -58,12 +42,9 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
     setRecruitmentTab,
     cameraActiveSection,
     setCameraActiveSection,
-    isSignDrawing,
-    setIsSignDrawing,
     signatureSaved,
     setSignatureSaved,
     sortConfig,
-    setSortConfig,
     requestSort,
     sortedEmployeesPerformance,
     employeePerformance,
@@ -84,33 +65,41 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
   } = useEmployeesLogic(props);
 
   return (
-    <div className="space-y-12 text-left p-2 animate-in fade-in duration-700">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
-        <div className="border-l-4 border-indigo-600 pl-8 space-y-2">
-          <h2 className="text-4xl font-black text-white tracking-tighter uppercase  leading-none">
-            STAFF <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">OPERATIONS</span>
-          </h2>
-          <p className="text-[10px] font-black text-slate-600 tracking-normal uppercase ">Integrated Resource Planning & Auth</p>
+    <div className="space-y-6 text-left">
+      {/* Clean & Fast Header */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Users size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              Personnel, Comptes & Pointage RH
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+              Dossiers employés, performances de vente, comptes d'accès PIN caisse, pointage et acomptes sur salaires
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex bg-black/40 p-2 rounded-xl border border-white/5 shadow-md ring-1 ring-white/10  overflow-x-auto no-scrollbar">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700 overflow-x-auto no-scrollbar">
             {[
-              { id: 'info', label: 'ANALYTICS' },
-              { id: 'team', label: 'ACCOUNTS' },
-              { id: 'permissions', label: 'ROLES' },
-              { id: 'attendance', label: 'METRICS' },
-              { id: 'advances', label: 'FINANCES' }
+              { id: 'info', label: 'Personnel & Ventes', icon: Users },
+              { id: 'team', label: 'Comptes & PIN', icon: Shield },
+              { id: 'permissions', label: 'Permissions', icon: Shield },
+              { id: 'attendance', label: 'Pointage', icon: Clock },
+              { id: 'advances', label: 'Acomptes & Paie', icon: Wallet }
             ].map(tab => (
               <button 
                 key={tab.id}
                 type="button"
                 onClick={() => setHrTab(tab.id as any)} 
                 className={cn(
-                  "px-5 py-3 rounded-xl text-[10px] font-black tracking-normal transition-all whitespace-nowrap active:scale-95 ",
+                  "px-3.5 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap",
                   hrTab === tab.id
-                    ? "bg-indigo-600 text-white shadow-xs border border-indigo-400 ring-1 ring-white/20"
-                    : "text-slate-600 hover:text-white hover:bg-white/5"
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 {tab.label}
@@ -121,22 +110,15 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
           <button
             type="button"
             onClick={() => { setEditingEmployee(null); setIsModalOpen(true); }}
-            className="group relative overflow-hidden flex items-center gap-4 px-6 py-5 bg-white text-black text-[11px] font-black uppercase tracking-normal rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-md border border-white/10 "
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs"
           >
-            <div className="absolute inset-0 bg-indigo-600 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
-            <Plus size={20} className="relative z-10 transition-colors group-hover:text-white" strokeWidth={3} />
-            <span className="relative z-10 transition-colors group-hover:text-white">ENRÔLER TALENT</span>
+            <Plus size={16} /> Ajouter Employé
           </button>
         </div>
       </div>
 
       {hrTab === 'info' && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
-        >
-          {/* Performance Summary Section */}
+        <div className="space-y-6">
           <PerformanceSummary
             sortedEmployeesPerformance={sortedEmployeesPerformance}
             employeePerformance={employeePerformance}
@@ -145,8 +127,7 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
             settings={settings}
           />
 
-          {/* Grid of employees */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {employees.map((employee: Employee, idx: number) => {
               const perf = employeePerformance[employee.id] || { totalSales: 0, transactionCount: 0 };
               return (
@@ -164,46 +145,66 @@ export const Employees = memo(function Employees(props: EmployeesProps) {
               );
             })}
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {hrTab === 'attendance' && <AttendanceTab attendance={attendance} employees={employees} users={users} advances={advances} settings={settings} />}
-      {hrTab === 'advances' && <AdvancesTab advances={advances} employees={employees} settings={settings} />}
-      {hrTab === 'team' && <TeamManagement users={users} employees={employees} settings={settings} setIsAddUserModalOpen={setIsAddUserModalOpen} defaultSubTab="users" />}
-      {hrTab === 'permissions' && <TeamManagement users={users} employees={employees} settings={settings} setIsAddUserModalOpen={setIsAddUserModalOpen} defaultSubTab="permissions" />}
+      {(hrTab === 'team' || hrTab === 'permissions') && (
+        <TeamManagement 
+          users={users} 
+          employees={employees} 
+          settings={settings} 
+          setIsAddUserModalOpen={setIsAddUserModalOpen} 
+          defaultSubTab={hrTab === 'permissions' ? 'permissions' : 'users'}
+        />
+      )}
 
-      <ConfirmDialog 
+      {hrTab === 'attendance' && (
+        <Suspense fallback={<div className="p-8 text-center text-sm text-slate-500">Chargement du module de pointage...</div>}>
+          <AttendanceTab employees={employees} attendance={attendance} users={users} advances={advances} settings={settings} />
+        </Suspense>
+      )}
+
+      {hrTab === 'advances' && (
+        <Suspense fallback={<div className="p-8 text-center text-sm text-slate-500">Chargement du module d'acomptes...</div>}>
+          <AdvancesTab employees={employees} advances={advances} settings={settings} />
+        </Suspense>
+      )}
+
+      {isModalOpen && (
+        <Suspense fallback={null}>
+          <RecruitmentModal
+            isOpen={isModalOpen}
+            onClose={() => { setIsModalOpen(false); stopCamera(); }}
+            stopCamera={stopCamera}
+            editingEmployee={editingEmployee}
+            recruitmentTab={recruitmentTab}
+            setRecruitmentTab={setRecruitmentTab}
+            handleSubmit={handleSubmit}
+            formData={formData}
+            setFormData={setFormData}
+            settings={settings}
+            cameraActiveSection={cameraActiveSection}
+            startCamera={startCamera}
+            takePhoto={takePhoto}
+            videoRef={videoRef}
+            handleFileUpload={handleFileUpload}
+            clearCanvas={clearCanvas}
+            canvasRef={canvasRef}
+            startDrawing={startDrawing}
+            drawSign={drawSign}
+            endDrawing={endDrawing}
+            saveSignature={saveSignature}
+          />
+        </Suspense>
+      )}
+
+      <ConfirmDialog
         isOpen={isDeleteConfirmOpen}
         onClose={() => setIsDeleteConfirmOpen(false)}
         onConfirm={confirmDelete}
         title="Supprimer l'employé"
-        message={`Êtes-vous sûr de vouloir supprimer ${employeeToDelete?.name} ? Cette action supprimera son profil employé mais pas son compte d'accès s'il en a un.`}
-      />
-
-      <RecruitmentModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        editingEmployee={editingEmployee}
-        handleSubmit={handleSubmit}
-        recruitmentTab={recruitmentTab}
-        setRecruitmentTab={setRecruitmentTab}
-        formData={formData}
-        setFormData={setFormData}
-        settings={settings}
-        cameraActiveSection={cameraActiveSection}
-        startCamera={startCamera}
-        stopCamera={stopCamera}
-        takePhoto={takePhoto}
-        videoRef={videoRef}
-        handleFileUpload={handleFileUpload}
-        clearCanvas={clearCanvas}
-        canvasRef={canvasRef}
-        startDrawing={startDrawing}
-        drawSign={drawSign}
-        endDrawing={endDrawing}
-        saveSignature={saveSignature}
+        message={`Êtes-vous sûr de vouloir supprimer l'employé "${employeeToDelete?.name}" ? Cette action est irréversible.`}
       />
     </div>
   );
 });
-

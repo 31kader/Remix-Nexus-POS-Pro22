@@ -1,6 +1,5 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
-import { motion } from 'motion/react';
 import { CompanySettings, RolePermissions } from '../../types';
 import { Card } from '../ui';
 import { cn } from '../../lib/utils';
@@ -13,71 +12,88 @@ interface TeamManagementPermissionsTabProps {
   handleTogglePermission: (role: 'admin' | 'manager' | 'cashier' | 'delivery' | 'picker', permission: keyof RolePermissions) => void;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Administrateur',
+  manager: 'Gérant (Manager)',
+  cashier: 'Caissier (POS)',
+  delivery: 'Livreur',
+  picker: 'Préparateur'
+};
+
 export function TeamManagementPermissionsTab({
   settings,
   isProcessing,
   handleTogglePermission
 }: TeamManagementPermissionsTabProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5 text-white">
-      {roles.map((role, idx) => {
+    <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+      {roles.map((role) => {
         const permissions = settings.rolePermissions?.[role] || DEFAULT_PERMISSIONS[role];
         return (
-          <motion.div
+          <Card
             key={role}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.05 }}
+            className="p-5 border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm"
           >
-            <Card className="p-5 border-white/5 bg-white/5  rounded-xl shadow-md relative overflow-hidden group">
-              <div className="flex items-center justify-between mb-10 pb-6 border-b border-white/10">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "w-14 h-14 rounded-xl flex items-center justify-center border shadow-xl transition-transform duration-500 group-hover:rotate-12",
-                    role === 'admin' ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/20 shadow-xs/20" : 
-                    role === 'manager' ? "bg-amber-500/20 text-amber-400 border-amber-500/20" : 
-                    "bg-white/5 text-white/40 border-white/10"
-                  )}>
-                    <Shield size={28} />
-                  </div>
-                  <div>
-                    <h4 className="font-black text-white uppercase tracking-widest text-lg">{role}</h4>
-                    <p className="text-[10px] text-white/30 font-black uppercase tracking-[0.22em] mt-0.5 ">Nexus Permission Profile</p>
-                  </div>
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 dark:border-zinc-800">
+              <div className="flex items-center gap-3.5">
+                <div className={cn(
+                  "w-12 h-12 rounded-xl flex items-center justify-center border",
+                  role === 'admin'
+                    ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+                    : role === 'manager'
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                      : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
+                )}>
+                  <Shield size={22} />
                 </div>
-              </div>
-
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {permissionKeys.map(key => (
-                  <div key={String(key)} className="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-white/[0.03] hover:border-white/10 transition-colors">
-                    <span className="text-[10px] font-black text-white/60 uppercase tracking-widest text-left">{permissionLabels[key]}</span>
-                    <button
-                      disabled={role === 'admin' || isProcessing}
-                      onClick={() => handleTogglePermission(role, key)}
-                      className={cn(
-                        "relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none disabled:opacity-30 active:scale-90",
-                        permissions[key] ? "bg-indigo-600 shadow-xs/40" : "bg-white/10 border border-white/10"
-                      )}
-                    >
-                      <span className={cn(
-                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300",
-                        permissions[key] ? "translate-x-6" : "translate-x-1"
-                      )} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              
-              {role === 'admin' && (
-                <div className="mt-8 p-6 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest leading-loose text-center ">
-                     ACCÈS NO-LIMIT : Le rôle Administrateur est protégé par le noyau Nexus System. Toutes les permissions sont actives nativement.
+                <div>
+                  <h4 className="font-black text-slate-900 dark:text-white text-base">
+                    {ROLE_LABELS[role] || role}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-bold uppercase">
+                    Profil d'Autorisations ({role})
                   </p>
                 </div>
-              )}
-              <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 blur-[40px] pointer-events-none rounded-full -mb-12 -mr-12" />
-            </Card>
-          </motion.div>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
+              {permissionKeys.map(key => (
+                <div
+                  key={String(key)}
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-zinc-800/60 rounded-xl border border-slate-200/70 dark:border-zinc-700/60"
+                >
+                  <span className="text-xs font-bold text-slate-700 dark:text-zinc-200 text-left">
+                    {permissionLabels[key]}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={role === 'admin' || isProcessing}
+                    onClick={() => handleTogglePermission(role, key)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed shrink-0",
+                      permissions[key]
+                        ? "bg-indigo-600"
+                        : "bg-slate-300 dark:bg-zinc-700"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-xs",
+                      permissions[key] ? "translate-x-6" : "translate-x-1"
+                    )} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {role === 'admin' && (
+              <div className="mt-4 p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 text-center">
+                  🔒 Le rôle Administrateur dispose nativement de l'intégralité des permissions système.
+                </p>
+              </div>
+            )}
+          </Card>
         );
       })}
     </div>

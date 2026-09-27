@@ -6,9 +6,9 @@ export const getStoredAiVisionKey = (): string => {
   try {
     return (
       localStorage.getItem(AI_VISION_KEY_STORAGE) ||
+      (import.meta as any).env?.VITE_GROQ_API_KEY ||
       localStorage.getItem('gemini_api_key') ||
       (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-      (import.meta as any).env?.VITE_GROQ_API_KEY ||
       ''
     ).trim();
   } catch {
@@ -28,10 +28,10 @@ export const setStoredAiVisionKey = (key: string): void => {
   }
 };
 
-const INVOICE_EXTRACTION_PROMPT = `Tu es un extracteur de factures et de bons de réception ultra-précis pour une caisse enregistreuse en Algérie (Devise: DA). Analyse l'image fournie.
+const INVOICE_EXTRACTION_PROMPT = `Tu es un extracteur de factures et de bons de réception ultra-précis pour une caisse enregistreuse en Algérie (Devise: DA). Analyse le contenu fourni.
 
 RÈGLE ABSOLUE ZÉRO HALLUCINATION :
-Extrais UNIQUEMENT et STRICTEMENT les lignes de produits visibles physiquement dans le tableau de l'image. N'invente aucun produit.
+Extrais UNIQUEMENT et STRICTEMENT les lignes de produits présentes dans la facture. N'invente aucun produit. Corriges les petites fautes d'OCR évidentes dans les nombres (ex: 'O' -> '0', ',' -> '.') et sépare proprement la désignation, la quantité et le prix unitaire.
 
 Retourne STRICTEMENT un objet JSON valide (sans texte autour) contenant :
 {
@@ -59,23 +59,24 @@ function extractJsonObject(rawText: string): any {
 }
 
 /**
- * Appel direct Groq Cloud Vision (meta-llama/llama-4-scout-17b-16e-instruct)
- * 100% gratuit sur console.groq.com sans carte bancaire en Algérie (clé gsk_...)
+ * Structuration intelligente d'un texte OCR de facture via Groq Cloud
+ * Modèles actifs 2026 : openai/gpt-oss-120b, qwen/qwen3.8-27b, openai/gpt-oss-20b
  */
-async function scanInvoiceWithGroq(imageBase64: string, mimeType: string, apiKey: string) {
-  const models = [
-    'meta-llama/llama-4-scout-17b-16e-instruct',
-    'meta-llama/llama-4-maverick-17b-128e-instruct',
-    'llama-3.2-90b-vision-preview'
-  ];
+export async function structureOcrTextWithGroq(rawOcrText: string, apiKey?: string): Promise<any> {
+  const key = (apiKey || getStoredAiVisionKey()).trim();
+  if (!key.startsWith('gsk_')) {
+    throw new Error('Clé Groq (gsk_...) requise pour la structuration IA.');
+  }
 
+  const models = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
   let lastErr: any = null;
+
   for (const model of models) {
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${key}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -84,14 +85,12 @@ async function scanInvoiceWithGroq(imageBase64: string, mimeType: string, apiKey
           response_format: { type: 'json_object' },
           messages: [
             {
+              role: 'system',
+              content: INVOICE_EXTRACTION_PROMPT
+            },
+            {
               role: 'user',
-              content: [
-                { type: 'text', text: INVOICE_EXTRACTION_PROMPT },
-                {
-                  type: 'image_url',
-                  image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` }
-                }
-              ]
+              content: `Voici le texte extrait par OCR d'une photo de facture / bon de livraison fournisseur :\n\n${rawOcrText}\n\nExtrais toutes les lignes d'articles et retourne uniquement le JSON demandé.`
             }
           ]
         })
@@ -107,7 +106,23 @@ async function scanInvoiceWithGroq(imageBase64: string, mimeType: string, apiKey
       lastErr = e;
     }
   }
-  throw lastErr || new Error('Échec de lecture Groq Vision');
+  throw lastErr || new Error('Échec de structuration Groq IA');
+}
+
+/**
+ * Pipeline Hybride Groq : OCR Image (Tesseract.js) + Structuration JSON Groq (openai/gpt-oss-120b / qwen3.8-27b)
+ */
+async function scanInvoiceWithGroq(imageBase64: string, mimeType: string, apiKey: string) {
+  const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`;
+  const Tesseract = await import('tesseract.js');
+  const ocrResult = await Tesseract.recognize(dataUrl, 'fra+eng');
+  const extractedText = (ocrResult?.data?.text || '').trim();
+
+  if (!extractedText) {
+    throw new Error("Aucun texte lisible n'a été détecté sur la photo.");
+  }
+
+  return await structureOcrTextWithGroq(extractedText, apiKey);
 }
 
 /**
@@ -190,9 +205,52 @@ async function scanInvoiceWithDirectGemini(imageBase64: string, mimeType: string
   throw lastErr || new Error('Échec de lecture Gemini Vision');
 }
 
+/**
+ * Appel Assistant IA : utilise Groq (openai/gpt-oss-120b / qwen3.8-27b) en priorité si clé gsk_ disponible
+ */
 export const callGeminiAI = async (data: any, userPrompt: string, systemPromptOverride?: string) => {
   try {
     const apiKey = getStoredAiVisionKey();
+
+    // 1. Appel direct Groq Cloud si clé gsk_ présente (dans .env ou localStorage)
+    if (apiKey.startsWith('gsk_')) {
+      const systemContent =
+        systemPromptOverride ||
+        "Tu es l'Assistant IA expert de Nexus POS Pro en Algérie (Devise: DA / DZD, TVA: 19%). Réponds toujours en français de manière claire, structurée et orientée action pour le gérant du magasin.";
+      const userContent = data
+        ? `Données du magasin :\n${JSON.stringify(data)}\n\nQuestion / Demande :\n${userPrompt}`
+        : userPrompt;
+
+      const models = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b'];
+      for (const model of models) {
+        try {
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model,
+              temperature: 0.3,
+              messages: [
+                { role: 'system', content: systemContent },
+                { role: 'user', content: userContent }
+              ]
+            })
+          });
+          if (groqRes.ok) {
+            const groqData = await groqRes.json();
+            const reply = groqData?.choices?.[0]?.message?.content;
+            if (reply) return reply;
+          }
+        } catch {
+          // try next Groq model
+        }
+      }
+    }
+
+    // 2. Fallback vers le serveur local /api/ai/complete
     const response = await fetch(getApiUrl('/api/ai/complete'), {
       method: 'POST',
       headers: {
@@ -208,16 +266,13 @@ export const callGeminiAI = async (data: any, userPrompt: string, systemPromptOv
       result = JSON.parse(text);
     } catch {
       if (text.includes('<!doctype') || text.includes('<html')) {
-        throw new Error("Le serveur local n'est pas joignable pour l'Assistant IA. Vérifiez que l'application est bien démarrée.");
+        throw new Error("Le serveur local n'est pas joignable pour l'Assistant IA. Vérifiez votre clé Groq (gsk_...) ou démarrez le serveur.");
       }
       throw new Error('Réponse serveur invalide : ' + text.slice(0, 100));
     }
 
     if (!response.ok) {
       const errMsg = result.message || result.error || 'Failed to call AI API';
-      if (response.status === 429 || errMsg.includes('Quota') || errMsg.includes('credits') || errMsg.includes('exhausted') || errMsg.includes('dépassé')) {
-        throw new Error("Quota atteint : Vos crédits Google AI Studio sont épuisés ou restreints dans votre région. Astuce : Utilisez une clé gratuite Groq (gsk_...) dans l'écran de scan.");
-      }
       throw new Error(errMsg);
     }
 
@@ -231,7 +286,7 @@ export const callGeminiAI = async (data: any, userPrompt: string, systemPromptOv
 export const scanInvoice = async (imageBase64: string, mimeType: string = 'image/jpeg', customKey?: string) => {
   const activeKey = (customKey || getStoredAiVisionKey()).trim();
 
-  // 1. Si une clé Groq (gsk_...) est fournie -> Appel direct Groq Vision (100% gratuit sans CB)
+  // 1. Si une clé Groq (gsk_...) est fournie -> OCR + Structuration IA Groq (openai/gpt-oss-120b)
   if (activeKey.startsWith('gsk_')) {
     return await scanInvoiceWithGroq(imageBase64, mimeType, activeKey);
   }
@@ -265,7 +320,7 @@ export const scanInvoice = async (imageBase64: string, mimeType: string = 'image
   try {
     result = JSON.parse(text);
   } catch {
-    throw new Error("Aucune clé IA Vision active ou serveur local non joignable.");
+    throw new Error("Aucune clé IA active ou serveur local non joignable.");
   }
 
   if (!response.ok) {

@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { generateUniqueId, logAction } from '../../lib/utils';
-import { scanInvoice, getStoredAiVisionKey } from '../../services/geminiService';
+import { scanInvoice, getStoredAiVisionKey, structureOcrTextWithGroq } from '../../services/geminiService';
 import { matchProductInCatalog, parseRawInvoiceText } from './invoiceParser';
 import { parseImportedFile } from './importFileParser';
 import { preprocessImageForOcr } from '../../utils/ocrUtils';
@@ -168,9 +168,9 @@ export function useSmartPurchaseScanner({
         reader.readAsDataURL(imageFile);
       });
 
-      let processedImageUrl = dataUrl;
+      let processedImageUrl: File | string = dataUrl;
       try {
-        processedImageUrl = await preprocessImageForOcr(dataUrl);
+        processedImageUrl = await preprocessImageForOcr(imageFile);
       } catch {
         // fallback to original dataUrl if canvas preprocessing fails
       }
@@ -192,19 +192,31 @@ export function useSmartPurchaseScanner({
         throw new Error("Aucun texte lisible n'a pu être détecté sur cette photo.");
       }
 
-      setOfflineScanProgress(`Correspondance avec vos ${products.length} produits du catalogue...`);
-      const parsedInvoice = parseRawInvoiceText(extractedText, suppliers, products);
+      setOfflineScanProgress(`Structuration intelligente des lignes avec Groq IA & Catalogue (${products.length} produits)...`);
+      let parsedInvoice = parseRawInvoiceText(extractedText, suppliers, products);
+
+      const storedKey = getStoredAiVisionKey();
+      if (storedKey.startsWith('gsk_')) {
+        try {
+          const groqStructured = await structureOcrTextWithGroq(extractedText, storedKey);
+          if (groqStructured && Array.isArray(groqStructured.items) && groqStructured.items.length > 0) {
+            parsedInvoice = groqStructured;
+          }
+        } catch (groqErr) {
+          console.warn('Groq structuring fallback to local parser:', groqErr);
+        }
+      }
 
       if (!parsedInvoice.items || parsedInvoice.items.length === 0) {
         setIsOcrInspectorOpen(true);
         throw new Error(
-          "Le texte a été lu mais aucune ligne article structurée (Désignation + Quantité + Prix) n'a été isolée. Pour les factures manuscrites ou complexes, ajoutez une clé gratuite Groq (gsk_...) ci-dessous."
+          "Le texte a été lu mais aucune ligne article structurée (Désignation + Quantité + Prix) n'a été isolée."
         );
       }
 
       applyExtractedInvoice(parsedInvoice);
       toast.success(
-        `Photo analysée en mode OCR Local : ${parsedInvoice.items.length} ligne(s) extraite(s) !`,
+        `Photo analysée (${storedKey.startsWith('gsk_') ? 'OCR + Groq IA' : 'OCR Local'}) : ${parsedInvoice.items.length} ligne(s) extraite(s) !`,
         { icon: '📸' }
       );
     } finally {

@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'motion/react';
 import { TrendingUp } from 'lucide-react';
 import { Employee, CompanySettings } from '../../types';
 import { Card, SortableHeader } from '../ui';
@@ -19,69 +18,74 @@ export function PerformanceSummary({
   requestSort,
   settings
 }: PerformanceSummaryProps) {
+  const currency = settings.currency || 'DA';
+
   return (
-    <Card className="overflow-hidden border-white/5 bg-white/5  rounded-xl shadow-md">
-      <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shadow-xs/20">
-            <TrendingUp size={24} />
+    <Card className="overflow-hidden border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl shadow-sm">
+      <div className="p-5 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/40">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+            <TrendingUp size={20} />
           </div>
           <div>
-            <h4 className="font-black text-white uppercase tracking-wider text-sm ">Résumé des Performances</h4>
-            <p className="text-[10px] font-black text-white/30 tracking-normal uppercase mt-0.5">Sales Metrics & Efficiency</p>
+            <h4 className="font-black text-slate-900 dark:text-white text-sm">Résumé des Performances par Employé</h4>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Chiffre d'affaires encaissé, nombre de tickets et panier moyen</p>
           </div>
         </div>
       </div>
       
-      <div className="overflow-x-auto text-white font-black">
-        <table className="w-full text-left">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-white/5 text-white/40 uppercase">
-              <SortableHeader label="EMPLOYÉ" sortKey="name" currentSort={sortConfig} onSort={() => requestSort('name')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal" />
-              <SortableHeader label="TRANSACTIONS" sortKey="transactions" currentSort={sortConfig} onSort={() => requestSort('transactions')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-center justify-center" />
-              <SortableHeader label="TOTAL VENTES" sortKey="revenue" currentSort={sortConfig} onSort={() => requestSort('revenue')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-right justify-end" />
-              <SortableHeader label="MOYENNE / VENTE" sortKey="average" currentSort={sortConfig} onSort={() => requestSort('average')} className="p-6 text-[10px] font-black text-white/30 uppercase tracking-normal text-right justify-end" />
+            <tr className="bg-slate-50 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800">
+              <SortableHeader label="EMPLOYÉ" sortKey="name" currentSort={sortConfig} onSort={() => requestSort('name')} className="p-4 text-[11px] font-black text-slate-500 dark:text-zinc-400 uppercase" />
+              <SortableHeader label="TRANSACTIONS" sortKey="transactions" currentSort={sortConfig} onSort={() => requestSort('transactions')} className="p-4 text-[11px] font-black text-slate-500 dark:text-zinc-400 uppercase text-center justify-center" />
+              <SortableHeader label="TOTAL VENTES" sortKey="revenue" currentSort={sortConfig} onSort={() => requestSort('revenue')} className="p-4 text-[11px] font-black text-slate-500 dark:text-zinc-400 uppercase text-right justify-end" />
+              <SortableHeader label="PANIER MOYEN" sortKey="average" currentSort={sortConfig} onSort={() => requestSort('average')} className="p-4 text-[11px] font-black text-slate-500 dark:text-zinc-400 uppercase text-right justify-end" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
-            {sortedEmployeesPerformance.map((employee: Employee, idx: number) => {
+          <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+            {sortedEmployeesPerformance.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="p-6 text-center text-sm text-slate-500 dark:text-zinc-400">
+                  Aucun employé enregistré. Cliquez sur « Ajouter Employé » pour commencer.
+                </td>
+              </tr>
+            ) : sortedEmployeesPerformance.map((employee: Employee) => {
               const perf = employeePerformance[employee.id] || { totalSales: 0, transactionCount: 0 };
               const avgSale = perf.transactionCount > 0 ? perf.totalSales / perf.transactionCount : 0;
               return (
-                <motion.tr 
+                <tr 
                   key={`perf-row-${employee.id}`} 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="group hover:bg-white/5 transition-colors"
+                  className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors"
                 >
-                  <td className="p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black/40 border border-white/10 text-indigo-400 rounded-xl flex items-center justify-center text-lg font-black group-hover:scale-110 group-hover:border-indigo-500/50 transition-all duration-500 shadow-xl">
-                        {employee.name.charAt(0)}
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center text-sm font-black">
+                        {(employee.name || 'E').charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-black text-white uppercase tracking-wider group-hover:text-indigo-400 transition-colors">{employee.name}</p>
-                        <p className="text-[10px] text-white/30 font-black tracking-widest uppercase mt-0.5">{employee.role}</p>
+                        <p className="font-black text-sm text-slate-900 dark:text-white">{employee.name}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-bold uppercase">{employee.role}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="p-6 text-center">
-                    <span className="text-lg font-black text-white tracking-widest">{perf.transactionCount}</span>
+                  <td className="p-4 text-center">
+                    <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-zinc-800 text-sm font-black text-slate-900 dark:text-white">
+                      {perf.transactionCount}
+                    </span>
                   </td>
-                  <td className="p-6 text-right">
-                    <div className="flex flex-col items-end">
-                      <span className="text-lg font-black text-emerald-400 tracking-tighter">{perf.totalSales.toFixed(2)}</span>
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{settings.currency}</span>
-                    </div>
+                  <td className="p-4 text-right">
+                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      {perf.totalSales.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    </span>
                   </td>
-                  <td className="p-6 text-right">
-                    <div className="flex flex-col items-end">
-                       <span className="text-base font-black text-white/60 tracking-tight">{avgSale.toFixed(2)}</span>
-                       <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">AVG PER ORDER</span>
-                    </div>
+                  <td className="p-4 text-right">
+                    <span className="text-sm font-bold text-slate-700 dark:text-zinc-300">
+                      {avgSale.toLocaleString('fr-DZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currency}
+                    </span>
                   </td>
-                </motion.tr>
+                </tr>
               );
             })}
           </tbody>

@@ -36,6 +36,14 @@ export interface CatalogPrintSettings {
   barcodeWidth: number;
   qrSize: number; // in px
   descFontSize: number;
+
+  // Extended Pro Options
+  layoutMode?: 'grid' | 'table';
+  priceDisplayMode?: 'retail' | 'wholesale' | 'both' | 'promo' | 'none';
+  themeColor?: string;
+  contactPhone?: string;
+  discountPercent?: number;
+  customOverrides?: Record<string, { customPrice?: number; oldPrice?: number; badge?: string }>;
 }
 
 export const printCatalog = async (
@@ -178,77 +186,152 @@ export const printCatalog = async (
   pages.forEach((pageItems, pageIdx) => {
     const isFirstPage = pageIdx === 0;
     
+    const accentColor = printSettings.themeColor || '#4f46e5';
+    const priceMode = printSettings.priceDisplayMode || 'retail';
+    const overrides = printSettings.customOverrides || {};
+    const discountPct = Number(printSettings.discountPercent || 0);
+
     // Header block
     let headerHtml = '';
     if (isFirstPage && showHeader) {
       const logoTag = showLogo && companySettings.logoUrl 
         ? `<img src="${companySettings.logoUrl}" style="height: 48px; object-fit: contain; margin-right: 15px; border-radius: 4px;" />` 
         : '';
+      const phoneTag = printSettings.contactPhone
+        ? `<div style="font-size: 11px; font-weight: 800; color: ${accentColor}; margin-top: 2px;">📞 ${escapeHtml(printSettings.contactPhone)}</div>`
+        : '';
       headerHtml = `
-        <div class="catalog-header">
+        <div class="catalog-header" style="border-bottom: 3px solid ${accentColor};">
           <div style="display: flex; align-items: center;">
             ${logoTag}
             <div>
-              <h1 class="catalog-title">${escapeHtml(title || companySettings.name || 'CATALOGUE')}</h1>
+              <h1 class="catalog-title" style="color: ${accentColor};">${escapeHtml(title || companySettings.name || 'CATALOGUE')}</h1>
               <p class="catalog-subtitle">${escapeHtml(subtitle || 'Nos produits disponibles')}</p>
             </div>
           </div>
-          ${showDate ? `<div class="catalog-date">${todayDate}</div>` : ''}
+          <div style="text-align: right;">
+            ${showDate ? `<div class="catalog-date">${todayDate}</div>` : ''}
+            ${phoneTag}
+          </div>
         </div>
       `;
     }
 
-    // Grid content
+    // Grid or Table content
     let gridItemsHtml = '';
-    pageItems.forEach((p) => {
-      const assets = assetMap.get(p.id);
-      const barcodeSvg = assets?.barcodeSvg || '';
-      const qrSvg = assets?.qrSvg || '';
+    if (printSettings.layoutMode === 'table') {
+      const rowsHtml = pageItems.map((p) => {
+        const ov = overrides[p.id] || {};
+        const retailPrice = ov.customPrice !== undefined ? ov.customPrice : Number(p.price || 0);
+        const wholesalePrice = Number((p as any).wholesalePrice || retailPrice * 0.9);
+        const badgeHtml = ov.badge
+          ? `<span style="background:${accentColor};color:#fff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;">${escapeHtml(ov.badge)}</span>`
+          : '';
+        return `<tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:6px 8px;font-size:10px;font-family:monospace;color:#475569;">${escapeHtml(p.sku || p.barcode || p.id.substring(0, 8).toUpperCase())}</td>
+          <td style="padding:6px 8px;font-size:12px;font-weight:700;color:#0f172a;">${escapeHtml(p.name)} ${badgeHtml}</td>
+          <td style="padding:6px 8px;font-size:11px;text-align:center;color:#475569;">${escapeHtml(p.unit || 'Unité')}</td>
+          ${priceMode === 'both' || priceMode === 'wholesale' ? `<td style="padding:6px 8px;font-size:12px;font-weight:800;text-align:right;color:#059669;">${wholesalePrice.toFixed(2)} ${companySettings.currency || 'DA'}</td>` : ''}
+          ${priceMode !== 'wholesale' && priceMode !== 'none' ? `<td style="padding:6px 8px;font-size:12px;font-weight:800;text-align:right;color:${accentColor};">${retailPrice.toFixed(2)} ${companySettings.currency || 'DA'}</td>` : ''}
+        </tr>`;
+      }).join('');
 
-      const imgTag = showImage && (p.imageUrl || p.image) 
-        ? `<div class="item-image-wrapper" style="height: ${imageHeight}px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 4px; overflow: hidden; margin-bottom: 4px;"><img src="${p.imageUrl || p.image}" style="max-height: ${imageHeight}px; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` 
-        : '';
-      const nameTag = showName 
-        ? `<div class="item-name" style="font-size: ${nameFontSize}px;">${escapeHtml(p.name)}</div>` 
-        : '';
-      const priceTag = showPrice 
-        ? `<div class="item-price" style="font-size: ${priceFontSize}px;">${p.price.toFixed(2)} ${companySettings.currency || 'DA'}</div>` 
-        : '';
-      const skuTag = showSku 
-        ? `<div class="item-sku">REF : ${escapeHtml(p.sku || p.id.substring(0, 8).toUpperCase())}</div>` 
-        : '';
-      const stockTag = showStock 
-        ? `<div class="item-stock">Stock disponible : ${p.stock} ${escapeHtml(p.unit || 'u')}</div>` 
-        : '';
-      const descTag = showDescription && p.description 
-        ? `<div class="item-desc" style="font-size: ${descFontSize}px;">${escapeHtml(p.description.length > 80 ? p.description.slice(0, 77) + '...' : p.description)}</div>` 
-        : '';
-      const barcodeBlock = showBarcode && barcodeSvg 
-        ? `<div class="item-barcode-wrapper">${barcodeSvg}</div>` 
-        : '';
-      const qrBlock = showQr && qrSvg 
-        ? `<div class="item-qr-wrapper">${qrSvg}</div>` 
-        : '';
-
-      gridItemsHtml += `
-        <div class="grid-item border-${cellBorder}">
-          ${imgTag}
-          <div class="item-details">
-            ${nameTag}
-            ${descTag}
-            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-              ${priceTag}
-              ${skuTag}
-            </div>
-            ${stockTag ? `<div style="margin-top: 2px;">${stockTag}</div>` : ''}
-            <div class="codes-row">
-              ${barcodeBlock}
-              ${qrBlock}
-            </div>
-          </div>
+      gridItemsHtml = `
+        <div style="grid-column: 1 / -1; width: 100%;">
+          <table style="width:100%;border-collapse:collapse;border:1px solid #cbd5e1;">
+            <thead>
+              <tr style="background:${accentColor};color:#fff;">
+                <th style="padding:8px;text-align:left;font-size:10px;">RÉF / CODE</th>
+                <th style="padding:8px;text-align:left;font-size:10px;">DÉSIGNATION ARTICLE</th>
+                <th style="padding:8px;text-align:center;font-size:10px;">UNITÉ</th>
+                ${priceMode === 'both' || priceMode === 'wholesale' ? `<th style="padding:8px;text-align:right;font-size:10px;">PRIX GROS</th>` : ''}
+                ${priceMode !== 'wholesale' && priceMode !== 'none' ? `<th style="padding:8px;text-align:right;font-size:10px;">PRIX PUBLIC</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
         </div>
       `;
-    });
+    } else {
+      pageItems.forEach((p) => {
+        const assets = assetMap.get(p.id);
+        const barcodeSvg = assets?.barcodeSvg || '';
+        const qrSvg = assets?.qrSvg || '';
+        const ov = overrides[p.id] || {};
+        const effectivePrice = ov.customPrice !== undefined ? ov.customPrice : Number(p.price || 0);
+        const wholesalePrice = Number((p as any).wholesalePrice || effectivePrice * 0.9);
+        const oldPrice = ov.oldPrice !== undefined
+          ? ov.oldPrice
+          : discountPct > 0
+            ? Math.round(effectivePrice / (1 - discountPct / 100))
+            : 0;
+
+        const badgeOverlay = ov.badge
+          ? `<div style="position:absolute;top:6px;left:6px;background:${accentColor};color:#fff;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:900;text-transform:uppercase;z-index:2;">${escapeHtml(ov.badge)}</div>`
+          : '';
+
+        const imgTag = showImage && (p.imageUrl || p.image) 
+          ? `<div class="item-image-wrapper" style="position:relative;height: ${imageHeight}px; width: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc; border-radius: 4px; overflow: hidden; margin-bottom: 4px;">${badgeOverlay}<img src="${p.imageUrl || p.image}" style="max-height: ${imageHeight}px; max-width: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` 
+          : badgeOverlay ? `<div style="margin-bottom:4px;">${badgeOverlay}</div>` : '';
+        const nameTag = showName 
+          ? `<div class="item-name" style="font-size: ${nameFontSize}px;">${escapeHtml(p.name)}</div>` 
+          : '';
+
+        let priceTag = '';
+        if (showPrice && priceMode !== 'none') {
+          if (priceMode === 'wholesale') {
+            priceTag = `<div class="item-price" style="font-size: ${priceFontSize}px; color: #059669;">Gros: ${wholesalePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>`;
+          } else if (priceMode === 'both') {
+            priceTag = `<div>
+              <div class="item-price" style="font-size: ${priceFontSize}px; color: ${accentColor};">${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>
+              <div style="font-size: 10px; font-weight: 800; color: #059669;">Gros: ${wholesalePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>
+            </div>`;
+          } else if (priceMode === 'promo' && oldPrice > effectivePrice) {
+            priceTag = `<div>
+              <span style="font-size: 10px; color: #94a3b8; text-decoration: line-through; margin-right: 4px;">${oldPrice.toFixed(2)}</span>
+              <span class="item-price" style="font-size: ${priceFontSize}px; color: #dc2626;">${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</span>
+            </div>`;
+          } else {
+            priceTag = `<div class="item-price" style="font-size: ${priceFontSize}px; color: ${accentColor};">${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>`;
+          }
+        }
+
+        const skuTag = showSku 
+          ? `<div class="item-sku">REF : ${escapeHtml(p.sku || p.id.substring(0, 8).toUpperCase())}</div>` 
+          : '';
+        const stockTag = showStock 
+          ? `<div class="item-stock">Stock : ${p.stock} ${escapeHtml(p.unit || 'u')}</div>` 
+          : '';
+        const descTag = showDescription && p.description 
+          ? `<div class="item-desc" style="font-size: ${descFontSize}px;">${escapeHtml(p.description.length > 80 ? p.description.slice(0, 77) + '...' : p.description)}</div>` 
+          : '';
+        const barcodeBlock = showBarcode && barcodeSvg 
+          ? `<div class="item-barcode-wrapper">${barcodeSvg}</div>` 
+          : '';
+        const qrBlock = showQr && qrSvg 
+          ? `<div class="item-qr-wrapper">${qrSvg}</div>` 
+          : '';
+
+        gridItemsHtml += `
+          <div class="grid-item border-${cellBorder}">
+            ${imgTag}
+            <div class="item-details">
+              ${nameTag}
+              ${descTag}
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+                ${priceTag}
+                ${skuTag}
+              </div>
+              ${stockTag ? `<div style="margin-top: 2px;">${stockTag}</div>` : ''}
+              <div class="codes-row">
+                ${barcodeBlock}
+                ${qrBlock}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
 
     // Grid structure
     // CSS Grid variables will control exact row count to fill height perfectly

@@ -97,7 +97,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
       const byName = c.name ? txStatsByCustomer.get(`name:${c.name.toLowerCase().trim()}`) : undefined;
       const txCount = (byId?.txCount || 0) + (byName?.txCount || 0);
       const computedSpent = Math.max(Number(c.totalSpent || 0), (byId?.spentInPeriod || 0) + (byName?.spentInPeriod || 0));
-      const points = Number(c.points ?? Math.floor(computedSpent / 100));
+      const points = Number(c.loyaltyPoints ?? (c as any).points ?? Math.floor(computedSpent / 100));
       const discountsReceived = (byId?.discountsReceived || 0) + (byName?.discountsReceived || 0);
       const tier =
         points >= 500 || computedSpent >= 50000
