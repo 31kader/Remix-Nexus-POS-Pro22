@@ -128,7 +128,14 @@ export function useCheckoutLogic(props: CheckoutProps) {
     setIsReturnMode(false);
     setReceivedAmount('');
     setKeepExcessInBalance(false);
+    setGlobalDiscount(null);
   }, [activeSessionId]);
+
+  useEffect(() => {
+    if (showSuccess) {
+      setGlobalDiscount(null);
+    }
+  }, [showSuccess]);
 
   // Reset payment calculations when customer changes
   useEffect(() => {

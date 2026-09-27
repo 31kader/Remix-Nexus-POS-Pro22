@@ -108,40 +108,56 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
         </div>
 
         {/* Remise Globale Panier */}
-        <div className="space-y-3">
-          <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-normal flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-xs" />
-            Remise Globale (Panier)
-          </h4>
-          <div className="flex gap-2">
-            <div className="flex bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl p-1 shrink-0">
+        <div className="space-y-2.5 p-3 rounded-xl bg-slate-50 dark:bg-zinc-950/60 border border-slate-200 dark:border-zinc-800">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-xs" />
+              Remise Globale (Panier)
+            </h4>
+            {globalDiscount && globalDiscount.value > 0 && (
               <button
                 type="button"
-                onClick={() => setGlobalDiscount && setGlobalDiscount(globalDiscount ? { ...globalDiscount, type: 'percentage' } : { type: 'percentage', value: 0 })}
+                onClick={() => {
+                  if (setGlobalDiscount) setGlobalDiscount(null);
+                }}
+                className="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <X size={12} /> Effacer
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-1.5">
+            <div className="flex bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setGlobalDiscount && setGlobalDiscount({ type: 'percentage', value: globalDiscount?.value || 0 })}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer",
-                  (!globalDiscount || globalDiscount.type === 'percentage') ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  "px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer",
+                  (!globalDiscount || globalDiscount.type === 'percentage') ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 %
               </button>
               <button
                 type="button"
-                onClick={() => setGlobalDiscount && setGlobalDiscount(globalDiscount ? { ...globalDiscount, type: 'fixed' } : { type: 'fixed', value: 0 })}
+                onClick={() => setGlobalDiscount && setGlobalDiscount({ type: 'fixed', value: globalDiscount?.value || 0 })}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer",
-                  (globalDiscount?.type === 'fixed') ? "bg-emerald-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  "px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer",
+                  (globalDiscount?.type === 'fixed') ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 {currency}
               </button>
             </div>
-            <div className="relative flex-1">
+
+            <div className="relative flex-1 min-w-0">
               <input
+                id="global-discount-input"
                 type="number"
                 min="0"
                 step="any"
-                placeholder="0.00"
+                placeholder={(!globalDiscount || globalDiscount.type === 'percentage') ? "Ex: 10 (%)" : `Ex: 200 (${currency})`}
                 value={globalDiscount && globalDiscount.value > 0 ? globalDiscount.value : ''}
                 onChange={(e) => {
                   const raw = e.target.value;
@@ -162,19 +178,84 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                     }
                   }
                 }}
-                className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/5 transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const inputEl = e.currentTarget;
+                    const val = parseFloat(inputEl.value);
+                    if (setGlobalDiscount && !isNaN(val) && val > 0) {
+                      setGlobalDiscount({
+                        type: globalDiscount?.type || 'percentage',
+                        value: val
+                      });
+                      inputEl.blur();
+                    }
+                  }
+                }}
+                className="w-full h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
               />
-              {globalDiscount && globalDiscount.value > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setGlobalDiscount && setGlobalDiscount(null)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 p-1"
-                >
-                  <X size={14} />
-                </button>
-              )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const inputEl = document.getElementById('global-discount-input') as HTMLInputElement | null;
+                const val = inputEl ? parseFloat(inputEl.value) : (globalDiscount?.value || 0);
+                if (setGlobalDiscount && !isNaN(val) && val > 0) {
+                  setGlobalDiscount({
+                    type: globalDiscount?.type || 'percentage',
+                    value: val
+                  });
+                }
+              }}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+            >
+              APPLIQUER
+            </button>
           </div>
+
+          {/* Boutons de remise rapide en 1 clic */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            {((!globalDiscount || globalDiscount.type === 'percentage')
+              ? [5, 10, 15, 20]
+              : [50, 100, 200, 500]
+            ).map((preset) => {
+              const isSelected = globalDiscount?.value === preset;
+              const currentType = globalDiscount?.type || 'percentage';
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setGlobalDiscount && setGlobalDiscount({ type: currentType, value: preset })}
+                  className={cn(
+                    "flex-1 py-1 rounded-lg text-[10px] font-bold font-mono border transition-all cursor-pointer",
+                    isSelected
+                      ? "bg-emerald-600 text-white border-emerald-500 shadow-xs"
+                      : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-600"
+                  )}
+                >
+                  -{preset}{currentType === 'percentage' ? '%' : ` ${currency}`}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Badge de confirmation quand une remise globale est active */}
+          {globalDiscount && globalDiscount.value > 0 && (
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-xl flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-[11px] font-black">
+              <span>
+                ✓ Remise active : -{globalDiscount.value}{globalDiscount.type === 'percentage' ? '%' : ` ${currency}`} (-{(isNaN(discountAmount) ? 0 : discountAmount).toFixed(2)} {currency})
+              </span>
+              <button
+                type="button"
+                onClick={() => setGlobalDiscount && setGlobalDiscount(null)}
+                className="p-1 hover:bg-rose-500/10 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                title="Annuler la remise"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Voucher Input */}

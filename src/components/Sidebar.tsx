@@ -108,6 +108,9 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
+  sidebarMode?: 'open' | 'collapsed' | 'closed';
+  setSidebarMode?: (mode: 'open' | 'collapsed' | 'closed') => void;
+  cycleSidebarMode?: () => void;
   isMobile: boolean;
   isMobileOverlayOpen: boolean;
   setIsMobileOverlayOpen: (open: boolean) => void;
@@ -129,6 +132,9 @@ export const Sidebar = ({
   setActiveTab,
   isSidebarOpen,
   setIsSidebarOpen,
+  sidebarMode = isSidebarOpen ? 'open' : 'collapsed',
+  setSidebarMode,
+  cycleSidebarMode,
   isMobile,
   isMobileOverlayOpen,
   setIsMobileOverlayOpen,
@@ -172,15 +178,20 @@ export const Sidebar = ({
     );
   };
 
+  // Si en mode fermé complet sur PC/Tablette, on masque totalement l'aside (0px)
+  if (!isMobile && sidebarMode === 'closed') {
+    return null;
+  }
+
   return (
     <motion.aside 
       initial={false}
       animate={{ 
-        width: isMobile ? (isMobileOverlayOpen ? '100%' : 0) : (isSidebarOpen ? 260 : 76),
+        width: isMobile ? (isMobileOverlayOpen ? '100%' : 0) : (sidebarMode === 'open' ? 260 : 76),
         x: isMobile && !isMobileOverlayOpen ? -300 : 0
       }}
       className={cn(
-        "border-r flex flex-col h-full bg-zinc-950 border-zinc-800 shadow-md relative",
+        "border-r flex flex-col h-full bg-zinc-950 border-zinc-800 shadow-md relative shrink-0",
         isMobile ? "fixed inset-y-0 left-0 z-[70]" : "relative z-40"
       )}
     >
@@ -198,20 +209,41 @@ export const Sidebar = ({
       )}
 
       {/* Brand Header */}
-      <div className="p-6 flex items-center gap-3.5 border-b border-white/5 relative z-10">
-        <div className="w-10 h-10 bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/5 hover:rotate-6 transition-transform">
-          <ShoppingCart size={20} />
-        </div>
-        {(isSidebarOpen || isMobile) && (
-          <div className="flex flex-col">
-            <span className="font-black text-lg truncate text-white tracking-tighter uppercase  flex items-center gap-1.5">
-              NEXUS 
-              <span className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md not- tracking-normal normal-case">
-                v1.2.14
-              </span>
-            </span>
-            <span className="text-[8px] font-black text-white/30 uppercase tracking-normal mt-0.5">Systems Guard</span>
+      <div className="p-4 sm:p-5 flex items-center justify-between gap-2 border-b border-white/5 relative z-10">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/5">
+            <ShoppingCart size={20} />
           </div>
+          {(isSidebarOpen || isMobile) && (
+            <div className="flex flex-col min-w-0">
+              <span className="font-black text-base truncate text-white tracking-tight uppercase flex items-center gap-1.5">
+                NEXUS 
+                <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md normal-case">
+                  v1.2.14
+                </span>
+              </span>
+              <span className="text-[8px] font-black text-white/30 uppercase tracking-normal mt-0.5">Systems Guard</span>
+            </div>
+          )}
+        </div>
+
+        {/* Bouton Rapide en haut du Menu : Réduire -> Fermer */}
+        {!isMobile && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => {
+              if (cycleSidebarMode) {
+                cycleSidebarMode();
+              } else {
+                setIsSidebarOpen(!isSidebarOpen);
+              }
+            }}
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-indigo-600/20 border border-white/10 hover:border-indigo-500/40 text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+            title={sidebarMode === 'open' ? "Réduire en icônes (1er clic) / Fermer (2e clic)" : "Fermer complètement le menu latéral"}
+          >
+            {sidebarMode === 'open' ? <Menu size={15} /> : <X size={15} />}
+          </button>
         )}
       </div>
 
@@ -318,14 +350,36 @@ export const Sidebar = ({
         )}
         
         {!isMobile && (
-          <button 
-            tabIndex={-1}
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            aria-label="Basculer l'affichage du menu latéral"
-            className="w-full p-2.5 rounded-xl flex items-center justify-center transition-colors hover:bg-white/5 text-slate-500 hover:text-white cursor-pointer border border-transparent hover:border-white/5"
-          >
-            <Menu size={16} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button 
+              type="button"
+              tabIndex={-1}
+              onClick={() => {
+                if (cycleSidebarMode) {
+                  cycleSidebarMode();
+                } else {
+                  setIsSidebarOpen(!isSidebarOpen);
+                }
+              }}
+              aria-label="Réduire ou fermer le menu latéral"
+              title={sidebarMode === 'open' ? "Réduire en icônes (puis clic suivant : fermer complètement)" : "Fermer complètement le menu latéral"}
+              className="flex-1 p-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors bg-white/[0.03] hover:bg-indigo-600/20 text-slate-400 hover:text-white cursor-pointer border border-white/5 hover:border-indigo-500/30 text-[10px] font-bold uppercase tracking-wider"
+            >
+              <Menu size={15} />
+              {sidebarMode === 'open' && <span>Réduire / Fermer</span>}
+            </button>
+            {sidebarMode === 'open' && setSidebarMode && (
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setSidebarMode('closed')}
+                title="Fermer complètement le menu latéral (0px)"
+                className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-white/5 hover:border-rose-500/30 transition-colors cursor-pointer shrink-0"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
         )}
 
         <div className="flex items-center gap-3 p-3 bg-white/[0.02] hover:bg-white/[0.04] transition-colors rounded-xl border border-white/5 shadow-inner">

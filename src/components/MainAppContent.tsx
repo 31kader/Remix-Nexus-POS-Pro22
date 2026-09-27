@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { Sidebar } from './Sidebar';
 import { BottomBar } from './BottomBar';
@@ -7,6 +7,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { useProductStats } from '../hooks/useAppPermissionsAndStats';
+
+export type SidebarMode = 'open' | 'collapsed' | 'closed';
 
 interface MainAppContentProps {
   activeTab: string;
@@ -38,6 +40,43 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
   const employees = usePeopleStore(s => s.employees);
   const { expiringProducts, lowStockProducts } = useProductStats();
 
+  // Mode 3-états du Menu Latéral : 'open' (260px) -> 'collapsed' (76px icônes) -> 'closed' (0px fermé complet)
+  const [sidebarMode, setSidebarModeState] = useState<SidebarMode>(() => {
+    try {
+      const saved = localStorage.getItem('nexus_sidebar_mode_v2') as SidebarMode | null;
+      if (saved === 'open' || saved === 'collapsed' || saved === 'closed') return saved;
+    } catch {}
+    return isSidebarOpen ? 'open' : 'collapsed';
+  });
+
+  const setSidebarMode = useCallback((mode: SidebarMode) => {
+    setSidebarModeState(mode);
+    setIsSidebarOpen(mode === 'open');
+    try {
+      localStorage.setItem('nexus_sidebar_mode_v2', mode);
+    } catch {}
+  }, [setIsSidebarOpen]);
+
+  // Cycle : Ouvert (260px) -> Réduit (76px) -> Fermé (0px) -> Ouvert (260px)
+  const cycleSidebarMode = useCallback(() => {
+    if (isMobile) {
+      setIsMobileOverlayOpen(!isMobileOverlayOpen);
+      return;
+    }
+    setSidebarModeState(prev => {
+      const next: SidebarMode = prev === 'open' ? 'collapsed' : prev === 'collapsed' ? 'closed' : 'open';
+      setIsSidebarOpen(next === 'open');
+      try {
+        localStorage.setItem('nexus_sidebar_mode_v2', next);
+      } catch {}
+      return next;
+    });
+  }, [isMobile, isMobileOverlayOpen, setIsMobileOverlayOpen, setIsSidebarOpen]);
+
+  useEffect(() => {
+    setIsSidebarOpen(sidebarMode === 'open');
+  }, [sidebarMode, setIsSidebarOpen]);
+
   return (
     <div className="flex h-[100dvh] text-slate-900 dark:text-slate-100 overflow-hidden font-sans bg-slate-50 dark:bg-zinc-950">
       <Sidebar 
@@ -45,8 +84,11 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         profile={profile}
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
+        isSidebarOpen={sidebarMode === 'open'}
+        setIsSidebarOpen={(open: boolean) => setSidebarMode(open ? 'open' : 'collapsed')}
+        sidebarMode={sidebarMode}
+        setSidebarMode={setSidebarMode}
+        cycleSidebarMode={cycleSidebarMode}
         isMobile={isMobile}
         isMobileOverlayOpen={isMobileOverlayOpen}
         setIsMobileOverlayOpen={setIsMobileOverlayOpen}
@@ -65,6 +107,9 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         <AppHeader 
           isMobile={isMobile}
           setIsMobileOverlayOpen={setIsMobileOverlayOpen}
+          sidebarMode={sidebarMode}
+          setSidebarMode={setSidebarMode}
+          cycleSidebarMode={cycleSidebarMode}
           activeTab={activeTab}
           lowStockProducts={lowStockProducts}
           expiringProducts={expiringProducts}

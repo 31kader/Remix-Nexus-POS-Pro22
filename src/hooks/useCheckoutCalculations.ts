@@ -79,10 +79,10 @@ export function useCheckoutCalculations({
           return isApplicable(item) ? sum + ((isNaN(p) ? 0 : p) * Math.max(0, isNaN(q) ? 0 : q)) : sum;
         }, 0);
         const val = parseFloat(promotionToApply.value?.toString());
-        discountAmount = applicableSubtotal * ((isNaN(val) ? 0 : val) / 100);
+        discountAmount += applicableSubtotal * ((isNaN(val) ? 0 : val) / 100);
       } else if (promotionToApply.type === 'fixed') {
         const val = parseFloat(promotionToApply.value?.toString());
-        discountAmount = isNaN(val) ? 0 : val;
+        discountAmount += isNaN(val) ? 0 : val;
       } else if (promotionToApply.type === 'buy_x_get_y' && promotionToApply.buyQuantity && promotionToApply.getQuantity) {
         cart.forEach((item: CartItem) => {
           if (isApplicable(item)) {
@@ -101,7 +101,14 @@ export function useCheckoutCalculations({
           }
         });
       }
-      total = subtotal < 0 ? subtotal : Math.max(0, subtotal - (discountAmount || 0));
+    }
+
+    // Always subtract discountAmount (from globalDiscount and/or promotionToApply) from subtotal
+    if (subtotal > 0) {
+      discountAmount = Math.min(subtotal, Math.max(0, discountAmount || 0));
+      total = Math.max(0, subtotal - discountAmount);
+    } else {
+      total = subtotal;
     }
 
     // 4. Calculate Customer profile loyalty points discounts

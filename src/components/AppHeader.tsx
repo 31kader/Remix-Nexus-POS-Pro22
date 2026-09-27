@@ -15,6 +15,9 @@ import { onBackgroundSyncStatus, flushSyncQueueImmediate } from '../services/Syn
 interface AppHeaderProps {
   isMobile: boolean;
   setIsMobileOverlayOpen: (open: boolean) => void;
+  sidebarMode?: 'open' | 'collapsed' | 'closed';
+  setSidebarMode?: (mode: 'open' | 'collapsed' | 'closed') => void;
+  cycleSidebarMode?: () => void;
   activeTab: string;
   lowStockProducts?: any[];
   expiringProducts?: any[];
@@ -44,6 +47,9 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   isMobile,
   setIsMobileOverlayOpen,
+  sidebarMode = 'open',
+  setSidebarMode,
+  cycleSidebarMode,
   activeTab,
   lowStockProducts = [],
   expiringProducts = [],
@@ -109,16 +115,37 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <header className="min-h-12 sm:h-14 pt-[env(safe-area-inset-top)] border-b px-2.5 sm:px-6 flex items-center justify-between flex-shrink-0 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 sticky top-0 z-[60]">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        {isMobile && (
-          <button 
-            type="button"
-            onClick={() => setIsMobileOverlayOpen(true)}
-            className="p-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 shrink-0 cursor-pointer"
-            aria-label="Ouvrir le menu"
-          >
-            <Menu size={18} />
-          </button>
-        )}
+        <button 
+          type="button"
+          onClick={() => {
+            if (isMobile) {
+              setIsMobileOverlayOpen(true);
+            } else if (cycleSidebarMode) {
+              cycleSidebarMode();
+            }
+          }}
+          className={cn(
+            "p-2 border rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
+            !isMobile && sidebarMode === 'closed'
+              ? "bg-indigo-600 text-white border-indigo-500 shadow-sm hover:bg-indigo-500"
+              : "bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700"
+          )}
+          title={
+            isMobile
+              ? "Ouvrir le menu"
+              : sidebarMode === 'open'
+                ? "Réduire le menu en icônes (puis clic suivant : fermer complètement)"
+                : sidebarMode === 'collapsed'
+                  ? "Fermer complètement le menu latéral (100% plein écran)"
+                  : "Rouvrir le menu latéral"
+          }
+          aria-label="Basculer le menu latéral"
+        >
+          <Menu size={18} />
+          {!isMobile && sidebarMode === 'closed' && (
+            <span className="text-[10px] font-black uppercase tracking-wider pr-0.5">Menu</span>
+          )}
+        </button>
         <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-none">
           {getTabTitle(activeTab)}
         </h2>
