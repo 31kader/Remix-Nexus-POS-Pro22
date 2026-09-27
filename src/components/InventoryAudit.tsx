@@ -120,12 +120,24 @@ export const InventoryAudit = memo(function InventoryAudit({ audits, products, u
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
-    (p.sku || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.description || '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.tags || []).some(tag => tag.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredProducts = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const res: Product[] = [];
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (!p) continue;
+      if (
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.sku && String(p.sku).toLowerCase().includes(q)) ||
+        (p.barcode && String(p.barcode).toLowerCase().includes(q))
+      ) {
+        res.push(p);
+        if (res.length >= 30) break;
+      }
+    }
+    return res;
+  }, [products, search]);
 
   return (
     <div className="space-y-10 max-w-6xl mx-auto py-5 px-4 font-sans">

@@ -61,7 +61,7 @@ export const SupplierOrderForm = ({
           </div>
           {isSearchFocused && searchQuery && (
             <div className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-xl rounded-xl mt-2 z-50 max-h-60 overflow-y-auto">
-              {filteredProducts.map((product: Product) => (
+              {filteredProducts.slice(0, 30).map((product: Product) => (
                 <button
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}

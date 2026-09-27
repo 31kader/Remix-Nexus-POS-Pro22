@@ -3,22 +3,21 @@ import { Product } from '../../types';
 import { LabelPrinterState } from './types';
 
 export const PRESETS = [
-  { id: 'preset-40-30', name: 'Standard (40 x 30 mm)', width: 40, height: 30, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-40-20', name: 'Standard (40 x 20 mm)', width: 40, height: 20, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-70-40', name: 'Moyen Rayon (70 x 40 mm)', width: 70, height: 40, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-80-50', name: 'Grand Box (80 x 50 mm)', width: 80, height: 50, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-50-30', name: 'Bijoux / Optique (50 x 30 mm)', width: 50, height: 30, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-idipos-80-50', name: 'Idipos GT-3150 (80 x 50 mm)', width: 80, height: 50, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-idipos-60-40', name: 'Idipos GT-3150 (60 x 40 mm)', width: 60, height: 40, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-idipos-40-20', name: 'Idipos GT-3150 (40 x 20 mm)', width: 40, height: 20, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-custom', name: 'Dimensions Personnalisées...', width: 60, height: 40, orientation: 'landscape', rotation: '0' }
+  { id: 'preset-40-30', name: 'Thermique Standard (40 × 30 mm)', width: 40, height: 30, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-50-30', name: 'Thermique Moyen (50 × 30 mm)', width: 50, height: 30, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-60-40', name: 'Gondole Supermarché (60 × 40 mm)', width: 60, height: 40, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-40-20', name: 'Mini Prix / Cosmétique (40 × 20 mm)', width: 40, height: 20, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-70-40', name: 'Grand Rayon / Promo (70 × 40 mm)', width: 70, height: 40, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-80-50', name: 'Carton / Colisage (80 × 50 mm)', width: 80, height: 50, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-idipos-60-40', name: 'Idipos / Xprinter (60 × 40 mm)', width: 60, height: 40, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-custom', name: 'Dimensions sur-mesure...', width: 60, height: 40, orientation: 'landscape', rotation: '0' }
 ];
 
 export function useLabelPrinter(products: Product[], initialSelectedProductIds: string[] = []) {
-  const [selectedProducts, setSelectedProducts] = useState<{ productId: string, quantity: number }[]>(
+  const [selectedProducts, setSelectedProducts] = useState<{ productId: string; quantity: number; customPrice?: number; oldPrice?: number }[]>(
     initialSelectedProductIds.map(id => ({ productId: id, quantity: 1 }))
   );
-  
+
   const [search, setSearch] = useState('');
   const [activePreset, setActivePreset] = useState('preset-40-30');
 
@@ -48,20 +47,20 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
   const [showImage, setShowImage] = useState(false);
 
   // Sizing controls
-  const [nameFontSize, setNameFontSize] = useState(12);
-  const [priceFontSize, setPriceFontSize] = useState(18);
-  const [barcodeHeight, setBarcodeHeight] = useState(28);
+  const [nameFontSize, setNameFontSize] = useState(11);
+  const [priceFontSize, setPriceFontSize] = useState(16);
+  const [barcodeHeight, setBarcodeHeight] = useState(26);
 
-  // Custom text options
+  // Custom text options (e.g. Store Name, FAB/EXP dates, Promo mention)
   const [customText, setCustomText] = useState('');
-  const [customTextSize, setCustomTextSize] = useState(10);
+  const [customTextSize, setCustomTextSize] = useState(9);
   const [customTextAlign, setCustomTextAlign] = useState<'left' | 'center' | 'right'>('center');
-  const [customTextBold, setCustomTextBold] = useState(false);
+  const [customTextBold, setCustomTextBold] = useState(true);
   const [customTextItalic, setCustomTextItalic] = useState(false);
 
   // Fine-grained alignment states
   const [barcodeWidth, setBarcodeWidth] = useState(1.2);
-  const [customGap, setCustomGap] = useState(4);
+  const [customGap, setCustomGap] = useState(3);
   const [nameLineClamp, setNameLineClamp] = useState<1 | 2>(1);
   const [customLetterSpacing, setCustomLetterSpacing] = useState(0);
 
@@ -76,8 +75,6 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
       setPaddingBottom(2);
       setPaddingLeft(2);
       setPaddingRight(2);
-      
-      // Auto-apply orientation and rotation for preset if available
       if ('orientation' in selected && selected.orientation) {
         setCustomOrientation(selected.orientation as any);
       }
@@ -97,20 +94,33 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
     }
   };
 
+  // STRICT SEARCH-ONLY: Never load the 11,177 products when search is empty!
   const filteredProducts = useMemo(() => {
-    return products.filter(p => 
-      (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
-      (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
-    );
+    const q = search.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const matches: Product[] = [];
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (!p) continue;
+      if (
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.barcode && String(p.barcode).toLowerCase().includes(q)) ||
+        (p.sku && String(p.sku).toLowerCase().includes(q))
+      ) {
+        matches.push(p);
+        if (matches.length >= 25) break;
+      }
+    }
+    return matches;
   }, [products, search]);
 
   const addProduct = (p: Product) => {
     setSelectedProducts(prev => {
       const existing = prev.find(item => item.productId === p.id);
       if (existing) {
-        return prev.map(item => item.productId === p.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return prev.map(item => (item.productId === p.id ? { ...item, quantity: item.quantity + 1 } : item));
       }
-      return [...prev, { productId: p.id, quantity: 1 }];
+      return [...prev, { productId: p.id, quantity: 1, customPrice: p.price }];
     });
   };
 
@@ -124,8 +134,39 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
       if (!existing) return prev;
       const newQuantity = Math.max(0, existing.quantity + delta);
       if (newQuantity === 0) return prev.filter(item => item.productId !== productId);
-      return prev.map(item => item.productId === productId ? { ...item, quantity: newQuantity } : item);
+      return prev.map(item => (item.productId === productId ? { ...item, quantity: newQuantity } : item));
     });
+  };
+
+  const setExactQuantity = (productId: string, quantity: number) => {
+    const validQty = Math.max(1, Math.min(500, Math.round(Number(quantity) || 1)));
+    setSelectedProducts(prev =>
+      prev.map(item => (item.productId === productId ? { ...item, quantity: validQty } : item))
+    );
+  };
+
+  const updateCustomPrice = (productId: string, customPrice?: number, oldPrice?: number) => {
+    setSelectedProducts(prev =>
+      prev.map(item =>
+        item.productId === productId
+          ? {
+              ...item,
+              ...(customPrice !== undefined ? { customPrice } : {}),
+              ...(oldPrice !== undefined ? { oldPrice } : {})
+            }
+          : item
+      )
+    );
+  };
+
+  const syncQuantitiesWithStock = () => {
+    setSelectedProducts(prev =>
+      prev.map(item => {
+        const prod = products.find(p => p.id === item.productId);
+        const stockQty = Math.max(1, Math.min(200, Math.round(Number(prod?.stock) || 1)));
+        return { ...item, quantity: stockQty };
+      })
+    );
   };
 
   const clearAllSelected = () => {
@@ -137,8 +178,13 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
     selectedProducts.forEach(sp => {
       const p = products.find(prod => prod.id === sp.productId);
       if (p) {
+        const effectiveProduct: Product = {
+          ...p,
+          price: sp.customPrice !== undefined ? sp.customPrice : p.price,
+          originalPrice: sp.oldPrice !== undefined ? sp.oldPrice : p.originalPrice
+        };
         for (let i = 0; i < sp.quantity; i++) {
-          flatItems.push(p);
+          flatItems.push(effectiveProduct);
         }
       }
     });
@@ -147,15 +193,22 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
 
   const previewProduct = useMemo(() => {
     if (selectedProducts.length > 0) {
-      const p = products.find(prod => prod.id === selectedProducts[0].productId);
-      if (p) return p;
+      const sp = selectedProducts[0];
+      const p = products.find(prod => prod.id === sp.productId);
+      if (p) {
+        return {
+          ...p,
+          price: sp.customPrice !== undefined ? sp.customPrice : p.price,
+          originalPrice: sp.oldPrice !== undefined ? sp.oldPrice : p.originalPrice
+        };
+      }
     }
     return {
       id: 'demo-id',
-      name: 'T-Shirt Sport Premium Noir',
-      price: 29.99,
-      sku: 'TSHIRT-BLK-M',
-      image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=200&auto=format&fit=crop&q=60'
+      name: 'Huile d’Olive Vierge Extra 1L',
+      price: 950,
+      sku: '6130001234567',
+      barcode: '6130001234567'
     } as Product;
   }, [selectedProducts, products]);
 
@@ -191,21 +244,22 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
     barcodeWidth, setBarcodeWidth,
     customGap, setCustomGap,
     nameLineClamp, setNameLineClamp,
-    customLetterSpacing, setCustomLetterSpacing,
+    customLetterSpacing, setCustomLetterSpacing
   };
 
   return {
+    stateContext,
     selectedProducts,
-    search,
-    setSearch,
     filteredProducts,
     addProduct,
     deleteProductFromList,
     updateQuantity,
+    setExactQuantity,
+    updateCustomPrice,
+    syncQuantitiesWithStock,
     clearAllSelected,
     itemsToPrint,
     previewProduct,
-    stateContext,
     handlePresetChange,
     handlePaddingBaseChange
   };
