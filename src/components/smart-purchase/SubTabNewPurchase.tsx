@@ -95,7 +95,7 @@ export function SubTabNewPurchase({
           <Card className="p-0 industrial-card overflow-hidden">
             <div className="p-6 bg-industrial-800/50 border-b border-industrial-800">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                <div className="flex bg-industrial-950 p-1 rounded-xl border border-industrial-800 flex-wrap md:flex-nowrap gap-0.5">
+                <div className="flex bg-industrial-950 p-1 rounded-xl border border-industrial-800 flex-wrap md:flex-nowrap gap-1">
                   <button 
                     type="button"
                     onClick={() => { setMode('manual'); setError(null); }} 
@@ -108,14 +108,25 @@ export function SubTabNewPurchase({
                   </button>
                   <button 
                     type="button"
+                    onClick={() => { setMode('scan'); setScanMethod('ai'); setError(null); }} 
+                    className={cn(
+                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
+                      (mode === 'scan' && scanMethod === 'ai') ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20" : "text-industrial-500 hover:text-industrial-100"
+                    )}
+                  >
+                    <Camera size={13} className={cn((mode === 'scan' && scanMethod === 'ai') ? "text-violet-200" : "")} />
+                    📸 Scanner Photo Facture (IA / OCR Local)
+                  </button>
+                  <button 
+                    type="button"
                     onClick={() => { setMode('scan'); setScanMethod('ocr'); setError(null); }} 
                     className={cn(
                       "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none", 
-                      (mode === 'scan') ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-industrial-500 hover:text-industrial-100"
+                      (mode === 'scan' && scanMethod === 'ocr') ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" : "text-industrial-500 hover:text-industrial-100"
                     )}
                   >
-                    <FileText size={12} className={cn((mode === 'scan') ? "text-emerald-300" : "")} />
-                    📂 Importer Facture / Fichier (CSV, Excel)
+                    <FileText size={12} className={cn((mode === 'scan' && scanMethod === 'ocr') ? "text-emerald-300" : "")} />
+                    📂 Importer Fichier (Excel, CSV, PDF)
                   </button>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">

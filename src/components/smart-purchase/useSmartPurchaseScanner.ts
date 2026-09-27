@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { generateUniqueId, logAction } from '../../lib/utils';
-import { scanInvoice } from '../../services/geminiService';
-import { matchProductInCatalog } from './invoiceParser';
+import { scanInvoice, getStoredAiVisionKey } from '../../services/geminiService';
+import { matchProductInCatalog, parseRawInvoiceText } from './invoiceParser';
 import { parseImportedFile } from './importFileParser';
+import { preprocessImageForOcr } from '../../utils/ocrUtils';
 import { Product, Supplier, InvoicePattern, PurchaseCartItem } from '../../types';
 
 interface UseSmartPurchaseScannerProps {
@@ -51,20 +52,20 @@ export function useSmartPurchaseScanner({
   const applyExtractedInvoice = (results: any) => {
     setExtractedData(results);
     setDetectedOcrType(results.isPosScreenshot ? 'pos' : 'standard');
-    
+
     if (results.supplierName && !selectedSupplierId) {
-      const matchedSupplier = suppliers.find(s => 
+      const matchedSupplier = suppliers.find(s =>
         Boolean(s?.name && s.name.toLowerCase().includes((results.supplierName || '').toLowerCase()))
       );
       if (matchedSupplier) {
         setSelectedSupplierId(matchedSupplier.id);
       }
     }
-    
+
     if (results.invoiceNumber && !invoiceNumber) {
       setInvoiceNumber(results.invoiceNumber);
     }
-    
+
     if (results.date || results.receptionDate) {
       const dateStr = results.date || results.receptionDate;
       const parsedDate = new Date(dateStr);
@@ -72,24 +73,27 @@ export function useSmartPurchaseScanner({
         setReceptionDate(dateStr.split('T')[0]);
       }
     }
-    
+
     if (results.previousBalance !== undefined && results.previousBalance !== null) {
       toast.info(`Ancien solde détecté : ${results.previousBalance} DA`, { icon: '💰' });
     }
-    
+
     if (results.items && Array.isArray(results.items)) {
       let mappedCount = 0;
       let unmappedCount = 0;
 
       const newItems: PurchaseCartItem[] = results.items
         .map((item: any) => {
-          const matchedProduct = item.productId 
+          const matchedProduct = item.productId
             ? products.find(p => p.id === item.productId)
-            : matchProductInCatalog({ 
-                name: item.name || '', 
-                barcode: item.barcode || item.code || '', 
-                sku: item.sku || '' 
-              }, products);
+            : matchProductInCatalog(
+                {
+                  name: item.name || '',
+                  barcode: item.barcode || item.code || '',
+                  sku: item.sku || ''
+                },
+                products
+              );
 
           if (matchedProduct) {
             mappedCount++;
@@ -98,18 +102,21 @@ export function useSmartPurchaseScanner({
               productId: matchedProduct.id,
               productName: matchedProduct.name,
               quantity: item.qty || item.quantity || 1,
-              costPrice: item.price > 0 ? item.price : (matchedProduct.costPrice || matchedProduct.price || 0),
+              costPrice: item.price > 0 ? item.price : matchedProduct.costPrice || matchedProduct.price || 0,
               taxRate: matchedProduct.taxRate || 0,
               discount: item.discount || 0,
               imageUrl: matchedProduct.imageUrl,
               isDraft: false
             };
           }
-          
+
           unmappedCount++;
-          const calcPrice = item.price > 0 
-            ? item.price 
-            : (item.total && (item.qty || item.quantity) ? item.total / (item.qty || item.quantity) : 0);
+          const calcPrice =
+            item.price > 0
+              ? item.price
+              : item.total && (item.qty || item.quantity)
+                ? item.total / (item.qty || item.quantity)
+                : 0;
 
           return {
             lineId: generateUniqueId(),
@@ -123,42 +130,110 @@ export function useSmartPurchaseScanner({
           };
         })
         .filter((item: any): item is PurchaseCartItem => item !== null && !!item.productName);
-      
+
       setCart(newItems);
 
       if (mappedCount > 0 && unmappedCount > 0) {
-        toast.success(`${mappedCount} articles associés, ${unmappedCount} nouveaux à créer.`);
+        toast.success(`${mappedCount} articles reconnus dans le catalogue, ${unmappedCount} nouveaux à créer.`);
       } else if (mappedCount > 0) {
-        toast.success(`${mappedCount} articles associés automatiquement au catalogue !`);
+        toast.success(`${mappedCount} articles reconnus automatiquement parmi vos ${products.length} produits !`);
       } else if (unmappedCount > 0) {
-        toast.info(`${unmappedCount} articles importés (prêts à être ajoutés au catalogue).`);
+        toast.info(`${unmappedCount} articles extraits (prêts à être associés ou ajoutés au catalogue).`);
       }
     }
-    
+
     setMode('manual');
     logAction(
-      user?.uid || user?.id || 'system', 
-      user?.displayName || 'Utilisateur', 
-      'File Import', 
-      'SmartPurchase', 
+      user?.uid || user?.id || 'system',
+      user?.displayName || 'Utilisateur',
+      'File Import',
+      'SmartPurchase',
       `Import réussi`
     );
   };
 
-  // ═══ NEW: Import CSV / Excel / PDF ═══
+  /**
+   * ═══ OCR Local 100% Hors-Ligne (Tesseract.js + Matching Catalogue 11 177 produits) ═══
+   */
+  const runLocalImageOcr = async (imageFile: File) => {
+    setIsOfflineScanning(true);
+    setOfflineScanProgress('Prétraitement de la photo (contraste & netteté)...');
+    setError(null);
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Impossible de lire la photo.'));
+        reader.readAsDataURL(imageFile);
+      });
+
+      let processedImageUrl = dataUrl;
+      try {
+        processedImageUrl = await preprocessImageForOcr(dataUrl);
+      } catch {
+        // fallback to original dataUrl if canvas preprocessing fails
+      }
+
+      setOfflineScanProgress('Initialisation du moteur OCR Local (Français + Chiffres)...');
+      const Tesseract = await import('tesseract.js');
+      const result = await Tesseract.recognize(processedImageUrl, 'fra+eng', {
+        logger: (m: any) => {
+          if (m?.status === 'recognizing text' && typeof m.progress === 'number') {
+            setOfflineScanProgress(`Lecture OCR Locale de la facture : ${Math.round(m.progress * 100)}%`);
+          }
+        }
+      });
+
+      const extractedText = result?.data?.text || '';
+      setRawOcrText(extractedText);
+
+      if (!extractedText.trim()) {
+        throw new Error("Aucun texte lisible n'a pu être détecté sur cette photo.");
+      }
+
+      setOfflineScanProgress(`Correspondance avec vos ${products.length} produits du catalogue...`);
+      const parsedInvoice = parseRawInvoiceText(extractedText, suppliers, products);
+
+      if (!parsedInvoice.items || parsedInvoice.items.length === 0) {
+        setIsOcrInspectorOpen(true);
+        throw new Error(
+          "Le texte a été lu mais aucune ligne article structurée (Désignation + Quantité + Prix) n'a été isolée. Pour les factures manuscrites ou complexes, ajoutez une clé gratuite Groq (gsk_...) ci-dessous."
+        );
+      }
+
+      applyExtractedInvoice(parsedInvoice);
+      toast.success(
+        `Photo analysée en mode OCR Local : ${parsedInvoice.items.length} ligne(s) extraite(s) !`,
+        { icon: '📸' }
+      );
+    } finally {
+      setIsOfflineScanning(false);
+    }
+  };
+
+  // ═══ Import CSV / Excel / PDF / Photo OCR Local ═══
   const processFileOffline = async (selectedFile: File) => {
     setIsOfflineScanning(true);
-    setOfflineScanProgress("Lecture du fichier...");
+    setOfflineScanProgress('Lecture du fichier...');
     setError(null);
     setFile(selectedFile);
-    
+
     try {
       const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-      
+      const isImage =
+        selectedFile.type.startsWith('image/') ||
+        ['jpg', 'jpeg', 'png', 'webp', 'bmp'].includes(ext);
+
+      if (isImage) {
+        await runLocalImageOcr(selectedFile);
+        return;
+      }
+
       if (['csv', 'txt', 'tsv', 'xlsx', 'xls'].includes(ext)) {
         setOfflineScanProgress(`Import du fichier ${ext.toUpperCase()}...`);
         const results = await parseImportedFile(selectedFile, suppliers, products);
-        
+
         setRawOcrText(results.columnMapping || '');
         applyExtractedInvoice(results);
         setIsOfflineScanning(false);
@@ -166,61 +241,77 @@ export function useSmartPurchaseScanner({
         const source = results.importSource === 'excel' ? 'Excel' : 'CSV';
         toast.success(`Fichier ${source} importé : ${(results.items || []).length} articles extraits !`, { icon: '📂' });
       } else if (ext === 'pdf') {
-        setOfflineScanProgress("Extraction du texte PDF...");
+        setOfflineScanProgress('Extraction du texte PDF...');
         const results = await parseImportedFile(selectedFile, suppliers, products);
-        
+
         setRawOcrText(results.columnMapping || '');
         applyExtractedInvoice(results);
         setIsOfflineScanning(false);
-        
+
         toast.success(`PDF importé : ${(results.items || []).length} articles extraits !`, { icon: '📄' });
       } else {
-        throw new Error("Format non supporté. Utilisez CSV, Excel (.xlsx) ou PDF.");
+        throw new Error('Format non supporté. Utilisez une Photo (JPG, PNG, WebP), Excel (.xlsx), CSV ou PDF.');
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Échec de l'import du fichier");
+      setError(err.message || "Échec de l'analyse du fichier");
       setIsOfflineScanning(false);
     }
   };
 
-  // ═══ AI Scan (Gemini - requires internet) ═══
+  // ═══ Scan Hybride Photo : IA Vision (Groq / OpenRouter / Gemini) + Bascule Automatique OCR Local ═══
   const processFile = async (selectedFile: File) => {
     setFile(selectedFile);
-    setIsScanning(true);
     setError(null);
     setShowMockOption(false);
-    
+
+    const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+    if (['csv', 'txt', 'tsv', 'xlsx', 'xls', 'pdf'].includes(ext) && !selectedFile.type.startsWith('image/')) {
+      await processFileOffline(selectedFile);
+      return;
+    }
+
+    setIsScanning(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          const results = await scanInvoice(base64, selectedFile.type);
-          
-          if (results) {
-            applyExtractedInvoice(results);
-            toast.success("Facture analysée avec succès via l'IA !");
-          }
-        } catch (err: any) {
-          const errMsg = err.message || "Erreur lors de l'analyse";
-          setError(errMsg);
-          if (errMsg.includes("Quota") || errMsg.includes("crédit") || errMsg.includes("exhausted") || errMsg.includes("429")) {
-            setShowMockOption(true);
-          }
-        } finally {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Impossible de lire le fichier image'));
+        reader.readAsDataURL(selectedFile);
+      });
+
+      const base64 = dataUrl.split(',')[1];
+      const storedKey = getStoredAiVisionKey();
+
+      try {
+        const results = await scanInvoice(base64, selectedFile.type || 'image/jpeg', storedKey);
+        if (results && Array.isArray(results.items) && results.items.length > 0) {
+          applyExtractedInvoice(results);
+          const providerLabel = storedKey.startsWith('gsk_')
+            ? 'Groq Vision IA'
+            : storedKey.startsWith('sk-or-')
+              ? 'OpenRouter Vision IA'
+              : 'Gemini Vision IA';
+          toast.success(`Facture analysée avec succès via ${providerLabel} !`, { icon: '✨' });
           setIsScanning(false);
+          return;
         }
-      };
-      reader.readAsDataURL(selectedFile);
+      } catch (aiErr: any) {
+        console.warn('IA Vision indisponible ou quota atteint, bascule automatique sur OCR Local:', aiErr?.message);
+        toast.info('Clé IA absente ou quota atteint : bascule automatique sur le moteur OCR Local (Hors-Ligne)...');
+      }
+
+      setIsScanning(false);
+      await runLocalImageOcr(selectedFile);
     } catch (err: any) {
-      setError("Impossible de lire le fichier");
+      setError(err.message || "Erreur lors de l'analyse de la photo");
+      setShowMockOption(true);
       setIsScanning(false);
     }
   };
 
   const simulateInvoiceScanning = () => {
-    toast.error("Veuillez sélectionner un vrai fichier.", { icon: '🚫', duration: 4000 });
+    toast.error('Veuillez sélectionner une vraie photo ou un fichier de facture.', { icon: '🚫', duration: 4000 });
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -235,20 +326,30 @@ export function useSmartPurchaseScanner({
   };
 
   return {
-    file, setFile,
-    isScanning, setIsScanning,
-    extractedData, setExtractedData,
-    error, setError,
-    showMockOption, setShowMockOption,
-    isOfflineScanning, setIsOfflineScanning,
-    offlineScanProgress, setOfflineScanProgress,
-    rawOcrText, setRawOcrText,
-    isOcrInspectorOpen, setIsOcrInspectorOpen,
-    detectedOcrType, setDetectedOcrType,
+    file,
+    setFile,
+    isScanning,
+    setIsScanning,
+    extractedData,
+    setExtractedData,
+    error,
+    setError,
+    showMockOption,
+    setShowMockOption,
+    isOfflineScanning,
+    setIsOfflineScanning,
+    offlineScanProgress,
+    setOfflineScanProgress,
+    rawOcrText,
+    setRawOcrText,
+    isOcrInspectorOpen,
+    setIsOcrInspectorOpen,
+    detectedOcrType,
+    setDetectedOcrType,
     fileInputRef,
     handleFileChange,
     processFile,
     processFileOffline,
-    simulateInvoiceScanning,
+    simulateInvoiceScanning
   };
 }

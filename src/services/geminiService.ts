@@ -1,87 +1,292 @@
-
 import { getApiUrl } from '../lib/api';
+
+const AI_VISION_KEY_STORAGE = 'nexus_ai_vision_key';
+
+export const getStoredAiVisionKey = (): string => {
+  try {
+    return (
+      localStorage.getItem(AI_VISION_KEY_STORAGE) ||
+      localStorage.getItem('gemini_api_key') ||
+      (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any).env?.VITE_GROQ_API_KEY ||
+      ''
+    ).trim();
+  } catch {
+    return '';
+  }
+};
+
+export const setStoredAiVisionKey = (key: string): void => {
+  try {
+    if (!key.trim()) {
+      localStorage.removeItem(AI_VISION_KEY_STORAGE);
+    } else {
+      localStorage.setItem(AI_VISION_KEY_STORAGE, key.trim());
+    }
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const INVOICE_EXTRACTION_PROMPT = `Tu es un extracteur de factures et de bons de réception ultra-précis pour une caisse enregistreuse en Algérie (Devise: DA). Analyse l'image fournie.
+
+RÈGLE ABSOLUE ZÉRO HALLUCINATION :
+Extrais UNIQUEMENT et STRICTEMENT les lignes de produits visibles physiquement dans le tableau de l'image. N'invente aucun produit.
+
+Retourne STRICTEMENT un objet JSON valide (sans texte autour) contenant :
+{
+  "supplierName": "nom du fournisseur ou null",
+  "invoiceNumber": "numéro du bon/facture ou null",
+  "date": "YYYY-MM-DD ou null",
+  "previousBalance": nombre ou null,
+  "total": montant total général (nombre) ou null,
+  "items": [
+    {
+      "name": "désignation exacte lue sur la facture",
+      "barcode": "code-barres numérique 8-14 chiffres si présent ou null",
+      "quantity": nombre (quantité achetée strictement positive),
+      "price": nombre (prix unitaire HT/TTC en DA),
+      "total": nombre (quantité * prix unitaire)
+    }
+  ]
+}`;
+
+function extractJsonObject(rawText: string): any {
+  const cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
+  return JSON.parse(jsonStr);
+}
+
+/**
+ * Appel direct Groq Cloud Vision (meta-llama/llama-4-scout-17b-16e-instruct)
+ * 100% gratuit sur console.groq.com sans carte bancaire en Algérie (clé gsk_...)
+ */
+async function scanInvoiceWithGroq(imageBase64: string, mimeType: string, apiKey: string) {
+  const models = [
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'meta-llama/llama-4-maverick-17b-128e-instruct',
+    'llama-3.2-90b-vision-preview'
+  ];
+
+  let lastErr: any = null;
+  for (const model of models) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.1,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: INVOICE_EXTRACTION_PROMPT },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` }
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || `Groq HTTP ${res.status}`);
+      }
+      const content = data?.choices?.[0]?.message?.content || '';
+      return extractJsonObject(content);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Échec de lecture Groq Vision');
+}
+
+/**
+ * Appel direct OpenRouter Vision (clé sk-or-...)
+ */
+async function scanInvoiceWithOpenRouter(imageBase64: string, mimeType: string, apiKey: string) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout:free',
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: INVOICE_EXTRACTION_PROMPT },
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` }
+            }
+          ]
+        }
+      ]
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `OpenRouter HTTP ${res.status}`);
+  }
+  const content = data?.choices?.[0]?.message?.content || '';
+  return extractJsonObject(content);
+}
+
+/**
+ * Appel direct Google Gemini API REST (clé AIza...) sans dépendre du serveur Express local
+ */
+async function scanInvoiceWithDirectGemini(imageBase64: string, mimeType: string, apiKey: string) {
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  let lastErr: any = null;
+
+  for (const model of models) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: INVOICE_EXTRACTION_PROMPT },
+                  { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json'
+            }
+          })
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || `Gemini HTTP ${res.status}`);
+      }
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return extractJsonObject(text);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('Échec de lecture Gemini Vision');
+}
 
 export const callGeminiAI = async (data: any, userPrompt: string, systemPromptOverride?: string) => {
   try {
+    const apiKey = getStoredAiVisionKey();
     const response = await fetch(getApiUrl('/api/ai/complete'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(apiKey ? { 'x-gemini-key': apiKey } : {})
       },
-      body: JSON.stringify({ data, userPrompt, systemPromptOverride }),
+      body: JSON.stringify({ data, userPrompt, systemPromptOverride })
     });
 
     const text = await response.text();
     let result: any;
     try {
       result = JSON.parse(text);
-    } catch (e) {
+    } catch {
       if (text.includes('<!doctype') || text.includes('<html')) {
         throw new Error("Le serveur local n'est pas joignable pour l'Assistant IA. Vérifiez que l'application est bien démarrée.");
       }
-      throw new Error("Réponse serveur invalide : " + text.slice(0, 100));
+      throw new Error('Réponse serveur invalide : ' + text.slice(0, 100));
     }
 
     if (!response.ok) {
       const errMsg = result.message || result.error || 'Failed to call AI API';
-      if (response.status === 429 || errMsg.includes("Quota") || errMsg.includes("credits") || errMsg.includes("exhausted") || errMsg.includes("dépassé")) {
-        throw new Error("Quota atteint : Vos crédits de prépaiement ou limites d'utilisation de Google AI Studio sont épuisés. Veuillez recharger vos crédits ou mode de facturation dans la console Google AI Studio pour rétablir les fonctionnalités automatiques.");
+      if (response.status === 429 || errMsg.includes('Quota') || errMsg.includes('credits') || errMsg.includes('exhausted') || errMsg.includes('dépassé')) {
+        throw new Error("Quota atteint : Vos crédits Google AI Studio sont épuisés ou restreints dans votre région. Astuce : Utilisez une clé gratuite Groq (gsk_...) dans l'écran de scan.");
       }
       throw new Error(errMsg);
     }
 
     return result.response;
   } catch (error) {
-    console.error("AI Assistant Error:", error);
+    console.error('AI Assistant Error:', error);
     throw error;
   }
 };
 
-export const scanInvoice = async (imageBase64: string, mimeType: string = 'image/jpeg') => {
-  try {
-    const response = await fetch(getApiUrl('/api/ai/scan'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ image: imageBase64, mimeType }),
-    });
+export const scanInvoice = async (imageBase64: string, mimeType: string = 'image/jpeg', customKey?: string) => {
+  const activeKey = (customKey || getStoredAiVisionKey()).trim();
 
-    const text = await response.text();
-    let result: any;
+  // 1. Si une clé Groq (gsk_...) est fournie -> Appel direct Groq Vision (100% gratuit sans CB)
+  if (activeKey.startsWith('gsk_')) {
+    return await scanInvoiceWithGroq(imageBase64, mimeType, activeKey);
+  }
+
+  // 2. Si une clé OpenRouter (sk-or-...) est fournie -> Appel direct OpenRouter Vision
+  if (activeKey.startsWith('sk-or-')) {
+    return await scanInvoiceWithOpenRouter(imageBase64, mimeType, activeKey);
+  }
+
+  // 3. Si une clé Google Gemini (AIza...) est fournie -> Appel direct Gemini REST API
+  if (activeKey.startsWith('AIza')) {
     try {
-      result = JSON.parse(text);
-    } catch (e) {
-      if (text.includes('<!doctype') || text.includes('<html')) {
-        throw new Error("Le serveur local n'a pas pu traiter l'analyse IA. Assurez-vous que l'application est bien démarrée.");
-      }
-      throw new Error("Réponse serveur inattendue : " + text.slice(0, 100));
+      return await scanInvoiceWithDirectGemini(imageBase64, mimeType, activeKey);
+    } catch (directErr) {
+      console.warn('Direct Gemini failed, trying local server fallback:', directErr);
     }
-
-    if (!response.ok) {
-      const errMsg = result.message || result.error || 'Failed to scan invoice';
-      if (response.status === 429 || errMsg.includes("Quota") || errMsg.includes("credits") || errMsg.includes("exhausted") || errMsg.includes("dépassé")) {
-        throw new Error("Impossible de scanner la facture : Vos crédits de prépaiement Google AI Studio sont épuisés. Veuillez approvisionner votre compte de facturation Google Cloud.");
-      }
-      throw new Error(errMsg);
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Invoice Scan Error:", error);
-    throw error;
   }
+
+  // 4. Fallback vers le serveur Express local (/api/ai/scan) avec transmission de x-gemini-key
+  const response = await fetch(getApiUrl('/api/ai/scan'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(activeKey ? { 'x-gemini-key': activeKey } : {})
+    },
+    body: JSON.stringify({ image: imageBase64, mimeType })
+  });
+
+  const text = await response.text();
+  let result: any;
+  try {
+    result = JSON.parse(text);
+  } catch {
+    throw new Error("Aucune clé IA Vision active ou serveur local non joignable.");
+  }
+
+  if (!response.ok) {
+    const errMsg = result.message || result.error || 'Failed to scan invoice';
+    throw new Error(errMsg);
+  }
+
+  return result;
 };
 
-export const analyzeStoreData = async (data: {
-  transactions: any[];
-  products: any[];
-  expenses: any[];
-  settings: any;
-  stockAdjustments?: any[];
-}, userPrompt?: string) => {
+export const analyzeStoreData = async (
+  data: {
+    transactions: any[];
+    products: any[];
+    expenses: any[];
+    settings: any;
+    stockAdjustments?: any[];
+  },
+  userPrompt?: string
+) => {
   try {
-    // Synthèse compacte et optimisée pour ne pas envoyer 11 000 produits bruts en réseau
     const totalProducts = Array.isArray(data.products) ? data.products.length : 0;
     const criticalProducts = (Array.isArray(data.products) ? data.products : [])
       .filter((p: any) => Number(p?.stock || 0) <= Number(p?.minStock || 5))
@@ -110,11 +315,8 @@ export const analyzeStoreData = async (data: {
 
     return await callGeminiAI(compactData, userPrompt || "Donne-moi un résumé de la santé de mon commerce aujourd'hui et 3 conseils actionnables.");
   } catch (error: any) {
-    console.error("AI Analysis Error:", error);
+    console.error('AI Analysis Error:', error);
     const msg = error.message || String(error);
-    if (msg.includes("Quota") || msg.includes("crédits") || msg.includes("exhausted") || msg.includes("429") || msg.includes("dépassé")) {
-      return `⚠️ **Quota d'utilisation atteint / Crédits épuisés**\n\nPour continuer à utiliser l'Assistant IA, veuillez **recharger vos crédits de prépaiement sur votre console de facturation Google AI Studio**.\n\nEn attendant, votre espace administrateur POS reste disponible et fonctionnel à 100% pour la gestion manuelle locale de votre inventaire, de vos factures et de votre point de vente !`;
-    }
     return `Erreur: ${msg || "L'Assistant IA n'est pas disponible pour le moment."}`;
   }
 };
