@@ -1,0 +1,61 @@
+name: Build iOS (.ipa) & Web Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ios-ipa:
+    name: Build iPhone App (.ipa via macOS Xcode)
+    runs-on: macos-14
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Production Web Bundle
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Add & Sync Capacitor iOS Platform
+        run: |
+          npm install @capacitor/ios@latest --no-save --legacy-peer-deps
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+          npx cap sync ios
+
+      - name: Build Unsigned iOS Archive & Package .ipa (For Sideloadly / AltStore / TrollStore)
+        run: |
+          cd ios/App
+          xcodebuild -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r ../../NexusPOSPro-1.2.14-iOS.ipa Payload
+
+      - name: Upload NexusPOSPro-1.2.14-iOS.ipa Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexusPOSPro-1.2.14-iOS-IPA
+          path: NexusPOSPro-1.2.14-iOS.ipa
+          retention-days: 30

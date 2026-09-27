@@ -1,12 +1,8 @@
-import React, { Suspense } from 'react';
-// motion removed for high-speed tab rendering
+import React from 'react';
 import { cn } from '../lib/utils';
 import { Sidebar } from './Sidebar';
 import { BottomBar } from './BottomBar';
 import { AppHeader } from './AppHeader';
-import { CheckoutSkeleton, DashboardSkeleton, InventorySkeleton } from './Skeletons';
-import { Skeleton } from './ui/Skeleton';
-import { Card } from './ui';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { usePeopleStore } from '../store/usePeopleStore';
@@ -43,7 +39,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
   const { expiringProducts, lowStockProducts } = useProductStats();
 
   return (
-    <div className="flex h-screen text-slate-100 overflow-hidden font-sans bg-zinc-950">
+    <div className="flex h-[100dvh] text-slate-900 dark:text-slate-100 overflow-hidden font-sans bg-slate-50 dark:bg-zinc-950">
       <Sidebar 
         user={user}
         profile={profile}
@@ -65,7 +61,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         setIsPriceCheckerModalOpen={props.setIsPriceCheckerModalOpen}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 relative bg-transparent">
+      <main className="flex-1 flex flex-col min-w-0 relative bg-transparent overflow-hidden">
         <AppHeader 
           isMobile={isMobile}
           setIsMobileOverlayOpen={setIsMobileOverlayOpen}
@@ -91,20 +87,26 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
           user={user}
           t={props.t}
           toast={props.toast}
+          deferredPrompt={props.deferredPrompt}
+          handleInstallApp={props.handleInstallApp}
         />
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           <div className={cn(
-            "h-full overflow-y-auto custom-scrollbar animate-in fade-in duration-150",
-            activeTab !== 'checkout' && (isMobile ? "p-4" : "p-5")
+            "h-full overflow-y-auto overflow-x-hidden custom-scrollbar animate-in fade-in duration-150",
+            activeTab !== 'checkout' && (isMobile ? "p-2.5 sm:p-4" : "p-5")
           )}>
-            
-              {children}
-            
+            {children}
           </div>
         </div>
 
-        {isMobile && <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} />}
+        {isMobile && (
+          <BottomBar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            onOpenMenu={() => setIsMobileOverlayOpen(true)}
+          />
+        )}
       </main>
     </div>
   );

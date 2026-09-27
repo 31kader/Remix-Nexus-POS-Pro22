@@ -11,16 +11,28 @@ const __dirname = path.dirname(__filename);
 
 const pwaConfig: Partial<VitePWAOptions> = {
   registerType: 'autoUpdate',
-  includeAssets: ['favicon.svg', 'icon.svg', 'robots.txt', 'apple-touch-icon.png'],
+  includeAssets: ['favicon.svg', 'icon.svg', 'robots.txt', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
   manifest: {
     name: 'Nexus POS Pro - Système de Caisse Intelligent',
     short_name: 'NexusPOS',
     description: 'Logiciel de point de vente et de gestion de stock professionnel hors-ligne',
     theme_color: '#4f46e5',
-    background_color: '#f8fafc',
+    background_color: '#09090b',
     display: 'standalone',
-    orientation: 'landscape',
+    orientation: 'any',
     icons: [
+      {
+        src: 'pwa-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any maskable'
+      },
+      {
+        src: 'pwa-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable'
+      },
       {
         src: 'icon.svg',
         sizes: '192x192 512x512',

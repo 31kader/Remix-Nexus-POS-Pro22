@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { ShoppingCart, Package, ShoppingBag, FileText, Settings as SettingsIcon } from 'lucide-react';
+import { ShoppingCart, Package, ShoppingBag, FileText, Tag, Menu } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface BottomNavItemProps {
@@ -13,33 +12,32 @@ interface BottomNavItemProps {
 function BottomNavItem({ icon, label, active, onClick }: BottomNavItemProps) {
   return (
     <button 
+      type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center gap-1 min-w-[64px] transition-all relative active:scale-90",
-        active ? "text-indigo-400" : "text-white"
+        "flex flex-col items-center justify-center gap-0.5 flex-1 py-1.5 transition-all relative active:scale-95 cursor-pointer",
+        active
+          ? "text-indigo-600 dark:text-indigo-400"
+          : "text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white"
       )}
     >
       <div className={cn(
-        "p-2.5 rounded-xl transition-all duration-300",
-        active ? "bg-indigo-500/10 shadow-[inset_0_0_10px_rgba(99,102,241,0.1)]" : "bg-transparent"
+        "px-3 py-1 rounded-xl transition-all",
+        active ? "bg-indigo-50 dark:bg-indigo-500/15" : "bg-transparent"
       )}>
         {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement<any>, { 
           strokeWidth: active ? 2.5 : 2,
-          size: 24 
+          size: 20 
         })}
       </div>
       <span className={cn(
-        "text-[9px] font-black uppercase tracking-widest transition-all",
-        active ? "opacity-100 scale-100" : "opacity-40 scale-95"
+        "text-[9px] font-extrabold uppercase tracking-tight leading-none",
+        active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-zinc-400"
       )}>
         {label}
       </span>
       {active && (
-        <motion.div 
-          layoutId="bottomNavDot"
-          className="absolute -top-1 w-1 h-1 bg-indigo-400 rounded-full shadow-[0_0_8px_rgba(99,102,241,1)]"
-          transition={{ type: "spring", bounce: 0.5, duration: 0.6 }}
-        />
+        <span className="absolute top-0.5 w-5 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
       )}
     </button>
   );
@@ -48,41 +46,50 @@ function BottomNavItem({ icon, label, active, onClick }: BottomNavItemProps) {
 interface BottomBarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  onOpenMenu?: () => void;
 }
 
-export const BottomBar = ({ activeTab, setActiveTab }: BottomBarProps) => {
+export const BottomBar = ({ activeTab, setActiveTab, onOpenMenu }: BottomBarProps) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-20 bg-workspace/90  border-t border-white/5 flex items-center justify-around px-4 z-40 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+    <nav className="shrink-0 w-full bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-around px-1 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
       <BottomNavItem 
-        icon={<ShoppingCart size={24} />} 
+        icon={<ShoppingCart size={20} />} 
         label="Caisse" 
         active={activeTab === 'checkout'} 
         onClick={() => setActiveTab('checkout')} 
       />
       <BottomNavItem 
-        icon={<Package size={24} />} 
+        icon={<Package size={20} />} 
         label="Stock" 
         active={activeTab === 'inventory'} 
         onClick={() => setActiveTab('inventory')} 
       />
       <BottomNavItem 
-        icon={<ShoppingBag size={24} />} 
+        icon={<ShoppingBag size={20} />} 
         label="Ventes" 
         active={activeTab === 'transactions'} 
         onClick={() => setActiveTab('transactions')} 
       />
-       <BottomNavItem 
-        icon={<FileText size={24} />} 
+      <BottomNavItem 
+        icon={<Tag size={20} />} 
+        label="Étiquettes" 
+        active={activeTab === 'label_printer'} 
+        onClick={() => setActiveTab('label_printer')} 
+      />
+      <BottomNavItem 
+        icon={<FileText size={20} />} 
         label="Rapports" 
         active={activeTab === 'reports'} 
         onClick={() => setActiveTab('reports')} 
       />
-      <BottomNavItem 
-        icon={<SettingsIcon size={24} />} 
-        label="Configs" 
-        active={activeTab === 'settings'} 
-        onClick={() => setActiveTab('settings')} 
-      />
+      {onOpenMenu && (
+        <BottomNavItem 
+          icon={<Menu size={20} />} 
+          label="Menu" 
+          active={false} 
+          onClick={onOpenMenu} 
+        />
+      )}
     </nav>
   );
 };

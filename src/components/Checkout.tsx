@@ -511,38 +511,44 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
         )}
       </div>
 
-      {/* Mobile Navigation Bar */}
+      {/* Mobile Action Bar (Panier / Catalogue + Encaisser) */}
       {isMobile && (
-        <div className="bg-zinc-950 border-t border-zinc-800 p-4 flex items-center justify-between gap-4 z-[90]">
-          <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+        <div className="shrink-0 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-2.5 py-2 flex items-center justify-between gap-2.5 z-[50]">
+          <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
             <button
+              type="button"
               onClick={() => setMobileTab('cart')}
               className={cn(
-                "p-3 rounded-xl transition-all",
-                mobileTab === 'cart' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-500"
+                "px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer",
+                mobileTab === 'cart' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 dark:text-zinc-400"
               )}
             >
-              <ShoppingCart size={20} />
+              <ShoppingCart size={16} />
+              <span>Panier ({cart.length})</span>
             </button>
             <button
+              type="button"
               onClick={() => setMobileTab('catalog')}
               className={cn(
-                "p-3 rounded-xl transition-all",
-                mobileTab === 'catalog' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-500"
+                "px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer",
+                mobileTab === 'catalog' ? "bg-indigo-600 text-white shadow-xs" : "text-slate-600 dark:text-zinc-400"
               )}
             >
-              <LayoutGrid size={20} />
+              <LayoutGrid size={16} />
+              <span>Grille</span>
             </button>
           </div>
 
           <div className="flex-1">
-             <button
-               disabled={cart.length === 0}
-               onClick={() => setIsPaymentSheetOpen(true)}
-               className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-900 disabled:text-slate-700 text-white py-4 rounded-xl font-black text-xs uppercase tracking-normal shadow-xs active:scale-95 transition-all flex items-center justify-center gap-3 "
-             >
-               {formatPrice(displayTotal, 2)} {settings.currency} <ArrowRight size={18} />
-             </button>
+            <button
+              type="button"
+              disabled={cart.length === 0}
+              onClick={() => setIsPaymentSheetOpen(true)}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 dark:disabled:bg-zinc-800 disabled:text-slate-400 dark:disabled:text-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-normal shadow-xs active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>Payer {formatPrice(displayTotal, 2)} {settings.currency}</span>
+              <ArrowRight size={16} />
+            </button>
           </div>
         </div>
       )}

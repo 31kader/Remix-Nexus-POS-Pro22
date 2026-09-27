@@ -82,27 +82,25 @@ export const CheckoutHeader: React.FC<Props> = ({
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-5 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-sm">
-      <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 md:gap-4">
-        {/* Giant High-Visibility Centered Total Banner */}
-        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border-2 border-emerald-400 dark:border-emerald-500/50 rounded-xl px-5 py-2 shadow-lg shadow-emerald-500/10 min-w-[200px]">
-          <div className="text-center">
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-100 dark:text-emerald-300 block">TOTAL À PAYER</span>
-            <span className="text-2xl lg:text-3xl font-black font-mono text-white dark:text-emerald-400 drop-shadow-sm">
-              {total.toFixed(2)} <span className="text-xs font-bold text-emerald-100 dark:text-emerald-300/80">{settings?.currency || 'DA'}</span>
-            </span>
-          </div>
+    <div className="p-2 sm:p-4 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-xs">
+      <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-3">
+        {/* Giant High-Visibility Centered Total Banner (Compact on Smartphone) */}
+        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-between sm:justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border border-emerald-400 dark:border-emerald-500/50 rounded-xl px-3.5 py-1.5 sm:px-5 sm:py-2 shadow-sm sm:min-w-[190px]">
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-100 dark:text-emerald-300 sm:block">TOTAL À PAYER</span>
+          <span className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-white dark:text-emerald-400">
+            {total.toFixed(2)} <span className="text-xs font-bold text-emerald-100 dark:text-emerald-300/80">{settings?.currency || 'DA'}</span>
+          </span>
         </div>
 
-        {/* Dedicated Direct Barcode / Shortcut Input (F10) */}
-        <div className="relative group w-full sm:w-56 lg:w-64 flex-shrink-0">
+        {/* Dedicated Direct Barcode / Shortcut Input (F10) - Hidden on small smartphone screens since main search handles barcodes */}
+        <div className="hidden sm:block relative group sm:w-52 lg:w-60 flex-shrink-0">
           <Barcode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" size={18} />
           <input 
             ref={barcodeRef}
             id="direct-barcode-input"
             type="text"
             placeholder="⚡ Code Raccourci (F10)"
-            className="w-full pl-10 pr-3 py-2.5 bg-emerald-50/60 dark:bg-slate-950/80 border border-emerald-300 dark:border-emerald-500/40 rounded-xl outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 text-xs font-mono font-bold text-emerald-900 dark:text-emerald-300 placeholder:text-emerald-700/60 dark:placeholder:text-slate-500 transition-all shadow-inner"
+            className="w-full pl-10 pr-3 py-2 bg-emerald-50/60 dark:bg-slate-950/80 border border-emerald-300 dark:border-emerald-500/40 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-xs font-mono font-bold text-emerald-900 dark:text-emerald-300 placeholder:text-emerald-700/60 dark:placeholder:text-slate-500 transition-all"
             value={directBarcode}
             onChange={(e) => setDirectBarcode(e.target.value)}
             onKeyDown={handleDirectBarcodeKeyDown}
@@ -110,7 +108,7 @@ export const CheckoutHeader: React.FC<Props> = ({
         </div>
 
         {/* Search Box with instant clear button */}
-        <div className="relative flex-1 min-w-0 group w-full">
+        <div className="relative flex-1 min-w-[180px] group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" size={18} />
           <input 
             ref={searchRef}

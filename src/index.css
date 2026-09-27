@@ -689,3 +689,55 @@ html.light table tbody td {
     border-radius: inherit !important;
   }
 }
+
+/* ==========================================================================
+   SMARTPHONE & iOS / ANDROID APK RESPONSIVE ENGINE (< 640px)
+   Ajuste automatiquement toutes les pages, tableaux, modales et aperçus A4
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* 1. Empêcher le zoom automatique de Safari sur iPhone lors du clic sur un champ */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* 2. Réduction automatique des paddings géants sur smartphone pour gagner 30% de largeur */
+  [class*="p-8"],
+  [class*="p-7"],
+  [class*="p-6"] {
+    padding: 0.75rem !important;
+  }
+
+  [class*="px-8"],
+  [class*="px-6"] {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  /* 3. Titres principaux adaptés à la largeur d'un écran de smartphone */
+  h1, [class*="text-3xl"], [class*="text-4xl"] {
+    font-size: 1.2rem !important;
+    line-height: 1.5rem !important;
+  }
+
+  /* 4. Tableaux : défilement horizontal fluide au doigt sans casser la page */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table thead th,
+  table tbody td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap;
+  }
+
+  /* 5. Mise à l'échelle automatique des feuilles A4 (210mm) sur écran de smartphone */
+  [class*="w-[210mm]"] {
+    zoom: 0.43;
+  }
+}
+
