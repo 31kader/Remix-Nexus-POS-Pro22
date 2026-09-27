@@ -63,7 +63,7 @@ export const DetailedReports = memo(function DetailedReports({
   setIsProductModalOpen
 }: DetailedReportsProps) {
   const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'baskets' | 'fidelity_stats' | 'cashflow' | 'stock_value' | 'losses'>('charts');
-  const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('today');
+  const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('all');
 
   const exportAccountingCSV = () => {
     const headers = [
@@ -226,6 +226,7 @@ export const DetailedReports = memo(function DetailedReports({
         ) : reportsTab === 'fidelity_stats' ? (
           <FidelityStatsReport 
             transactions={transactions}
+            customers={customers}
             settings={settings}
             marketingFilterDate={marketingFilterDate}
             setMarketingFilterDate={setMarketingFilterDate}
@@ -243,6 +244,12 @@ export const DetailedReports = memo(function DetailedReports({
             products={products}
             categories={categories}
             settings={settings}
+            onEditProduct={(product) => {
+              if (setEditingProduct && setIsProductModalOpen) {
+                setEditingProduct(product);
+                setIsProductModalOpen(true);
+              }
+            }}
           />
         ) : (
           <LossesReport 
