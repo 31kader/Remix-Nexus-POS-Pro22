@@ -109,7 +109,17 @@ export function useCheckoutProcess({
         ? (total >= 0 ? Math.floor(total * loyaltyRatio) : -Math.floor(Math.abs(total) * loyaltyRatio))
         : 0;
         
-      const parsedReceived = receivedAmount !== '' ? parseFloat(receivedAmount) || 0 : total;
+      const parsedReceived = receivedAmount !== '' ? (parseFloat(receivedAmount) || 0) : (method === 'balance' ? 0 : total);
+      const unpaidShortfall = method === 'balance'
+        ? Math.max(0, total - (receivedAmount !== '' ? Math.max(0, parsedReceived) : 0))
+        : ((receivedAmount !== '' && parsedReceived < total && total > 0) ? Math.max(0, total - Math.max(0, parsedReceived)) : 0);
+
+      if (unpaidShortfall > 0 && !selectedCustomer) {
+        toast.error("Montant reçu insuffisant. Veuillez sélectionner un client pour enregistrer le reste en dette.");
+        setIsProcessing(false);
+        return;
+      }
+
       const parsedReturned = (receivedAmount !== '' && parsedReceived > total && !keepExcessInBalance) ? parsedReceived - total : 0;
 
       const currentUserId = user?.uid || 'local-cashier';
@@ -122,7 +132,7 @@ export function useCheckoutProcess({
         total,
         discountAmount: discountAmount || 0,
         pointsDiscount: pointsDiscount || 0,
-        balanceUsed: method === 'balance' ? total : 0,
+        balanceUsed: unpaidShortfall,
         voucherDiscount: voucherDiscount || 0,
         promotionId: promotionToApply?.id || null,
         paymentMethod: method,
@@ -388,14 +398,14 @@ export function useCheckoutProcess({
           const oldPointsEarned = Number(editingTransaction!.pointsEarned || 0);
           const oldPointsSpent = editingTransaction!.pointsDiscount ? Math.floor(editingTransaction!.pointsDiscount / pointVal) : 0;
           const oldBalanceUsed = Number(editingTransaction!.balanceUsed || (editingTransaction!.paymentMethod === 'balance' ? oldTotal : 0));
-          const newBalanceUsed = method === 'balance' ? total : 0;
+          const newBalanceUsed = unpaidShortfall;
 
           deltaSpent = total - oldTotal;
           deltaPoints = (pointsEarned - pointsSpent) - (oldPointsEarned - oldPointsSpent);
           deltaBalance = (oldBalanceUsed - newBalanceUsed);
           if (keepExcessInBalance && parsedReceived > total) deltaBalance += (parsedReceived - total);
         } else {
-          if (method === 'balance') deltaBalance -= total;
+          if (unpaidShortfall > 0) deltaBalance -= unpaidShortfall;
           if (keepExcessInBalance && parsedReceived > total) deltaBalance += (parsedReceived - total);
           deltaSpent = total;
           deltaPoints = pointsEarned - pointsSpent;
@@ -426,7 +436,7 @@ export function useCheckoutProcess({
       if (appliedVoucher) {
         if (appliedVoucher.type === 'fixed') {
           const balanceKey = appliedVoucher.currentBalance ?? appliedVoucher.value;
-          const rem = Math.max(0, balanceKey - (total + (discountAmount || 0) + (pointsDiscount || 0)));
+          const rem = Math.max(0, balanceKey - (voucherDiscount || 0));
           const payload = rem <= 0 ? { status: 'used', currentBalance: 0 } : { currentBalance: rem };
           localDb.update(`vouchers/${appliedVoucher.id}`, payload).catch(console.warn);
           localDb.update(`promotions/${appliedVoucher.id}`, payload).catch(console.warn);

@@ -74,7 +74,7 @@ export function useCheckoutCalculations({
 
       if (promotionToApply.type === 'percentage') {
         const applicableSubtotal = cart.reduce((sum: number, item: CartItem) => {
-          const p = parseFloat(item.price?.toString()) || 0;
+          const p = calculateItemPrice(item, isWholesale);
           const q = parseFloat(item.quantity?.toString()) || 0;
           return isApplicable(item) ? sum + ((isNaN(p) ? 0 : p) * Math.max(0, isNaN(q) ? 0 : q)) : sum;
         }, 0);
@@ -87,7 +87,7 @@ export function useCheckoutCalculations({
         cart.forEach((item: CartItem) => {
           if (isApplicable(item)) {
             const q = parseFloat(item.quantity?.toString()) || 0;
-            const p = parseFloat(item.price?.toString()) || 0;
+            const p = calculateItemPrice(item, isWholesale);
             const safeQ = isNaN(q) ? 0 : Math.max(0, q);
             const safeP = isNaN(p) ? 0 : Math.max(0, p);
             

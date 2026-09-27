@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Camera, Activity, ShieldCheck, ShieldAlert, History } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn, safeGetItems } from '../../lib/utils';
 import { Button } from '../ui';
 import { Transaction } from '../../types';
@@ -15,6 +16,16 @@ export function CameraMainFeed({
   activeAiZone,
   handleAudit
 }: CameraMainFeedProps) {
+  const [scrubPosition, setScrubPosition] = useState<number>(60);
+  const [isRewinding, setIsRewinding] = useState<boolean>(false);
+
+  const handleInstantReplay = () => {
+    setIsRewinding(true);
+    setScrubPosition((prev) => Math.max(10, prev - 25));
+    toast.info("Rembobinage instantané (-12 secondes) activé sur Cam-01");
+    setTimeout(() => setIsRewinding(false), 1800);
+  };
+
   return (
     <div className="flex-1 p-5 overflow-hidden flex flex-col gap-6">
       <div className="flex-1 relative rounded-xl overflow-hidden bg-black border border-white/5 shadow-md group">
@@ -43,7 +54,7 @@ export function CameraMainFeed({
                 </div>
                 <div>
                    <p className="text-xs font-black text-white tracking-widest uppercase">Cam-01 / Sortie 1</p>
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-normal animate-pulse">Scanning Live</p>
+                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-normal animate-pulse">{isRewinding ? 'Replay -12s...' : 'Scanning Live'}</p>
                 </div>
             </div>
 
@@ -61,10 +72,23 @@ export function CameraMainFeed({
          {/* Controls Overlay Bottom */}
          <div className="absolute bottom-10 left-10 right-10 flex items-center justify-between z-10">
             <div className="flex items-center gap-4 bg-black/40  p-2 rounded-xl border border-white/5">
-               <button className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-all"><History size={18} /></button>
-               <div className="w-64 h-1.5 bg-white/10 rounded-full relative group/scrub cursor-pointer">
-                  <div className="absolute top-0 left-0 h-full bg-indigo-500 rounded-full" style={{ width: '60%' }} />
-                  <div className="absolute top-1/2 left-[60%] -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" />
+               <button
+                  type="button"
+                  onClick={handleInstantReplay}
+                  title="Rembobiner de 12 secondes"
+                  className={cn(
+                    "p-3 rounded-xl text-white transition-all cursor-pointer",
+                    isRewinding ? "bg-indigo-600 animate-pulse" : "bg-white/10 hover:bg-white/20"
+                  )}
+               >
+                  <History size={18} />
+               </button>
+               <div
+                  onClick={() => setScrubPosition((prev) => (prev >= 90 ? 25 : prev + 15))}
+                  className="w-64 h-1.5 bg-white/10 rounded-full relative group/scrub cursor-pointer"
+               >
+                  <div className="absolute top-0 left-0 h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${scrubPosition}%` }} />
+                  <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" style={{ left: `${scrubPosition}%` }} />
                </div>
                <span className="text-[10px] font-mono text-white/40">-12s</span>
             </div>

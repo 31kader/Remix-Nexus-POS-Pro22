@@ -61,10 +61,10 @@ export function CustomerFinancialModal({
             <CreditCard size={24} />
           </div>
           <div>
-            <p className="text-sm font-black text-white uppercase tracking-tight">{selectedCustomer?.name}</p>
+            <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{selectedCustomer?.name}</p>
             <p className={cn(
               "text-xs font-black uppercase mt-0.5",
-              selectedCustomer && (selectedCustomer.balance || 0) < 0 ? "text-rose-400" : "text-emerald-400"
+              selectedCustomer && (selectedCustomer.balance || 0) < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
             )}>
               {selectedCustomer && (selectedCustomer.balance || 0) < 0 
                 ? `Dette Actuelle: ${Math.abs(selectedCustomer.balance || 0).toFixed(2)} ${settings.currency}`
@@ -76,7 +76,7 @@ export function CustomerFinancialModal({
 
         {/* Operation type picker */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-bold font-sans">Type d'opération</label>
+          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold font-sans">Type d'opération</label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
@@ -85,11 +85,11 @@ export function CustomerFinancialModal({
                 "p-4 rounded-xl border text-left flex flex-col gap-1 transition-all",
                 financialOpType === 'encaissement'
                   ? "bg-emerald-500/10 border-emerald-500/30 ring-2 ring-emerald-500/20"
-                  : "bg-slate-900/30 border-white/5 opacity-60 hover:opacity-100"
+                  : "bg-slate-100 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 opacity-70 hover:opacity-100"
               )}
             >
-              <span className="text-emerald-400 text-xs font-black uppercase tracking-wider">Encaissement (+)</span>
-              <span className="text-[9px] text-slate-400 font-bold leading-normal">Le client règle une partie ou totalité de sa dette, ou recharge son solde.</span>
+              <span className="text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider">Encaissement (+)</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold leading-normal">Le client règle une partie ou totalité de sa dette, ou recharge son solde.</span>
             </button>
             <button
               type="button"
@@ -98,30 +98,30 @@ export function CustomerFinancialModal({
                 "p-4 rounded-xl border text-left flex flex-col gap-1 transition-all",
                 financialOpType === 'decaissement'
                   ? "bg-rose-500/10 border-rose-500/30 ring-2 ring-rose-500/20"
-                  : "bg-slate-900/30 border-white/5 opacity-60 hover:opacity-100"
+                  : "bg-slate-100 dark:bg-slate-900/30 border-slate-200 dark:border-white/5 opacity-70 hover:opacity-100"
               )}
             >
-              <span className="text-rose-400 text-xs font-black uppercase tracking-wider">Décaissement (-)</span>
-              <span className="text-[9px] text-slate-400 font-bold leading-normal">Vous sortez de l'argent pour rembourser le client, ou enregistrez un crédit d'achat.</span>
+              <span className="text-rose-600 dark:text-rose-400 text-xs font-black uppercase tracking-wider">Décaissement (-)</span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400 font-bold leading-normal">Vous sortez de l'argent pour rembourser le client, ou enregistrez un crédit d'achat.</span>
             </button>
           </div>
         </div>
 
         {/* Amount and quick actions */}
         <div className="space-y-2 font-mono">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Montant ({settings.currency})</label>
+          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-sans">Montant ({settings.currency})</label>
           <div className="relative">
             <input 
               type="number"
               step="any"
               required
               autoFocus
-              className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-4 px-5 text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
+              className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl py-4 px-5 text-xl font-black text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono"
               placeholder="0.00"
               value={topUpAmount}
               onChange={e => setTopUpAmount(e.target.value)}
             />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-white/30 font-black">
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 font-black">
               {settings.currency}
             </div>
           </div>
@@ -133,7 +133,7 @@ export function CustomerFinancialModal({
               <button
                 type="button"
                 onClick={() => setTopUpAmount(Math.abs(selectedCustomer.balance || 0).toFixed(2))}
-                className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-400 font-mono text-[9px] font-black rounded-lg border border-rose-500/10 transition-all uppercase tracking-wider"
+                className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-rose-600 dark:text-rose-400 font-mono text-[9px] font-black rounded-lg border border-rose-500/20 transition-all uppercase tracking-wider"
               >
                 Régler toute la dette ({Math.abs(selectedCustomer.balance || 0).toFixed(2)})
               </button>
@@ -146,7 +146,7 @@ export function CustomerFinancialModal({
                   const currentVal = parseFloat(topUpAmount) || 0;
                   setTopUpAmount((currentVal + val).toString());
                 }}
-                className="px-2.5 py-1.5 bg-slate-800/40 hover:bg-slate-800/80 active:scale-95 text-[9px] text-slate-300 font-mono font-bold rounded-lg border border-white/5 transition-all"
+                className="px-2.5 py-1.5 bg-slate-200/70 dark:bg-slate-800/40 hover:bg-slate-300 dark:hover:bg-slate-800/80 active:scale-95 text-[9px] text-slate-700 dark:text-slate-300 font-mono font-bold rounded-lg border border-slate-300 dark:border-white/5 transition-all"
               >
                 +{val}
               </button>
@@ -154,7 +154,7 @@ export function CustomerFinancialModal({
             <button
               type="button"
               onClick={() => setTopUpAmount('')}
-              className="px-2.5 py-1.5 bg-rose-500/5 hover:bg-rose-500/15 active:scale-95 text-[9px] text-rose-400 font-mono font-bold rounded-lg border border-rose-500/10 transition-all"
+              className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 active:scale-95 text-[9px] text-rose-600 dark:text-rose-400 font-mono font-bold rounded-lg border border-rose-500/20 transition-all"
             >
               Vider
             </button>
@@ -163,7 +163,7 @@ export function CustomerFinancialModal({
 
         {/* Payment Method */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-bold font-sans">Mode de règlement</label>
+          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold font-sans">Mode de règlement</label>
           <div className="grid grid-cols-4 gap-2">
             {[
               { id: 'cash', label: 'Espèces' },
@@ -178,8 +178,8 @@ export function CustomerFinancialModal({
                 className={cn(
                   "py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-wider text-center transition-all",
                   financialMethod === m.id
-                    ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-400 font-black shadow-xs/10"
-                    : "bg-slate-900 text-slate-400 border-white/5 hover:text-white"
+                    ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 font-black shadow-xs/10"
+                    : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 {m.label}
@@ -190,11 +190,11 @@ export function CustomerFinancialModal({
 
         {/* Comment/Note */}
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-bold font-sans">Note / Motif (Facultatif)</label>
+          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block font-bold font-sans">Note / Motif (Facultatif)</label>
           <input 
             type="text"
             placeholder="Ex: Règlement ardoise, Remboursement espèces..."
-            className="w-full bg-slate-900/50 border border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+            className="w-full bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             value={financialNote}
             onChange={e => setFinancialNote(e.target.value)}
           />
@@ -209,9 +209,9 @@ export function CustomerFinancialModal({
             const newBalance = currentBalance + change;
 
             return (
-              <div className="bg-slate-900 border border-white/5 p-4 rounded-xl flex justify-between items-center mt-2">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Nouveau Solde</span>
-                <span className={cn("text-lg font-black font-mono tracking-tighter", newBalance >= 0 ? "text-emerald-400" : "text-rose-400")}>
+              <div className="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/5 p-4 rounded-xl flex justify-between items-center mt-2">
+                <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest font-sans">Nouveau Solde</span>
+                <span className={cn("text-lg font-black font-mono tracking-tighter", newBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                   {newBalance.toFixed(2)} {settings.currency}
                 </span>
               </div>

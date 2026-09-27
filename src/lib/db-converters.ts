@@ -175,7 +175,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'name', 'contact_name', 'phone', 'email', 'address', 'categories', 
     'feed_url', 'feed_format', 'last_sync', 'sync_enabled', 'is_app_user', 
     'has_full_inventory_access', 'balance', 'pre_sale_days', 
-    'delivery_days', 'payment_days', 'planning_notes', 'updated_at', 'password_hash'
+    'delivery_days', 'payment_days', 'planning_notes', 'reminders', 'updated_at', 'password_hash'
   ],
   users: [
     'id', 'uid', 'email', 'display_name', 'role', 'join_date', 'password', 'password_hash'

@@ -100,6 +100,8 @@ export function OrderDetailModal({
   handleYassirRequest,
   t
 }: OrderDetailModalProps) {
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+
   if (!selectedOrder) return null;
 
   const orderItems: any[] = Array.isArray(selectedOrder.items)
@@ -203,14 +205,17 @@ export function OrderDetailModal({
                     return locA.localeCompare(locB);
                   })
                   .map((item, idx) => {
-                    const itemKey = item.lineId || `pick-item-${idx}`;
+                    const itemKey = `${selectedOrder.id}-${item.lineId || `pick-item-${idx}`}`;
+                    const isItemChecked = !!checkedItems[itemKey];
                     const productRef = (products || []).find(p => p.id === (item.productId || (item as any).id));
                     return (
-                      <div key={itemKey} className="flex items-center gap-4 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group">
+                      <div key={itemKey} className={cn("flex items-center gap-4 p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-all group", isItemChecked && "opacity-60 bg-emerald-500/5 border-emerald-500/20")}>
                         <div className="flex items-center justify-center">
                           <input 
                             type="checkbox" 
                             id={`check-${itemKey}`} 
+                            checked={isItemChecked}
+                            onChange={(e) => setCheckedItems(prev => ({ ...prev, [itemKey]: e.target.checked }))}
                             className="w-5 h-5 rounded border-white/20 bg-white/5 text-indigo-500 focus:ring-indigo-500 cursor-pointer"
                           />
                         </div>
