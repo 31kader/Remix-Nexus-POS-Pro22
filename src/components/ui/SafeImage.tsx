@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getLocalImage, cacheImage, evictObjectUrl } from '../../services/imageCache';
+import { getLocalImage, cacheImage, evictObjectUrl, getCanonicalCacheUrl } from '../../services/imageCache';
 import { getOptimizedImageUrl } from '../../lib/image-optimizer';
 
 interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -13,23 +13,26 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export const isBadUrl = (url: any): boolean => {
   if (typeof url !== 'string') return false;
   const u = url.toLowerCase();
-  return u.includes('aistudio.google.com') ||
-         u.includes('/aistudio/') ||
-         (u.includes('/_/') && u.includes('/upload/') && u.includes('/file/')) ||
-         u.includes('eb137f4a-fb23-4b8c-aec9-844aecbc242a');
+  return (
+    u.includes('aistudio.google.com') ||
+    u.includes('/aistudio/') ||
+    (u.includes('/_/') && u.includes('/upload/') && u.includes('/file/')) ||
+    u.includes('eb137f4a-fb23-4b8c-aec9-844aecbc242a')
+  );
 };
 
-export const SafeImage: React.FC<SafeImageProps> = ({ 
-  src, 
-  alt, 
-  className, 
-  fallback, 
+export const SafeImage: React.FC<SafeImageProps> = ({
+  src,
+  alt,
+  className,
+  fallback,
   containerClassName,
   optimizeWidth = 300,
   ...props
 }) => {
   const [error, setError] = useState(false);
-  const isRemote = typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'));
+  const isRemote =
+    typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'));
   const [displaySrc, setDisplaySrc] = useState<string | undefined>(isRemote ? undefined : src);
 
   useEffect(() => {
@@ -42,28 +45,42 @@ export const SafeImage: React.FC<SafeImageProps> = ({
         return;
       }
 
-      // Prioritize optimized URL for mobile/smaller thumbnails
-      const finalSrc = getOptimizedImageUrl(src, optimizeWidth);
+      const canonicalSrc = getCanonicalCacheUrl(getOptimizedImageUrl(src, optimizeWidth));
 
-      getLocalImage(finalSrc).then(cachedUrl => {
-        if (!active) return;
-        if (cachedUrl) {
-          setDisplaySrc(cachedUrl);
-        } else {
-          // Si hors-ligne et pas en cache local, afficher directement le fallback sans polluer la console réseau
+      // 1. Vérifier d'abord le cache local IndexedDB / mémoire (0 octet d'Egress Supabase)
+      getLocalImage(canonicalSrc)
+        .then((cachedUrl) => {
+          if (!active) return;
+          if (cachedUrl) {
+            setDisplaySrc(cachedUrl);
+            return;
+          }
+
           if (typeof navigator !== 'undefined' && !navigator.onLine) {
             setError(true);
             return;
           }
 
-          setDisplaySrc(finalSrc);
-          // Mettre en cache en tâche de fond pour les prochains rendus et le mode hors-ligne,
-          // sans écraser displaySrc pour éviter d'avorter la requête HTTP en cours dans Chromium
-          cacheImage(finalSrc).catch(() => {});
-        }
-      }).catch(() => {
-        if (active) setError(true);
-      });
+          // 2. Si absent du cache local : télécharger UNE SEULE FOIS via cacheImage()
+          // (mutualisé via inFlightRequests) et afficher le blob: local obtenu.
+          // Ceci élimine le double téléchargement simultané (<img src> + fetch()).
+          cacheImage(canonicalSrc)
+            .then((blobUrl) => {
+              if (!active) return;
+              if (blobUrl) {
+                setDisplaySrc(blobUrl);
+              } else {
+                // Repli uniquement si fetch CORS a échoué (ex: domaine externe tiers)
+                setDisplaySrc(canonicalSrc);
+              }
+            })
+            .catch(() => {
+              if (active) setDisplaySrc(canonicalSrc);
+            });
+        })
+        .catch(() => {
+          if (active) setError(true);
+        });
     } else {
       setDisplaySrc(src);
     }
@@ -75,39 +92,33 @@ export const SafeImage: React.FC<SafeImageProps> = ({
 
   const handleImageError = () => {
     if (displaySrc && displaySrc.startsWith('blob:') && src) {
-      const finalSrc = getOptimizedImageUrl(src, optimizeWidth);
-      evictObjectUrl(finalSrc);
-      getLocalImage(finalSrc, true).then(freshBlobUrl => {
-        if (freshBlobUrl) {
-          setDisplaySrc(freshBlobUrl);
-        } else if (typeof navigator === 'undefined' || navigator.onLine) {
-          setDisplaySrc(finalSrc);
-        } else {
-          setError(true);
-        }
-      }).catch(() => setError(true));
-      return;
-    }
-
-    // Si l'URL optimisée a échoué et qu'elle diffère de l'URL brute d'origine, repli sur l'originale
-    if (src && displaySrc && displaySrc !== src) {
-      setDisplaySrc(src);
+      const canonicalSrc = getCanonicalCacheUrl(getOptimizedImageUrl(src, optimizeWidth));
+      evictObjectUrl(canonicalSrc);
+      getLocalImage(canonicalSrc, true)
+        .then((freshBlobUrl) => {
+          if (freshBlobUrl) {
+            setDisplaySrc(freshBlobUrl);
+          } else if (typeof navigator === 'undefined' || navigator.onLine) {
+            setDisplaySrc(canonicalSrc);
+          } else {
+            setError(true);
+          }
+        })
+        .catch(() => setError(true));
       return;
     }
 
     setError(true);
   };
 
-  const handleImageLoad = () => {
-    // Si l'image affichée est distante, s'assurer qu'elle est archivée en cache local
-    if (displaySrc && !displaySrc.startsWith('blob:') && !displaySrc.startsWith('data:')) {
-      cacheImage(displaySrc).catch(() => {});
-    }
-  };
-
   if (!displaySrc || isBadUrl(displaySrc) || error) {
     return (
-      <div className={cn("flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg", containerClassName || className)}>
+      <div
+        className={cn(
+          'flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg',
+          containerClassName || className
+        )}
+      >
         {fallback || <Package className="text-slate-400" size={24} />}
       </div>
     );
@@ -119,7 +130,6 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       alt={alt}
       className={className}
       onError={handleImageError}
-      onLoad={handleImageLoad}
       referrerPolicy="no-referrer"
       loading="lazy"
       decoding="async"

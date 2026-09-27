@@ -3,39 +3,73 @@ import { get as getIDB, set as setIDB } from 'idb-keyval';
 const MAX_CACHED_OBJECT_URLS = 2000;
 const objectUrlMap = new Map<string, string>();
 
+/**
+ * Normalise toute URL d'image Supabase Storage en URL canonique unique
+ * afin d'éviter de télécharger plusieurs fois la même image sous différentes largeurs (?width=...).
+ */
+export function getCanonicalCacheUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  if (!url.includes('supabase.co/storage/')) return url;
+  return url
+    .replace('/storage/v1/render/image/public/', '/storage/v1/object/public/')
+    .split('?')[0];
+}
+
 export function evictObjectUrl(url: string) {
-  if (objectUrlMap.has(url)) {
-    const existing = objectUrlMap.get(url);
+  const key = getCanonicalCacheUrl(url);
+  if (objectUrlMap.has(key)) {
+    const existing = objectUrlMap.get(key);
     if (existing && existing.startsWith('blob:')) {
       try { URL.revokeObjectURL(existing); } catch (_) {}
     }
-    objectUrlMap.delete(url);
+    objectUrlMap.delete(key);
   }
 }
 
 function setBoundedObjectUrl(url: string, objUrl: string) {
-  if (objectUrlMap.has(url)) {
-    const existing = objectUrlMap.get(url);
+  const key = getCanonicalCacheUrl(url);
+  if (objectUrlMap.has(key)) {
+    const existing = objectUrlMap.get(key);
     if (existing && existing !== objUrl && existing.startsWith('blob:')) {
       try { URL.revokeObjectURL(existing); } catch (_) {}
     }
-    objectUrlMap.delete(url);
+    objectUrlMap.delete(key);
   } else if (objectUrlMap.size >= MAX_CACHED_OBJECT_URLS) {
-    // Élagage LRU sans révocation agressive pour ne pas casser le rendu des balises <img> montées
     const oldestKey = objectUrlMap.keys().next().value;
     if (oldestKey) {
       objectUrlMap.delete(oldestKey);
     }
   }
-  objectUrlMap.set(url, objUrl);
+  objectUrlMap.set(key, objUrl);
 }
 
 /**
- * Resizes an image to maxWidth and compresses it to WebP format client-side.
+ * Pré-remplit immédiatement le cache local IndexedDB et mémoire au moment de l'upload.
+ * Évite que la caisse qui vient d'uploader l'image ne la retélécharge depuis Supabase (0 Egress).
  */
-async function compressImageBlob(blob: Blob, maxWidth = 400, quality = 0.7): Promise<Blob> {
+export async function seedLocalImageCache(url: string, blob: Blob): Promise<void> {
+  if (!url || !blob) return;
+  const key = getCanonicalCacheUrl(url);
+  try {
+    await setIDB(`img_${key}`, blob);
+    const objUrl = URL.createObjectURL(blob);
+    setBoundedObjectUrl(key, objUrl);
+  } catch (err) {
+    console.warn('[ImageCache] Failed to seed local cache after upload:', err);
+  }
+}
+
+/**
+ * Redimensionne et compresse une image en WebP (360x360, q=0.60) côté client
+ * uniquement si elle dépasse 15 Ko ou n'est pas déjà en WebP.
+ */
+async function compressImageBlob(blob: Blob, maxWidth = 360, quality = 0.6): Promise<Blob> {
   if (!blob.type.startsWith('image/')) return blob;
-  
+  // Si le fichier est déjà un WebP léger (<= 15 Ko), le conserver tel quel sans re-compression CPU
+  if (blob.type === 'image/webp' && blob.size <= 15 * 1024) {
+    return blob;
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     img.src = URL.createObjectURL(blob);
@@ -66,7 +100,7 @@ async function compressImageBlob(blob: Blob, maxWidth = 400, quality = 0.7): Pro
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
         (compressedBlob) => {
-          if (compressedBlob) {
+          if (compressedBlob && compressedBlob.size < blob.size) {
             resolve(compressedBlob);
           } else {
             resolve(blob);
@@ -86,20 +120,28 @@ async function compressImageBlob(blob: Blob, maxWidth = 400, quality = 0.7): Pro
 export async function getLocalImage(url: string, forceFresh = false): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-  
-  if (!forceFresh && objectUrlMap.has(url)) {
-    const cached = objectUrlMap.get(url)!;
-    // Re-insert to refresh LRU order
-    objectUrlMap.delete(url);
-    objectUrlMap.set(url, cached);
+
+  const key = getCanonicalCacheUrl(url);
+
+  if (!forceFresh && objectUrlMap.has(key)) {
+    const cached = objectUrlMap.get(key)!;
+    objectUrlMap.delete(key);
+    objectUrlMap.set(key, cached);
     return cached;
   }
-  
+
   try {
-    const cachedBlob = await getIDB(`img_${url}`);
+    let cachedBlob = await getIDB(`img_${key}`);
+    // Compatibilité rétroactive avec d'anciennes entrées indexées sous l'URL non canonique
+    if (!(cachedBlob instanceof Blob) && key !== url) {
+      cachedBlob = await getIDB(`img_${url}`);
+      if (cachedBlob instanceof Blob) {
+        await setIDB(`img_${key}`, cachedBlob);
+      }
+    }
     if (cachedBlob instanceof Blob) {
       const objUrl = URL.createObjectURL(cachedBlob);
-      setBoundedObjectUrl(url, objUrl);
+      setBoundedObjectUrl(key, objUrl);
       return objUrl;
     }
   } catch (err) {
@@ -137,44 +179,45 @@ function releaseFetchSlot(): void {
 export async function cacheImage(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-  
+
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return null;
   }
-  
-  if (objectUrlMap.has(url)) {
-    const cached = objectUrlMap.get(url)!;
-    objectUrlMap.delete(url);
-    objectUrlMap.set(url, cached);
+
+  const key = getCanonicalCacheUrl(url);
+
+  if (objectUrlMap.has(key)) {
+    const cached = objectUrlMap.get(key)!;
+    objectUrlMap.delete(key);
+    objectUrlMap.set(key, cached);
     return cached;
   }
 
-  // Deduplicate concurrent requests for the same image
-  if (inFlightRequests.has(url)) {
-    return inFlightRequests.get(url)!;
+  if (inFlightRequests.has(key)) {
+    return inFlightRequests.get(key)!;
   }
 
   const fetchPromise = (async () => {
     try {
-      const cachedBlob = await getIDB(`img_${url}`);
+      const cachedBlob = await getIDB(`img_${key}`);
       if (cachedBlob instanceof Blob) {
         const objUrl = URL.createObjectURL(cachedBlob);
-        setBoundedObjectUrl(url, objUrl);
+        setBoundedObjectUrl(key, objUrl);
         return objUrl;
       }
-      
-      // Throttle network fetches so we never exceed MAX_CONCURRENT_FETCHES
+
       await acquireFetchSlot();
-      
+
       let rawBlob: Blob;
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
-        
+
         let response: Response;
         try {
-          response = await fetch(url, { 
+          response = await fetch(key, {
             referrerPolicy: 'no-referrer',
+            cache: 'force-cache',
             signal: controller.signal
           });
         } catch (netErr: any) {
@@ -188,21 +231,20 @@ export async function cacheImage(url: string): Promise<string | null> {
       } finally {
         releaseFetchSlot();
       }
-      
-      // Compress and convert to WebP before saving
+
       const compressedBlob = await compressImageBlob(rawBlob);
-      
-      await setIDB(`img_${url}`, compressedBlob);
+
+      await setIDB(`img_${key}`, compressedBlob);
       const objUrl = URL.createObjectURL(compressedBlob);
-      setBoundedObjectUrl(url, objUrl);
+      setBoundedObjectUrl(key, objUrl);
       return objUrl;
     } catch (err: any) {
       return null;
     } finally {
-      inFlightRequests.delete(url);
+      inFlightRequests.delete(key);
     }
   })();
 
-  inFlightRequests.set(url, fetchPromise);
+  inFlightRequests.set(key, fetchPromise);
   return fetchPromise;
 }

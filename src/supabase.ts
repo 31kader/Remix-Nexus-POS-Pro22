@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { compressImage } from './lib/image-optimizer';
+import { seedLocalImageCache } from './services/imageCache';
 import { realtimeCircuitBreaker, getSafeWebSocketTransport } from './services/RealtimeCircuitBreaker';
 
 export { realtimeCircuitBreaker };
@@ -18,14 +19,14 @@ export const isSupabaseConfigured = (() => {
   }
 })();
 
-export const supabase = isSupabaseConfigured 
+export const supabase = isSupabaseConfigured
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       realtime: {
         timeout: 10000,
         transport: getSafeWebSocketTransport(realtimeCircuitBreaker),
         reconnectAfterMs: (tries: number) => realtimeCircuitBreaker.getReconnectInterval(tries)
       }
-    }) 
+    })
   : ({} as any);
 
 if (isSupabaseConfigured && supabase?.realtime) {
@@ -58,7 +59,9 @@ export const removeChannelByName = (channelName: string) => {
   if (!isSupabaseConfigured) return;
   try {
     const channels = supabase.getChannels();
-    const matched = channels.find((c: any) => c.name === channelName || c.topic === `realtime:${channelName}`);
+    const matched = channels.find(
+      (c: any) => c.name === channelName || c.topic === `realtime:${channelName}`
+    );
     if (matched) {
       supabase.removeChannel(matched).catch(() => {});
     }
@@ -72,7 +75,9 @@ export const safeRemoveChannel = (channelOrName: any) => {
       removeChannelByName(channelOrName);
     } else {
       if (typeof channelOrName.unsubscribe === 'function') {
-        try { channelOrName.unsubscribe(); } catch (_) {}
+        try {
+          channelOrName.unsubscribe();
+        } catch (_) {}
       }
       supabase.removeChannel(channelOrName).catch(() => {});
     }
@@ -98,6 +103,24 @@ export const serializeError = (err: any): string => {
   return String(err);
 };
 
+/**
+ * Supprime un fichier image de Supabase Storage lorsqu'il est remplacé ou supprimé d'un produit,
+ * afin d'empêcher l'accumulation de fichiers orphelins dans les buckets.
+ */
+export async function deleteImageFromStorageByUrl(url: string): Promise<void> {
+  if (!isSupabaseConfigured || !url || typeof url !== 'string') return;
+  try {
+    const match = url.match(/\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/([^?]+)/);
+    if (!match) return;
+    const [, bucketName, filePath] = match;
+    if (bucketName && filePath) {
+      await supabase.storage.from(bucketName).remove([decodeURIComponent(filePath)]);
+    }
+  } catch (err) {
+    console.warn('[Storage] Impossible de supprimer l’ancienne image:', err);
+  }
+}
+
 export async function uploadImageBlobToStorage(
   blob: Blob,
   bucketName: string,
@@ -108,55 +131,71 @@ export async function uploadImageBlobToStorage(
   let finalBlob = blob;
   let finalContentType = contentType;
 
-  // Validation stricte du type de fichier (S9 : Images uniquement)
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'];
+  // Validation stricte du type MIME (S9 : Images uniquement)
+  const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'image/svg+xml'
+  ];
   if (blob.type && !allowedTypes.includes(blob.type.toLowerCase())) {
-    console.error(`[Storage] Upload bloqué: Type de fichier '${blob.type}' non autorisé. Format d'image requis.`);
+    console.error(
+      `[Storage] Upload bloqué: Type de fichier '${blob.type}' non autorisé. Format d'image requis.`
+    );
     return null;
   }
 
-  // AUTO-OPTIMIZATION: Always compress and convert to WebP before upload
-  // This saves massive amounts of data and storage space.
+  // AUTO-OPTIMIZATION ULTRA-LÉGÈRE (360x360 WebP q=0.60 => ~5 à 9 Ko par vignette POS)
   try {
-    finalBlob = await compressImage(blob, 1024, 1024, 0.7);
+    finalBlob = await compressImage(blob, 360, 360, 0.6);
     finalContentType = 'image/webp';
   } catch (optErr) {
-    console.warn("[Storage] Optimization failed, uploading original:", optErr);
+    console.warn('[Storage] Optimization failed, uploading original:', optErr);
   }
 
   // File size validation (limit to 5MB)
   if (finalBlob.size > 5 * 1024 * 1024) {
-    console.error("[Storage] Upload blocked: File size exceeds 5MB limit.");
+    console.error('[Storage] Upload blocked: File size exceeds 5MB limit.');
     return null;
   }
 
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.webp`;
-  
+  const fileName = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 8)}.webp`;
+
   try {
     const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(fileName, finalBlob, {
         contentType: finalContentType,
-        cacheControl: '3600',
+        // Cache HTTP/CDN Cloudflare de 1 an (31 536 000s) pour éliminer le Uncached Storage Egress !
+        cacheControl: '31536000',
         upsert: true
       });
 
     if (uploadError) {
       console.warn(`[Storage] Upload échoué vers bucket '${bucketName}':`, uploadError.message);
-      if (uploadError.message.includes('Bucket not found') || uploadError.message.includes('not found')) {
-        console.error(`[Storage] ⚠️ Le bucket '${bucketName}' n'existe pas dans Supabase Storage. Créez-le dans le Dashboard Supabase.`);
-      } else if (uploadError.message.includes('policy') || uploadError.message.includes('Permission') || uploadError.message.includes('RLS')) {
-        console.error(`[Storage] ⚠️ Politique RLS bloquée. Ajoutez une politique PUBLIC INSERT sur le bucket '${bucketName}'.`);
-      }
       return null;
     }
 
     const { data } = supabase.storage.from(bucketName).getPublicUrl(fileName);
     let publicUrl = data?.publicUrl || null;
-    if (publicUrl && publicUrl.includes('/storage/v1/object/') && !publicUrl.includes('/storage/v1/object/public/')) {
+    if (
+      publicUrl &&
+      publicUrl.includes('/storage/v1/object/') &&
+      !publicUrl.includes('/storage/v1/object/public/')
+    ) {
       publicUrl = publicUrl.replace('/storage/v1/object/', '/storage/v1/object/public/');
     }
-    console.log(`[Storage] ✅ Image uploadée: ${publicUrl}`);
+
+    // Pré-remplir immédiatement le cache local IndexedDB pour que ce terminal ne retélécharge JAMAIS cette image
+    if (publicUrl) {
+      await seedLocalImageCache(publicUrl, finalBlob);
+    }
+
+    console.log(
+      `[Storage] ✅ Image WebP optimisée (${(finalBlob.size / 1024).toFixed(1)} Ko) uploadée avec Cache 1 an: ${publicUrl}`
+    );
     return publicUrl;
   } catch (error) {
     console.warn('[Storage] Erreur inattendue:', error);
