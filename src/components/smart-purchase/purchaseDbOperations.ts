@@ -126,6 +126,11 @@ export async function savePurchaseDb({
     const scannedImageUrl = extractedData?.scannedImageUrl || '';
     const autoInvoiceNum = finalInvoiceNumber || ('BON-SCAN-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(100 + Math.random() * 900));
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const effectiveIsoDate = (!receptionDate || receptionDate === todayStr)
+      ? new Date().toISOString()
+      : new Date(receptionDate).toISOString();
+
     const purchaseData: any = {
       supplierId: selectedSupplierId || '',
       supplierName: supplierName || 'Inconnu',
@@ -133,7 +138,8 @@ export async function savePurchaseDb({
       invoiceNumber: autoInvoiceNum,
       total: totalValue,
       totalAmount: totalValue,
-      date: receptionDate ? new Date(receptionDate).toISOString() : new Date().toISOString(),
+      date: effectiveIsoDate,
+      updatedAt: new Date().toISOString(),
       status: purchaseStatus,
       paymentStatus: computedPaymentStatus,
       paidAmount: paidAmount || 0,
@@ -177,7 +183,7 @@ export async function savePurchaseDb({
       } catch (_) {}
     }
 
-    // Instantly update Zustand store so the UI is updated immediately
+    // Instantly update Zustand store AND IndexedDB cache (nexus_purchases_cache) so the UI and reloads are 100% synced
     useFinanceStore.setState(state => {
       const idx = state.purchases.findIndex(p => p.id === purchaseId);
       let updated;
@@ -187,6 +193,9 @@ export async function savePurchaseDb({
       } else {
         updated = [{ ...purchaseData, id: purchaseId }, ...state.purchases];
       }
+      import('idb-keyval').then(({ set: idbSet }) => {
+        idbSet('nexus_purchases_cache', updated).catch(() => {});
+      }).catch(() => {});
       return { purchases: updated };
     });
 

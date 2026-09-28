@@ -62,11 +62,15 @@ export function useProductsAndCoreData({
   useEffect(() => {
     if (loading) return;
 
-    // Migration du cache pour aligner tous les appareils avec les 7237 produits Supabase
-    const CACHE_VERSION = '2.1';
+    // Migration du cache pour aligner tous les appareils avec les produits et bons d'achat Supabase
+    const CACHE_VERSION = '2.2';
     const currentVersion = localStorage.getItem('nexus_products_cache_version');
     if (currentVersion !== CACHE_VERSION) {
       localStorage.removeItem('last_sync_timestamp');
+      localStorage.removeItem('last_sync_purchases');
+      localStorage.removeItem('last_sync_supplierPayments');
+      localStorage.removeItem('last_sync_expenses');
+      localStorage.removeItem('last_sync_returns');
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
     }
 
@@ -669,10 +673,11 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
     const runQueue = async () => {
       try {
-        // 1. Charger en parallèle: produits IDB + toutes les autres tables IDB + base locale des transactions + archives
-        const [cachedProducts, localDbTxsRaw, archivedTxsRaw, ...otherCaches] = await Promise.all([
+        // 1. Charger en parallèle: produits IDB + toutes les autres tables IDB + base locale des transactions/achats + archives
+        const [cachedProducts, localDbTxsRaw, localDbPurchasesRaw, archivedTxsRaw, ...otherCaches] = await Promise.all([
           idbGet<Product[]>('nexus_products_cache').catch(() => null),
           idbGet<Record<string, any>>('nexus_db_transactions').catch(() => ({})),
+          idbGet<Record<string, any>>('nexus_db_purchases').catch(() => ({})),
           getArchivedTransactionsFromStorage().catch(() => []),
           ...queueConfig.map(config =>
             idbGet<any[]>(config.cacheKey).catch(() => [])
@@ -680,6 +685,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         ]);
 
         const localDbTxList = localDbTxsRaw ? Object.values(localDbTxsRaw) : [];
+        const localDbPurchaseList = localDbPurchasesRaw ? Object.values(localDbPurchasesRaw) : [];
         const archivedTxList = Array.isArray(archivedTxsRaw) ? archivedTxsRaw : [];
 
         // Appliquer le cache des produits
@@ -688,7 +694,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
           localStorage.setItem('nexus_has_cached_products', 'true');
         }
 
-        // Appliquer le cache des autres tables avec fusion des ventes locales et archivées
+        // Appliquer le cache des autres tables avec fusion des ventes et bons d'achat locaux
         queueConfig.forEach((config, i) => {
           let cached = otherCaches[i] || [];
           if (config.collectionName === 'transactions') {
@@ -698,6 +704,13 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             cached.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
             cached = Array.from(mergedMap.values()).sort((a: any, b: any) => 
               new Date(b.timestamp || b.created_at || b.date || 0).getTime() - new Date(a.timestamp || a.created_at || a.date || 0).getTime()
+            );
+          } else if (config.collectionName === 'purchases') {
+            const mergedMap = new Map<string, any>();
+            cached.forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
+            localDbPurchaseList.forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
+            cached = Array.from(mergedMap.values()).sort((a: any, b: any) => 
+              new Date(b.date || b.updated_at || 0).getTime() - new Date(a.date || a.updated_at || 0).getTime()
             );
           }
           if (cached && cached.length > 0 && isSubscribed) {
@@ -720,16 +733,13 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
       }
 
-      // 5. Synchronisation différée des tables administratives secondaires (arrière-plan non bloquant)
+      // 5. Synchronisation des tables administratives
       if (deferredQueueConfig.length > 0) {
-        setTimeout(async () => {
-          if (!isSubscribed) return;
-          for (let i = 0; i < deferredQueueConfig.length; i += CONCURRENCY) {
-            if (!isSubscribed) break;
-            const chunk = deferredQueueConfig.slice(i, i + CONCURRENCY);
-            await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
-          }
-        }, 2500);
+        for (let i = 0; i < deferredQueueConfig.length; i += CONCURRENCY) {
+          if (!isSubscribed) break;
+          const chunk = deferredQueueConfig.slice(i, i + CONCURRENCY);
+          await Promise.all(chunk.map(config => syncTableFromNetwork(config)));
+        }
       }
     };
 
@@ -738,7 +748,9 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       try {
         const cached = await idbGet<T[]>(cacheKey) || [];
         if (isSupabaseConfigured) {
-          const lastSyncTime = cached.length > 0 ? localStorage.getItem(`last_sync_${collectionName}`) : null;
+          // Ne jamais filtrer par deltaSyncTime quand timestampColumn === 'date' (car 'date' est souvent à 00:00:00Z, ce qui masquerait les bons du jour)
+          const useDelta = timestampColumn && timestampColumn !== 'date';
+          const lastSyncTime = (useDelta && cached.length > 0) ? localStorage.getItem(`last_sync_${collectionName}`) : null;
           const camelData = await fetchTableFromSupabase<T>(collectionName, limit, startDate, lastSyncTime || undefined, timestampColumn);
           
           if (camelData && isSubscribed) {
@@ -752,6 +764,11 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
               }
               if (localDbTxs) {
                 Object.values(localDbTxs).forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+              }
+            } else if (collectionName === 'purchases') {
+              const localDbPurchases = await idbGet<Record<string, any>>('nexus_db_purchases').catch(() => ({}));
+              if (localDbPurchases) {
+                Object.values(localDbPurchases).forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
               }
             }
             cached.forEach((r: any) => r && r.id && mergedMap.set(r.id, r));

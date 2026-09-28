@@ -8,16 +8,30 @@ export function filterPurchases(
   historyStartDate: string,
   historyEndDate: string
 ): Purchase[] {
-  return purchases
+  const q = (historySearch || '').trim().toLowerCase();
+  return (purchases || [])
+    .map((raw: any) => ({
+      ...raw,
+      supplierName: raw.supplierName || raw.supplier_name || 'Fournisseur',
+      invoiceNumber: raw.invoiceNumber || raw.invoice_number || `BR-${String(raw.id || '').slice(-6).toUpperCase()}`,
+      total: Number(raw.total ?? raw.totalAmount ?? raw.total_amount ?? 0),
+      totalAmount: Number(raw.totalAmount ?? raw.total ?? raw.total_amount ?? 0),
+      paidAmount: Number(raw.paidAmount ?? raw.paid_amount ?? 0)
+    }))
     .filter(p => {
-      const matchesSearch = (p.supplierName || '').toLowerCase().includes(historySearch.toLowerCase()) || 
-                           (p.invoiceNumber || '').toLowerCase().includes(historySearch.toLowerCase());
-      const date = new Date(p.date);
-      const matchesStart = !historyStartDate || date >= new Date(historyStartDate);
-      const matchesEnd = !historyEndDate || date <= new Date(historyEndDate);
+      const itemNames = Array.isArray(p.items) ? p.items.map((i: any) => i?.name || '').join(' ') : '';
+      const matchesSearch = !q ||
+        (p.supplierName || '').toLowerCase().includes(q) || 
+        (p.invoiceNumber || '').toLowerCase().includes(q) ||
+        (p.id || '').toLowerCase().includes(q) ||
+        (p.notes || '').toLowerCase().includes(q) ||
+        itemNames.toLowerCase().includes(q);
+      const date = new Date(p.date || Date.now());
+      const matchesStart = !historyStartDate || date >= new Date(`${historyStartDate}T00:00:00`);
+      const matchesEnd = !historyEndDate || date <= new Date(`${historyEndDate}T23:59:59.999`);
       return matchesSearch && matchesStart && matchesEnd;
     })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
 }
 
 export function filterProducts(

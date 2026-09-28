@@ -654,6 +654,56 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
       });
     });
 
+    // 📱 Route d'information réseau local (IP Wi-Fi du PC) pour le QR Code d'installation iPhone & Android
+    app.get('/api/network-info', (req, res) => {
+      try {
+        const nets = os.networkInterfaces();
+        const ips: string[] = [];
+        for (const name of Object.keys(nets)) {
+          for (const net of nets[name] || []) {
+            if (net.family === 'IPv4' && !net.internal) {
+              ips.push(net.address);
+            }
+          }
+        }
+        // Prioriser 192.168.x.x ou 10.x.x.x (Wi-Fi / Ethernet local)
+        const preferredIp = ips.find(ip => ip.startsWith('192.168.')) || ips.find(ip => ip.startsWith('10.')) || ips[0] || '127.0.0.1';
+        const lanUrl = `http://${preferredIp}:${PORT}`;
+        res.json({
+          lanIp: preferredIp,
+          allIps: ips,
+          port: PORT,
+          lanUrl,
+          apkLanUrl: `${lanUrl}/download/apk`,
+          githubApkUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk'
+        });
+      } catch (e) {
+        res.json({
+          lanIp: '127.0.0.1',
+          allIps: [],
+          port: PORT,
+          lanUrl: `http://127.0.0.1:${PORT}`,
+          apkLanUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk',
+          githubApkUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk'
+        });
+      }
+    });
+
+    // 📦 Route de téléchargement direct du fichier APK Android depuis le PC en Wi-Fi ou redirection GitHub
+    app.get('/download/apk', (req, res) => {
+      const candidatePaths = [
+        path.join(process.cwd(), 'release', 'NexusPOSPro-1.2.14.apk'),
+        path.join(_dirname, '..', 'release', 'NexusPOSPro-1.2.14.apk'),
+        path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
+      ];
+      for (const p of candidatePaths) {
+        if (fs.existsSync(p)) {
+          return res.download(p, 'NexusPOSPro-1.2.14.apk');
+        }
+      }
+      return res.redirect('https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk');
+    });
+
     // Ensure we correctly detect production mode in Cloud Run
     if (!IS_PROD) {
       try {
