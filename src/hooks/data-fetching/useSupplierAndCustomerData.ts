@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { PurchaseOrder, Transaction, CompanySettings } from '../../types';
 
@@ -64,7 +64,7 @@ export function useSupplierAndCustomerData({
         })
       if (typeof navigator === 'undefined' || navigator.onLine) {
         if (!realtimeCircuitBreaker.isOpen()) {
-          channel.subscribe((status: string) => {
+          safeSubscribeChannel(channel, (status: string) => {
             if (status === 'SUBSCRIBED') {
               realtimeCircuitBreaker.recordSuccess();
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -135,7 +135,7 @@ export function useSupplierAndCustomerData({
         })
       if (typeof navigator === 'undefined' || navigator.onLine) {
         if (!realtimeCircuitBreaker.isOpen()) {
-          channel.subscribe((status: string) => {
+          safeSubscribeChannel(channel, (status: string) => {
             if (status === 'SUBSCRIBED') {
               realtimeCircuitBreaker.recordSuccess();
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {

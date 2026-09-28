@@ -134,15 +134,19 @@ export function broadcastCustomerDisplay(state: CustomerDisplayState): void {
     }, 40);
   }
 
-  // 5. Diffusion sans fil globale via Supabase Realtime (si connecté au Cloud)
+  // 5. Diffusion sans fil globale via Supabase Realtime (si connecté au Cloud et canal déjà joint)
   try {
-    if (isSupabaseConfigured && supabase && !realtimeCircuitBreaker.isOpen()) {
-      const channel = supabase.channel('nexus-pos-realtime');
-      channel.send({
-        type: 'broadcast',
-        event: 'customer-display-update',
-        payload: state
-      }).catch(() => {});
+    if (isSupabaseConfigured && supabase && !realtimeCircuitBreaker.isOpen() && typeof supabase.getChannels === 'function') {
+      const existingChannel = supabase.getChannels().find(
+        (c: any) => (c.name === 'nexus-pos-realtime' || c.topic === 'realtime:nexus-pos-realtime') && c.state === 'joined'
+      );
+      if (existingChannel) {
+        existingChannel.send({
+          type: 'broadcast',
+          event: 'customer-display-update',
+          payload: state
+        }).catch(() => {});
+      }
     }
   } catch (_) {}
 }

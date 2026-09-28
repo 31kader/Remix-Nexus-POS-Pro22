@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../database';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
@@ -302,7 +302,7 @@ export function useFastChangingData({
         if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         if (realtimeCircuitBreaker.isOpen()) return;
 
-        fastChannel.subscribe((status: string) => {
+        safeSubscribeChannel(fastChannel, (status: string) => {
           if (status === 'SUBSCRIBED') {
             realtimeCircuitBreaker.recordSuccess();
             console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
@@ -317,10 +317,6 @@ export function useFastChangingData({
           connectFastChannel();
         }
       }
-
-      const handleOnlineFast = () => connectFastChannel();
-      window.addEventListener('online', handleOnlineFast);
-      listeners.push(() => window.removeEventListener('online', handleOnlineFast));
 
       const handleRetryFast = () => connectFastChannel();
       window.addEventListener('nexus-realtime-retry', handleRetryFast);

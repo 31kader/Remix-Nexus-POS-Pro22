@@ -44,6 +44,48 @@ if (isSupabaseConfigured && supabase?.realtime) {
   );
 }
 
+// Empêcher le spam de POST /auth/v1/token?grant_type=refresh_token (ERR_NAME_NOT_RESOLVED) lorsque la caisse est hors-ligne
+if (isSupabaseConfigured && typeof window !== 'undefined' && supabase?.auth) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    try { supabase.auth.stopAutoRefresh(); } catch (_) {}
+  }
+  window.addEventListener('offline', () => {
+    try { supabase.auth.stopAutoRefresh(); } catch (_) {}
+  });
+  window.addEventListener('online', () => {
+    try { supabase.auth.startAutoRefresh(); } catch (_) {}
+  });
+}
+
+/**
+ * Souscrit en toute sécurité à un canal Supabase Realtime sans jamais déclencher
+ * "Uncaught Error: tried to join multiple times. 'join' can only be called a single time per channel instance".
+ */
+export const safeSubscribeChannel = (channel: any, callback?: (status: string, err?: any) => void) => {
+  if (!isSupabaseConfigured || !channel) return channel;
+  try {
+    if (channel.state === 'joined' || channel.state === 'joining') {
+      return channel;
+    }
+    if (channel.joinedOnce) {
+      // Le canal a déjà été joint une première fois : on demande à Phoenix Socket de se reconnecter/rejoindre sans rappeler .join()
+      if (typeof supabase?.realtime?.connect === 'function') {
+        try { supabase.realtime.connect(); } catch (_) {}
+      }
+      if (typeof channel.rejoin === 'function') {
+        try { channel.rejoin(); } catch (_) {}
+      }
+      return channel;
+    }
+    return channel.subscribe(callback);
+  } catch (err: any) {
+    if (!String(err?.message || '').includes('tried to join multiple times')) {
+      console.warn('[Supabase] Channel subscribe warning:', err);
+    }
+    return channel;
+  }
+};
+
 export const disconnectRealtime = async (): Promise<void> => {
   if (!isSupabaseConfigured || !supabase?.realtime) return;
   try {

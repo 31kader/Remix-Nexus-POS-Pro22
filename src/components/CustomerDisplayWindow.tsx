@@ -3,7 +3,7 @@ import { ShoppingBag, Sparkles, CheckCircle2, ShieldCheck, Heart, Store, Wifi, R
 import { QRCodeSVG } from 'qrcode.react';
 import { useCoreStore } from '../store/useCoreStore';
 import { SafeImage } from './ui/SafeImage';
-import { supabase, isSupabaseConfigured, safeRemoveChannel, realtimeCircuitBreaker } from '../supabase';
+import { supabase, isSupabaseConfigured, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../supabase';
 import { getCustomerDisplaySocket } from '../services/customerDisplayService';
 
 interface CustomerDisplayState {
@@ -125,9 +125,9 @@ export const CustomerDisplayWindow: React.FC = () => {
               setDisplayState(msg.payload);
               setIsRealtimeActive(true);
             }
-          })
+          });
         if (!realtimeCircuitBreaker.isOpen()) {
-          channel.subscribe((status: string) => {
+          safeSubscribeChannel(channel, (status: string) => {
             if (status === 'SUBSCRIBED') {
               realtimeCircuitBreaker.recordSuccess();
               setIsRealtimeActive(true);

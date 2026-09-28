@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, realtimeCircuitBreaker } from '../../supabase';
+import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
 import { 
   Product, Category, Brand, Transaction, Promotion, Customer, Supplier, UserProfile,
   ProductReturn, Expense, StockAdjustment, Purchase, SupplierPayment, DamagedRecord, AuditLog
@@ -593,7 +593,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         if (typeof navigator !== 'undefined' && !navigator.onLine) return;
         if (realtimeCircuitBreaker.isOpen()) return;
 
-        multiplexedChannel.subscribe(async (status: string, err?: Error) => {
+        safeSubscribeChannel(multiplexedChannel, async (status: string, err?: Error) => {
           if (status === 'SUBSCRIBED') {
             realtimeCircuitBreaker.recordSuccess();
             console.log('[Realtime] ✅ Canal unique multiplexé nexus-pos-realtime connecté avec succès.');
@@ -609,9 +609,8 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             // Rattrapage d'événements (Event Backfill) après coupure réseau
             if (wasDisconnected) {
               console.log('[Realtime] 🔄 Reconnexion détectée : rattrapage automatique des données...');
-              syncProducts(false);
-              window.dispatchEvent(new CustomEvent('force-full-sync'));
               wasDisconnected = false;
+              syncProducts(false);
             }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             wasDisconnected = true;
@@ -631,12 +630,6 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
           connectRealtime();
         }
       }
-
-      const handleOnlineRealtime = () => {
-        connectRealtime();
-      };
-      window.addEventListener('online', handleOnlineRealtime);
-      unsubscribes.push(() => window.removeEventListener('online', handleOnlineRealtime));
 
       const handleRetryRealtime = () => {
         connectRealtime();
