@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
-import { localDb } from '../../services/LocalDatabase';
+import { localDb, getDeletedRecordIds } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
 import { 
   Product, Category, Brand, Transaction, Promotion, Customer, Supplier, UserProfile,
@@ -696,19 +696,20 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
         // Appliquer le cache des autres tables avec fusion des ventes et bons d'achat locaux
         queueConfig.forEach((config, i) => {
-          let cached = otherCaches[i] || [];
+          const deletedIds = getDeletedRecordIds(config.collectionName);
+          let cached = (otherCaches[i] || []).filter((item: any) => item && item.id && !deletedIds.has(String(item.id)));
           if (config.collectionName === 'transactions') {
             const mergedMap = new Map<string, any>();
-            archivedTxList.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
-            localDbTxList.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
-            cached.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+            archivedTxList.forEach((t: any) => t && t.id && !deletedIds.has(String(t.id)) && mergedMap.set(t.id, t));
+            localDbTxList.forEach((t: any) => t && t.id && !deletedIds.has(String(t.id)) && mergedMap.set(t.id, t));
+            cached.forEach((t: any) => t && t.id && !deletedIds.has(String(t.id)) && mergedMap.set(t.id, t));
             cached = Array.from(mergedMap.values()).sort((a: any, b: any) => 
               new Date(b.timestamp || b.created_at || b.date || 0).getTime() - new Date(a.timestamp || a.created_at || a.date || 0).getTime()
             );
           } else if (config.collectionName === 'purchases') {
             const mergedMap = new Map<string, any>();
-            cached.forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
-            localDbPurchaseList.forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
+            cached.forEach((p: any) => p && p.id && !deletedIds.has(String(p.id)) && mergedMap.set(p.id, p));
+            localDbPurchaseList.forEach((p: any) => p && p.id && !deletedIds.has(String(p.id)) && mergedMap.set(p.id, p));
             cached = Array.from(mergedMap.values()).sort((a: any, b: any) => 
               new Date(b.date || b.updated_at || 0).getTime() - new Date(a.date || a.updated_at || 0).getTime()
             );
@@ -746,33 +747,41 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
     const syncTableFromNetwork = async <T,>(config: QueueConfig) => {
       const { cacheKey, collectionName, setState, limit, startDate, timestampColumn } = config;
       try {
-        const cached = await idbGet<T[]>(cacheKey) || [];
+        const deletedIds = getDeletedRecordIds(collectionName);
+        const rawCached = await idbGet<T[]>(cacheKey) || [];
+        const cached = rawCached.filter((r: any) => r && r.id && !deletedIds.has(String(r.id)));
         if (isSupabaseConfigured) {
           // Ne jamais filtrer par deltaSyncTime quand timestampColumn === 'date' (car 'date' est souvent à 00:00:00Z, ce qui masquerait les bons du jour)
-          const useDelta = timestampColumn && timestampColumn !== 'date';
+          const useDelta = Boolean(timestampColumn && timestampColumn !== 'date');
           const lastSyncTime = (useDelta && cached.length > 0) ? localStorage.getItem(`last_sync_${collectionName}`) : null;
           const camelData = await fetchTableFromSupabase<T>(collectionName, limit, startDate, lastSyncTime || undefined, timestampColumn);
           
           if (camelData && isSubscribed) {
             const mergedMap = new Map<string, any>();
-            // Si c'est les transactions, préserver d'abord toutes les transactions locales et archivées
+            // Si c'est les transactions, préserver d'abord toutes les transactions locales et archivées non supprimées
             if (collectionName === 'transactions') {
               const localDbTxs = await idbGet<Record<string, any>>('nexus_db_transactions').catch(() => ({}));
               const archivedTxs = await getArchivedTransactionsFromStorage().catch(() => []);
               if (Array.isArray(archivedTxs)) {
-                archivedTxs.forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+                archivedTxs.forEach((t: any) => t && t.id && !deletedIds.has(String(t.id)) && mergedMap.set(t.id, t));
               }
               if (localDbTxs) {
-                Object.values(localDbTxs).forEach((t: any) => t && t.id && mergedMap.set(t.id, t));
+                Object.values(localDbTxs).forEach((t: any) => t && t.id && !deletedIds.has(String(t.id)) && mergedMap.set(t.id, t));
               }
             } else if (collectionName === 'purchases') {
               const localDbPurchases = await idbGet<Record<string, any>>('nexus_db_purchases').catch(() => ({}));
               if (localDbPurchases) {
-                Object.values(localDbPurchases).forEach((p: any) => p && p.id && mergedMap.set(p.id, p));
+                Object.values(localDbPurchases).forEach((p: any) => p && p.id && !deletedIds.has(String(p.id)) && mergedMap.set(p.id, p));
               }
             }
-            cached.forEach((r: any) => r && r.id && mergedMap.set(r.id, r));
-            camelData.forEach((newRow: any) => newRow && newRow.id && mergedMap.set(newRow.id, newRow));
+
+            // Si c'est une synchronisation incrémentale (lastSyncTime présent), on garde le cache existant non supprimé.
+            // Si c'est un chargement complet (lastSyncTime === null, ex: purchases, expenses, supplierPayments),
+            // on ne réinjecte PAS les anciennes lignes de `cached` qui ont été supprimées sur Supabase !
+            if (lastSyncTime) {
+              cached.forEach((r: any) => r && r.id && !deletedIds.has(String(r.id)) && mergedMap.set(r.id, r));
+            }
+            camelData.forEach((newRow: any) => newRow && newRow.id && !deletedIds.has(String(newRow.id)) && mergedMap.set(newRow.id, newRow));
 
             let updatedCache = Array.from(mergedMap.values());
             if (timestampColumn) {

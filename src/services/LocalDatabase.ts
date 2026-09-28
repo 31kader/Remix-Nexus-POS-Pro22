@@ -19,8 +19,78 @@ import {
   enqueueStockAdjustment,
 } from './SyncService';
 
+import { get as idbGet, set as idbSet } from 'idb-keyval';
+import { supabase, isSupabaseConfigured } from '../supabase';
+
 // Tables requiring zero-latency immediate IndexedDB flush (no 150ms debounce)
-const CRITICAL_IMMEDIATE_TABLES = new Set(['transactions', 'returns', 'shifts', 'cash_shifts', 'stock_adjustments', 'damaged_items']);
+const CRITICAL_IMMEDIATE_TABLES = new Set([
+  'transactions', 'returns', 'shifts', 'cash_shifts', 'stock_adjustments',
+  'damaged_items', 'purchases', 'supplier_payments', 'supplierPayments',
+  'expenses', 'goods_receipt_notes', 'goodsReceiptNotes'
+]);
+
+const DELETED_IDS_STORAGE_KEY = 'nexus_deleted_records_v1';
+
+const TABLE_TO_IDB_CACHE_KEY: Record<string, string> = {
+  purchases: 'nexus_purchases_cache',
+  transactions: 'nexus_transactions_cache',
+  returns: 'nexus_returns_cache',
+  expenses: 'nexus_expenses_cache',
+  supplierPayments: 'nexus_supplier_payments_cache',
+  supplier_payments: 'nexus_supplier_payments_cache',
+  stockAdjustments: 'nexus_stock_adjustments_cache',
+  stock_adjustments: 'nexus_stock_adjustments_cache',
+  damagedItems: 'nexus_damaged_items_cache',
+  damaged_items: 'nexus_damaged_items_cache',
+  auditLogs: 'nexus_audit_logs_cache',
+  audit_logs: 'nexus_audit_logs_cache',
+  goodsReceiptNotes: 'nexus_goods_receipt_notes_cache',
+  goods_receipt_notes: 'nexus_goods_receipt_notes_cache',
+  onlineOrders: 'nexus_online_orders_cache',
+  online_orders: 'nexus_online_orders_cache',
+  customers: 'nexus_customers',
+  suppliers: 'nexus_suppliers',
+  categories: 'nexus_categories',
+  brands: 'nexus_brands',
+  promotions: 'nexus_promotions',
+  users: 'nexus_users',
+  products: 'nexus_products_cache'
+};
+
+export function markRecordDeleted(table: string, id: string): void {
+  if (!id || typeof localStorage === 'undefined') return;
+  try {
+    const normalized = TABLE_NAME_MAPPINGS[table] || table;
+    const raw = JSON.parse(localStorage.getItem(DELETED_IDS_STORAGE_KEY) || '{}');
+    if (!Array.isArray(raw[normalized])) raw[normalized] = [];
+    if (!raw[normalized].includes(id)) {
+      raw[normalized].push(id);
+      if (raw[normalized].length > 1000) {
+        raw[normalized] = raw[normalized].slice(-1000);
+      }
+      localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(raw));
+    }
+    if (table !== normalized) {
+      if (!Array.isArray(raw[table])) raw[table] = [];
+      if (!raw[table].includes(id)) {
+        raw[table].push(id);
+        localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(raw));
+      }
+    }
+  } catch (_) {}
+}
+
+export function getDeletedRecordIds(table: string): Set<string> {
+  const result = new Set<string>();
+  if (typeof localStorage === 'undefined') return result;
+  try {
+    const normalized = TABLE_NAME_MAPPINGS[table] || table;
+    const raw = JSON.parse(localStorage.getItem(DELETED_IDS_STORAGE_KEY) || '{}');
+    if (Array.isArray(raw[table])) raw[table].forEach((id: string) => result.add(String(id)));
+    if (Array.isArray(raw[normalized])) raw[normalized].forEach((id: string) => result.add(String(id)));
+  } catch (_) {}
+  return result;
+}
 
 // Tables managed directly via Supabase-First (NOT through SyncService queue)
 // online_orders is handled directly in useOrderActions.ts and useOrdersLogic.tsx
@@ -183,6 +253,20 @@ export const localDb = {
     const table = parts[0];
     const id = parts.slice(1).join('/');
 
+    if (id) {
+      markRecordDeleted(table, id);
+      const cacheKey = TABLE_TO_IDB_CACHE_KEY[table] || TABLE_TO_IDB_CACHE_KEY[normalizeSyncTable(table)];
+      if (cacheKey) {
+        try {
+          const cachedArr = await idbGet<any[]>(cacheKey);
+          if (Array.isArray(cachedArr)) {
+            const filtered = cachedArr.filter(item => item && String(item.id) !== String(id));
+            await idbSet(cacheKey, filtered);
+          }
+        } catch (_) {}
+      }
+    }
+
     if (CRITICAL_IMMEDIATE_TABLES.has(table)) {
       await saveStateToStorageImmediate(table);
     } else {
@@ -194,7 +278,11 @@ export const localDb = {
 
     // Skip SyncService queue for Supabase-First tables (handled directly)
     if (!SUPABASE_FIRST_TABLES.has(table)) {
-      enqueueSync(normalizeSyncTable(table), id || '', 'DELETE', null);
+      const targetTable = normalizeSyncTable(table);
+      enqueueSync(targetTable, id || '', 'DELETE', null);
+      if (id && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+        supabase.from(targetTable).delete().eq('id', id).then(() => {}).catch(() => {});
+      }
     }
   },
 

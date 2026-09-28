@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Printer, Grid, Calendar, Store, Tag, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, Grid, Calendar, Store, Tag, Sparkles, CloudDownload, Trash2 } from 'lucide-react';
 import { Product } from '../types';
 import { Button } from './ui';
 import Barcode from 'react-barcode';
@@ -10,6 +10,12 @@ import { ProductSelectionPanel } from './label-printer/ProductSelectionPanel';
 import { SettingsPanel } from './label-printer/SettingsPanel';
 import { LabelSimulator } from './label-printer/LabelSimulator';
 import { toast } from 'sonner';
+import {
+  RemoteLabelQueueItem,
+  fetchRemoteLabelQueue,
+  clearRemoteLabelQueue,
+  subscribeToRemoteLabelQueue
+} from '../services/remoteLabelQueueService';
 
 export * from './label-printer/types';
 
@@ -145,10 +151,44 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
 
   // High-value Pro Additions: Thermal Roll vs A4 Sticker Sheet + Start Offset + Quick Mentions
   const [printMedium, setPrintMedium] = useState<'thermal' | 'a4_sheet'>('thermal');
+  const [labelPrinterType, setLabelPrinterType] = useState<'receipt_printer' | 'dedicated_label_printer'>('receipt_printer');
   const [selectedA4Sheet, setSelectedA4Sheet] = useState('a4-40');
   const [startOffset, setStartOffset] = useState(1); // 1-indexed cell offset to reuse partially used A4 sticker sheets
   const [packDate, setPackDate] = useState('');
   const [expDate, setExpDate] = useState('');
+  const [remoteQueue, setRemoteQueue] = useState<RemoteLabelQueueItem[]>([]);
+
+  useEffect(() => {
+    fetchRemoteLabelQueue().then(setRemoteQueue).catch(() => {});
+    const unsub = subscribeToRemoteLabelQueue(setRemoteQueue);
+    return () => unsub();
+  }, []);
+
+  const handleImportRemoteQueue = async (clearAfterImport: boolean = true) => {
+    const queue = await fetchRemoteLabelQueue();
+    if (!queue || queue.length === 0) {
+      toast.info('Aucun article en attente dans la file du Vérificateur de Prix.');
+      return;
+    }
+
+    let importedCount = 0;
+    queue.forEach(item => {
+      const found = (products || []).find(p => p && p.id === item.productId) ||
+                    (products || []).find(p => p && p.sku === item.sku);
+      if (found) {
+        addProduct(found);
+        setExactQuantity(found.id, Math.max(1, item.quantity || 1));
+        importedCount++;
+      }
+    });
+
+    if (clearAfterImport) {
+      await clearRemoteLabelQueue();
+      setRemoteQueue([]);
+    }
+
+    toast.success(`${importedCount} article(s) importé(s) depuis le Vérificateur de Prix avec leurs quantités !`);
+  };
 
   const applyQuickMention = (type: 'store' | 'dates' | 'promo') => {
     if (type === 'store') {
@@ -267,6 +307,7 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
 
     const dynamicSettings = {
       ...settings,
+      labelPrinterType,
       labelTemplate: 'custom',
       labelWidthCustom: stateContext.customWidth,
       labelHeightCustom: stateContext.customHeight,
@@ -304,6 +345,8 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
     await printLabels(itemsToPrint, dynamicSettings as any);
   };
 
+  const remoteTotalLabels = remoteQueue.reduce((acc, i) => acc + (i.quantity || 1), 0);
+
   return (
     <div className="space-y-6 text-left">
       {/* Header + Mode Selector */}
@@ -320,11 +363,26 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-              Imprimez sur rouleau thermique (Xprinter/Zebra) ou sur planche A4 autocollante (65, 40, 24 ou 16 étiquettes/page) avec dates FAB/EXP et prix promo barrés.
+              Imprimez sur rouleau ticket de caisse 80mm (anti-rotation 20cm), étiqueteuse dédiée ou planche A4 autocollante.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            {/* Bouton d'importation de la file d'attente du Vérificateur de Prix (Multi-Postes) */}
+            <button
+              type="button"
+              onClick={() => handleImportRemoteQueue(true)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 transition-all cursor-pointer border ${
+                remoteQueue.length > 0
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 shadow-sm animate-pulse'
+                  : 'bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:bg-slate-100'
+              }`}
+              title="Charger les articles scannés depuis le Vérificateur de Prix (autre poste ou mobile)"
+            >
+              <CloudDownload size={15} />
+              Importer File Vérificateur ({remoteQueue.length} art. / {remoteTotalLabels} étiq.)
+            </button>
+
             <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
               <button
                 type="button"
@@ -349,6 +407,35 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
                 📄 Planche A4 Autocollante
               </button>
             </div>
+
+            {printMedium === 'thermal' && (
+              <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => setLabelPrinterType('receipt_printer')}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                    labelPrinterType === 'receipt_printer'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400'
+                  }`}
+                  title="Empêche le pilote d'imprimante de ticket de caisse 80mm de tourner en Paysage (20cm)"
+                >
+                  🧾 Imprimante Ticket Caisse (80mm Anti-20cm)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLabelPrinterType('dedicated_label_printer')}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                    labelPrinterType === 'dedicated_label_printer'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-zinc-400'
+                  }`}
+                  title="Pour imprimante d'étiquettes autocollantes dédiée (Zebra / Xprinter XP-365B)"
+                >
+                  🏷️ Étiqueteuse Dédiée
+                </button>
+              </div>
+            )}
 
             {selectedProducts.length > 0 && (
               <Button

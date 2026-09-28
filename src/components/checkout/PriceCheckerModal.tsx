@@ -1,8 +1,10 @@
 import React from 'react';
 import { Modal, Button, SafeImage } from '../ui';
-import { Package } from 'lucide-react';
+import { Package, Printer } from 'lucide-react';
 import { formatProductStock } from '../../lib/utils';
 import { Product } from '../../types';
+import { addProductToRemoteLabelQueue } from '../../services/remoteLabelQueueService';
+import { toast } from 'sonner';
 
 interface PriceCheckerModalProps {
   priceCheckResult: Product | null;
@@ -56,7 +58,17 @@ export function PriceCheckerModal({
             <p className="text-3xl font-black text-indigo-400 tracking-tighter">{formatProductStock(priceCheckResult, products)}</p>
           </div>
         </div>
-        <div className="flex gap-4 pt-2">
+        <Button
+          onClick={async () => {
+            await addProductToRemoteLabelQueue(priceCheckResult, 1, 'Vérificateur Caisse');
+            toast.success(`"${priceCheckResult.name}" envoyé à la file d'étiquettes (Autre Poste) !`);
+          }}
+          className="w-full py-4 rounded-xl font-black uppercase bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex items-center justify-center gap-2"
+        >
+          <Printer size={15} />
+          Enregistrer pour Impression Étiquette (Autre Poste)
+        </Button>
+        <div className="flex gap-4 pt-1">
           <Button onClick={() => { addToCart(priceCheckResult); onClose(); }} className="flex-1 py-5 rounded-xl font-black uppercase tracking-normal bg-indigo-600 hover:bg-indigo-500 shadow-xs text-xs">AJOUTER AU PANIER</Button>
           <Button onClick={onClose} variant="secondary" className="flex-1 py-5 rounded-xl font-black uppercase tracking-normal text-xs border-none bg-white/10 hover:bg-white/20 text-white">ANNULER</Button>
         </div>

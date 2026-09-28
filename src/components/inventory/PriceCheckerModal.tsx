@@ -1,9 +1,11 @@
 import React from 'react';
-import { Package, ShoppingCart } from 'lucide-react';
+import { Package, ShoppingCart, Printer } from 'lucide-react';
 import { Button, Modal } from '../ui';
 import { SafeImage } from '../ui/SafeImage';
 import { formatPrice } from '../../lib/utils';
 import { Product, CompanySettings } from '../../types';
+import { addProductToRemoteLabelQueue } from '../../services/remoteLabelQueueService';
+import { toast } from 'sonner';
 
 interface PriceCheckerModalProps {
   isOpen: boolean;
@@ -66,7 +68,18 @@ export function PriceCheckerModal({
           </div>
         </div>
 
-        <div className="flex gap-4 pt-4">
+        <Button
+          onClick={async () => {
+            await addProductToRemoteLabelQueue(product, 1, 'Vérificateur Stock');
+            toast.success(`"${product.name}" enregistré dans la file d'étiquettes (Autre Poste) !`);
+          }}
+          className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2"
+        >
+          <Printer size={15} />
+          Enregistrer pour Impression Étiquette (Autre Poste)
+        </Button>
+
+        <div className="flex gap-4 pt-1">
           <Button 
             onClick={() => {
               onEdit(product);

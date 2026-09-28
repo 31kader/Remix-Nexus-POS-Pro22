@@ -145,11 +145,6 @@ export const TeamManagement = React.memo(function TeamManagement({
   };
 
   const printWeeklySchedule = () => {
-    const win = window.open('', '_blank', 'width=1000,height=750');
-    if (!win) {
-      toast.error('Veuillez autoriser les popups pour imprimer le planning.');
-      return;
-    }
     const rowsHtml = staffMembers
       .map(m => {
         const cells = DAYS_OF_WEEK.map(d => {
@@ -166,7 +161,24 @@ export const TeamManagement = React.memo(function TeamManagement({
       })
       .join('');
 
-    win.document.write(`<!DOCTYPE html>
+    let iframe = document.getElementById('nexus-planning-print-iframe') as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'nexus-planning-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+    }
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) return;
+
+    doc.open();
+    doc.write(`<!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8" />
@@ -195,10 +207,16 @@ export const TeamManagement = React.memo(function TeamManagement({
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          <script>window.onload = () => { window.print(); }</script>
         </body>
       </html>`);
-    win.document.close();
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe?.contentWindow?.focus();
+        iframe?.contentWindow?.print();
+      } catch (_) {}
+    }, 150);
   };
 
   const {

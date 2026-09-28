@@ -1,7 +1,7 @@
 import { convertKeysToSnake } from '../../lib/db-converters';
 import { enqueueStockAdjustment } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
-import { supabase } from '../../supabase';
+import { supabase, isSupabaseConfigured } from '../../supabase';
 import { generateUniqueId, safeGetItems } from '../../lib/utils';
 import { Product, Supplier, InvoicePattern, Purchase, PurchaseOrder, CompanySettings } from '../../types';
 import { PurchaseCartItem } from '../usePurchaseCart';
@@ -480,8 +480,18 @@ export async function handleDeletePurchaseDb({
 }: DeletePurchaseParams) {
   setIsProcessing(true);
   try {
-    // Delete from local DB and trigger sync/delete in background
+    // Delete from local DB (purges both nexus_db_purchases and nexus_purchases_cache + records tombstone)
     await localDb.delete(`purchases/${purchaseId}`);
+    try {
+      await localDb.delete(`goodsReceiptNotes/${purchaseId}`);
+    } catch (_) {}
+
+    if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+      await Promise.allSettled([
+        supabase.from('purchases').delete().eq('id', purchaseId),
+        supabase.from('goods_receipt_notes').delete().eq('id', purchaseId)
+      ]);
+    }
     
     // Instantly update Zustand store so it disappears from the UI immediately
     useFinanceStore.setState(state => ({
@@ -489,7 +499,7 @@ export async function handleDeletePurchaseDb({
     }));
     
     setPurchaseToDelete(null);
-    toast.success("Achat supprimé avec succès.");
+    toast.success("Bon d'achat supprimé définitivement (Local + Cloud).");
   } catch (error: any) {
     console.error("Error deleting purchase:", error);
     toast.error("Erreur de suppression : " + error.message);

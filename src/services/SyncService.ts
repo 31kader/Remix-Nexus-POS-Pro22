@@ -3,7 +3,7 @@ function isAuthOrPermissionError(err: any): boolean {
   const str = String(err?.message || err?.details || err?.code || err?.status || '');
   return str.includes('401') || str.includes('JWT') || str.includes('Unauthorized') || str.includes('permission') || str.includes('row-level security');
 }
-import { get as getIDB, set as setIDB } from 'idb-keyval';
+import { get as getIDB, set as setIDB, del } from 'idb-keyval';
 import { supabase } from '../supabase';
 import { convertKeysToSnake, preparePayload, TABLE_COLUMNS, TABLE_NAME_MAPPINGS } from '../lib/db-converters';
 import { useCoreStore } from '../store/useCoreStore';

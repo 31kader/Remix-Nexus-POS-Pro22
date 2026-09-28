@@ -5,49 +5,48 @@ import QRCode from 'qrcode';
 
 export const printLabels = async (products: Product[], rawSettings: CompanySettings) => {
   const settings = rawSettings as any;
-  const useSilent = settings.silentPrinting;
 
-  let printWindow: Window | null = null;
-  let iframe: HTMLIFrameElement | null = null;
-  let doc: Document | null = null;
-
-  if (useSilent) {
-    iframe = document.getElementById('print-iframe') as HTMLIFrameElement;
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'print-iframe';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-    }
-    doc = iframe.contentWindow?.document || iframe.contentDocument;
-  } else {
-    printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) return;
-    doc = printWindow.document;
+  // Toujours utiliser une iframe d'impression invisible pour éviter les blocages de popups
+  // et empêcher Chromium d'imprimer les marges/URLs d'une fenêtre externe
+  let iframe = document.getElementById('print-iframe') as HTMLIFrameElement;
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
   }
-
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
   if (!doc) return;
 
   const tpl = (settings.labelTemplate as string) || 'standard';
   
+  // Mode Imprimante de Ticket de Caisse (activé par défaut pour éviter le déroulement de 20cm et la rotation 90° Windows)
+  const isReceiptPrinterMode = settings.labelPrinterType !== 'dedicated_label_printer';
+
   // Base/unrotated width and height
-  const defaultWidthNum = tpl === 'custom' ? 70 : (tpl === 'shelf-large' ? 80 : tpl === 'shelf-standard' ? 40 : 60);
+  const defaultWidthNum = tpl === 'custom' ? 70 : (tpl === 'shelf-large' ? 72 : tpl === 'shelf-standard' ? 50 : 60);
   const defaultHeightNum = tpl === 'custom' ? 40 : (tpl === 'shelf-standard' ? 30 : 40);
 
-  const uWidthNum = settings.labelWidthCustom || defaultWidthNum;
-  const uHeightNum = settings.labelHeightCustom || defaultHeightNum;
+  const uWidthNum = Number(settings.labelWidthCustom) || defaultWidthNum;
+  const uHeightNum = Number(settings.labelHeightCustom) || defaultHeightNum;
 
-  // Render Dimensions (width and height swapped if portrait, e.g. for label feeding rolls)
+  // Render Dimensions
   let widthVal = uWidthNum;
   let heightVal = uHeightNum;
   if (settings.labelOrientation === 'portrait') {
     widthVal = uHeightNum;
     heightVal = uWidthNum;
+  }
+
+  // Sur une imprimante thermique de ticket de caisse 80mm, la zone chauffante réelle est de 72mm maximum.
+  // Si on dépasse 72mm ou si @page a width > height, le pilote Windows bascule en PAYSAGE (20cm horizontal).
+  if (isReceiptPrinterMode && widthVal > 72) {
+    widthVal = 72;
   }
 
   const width = `${widthVal}mm`;
@@ -517,15 +516,38 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
     `;
   });
 
+  // Si on imprime sur l'imprimante de ticket de caisse (mode par défaut),
+  // @page NE DOIT JAMAIS avoir width > height sinon Windows/Chromium bascule en PAYSAGE (20cm horizontal).
+  // On force donc `@page { size: 80mm auto; margin: 0mm !important; }` avec `height: auto` sur body.
+  const pageSizeCss = isReceiptPrinterMode
+    ? '80mm auto'
+    : `${width} ${height}`;
+  const bodyWidthCss = isReceiptPrinterMode ? '72mm' : width;
+  const bodyHeightCss = isReceiptPrinterMode ? 'auto' : height;
+
   doc.open();
   doc.write(`
+    <!DOCTYPE html>
     <html>
       <head>
+        <meta charset="utf-8" />
         <title>Etiquettes</title>
         <style>
           @page { 
-            size: ${width} ${height}; 
+            size: ${pageSizeCss}; 
             margin: 0mm !important; 
+          }
+          @media print {
+            @page {
+              size: ${pageSizeCss};
+              margin: 0mm !important;
+            }
+            html, body {
+              width: ${bodyWidthCss} !important;
+              height: ${bodyHeightCss} !important;
+              margin: 0mm !important;
+              padding: 0mm !important;
+            }
           }
           * { 
             box-sizing: border-box; 
@@ -536,13 +558,14 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             margin: 0 !important; 
             padding: 0 !important; 
             background: white !important;
-            font-family: sans-serif;
-            width: ${width} !important;
-            height: ${height} !important;
-            max-height: ${height} !important;
-            overflow: hidden !important;
+            font-family: Arial, sans-serif;
+            width: ${bodyWidthCss} !important;
+            height: ${bodyHeightCss} !important;
+            ${isReceiptPrinterMode ? '' : `max-height: ${height} !important; overflow: hidden !important;`}
             font-size: 0 !important;
             line-height: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           svg {
             max-width: 100% !important;
@@ -555,7 +578,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             height: ${height} !important;
             max-height: ${height} !important;
             padding: 0;
-            margin: 0;
+            margin: ${isReceiptPrinterMode ? '0 auto' : '0'} !important;
             box-sizing: border-box;
             background: white;
             position: relative !important;
@@ -569,10 +592,12 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             justify-content: center;
             font-size: 12px !important;
             line-height: normal !important;
+            ${isReceiptPrinterMode ? 'border-bottom: 1px dashed #ccc;' : ''}
           }
           .label-container:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
+            border-bottom: none !important;
           }
           .label-wrapper {
             box-sizing: border-box;
@@ -631,23 +656,19 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
       </head>
       <body>
         ${labelsHtml}
-        <script>
-          window.onload = () => {
-            window.print();
-            ${useSilent ? '' : 'setTimeout(() => window.close(), 500);'}
-          };
-        </script>
       </body>
     </html>
   `);
   doc.close();
 
-  if (useSilent && iframe?.contentWindow) {
-    try {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
-    } catch (e) {}
-  }
+  setTimeout(() => {
+    if (iframe?.contentWindow) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (e) {}
+    }
+  }, 150);
 };
 
 export const printLabel = async (p: Product, settings: CompanySettings) => {
