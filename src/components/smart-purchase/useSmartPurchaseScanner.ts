@@ -4,7 +4,7 @@ import { generateUniqueId, logAction } from '../../lib/utils';
 import { scanInvoice, getStoredAiVisionKey, structureOcrTextWithGroq } from '../../services/geminiService';
 import { matchProductInCatalog, parseRawInvoiceText } from './invoiceParser';
 import { parseImportedFile } from './importFileParser';
-import { preprocessImageForOcr } from '../../utils/ocrUtils';
+import { preprocessImageForOcr, parseSmartAlgerianNumber } from '../../utils/ocrUtils';
 import { Product, Supplier, InvoicePattern, PurchaseCartItem } from '../../types';
 
 interface UseSmartPurchaseScannerProps {
@@ -124,18 +124,41 @@ export function useSmartPurchaseScanner({
       let mappedCount = 0;
       let unmappedCount = 0;
 
+      // Récupérer aussi les patterns enregistrés en base (invoice_patterns) pour ce fournisseur
+      const supplierPatterns = (patterns || []).filter(p => !selectedSupplierId || (p as any).supplierId === selectedSupplierId || (p as any).supplier_id === selectedSupplierId);
+      const patternMappings: Record<string, string> = {};
+      supplierPatterns.forEach(pat => {
+        const mappings = (pat as any).itemMappings || (pat as any).item_mappings;
+        if (mappings && typeof mappings === 'object') {
+          Object.entries(mappings).forEach(([k, v]) => {
+            if (k && v) patternMappings[k.trim().toLowerCase()] = String(v);
+          });
+        }
+      });
+
       const newItems: PurchaseCartItem[] = results.items
         .map((item: any) => {
+          const cleanQty = Math.max(1, parseSmartAlgerianNumber(item.qty ?? item.quantity ?? 1) || 1);
+          const rawPrice = parseSmartAlgerianNumber(item.price);
+          const rawTotal = parseSmartAlgerianNumber(item.total);
+          const cleanDiscount = parseSmartAlgerianNumber(item.discount);
+          const cleanPrice = rawPrice > 0 ? rawPrice : (rawTotal > 0 && cleanQty > 0 ? Math.round((rawTotal / cleanQty) * 100) / 100 : 0);
+
+          const rawNameKey = String(item.name || '').trim().toLowerCase();
+          const patternProductId = patternMappings[rawNameKey];
+
           const matchedProduct = item.productId
             ? products.find(p => p.id === item.productId)
-            : matchProductInCatalog(
-                {
-                  name: item.name || '',
-                  barcode: item.barcode || item.code || '',
-                  sku: item.sku || ''
-                },
-                products
-              );
+            : patternProductId
+              ? products.find(p => p.id === patternProductId)
+              : matchProductInCatalog(
+                  {
+                    name: item.name || '',
+                    barcode: item.barcode || item.code || '',
+                    sku: item.sku || ''
+                  },
+                  products
+                );
 
           if (matchedProduct) {
             mappedCount++;
@@ -143,31 +166,25 @@ export function useSmartPurchaseScanner({
               lineId: generateUniqueId(),
               productId: matchedProduct.id,
               productName: matchedProduct.name,
-              quantity: item.qty || item.quantity || 1,
-              costPrice: item.price > 0 ? item.price : matchedProduct.costPrice || matchedProduct.price || 0,
+              quantity: cleanQty,
+              costPrice: cleanPrice > 0 ? cleanPrice : matchedProduct.costPrice || matchedProduct.price || 0,
               taxRate: matchedProduct.taxRate || 0,
-              discount: item.discount || 0,
+              discount: cleanDiscount,
               imageUrl: matchedProduct.imageUrl,
               isDraft: false
             };
           }
 
           unmappedCount++;
-          const calcPrice =
-            item.price > 0
-              ? item.price
-              : item.total && (item.qty || item.quantity)
-                ? item.total / (item.qty || item.quantity)
-                : 0;
 
           return {
             lineId: generateUniqueId(),
             productId: '',
             productName: item.name || 'Article Importé',
-            quantity: item.qty || item.quantity || 1,
-            costPrice: calcPrice > 0 ? calcPrice : 0,
+            quantity: cleanQty,
+            costPrice: cleanPrice > 0 ? cleanPrice : 0,
             taxRate: 19,
-            discount: item.discount || 0,
+            discount: cleanDiscount,
             isDraft: true
           };
         })

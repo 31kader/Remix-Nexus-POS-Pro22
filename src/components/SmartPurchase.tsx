@@ -248,6 +248,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
           purchaseStatus={purchaseStatus}
           setPurchaseStatus={setPurchaseStatus}
           rawOcrText={rawOcrText}
+          scannedImageUrl={extractedData?.scannedImageUrl || ''}
           setIsOcrInspectorOpen={setIsOcrInspectorOpen}
           detectedOcrType={detectedOcrType}
           invoiceNumber={invoiceNumber}

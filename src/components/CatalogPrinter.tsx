@@ -1381,6 +1381,13 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                         const ov = customOverrides[p.id] || {};
                         const effPrice = ov.customPrice !== undefined ? ov.customPrice : Number(p.price || 0);
                         const wholesale = Number((p as any).wholesalePrice || effPrice * 0.9);
+                        const oldPrice =
+                          ov.oldPrice !== undefined
+                            ? ov.oldPrice
+                            : priceDisplayMode === 'promo' && discountPercent > 0
+                              ? Math.round(effPrice / (1 - discountPercent / 100))
+                              : 0;
+                        const hasPromo = oldPrice > effPrice;
                         return (
                           <tr key={p.id}>
                             <td className="p-2 font-mono text-[10px] text-slate-500">
@@ -1404,7 +1411,12 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                               </td>
                             )}
                             {priceDisplayMode !== 'wholesale' && priceDisplayMode !== 'none' && (
-                              <td className="p-2 text-right font-black" style={{ color: themeColor }}>
+                              <td className="p-2 text-right font-black" style={{ color: hasPromo ? '#dc2626' : themeColor }}>
+                                {hasPromo && (
+                                  <span className="text-[10px] text-slate-400 line-through mr-1.5">
+                                    {oldPrice.toFixed(0)}
+                                  </span>
+                                )}
                                 {effPrice.toFixed(2)} {currency}
                               </td>
                             )}
@@ -1429,9 +1441,10 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                       const oldPrice =
                         ov.oldPrice !== undefined
                           ? ov.oldPrice
-                          : discountPercent > 0
+                          : priceDisplayMode === 'promo' && discountPercent > 0
                             ? Math.round(effPrice / (1 - discountPercent / 100))
                             : 0;
+                      const hasPromo = oldPrice > effPrice;
 
                       return (
                         <div
@@ -1481,15 +1494,15 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                             <div className="flex items-baseline justify-between gap-1">
                               {showPrice && priceDisplayMode !== 'none' && (
                                 <div>
-                                  {priceDisplayMode === 'promo' && oldPrice > effPrice && (
-                                    <span className="text-[10px] text-slate-400 line-through mr-1">
+                                  {hasPromo && (
+                                    <span className="text-[10px] text-rose-500 font-bold line-through mr-1.5">
                                       {oldPrice.toFixed(0)}
                                     </span>
                                   )}
                                   <span
                                     style={{
                                       fontSize: `${priceFontSize}px`,
-                                      color: priceDisplayMode === 'promo' ? '#dc2626' : themeColor
+                                      color: hasPromo ? '#dc2626' : themeColor
                                     }}
                                     className="font-black"
                                   >

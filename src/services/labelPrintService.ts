@@ -221,6 +221,10 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
 
       const imageHtml = showImage && (p.imageUrl || p.image) ? `<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : '';
 
+      const crossedPriceHtml = (p.originalPrice && Number(p.originalPrice) > Number(p.price))
+        ? `<span style="font-size: ${Math.max(8, Math.round(priceSize * 0.65))}px; text-decoration: line-through; color: #555; font-weight: bold; margin-right: 4px;">${formatPrice(p.originalPrice)}</span>`
+        : '';
+
       if (struct === 'split') {
         // Two-Column Layout organization: left side details, right side code
         contentHtml = `
@@ -263,7 +267,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
               ` : ''}
               <div style="display: flex; align-items: center; justify-content: flex-start; gap: 6px; margin: 3px 0; width: 100%;">
                 ${imageHtml}
-                ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 900; margin: 0; white-space: nowrap;">${formatPrice(p.price)} ${settings.currency}</div>` : ''}
+                ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 900; margin: 0; white-space: nowrap;">${crossedPriceHtml}${formatPrice(p.price)} ${settings.currency}</div>` : ''}
               </div>
               ${customText ? `<div class="custom-text" style="font-size: ${textSize}px; font-weight: ${isBold}; font-style: ${isItalic}; color: #333; margin: 1px 0; width: 100%; word-break: break-word;">${customText}</div>` : ''}
             </div>
@@ -304,6 +308,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
           ">
             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f1f5f9; border: 1.5px solid #000; border-radius: 4px; padding: 4px; min-width: 45%; height: 100%; box-sizing: border-box;">
               ${showPrice ? `
+                ${p.originalPrice && Number(p.originalPrice) > Number(p.price) ? `<div style="font-size: ${Math.max(8, Math.round(priceSize * 0.65))}px; text-decoration: line-through; color: #555; font-weight: bold; margin-bottom: 2px;">${formatPrice(p.originalPrice)}</div>` : ''}
                 <div class="price" style="font-size: ${Math.round(priceSize * 1.25)}px; font-weight: 900; line-height: 1; text-align: center; color: #000;">${formatPrice(p.price)}</div>
                 <div style="font-size: 9px; font-weight: bold; margin-top: 3px; text-transform: uppercase; color: #475569;">${settings.currency}</div>
               ` : '<div style="font-weight: bold; font-size: 11px;">PROMO</div>'}
@@ -378,7 +383,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
                   `}
                 ">${p.name}</div>
               ` : ''}
-              ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 950; text-align: right; white-space: nowrap;">${formatPrice(p.price)} ${settings.currency}</div>` : ''}
+              ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 950; text-align: right; white-space: nowrap;">${crossedPriceHtml}${formatPrice(p.price)} ${settings.currency}</div>` : ''}
             </div>
 
             ${customText ? `<div class="custom-text" style="font-size: ${textSize}px; font-weight: ${isBold}; font-style: ${isItalic}; color: #333; width: 100%; text-align: center; margin-bottom: 2px;">${customText}</div>` : ''}
@@ -437,7 +442,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             
             <div style="display: flex; align-items: center; justify-content: ${align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center'}; gap: 8px; margin: auto; width: 100%;">
               ${imageHtml}
-              ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 900; margin: 0; white-space: nowrap;">${formatPrice(p.price)} ${settings.currency}</div>` : ''}
+              ${showPrice ? `<div class="price" style="font-size: ${priceSize}px; font-weight: 900; margin: 0; white-space: nowrap;">${crossedPriceHtml}${formatPrice(p.price)} ${settings.currency}</div>` : ''}
             </div>
 
             ${customText ? `<div class="custom-text" style="font-size: ${textSize}px; text-align: ${tAlign}; font-weight: ${isBold}; font-style: ${isItalic}; color: #333; margin: 2px 0; width: 100%; word-break: break-word;">${customText}</div>` : ''}

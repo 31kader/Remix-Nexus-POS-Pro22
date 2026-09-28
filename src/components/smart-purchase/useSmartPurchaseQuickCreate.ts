@@ -4,6 +4,7 @@ import { localDb } from '../../services/LocalDatabase';
 import { logAction } from '../../lib/utils';
 import { Category, Product, PurchaseCartItem } from '../../types';
 import { useCoreStore } from '../../store/useCoreStore';
+import { saveLearnedOcrMapping } from './invoiceParser';
 
 interface UseSmartPurchaseQuickCreateProps {
   categories: Category[];
@@ -35,8 +36,10 @@ export function useSmartPurchaseQuickCreate({
   });
 
   const linkDraftToProduct = (itemLineId: string, matchedProduct: Product) => {
+    let scannedText = '';
     setCart(prev => prev.map(item => {
       if (item.lineId === itemLineId) {
+        scannedText = item.productName || '';
         return {
           ...item,
           productId: matchedProduct.id,
@@ -48,7 +51,10 @@ export function useSmartPurchaseQuickCreate({
       }
       return item;
     }));
-    toast.success(`Associé avec succès à "${matchedProduct.name}" !`);
+    if (scannedText) {
+      saveLearnedOcrMapping(scannedText, matchedProduct.id);
+    }
+    toast.success(`Associé à "${matchedProduct.name}" et mémorisé automatiquement pour vos prochains scans ! 🧠`);
   };
 
   const openQuickCreateModal = (item: PurchaseCartItem) => {
@@ -119,8 +125,11 @@ export function useSmartPurchaseQuickCreate({
         `Produit créé : ${newProductData.name}, ID: ${newProductId}`
       );
 
-      // Map this item in the cart to the new product
+      // Map this item in the cart to the new product and remember the OCR alias
       if (draftItemToCreate) {
+        if (draftItemToCreate.productName) {
+          saveLearnedOcrMapping(draftItemToCreate.productName, newProductId);
+        }
         setCart(prev => prev.map(item => {
           if (item.lineId === draftItemToCreate.lineId) {
             return {

@@ -29,6 +29,8 @@ interface EditableSaleRow {
   quantity: number;
   price: number;
   costPrice: number;
+  discountAmount: number;
+  ticketDiscountTotal: number;
   isEditing: boolean;
 }
 
@@ -76,6 +78,16 @@ export function ProductSalesEditModal({
       }
       if (!Array.isArray(items)) return;
 
+      const txLinesSubtotal = items.reduce((acc, it) => {
+        if (!it) return acc;
+        return acc + (Number(calculateItemPrice(it, t.isWholesale) ?? it.price ?? 0) * (Number(it.quantity) || 1));
+      }, 0);
+
+      const explicitTxDiscount = Number(t.discountAmount ?? (t as any).discount_amount ?? 0);
+      const pointsAndVoucher = Number(t.pointsDiscount || 0) + Number(t.voucherDiscount || 0);
+      const implicitTxDiscount = Math.max(0, Math.round((txLinesSubtotal - Number(t.total ?? txLinesSubtotal) - pointsAndVoucher) * 100) / 100);
+      const effectiveTxGlobalDiscount = explicitTxDiscount > 0 ? explicitTxDiscount : implicitTxDiscount;
+
       items.forEach((item, idx) => {
         if (!item) return;
         const itemProdId = String((item as any).productId || item.id || '');
@@ -94,8 +106,18 @@ export function ProductSalesEditModal({
             ? Number(rawCost) 
             : Number(product.costPrice || (product as any).cost_price || 0);
 
-          const itemPrice = Number(calculateItemPrice(item, t.isWholesale) ?? item.price ?? 0);
+          const catalogOrOriginalPrice = Number(item.price ?? 0);
+          const effectiveUnitPrice = Number(calculateItemPrice(item, t.isWholesale) ?? item.price ?? 0);
           const itemQty = Number(item.quantity) || 1;
+          const lineSubtotalAfterLineDisc = effectiveUnitPrice * itemQty;
+
+          // Remise directe sur la ligne (si lineDiscount ou overriddenPrice < price)
+          const directLineDiscount = Math.max(0, (catalogOrOriginalPrice - effectiveUnitPrice) * itemQty);
+          // Part proportionnelle de la remise globale du ticket sur cet article
+          const allocatedGlobalDiscount = txLinesSubtotal > 0
+            ? (lineSubtotalAfterLineDisc / txLinesSubtotal) * effectiveTxGlobalDiscount
+            : 0;
+          const totalRowDiscount = Math.round((directLineDiscount + allocatedGlobalDiscount) * 100) / 100;
 
           sales.push({
             transactionId: t.id,
@@ -104,8 +126,10 @@ export function ProductSalesEditModal({
             item: { ...item },
             currentDate: t.timestamp ? new Date(t.timestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
             quantity: itemQty,
-            price: itemPrice,
+            price: directLineDiscount > 0 ? catalogOrOriginalPrice : effectiveUnitPrice,
             costPrice: itemCost,
+            discountAmount: totalRowDiscount,
+            ticketDiscountTotal: effectiveTxGlobalDiscount,
             isEditing: false
           });
         }
@@ -143,7 +167,7 @@ export function ProductSalesEditModal({
     );
   };
 
-  // Save single transaction changes (Price, CostPrice, Quantity, Date)
+  // Save single transaction changes (Price, CostPrice, Quantity, Discount, Date)
   const handleSaveTransactionRow = async (row: EditableSaleRow) => {
     setProcessingTxId(row.transactionId);
     try {
@@ -167,13 +191,17 @@ export function ProductSalesEditModal({
         quantity: row.quantity
       };
 
-      // Recalculate transaction total
-      const newTotal = updatedItems.reduce((sum, it) => sum + (calculateItemPrice(it, origTx.isWholesale) * it.quantity), 0);
+      // Recalculate transaction total while preserving/updating the discount
+      const grossItemsTotal = updatedItems.reduce((sum, it) => sum + (calculateItemPrice(it, origTx.isWholesale) * it.quantity), 0);
+      const newDiscountAmount = Math.max(0, Number(row.discountAmount || 0));
+      const pointsAndVoucher = Number(origTx.pointsDiscount || 0) + Number(origTx.voucherDiscount || 0);
+      const newTotal = Math.max(0, grossItemsTotal - newDiscountAmount - pointsAndVoucher);
       const newTimestamp = row.currentDate ? new Date(row.currentDate).toISOString() : origTx.timestamp;
 
       const updatedTx: Transaction = {
         ...origTx,
         items: updatedItems,
+        discountAmount: newDiscountAmount,
         total: newTotal,
         timestamp: newTimestamp,
         updatedAt: new Date().toISOString()
@@ -205,6 +233,7 @@ export function ProductSalesEditModal({
             .from('transactions')
             .update({
               items: updatedItems,
+              discount_amount: newDiscountAmount,
               total: newTotal,
               timestamp: newTimestamp,
               updated_at: new Date().toISOString()
@@ -371,15 +400,18 @@ export function ProductSalesEditModal({
     }
   };
 
-  const { totalQtySold, totalRevenue, totalCost, totalProfit } = useMemo(() => {
+  const { totalQtySold, totalRevenue, totalDiscount, totalCost, totalProfit } = useMemo(() => {
     const qty = salesRows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-    const rev = salesRows.reduce((sum, r) => sum + ((Number(r.price) || 0) * (Number(r.quantity) || 0)), 0);
+    const grossRev = salesRows.reduce((sum, r) => sum + ((Number(r.price) || 0) * (Number(r.quantity) || 0)), 0);
+    const disc = salesRows.reduce((sum, r) => sum + (Number(r.discountAmount) || 0), 0);
+    const netRev = Math.max(0, grossRev - disc);
     const cost = salesRows.reduce((sum, r) => sum + ((Number(r.costPrice) || 0) * (Number(r.quantity) || 0)), 0);
     return {
       totalQtySold: qty,
-      totalRevenue: rev,
+      totalRevenue: netRev,
+      totalDiscount: disc,
       totalCost: cost,
-      totalProfit: rev - cost,
+      totalProfit: netRev - cost,
     };
   }, [salesRows]);
 
@@ -396,7 +428,7 @@ export function ProductSalesEditModal({
       isOpen={isOpen}
       onClose={onClose}
       title="DÉTAIL & CORRECTION DES VENTES PAR PRODUIT"
-      maxWidth="max-w-5xl"
+      maxWidth="max-w-6xl"
       className="bg-[#0b0d14] border border-white/10"
     >
       <div className="space-y-6 text-left py-2">
@@ -414,19 +446,24 @@ export function ProductSalesEditModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-black/40 px-4 py-2.5 rounded-xl border border-white/5 font-mono text-xs">
+          <div className="flex items-center gap-4 bg-black/40 px-4 py-2.5 rounded-xl border border-white/5 font-mono text-xs flex-wrap">
             <div>
               <span className="text-[9px] text-slate-400 uppercase font-sans block">Qté Vendue</span>
               <span className="text-sm font-black text-white">{totalQtySold}</span>
             </div>
             <div className="h-6 w-px bg-white/10" />
             <div>
-              <span className="text-[9px] text-slate-400 uppercase font-sans block">CA Total</span>
+              <span className="text-[9px] text-rose-400 uppercase font-sans block">Remises Caisse</span>
+              <span className="text-sm font-black text-rose-400">-{Number(totalDiscount || 0).toFixed(2)}</span>
+            </div>
+            <div className="h-6 w-px bg-white/10" />
+            <div>
+              <span className="text-[9px] text-slate-400 uppercase font-sans block">CA Net</span>
               <span className="text-sm font-black text-white">{Number(totalRevenue || 0).toFixed(2)}</span>
             </div>
             <div className="h-6 w-px bg-white/10" />
             <div>
-              <span className="text-[9px] text-slate-400 uppercase font-sans block">Bénéfice</span>
+              <span className="text-[9px] text-slate-400 uppercase font-sans block">Bénéfice Net</span>
               <span className={`text-sm font-black ${totalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {totalProfit >= 0 ? '+' : ''}{Number(totalProfit || 0).toFixed(2)}
               </span>
@@ -470,7 +507,7 @@ export function ProductSalesEditModal({
               <Receipt size={15} className="text-indigo-400" />
               Historique des Ventes de ce Produit ({salesRows.length} tickets)
             </h5>
-            <span className="text-[10px] text-slate-400 ">Modifiez le prix, le coût, la date ou supprimez une ligne erronée</span>
+            <span className="text-[10px] text-slate-400 ">Modifiez le prix, la remise caisse, le coût, la date ou supprimez une ligne erronée</span>
           </div>
 
           {salesRows.length === 0 ? (
@@ -486,9 +523,10 @@ export function ProductSalesEditModal({
                     <th className="p-3">Client / Caisse</th>
                     <th className="p-3 text-center">Qté</th>
                     <th className="p-3 text-right">Prix Vente ({currency})</th>
+                    <th className="p-3 text-right text-rose-400">Remise Caisse</th>
                     <th className="p-3 text-right">Prix Achat ({currency})</th>
-                    <th className="p-3 text-right">Total Ligne</th>
-                    <th className="p-3 text-right">Marge</th>
+                    <th className="p-3 text-right">Total Net Ligne</th>
+                    <th className="p-3 text-right">Marge Nette</th>
                     <th className="p-3 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -498,7 +536,9 @@ export function ProductSalesEditModal({
                     const safePrice = Number(row.price) || 0;
                     const safeCost = Number(row.costPrice) || 0;
                     const safeQty = Number(row.quantity) || 0;
-                    const lineTotal = safePrice * safeQty;
+                    const safeDiscount = Math.max(0, Number(row.discountAmount) || 0);
+                    const grossLineTotal = safePrice * safeQty;
+                    const lineTotal = Math.max(0, grossLineTotal - safeDiscount);
                     const lineCost = safeCost * safeQty;
                     const lineProfit = lineTotal - lineCost;
                     const lineMarginPct = lineCost > 0 ? ((lineProfit / lineCost) * 100).toFixed(0) : '0';
@@ -564,6 +604,33 @@ export function ProductSalesEditModal({
                           )}
                         </td>
 
+                        {/* Checkout Discount */}
+                        <td className="p-3 text-right">
+                          {row.isEditing ? (
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={row.discountAmount}
+                              onChange={e => handleUpdateRowState(row.transactionId, row.itemIndex, { discountAmount: parseFloat(e.target.value) || 0 })}
+                              className="w-20 text-right bg-black/60 border border-rose-500/40 rounded-lg py-1 px-2 text-xs font-black text-rose-300 outline-none"
+                            />
+                          ) : safeDiscount > 0 ? (
+                            <div>
+                              <span className="px-2 py-0.5 rounded bg-rose-500/15 border border-rose-500/30 text-rose-400 font-black text-[11px]">
+                                -{safeDiscount.toFixed(2)}
+                              </span>
+                              {row.ticketDiscountTotal > safeDiscount && (
+                                <span className="block text-[9px] text-slate-400 mt-0.5 font-sans">
+                                  (Ticket: -{row.ticketDiscountTotal.toFixed(0)} {currency})
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-[10px]">0.00</span>
+                          )}
+                        </td>
+
                         {/* Cost Price */}
                         <td className="p-3 text-right">
                           {row.isEditing ? (
@@ -580,8 +647,13 @@ export function ProductSalesEditModal({
                         </td>
 
                         {/* Line Total */}
-                        <td className="p-3 text-right font-black text-white text-xs">
-                          {lineTotal.toFixed(2)}
+                        <td className="p-3 text-right">
+                          {safeDiscount > 0 && (
+                            <span className="block text-[9px] text-slate-500 line-through">
+                              {grossLineTotal.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="font-black text-white text-xs">{lineTotal.toFixed(2)}</span>
                         </td>
 
                         {/* Margin */}

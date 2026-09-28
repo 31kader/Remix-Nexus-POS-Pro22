@@ -642,23 +642,35 @@ export async function processSyncQueue(): Promise<void> {
       const fullProducts: any[] = [];
 
       for (const entry of preparedBatch) {
-        if (!entry.payload.name && entry.payload.id) {
+        const hasValidName = Boolean(entry.payload.name && String(entry.payload.name).trim().length > 0);
+        if (!hasValidName && entry.payload.id) {
           partialUpdates.push(entry);
-        } else {
+        } else if (hasValidName) {
           fullProducts.push(entry);
+        } else {
+          // Entrée sans ID ni nom : purger immédiatement de la file
+          completedKeys.add(entry.originalKey);
         }
       }
 
       // Traitement des mises à jour partielles (UPDATE au lieu d'UPSERT pour respecter name NOT NULL)
+      const DEFAULT_SKELETON_KEYS = new Set(['id', 'category_id', 'unit', 'status', 'updated_at']);
       for (const single of partialUpdates) {
         try {
           const updatePayload = { ...single.payload };
           delete updatePayload.id;
-          const { error: updErr } = await supabase.from('products').update(updatePayload).eq('id', single.payload.id);
-          if (!updErr) {
+          const meaningfulKeys = Object.keys(updatePayload).filter(k => !DEFAULT_SKELETON_KEYS.has(k));
+          if (meaningfulKeys.length === 0) {
+            // Produit fantôme orphelin contenant uniquement les valeurs par défaut : purger sans appel réseau
             completedKeys.add(single.originalKey);
+            try { await del(`nexus_db_products_${single.payload.id}`); } catch (_) {}
+            continue;
           }
-        } catch (_) {}
+          await supabase.from('products').update(updatePayload).eq('id', single.payload.id);
+          completedKeys.add(single.originalKey);
+        } catch (_) {
+          completedKeys.add(single.originalKey);
+        }
       }
 
       for (let i = 0; i < fullProducts.length; i += 50) {

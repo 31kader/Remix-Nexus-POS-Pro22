@@ -1,4 +1,32 @@
 import { Product, Supplier } from '../../types';
+import { parseSmartAlgerianNumber } from '../../utils/ocrUtils';
+
+export const LEARNED_OCR_MAPPINGS_KEY = 'nexus_ocr_learned_mappings_v1';
+
+export const getLearnedOcrMappings = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(LEARNED_OCR_MAPPINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveLearnedOcrMapping = (scannedName: string, productId: string) => {
+  if (!scannedName || !productId) return;
+  try {
+    const norm = normalizeForMatching(scannedName);
+    if (norm.length < 2) return;
+    const current = getLearnedOcrMappings();
+    current[norm] = productId;
+    // Aussi enregistrer la chaîne brute en minuscule au cas où elle contient des chiffres distinctifs (ex: "MAXON 45G")
+    const rawClean = scannedName.trim().toLowerCase().replace(/\s+/g, ' ');
+    current[rawClean] = productId;
+    localStorage.setItem(LEARNED_OCR_MAPPINGS_KEY, JSON.stringify(current));
+  } catch (e) {
+    console.warn('Could not save learned OCR mapping:', e);
+  }
+};
 
 /**
  * Normalizes text for matching by removing accents, special characters, and extra spaces.
@@ -31,6 +59,7 @@ export const extractDistinctiveTokens = (name: string): string[] => {
 /**
  * Intelligent Automatic Catalog Mapper:
  * Matches a scanned item against the product catalog with high precision.
+ * 0. Learned User Mapping (100% priority - remembered from previous manual links!)
  * 1. Barcode match (exact)
  * 2. SKU match (exact)
  * 3. Exact normalized name match
@@ -42,6 +71,18 @@ export const matchProductInCatalog = (
   products: Product[]
 ): Product | undefined => {
   if (!products || products.length === 0) return undefined;
+
+  // 0. Learned User Mapping (Mémorisation automatique des liaisons précédentes)
+  if (item.name) {
+    const learned = getLearnedOcrMappings();
+    const rawKey = item.name.trim().toLowerCase().replace(/\s+/g, ' ');
+    const normKey = normalizeForMatching(item.name);
+    const learnedProductId = learned[rawKey] || learned[normKey];
+    if (learnedProductId) {
+      const learnedProduct = products.find(p => p.id === learnedProductId);
+      if (learnedProduct) return learnedProduct;
+    }
+  }
 
   // 1. Direct Barcode Match
   if (item.barcode && item.barcode.trim().length >= 4) {
@@ -162,7 +203,7 @@ const isNoiseLine = (line: string): boolean => {
  * Extracts numbers and product text from a single invoice line.
  */
 const splitLineIntoNameAndNumbers = (line: string): { barcode?: string; name: string; numbers: number[] } => {
-  let cleaned = line;
+  let cleaned = line.replace(/[\u00A0\u202F]/g, ' ');
 
   // 1. Check for leading or embedded barcode (8-14 digits)
   let barcode: string | undefined = undefined;
@@ -172,19 +213,22 @@ const splitLineIntoNameAndNumbers = (line: string): { barcode?: string; name: st
     cleaned = cleaned.replace(bcMatch[0], ' ');
   }
 
-  // 2. Clean currency words and extract numbers (handling decimals with , or .)
-  // E.g. "1 170,00 DA" -> "1170.00"
-  cleaned = cleaned.replace(/(\d)\s+(\d{3}(?:[.,]\d{1,2})?)/g, '$1$2'); // merge thousands e.g. "1 170" -> "1170"
+  // 2. Normaliser les nombres avec séparateurs de milliers (. ou , ou espace) avant l'extraction
+  // Ex: "1.200,00" -> "1200.00", "1,200.00" -> "1200.00", "1.500" -> "1500", "1 170,00 DA" -> "1170.00"
+  cleaned = cleaned.replace(/\b(\d{1,3})[.\s](\d{3})[,.](\d{2})\b/g, '$1$2.$3');
+  cleaned = cleaned.replace(/\b(\d{1,3}),(\d{3})\.(\d{2})\b/g, '$1$2.$3');
+  cleaned = cleaned.replace(/\b(\d{1,3})\.(\d{3})\b/g, '$1$2');
+  cleaned = cleaned.replace(/(\d)\s+(\d{3}(?:[.,]\d{1,2})?)/g, '$1$2');
   cleaned = cleaned.replace(/(\d)\s*(DA|DZD|DT|€|\$)\b/gi, '$1');
 
-  const numberMatches = cleaned.match(/\b\d+(?:[.,]\d{1,2})?\b/g) || [];
+  const numberMatches = cleaned.match(/\b\d+(?:[.,]\d{1,3})?\b/g) || [];
   const numbers = numberMatches
-    .map(n => parseFloat(n.replace(',', '.')))
+    .map(n => parseSmartAlgerianNumber(n))
     .filter(v => !isNaN(v) && v > 0);
 
   // 3. Clean line to get the product designation
   let name = cleaned
-    .replace(/\b\d+(?:[.,]\d{1,2})?\b/g, ' ')
+    .replace(/\b\d+(?:[.,]\d{1,3})?\b/g, ' ')
     .replace(/\b(DA|DZD|DT|EUR|USD|€|\$|%|pcs|kg|u|l|m|g|ml|cl)\b/gi, ' ')
     .replace(/[*#|:;_=+><\[\]{}()]/g, ' ')
     .replace(/\s+/g, ' ')

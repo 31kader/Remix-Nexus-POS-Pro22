@@ -181,9 +181,10 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       const validBrandIds = new Set(allBrands.map(b => b.id));
 
       let prodCount = 0;
-      if (allProducts.length > 0) {
-        for (let i = 0; i < allProducts.length; i += BATCH_SIZE) {
-          const chunk = allProducts.slice(i, i + BATCH_SIZE).map(p => {
+      const validProducts = allProducts.filter(p => Boolean(p && p.name && String(p.name).trim().length > 0));
+      if (validProducts.length > 0) {
+        for (let i = 0; i < validProducts.length; i += BATCH_SIZE) {
+          const chunk = validProducts.slice(i, i + BATCH_SIZE).map(p => {
             const clean = sanitizeProductForSupabase(p);
             if (!clean.category_id || !validCatIds.has(clean.category_id)) {
               clean.category_id = 'uncategorized';
@@ -192,7 +193,9 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
               clean.brand_id = null;
             }
             return clean;
-          });
+          }).filter(clean => Boolean(clean.name && String(clean.name).trim().length > 0));
+
+          if (chunk.length === 0) continue;
 
           try {
             const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'id' });

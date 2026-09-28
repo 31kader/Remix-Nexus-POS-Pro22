@@ -101,8 +101,13 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                     </div>
                   )}
                   {state.showPrice && (
-                    <div style={{ fontSize: `${state.priceFontSize}px`, fontWeight: '900', lineHeight: '1.1' }}>
-                      {previewProduct.price.toFixed(2)} {settings.currency}
+                    <div style={{ fontSize: `${state.priceFontSize}px`, fontWeight: '900', lineHeight: '1.1', display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+                      {previewProduct.originalPrice && Number(previewProduct.originalPrice) > Number(previewProduct.price) && (
+                        <span style={{ fontSize: `${Math.max(8, Math.round(state.priceFontSize * 0.65))}px`, textDecoration: 'line-through', color: '#dc2626', fontWeight: 'bold' }}>
+                          {Number(previewProduct.originalPrice).toFixed(0)}
+                        </span>
+                      )}
+                      <span>{previewProduct.price.toFixed(2)} {settings.currency}</span>
                     </div>
                   )}
                 </div>
@@ -145,6 +150,11 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f1f5f9', border: '1.5px solid #000', borderRadius: '4px', padding: '4px', minWidth: '45%', height: '100%', boxSizing: 'border-box' }}>
                 {state.showPrice ? (
                   <>
+                    {previewProduct.originalPrice && Number(previewProduct.originalPrice) > Number(previewProduct.price) && (
+                      <div style={{ fontSize: `${Math.max(9, Math.round(state.priceFontSize * 0.7))}px`, textDecoration: 'line-through', color: '#dc2626', fontWeight: 'bold', marginBottom: '2px' }}>
+                        {Number(previewProduct.originalPrice).toFixed(0)} {settings.currency}
+                      </div>
+                    )}
                     <div style={{ fontSize: `${Math.round(state.priceFontSize * 1.25)}px`, fontWeight: '900', color: '#000', lineHeight: 1 }}>
                       {previewProduct.price.toFixed(2)}
                     </div>
@@ -224,7 +234,12 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                )}
                {state.showPrice && (
                   <div style={{ fontSize: `${state.priceFontSize}px`, fontWeight: '900', color: '#000', marginTop: '4px', textAlign: 'center' }}>
-                    {previewProduct.price.toFixed(2)} {settings.currency}
+                    {previewProduct.originalPrice && Number(previewProduct.originalPrice) > Number(previewProduct.price) && (
+                      <span style={{ fontSize: `${Math.max(9, Math.round(state.priceFontSize * 0.68))}px`, textDecoration: 'line-through', color: '#dc2626', fontWeight: 'bold', marginRight: '6px' }}>
+                        {Number(previewProduct.originalPrice).toFixed(0)}
+                      </span>
+                    )}
+                    <span>{previewProduct.price.toFixed(2)} {settings.currency}</span>
                   </div>
                )}
             </div>
@@ -254,7 +269,12 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
                   margin: '2px 0 6px 0',
                   lineHeight: '1.1'
                 }}>
-                  {previewProduct.price.toFixed(2)} {settings.currency}
+                  {previewProduct.originalPrice && Number(previewProduct.originalPrice) > Number(previewProduct.price) && (
+                    <span style={{ fontSize: `${Math.max(9, Math.round(state.priceFontSize * 0.68))}px`, textDecoration: 'line-through', color: '#dc2626', fontWeight: 'bold', marginRight: '6px' }}>
+                      {Number(previewProduct.originalPrice).toFixed(0)}
+                    </span>
+                  )}
+                  <span>{previewProduct.price.toFixed(2)} {settings.currency}</span>
                 </div>
               )}
 

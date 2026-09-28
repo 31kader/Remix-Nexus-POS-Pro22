@@ -121,15 +121,50 @@ export function useCheckoutLogic(props: CheckoutProps) {
     setActiveShift, promotions, selectedCustomer, setSelectedCustomer, settings,
   });
 
-  // Reset session-specific local states when switching active session
+  const [globalDiscount, setGlobalDiscount] = useState<{ type: 'percentage' | 'fixed', value: number } | null>(null);
+
+  // Détection du mode modification de vente sur la session active
+  const activeSession = (posSessions || []).find(s => s && s.id === activeSessionId) || posSessions?.[0];
+  const editingTransaction = activeSession?.editingTransaction || null;
+
+  // Reset session-specific local states when switching active session (sauf si un ticket en modification porte une remise)
   useEffect(() => {
     setUseLoyaltyPoints(false);
     setUseBalance(false);
     setIsReturnMode(false);
     setReceivedAmount('');
     setKeepExcessInBalance(false);
-    setGlobalDiscount(null);
+    if (!editingTransaction) {
+      setGlobalDiscount(null);
+    }
   }, [activeSessionId]);
+
+  // Restaurer automatiquement la remise effectuée en caisse lorsqu'on ouvre un ancien panier ("Modifier Panier en Caisse")
+  useEffect(() => {
+    if (editingTransaction) {
+      const explicitDiscount = Number(
+        editingTransaction.discountAmount ??
+        (editingTransaction as any).discount_amount ??
+        0
+      );
+      const rawItems = Array.isArray(editingTransaction.items) ? editingTransaction.items : [];
+      const itemsSubtotal = rawItems.reduce((sum: number, it: any) => {
+        const unitP = Number(calculateItemPrice(it, editingTransaction.isWholesale) ?? it?.price ?? 0);
+        const q = Number(it?.quantity) || 1;
+        return sum + unitP * q;
+      }, 0);
+      const txTotal = Number(editingTransaction.total ?? itemsSubtotal);
+      const pointsAndVoucher = Number(editingTransaction.pointsDiscount || 0) + Number(editingTransaction.voucherDiscount || 0);
+      const implicitDiscount = Math.max(0, Math.round((itemsSubtotal - txTotal - pointsAndVoucher) * 100) / 100);
+      const finalRestoredDiscount = explicitDiscount > 0 ? explicitDiscount : implicitDiscount;
+
+      if (finalRestoredDiscount > 0) {
+        setGlobalDiscount({ type: 'fixed', value: finalRestoredDiscount });
+      } else {
+        setGlobalDiscount(null);
+      }
+    }
+  }, [editingTransaction?.id]);
 
   useEffect(() => {
     if (showSuccess) {
@@ -322,12 +357,6 @@ export function useCheckoutLogic(props: CheckoutProps) {
       });
     });
   }, [setCart]);
-
-  const [globalDiscount, setGlobalDiscount] = useState<{ type: 'percentage' | 'fixed', value: number } | null>(null);
-
-  // Détection du mode modification de vente sur la session active
-  const activeSession = (posSessions || []).find(s => s && s.id === activeSessionId) || posSessions?.[0];
-  const editingTransaction = activeSession?.editingTransaction || null;
 
   const handleCancelEditTransaction = useCallback(() => {
     if (window.confirm("Voulez-vous annuler la modification de ce ticket ? Le panier sera vidé et le ticket initial restera intact.")) {

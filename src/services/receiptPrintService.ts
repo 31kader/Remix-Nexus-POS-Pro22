@@ -53,7 +53,10 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
   const receiptId = (t.id || 'N/A').slice(-8).toUpperCase();
   const subtotalBeforeDiscounts = ( (t.total || 0) + (t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0) );
   const totalSavings = ((t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0));
-  const paperWidth = settings.paperFormat === '60mm' ? '58mm' : settings.paperFormat === 'A4' ? '210mm' : '80mm';
+  // Largeur utile réelle des imprimantes thermiques : 72mm (pour rouleau 80mm) et 48mm (pour rouleau 58/60mm)
+  // Utiliser 80mm provoque un débordement qui force le pilote Windows/Electron en mode Paysage A4 (20cm horizontal)
+  const paperWidth = settings.paperFormat === '60mm' ? '48mm' : settings.paperFormat === 'A4' ? '210mm' : '72mm';
+  const pageSizeRule = settings.paperFormat === '60mm' ? '58mm auto' : '80mm auto';
 
   let socialQrDataUrl = '';
   if (settings.receiptSocialQrUrl) {
@@ -70,18 +73,20 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
     const hasLineDiscount = item.lineDiscount || (item.overriddenPrice !== undefined && item.overriddenPrice < item.price);
     
     return `
-      <div style="padding: 4px 0; border-bottom: 1px dashed #ddd;">
-        <div style="font-weight: 800; font-size: 11px; margin-bottom: 2px; color: #000;">${escapeHtml(item.name)}</div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-          <div style="font-size: 10px; font-weight: 600; color: #111;">
-            <span style="font-weight: 900;">${item.quantity}</span> x ${formatPrice(unitPrice)} ${settings.currency || 'DA'}
-            ${item.lineDiscount ? `<span style="color: #c00; font-weight: 800; margin-left: 4px;">(-${item.lineDiscount.value}${item.lineDiscount.type === 'percentage' ? '%' : (settings.currency || 'DA')})</span>` : ''}
-          </div>
-          <div style="text-align: right;">
-            ${hasLineDiscount ? `<div style="text-decoration: line-through; font-size: 8px; color: #888;">${formatPrice((Number(originalUnitPrice) || 0) * (Number(item.quantity) || 0))}</div>` : ''}
-            <div style="font-weight: 900; font-size: 11px; color: #000;">${formatPrice((Number(unitPrice) || 0) * (Number(item.quantity) || 0))} ${settings.currency || 'DA'}</div>
-          </div>
-        </div>
+      <div style="padding: 3px 0; border-bottom: 1px dashed #aaa; width: 100%; overflow: hidden;">
+        <div style="font-weight: 800; font-size: 11px; margin-bottom: 1px; color: #000; word-break: break-word;">${escapeHtml(item.name)}</div>
+        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+          <tr>
+            <td style="font-size: 10px; font-weight: 700; color: #000; text-align: left; width: 60%; vertical-align: bottom;">
+              <span style="font-weight: 900;">${item.quantity}</span> x ${formatPrice(unitPrice)} ${settings.currency || 'DA'}
+              ${item.lineDiscount ? `<span style="color: #000; font-weight: 900; margin-left: 2px;">(-${item.lineDiscount.value}${item.lineDiscount.type === 'percentage' ? '%' : (settings.currency || 'DA')})</span>` : ''}
+            </td>
+            <td style="text-align: right; width: 40%; vertical-align: bottom; white-space: nowrap;">
+              ${hasLineDiscount ? `<div style="text-decoration: line-through; font-size: 8px; color: #555;">${formatPrice((Number(originalUnitPrice) || 0) * (Number(item.quantity) || 0))}</div>` : ''}
+              <div style="font-weight: 900; font-size: 11px; color: #000;">${formatPrice((Number(unitPrice) || 0) * (Number(item.quantity) || 0))} ${settings.currency || 'DA'}</div>
+            </td>
+          </tr>
+        </table>
       </div>
     `;
   }).join('');
@@ -165,7 +170,7 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
       </html>
     `);
   } else {
-    // Standard Thermal Receipt (80mm & 58mm)
+    // Standard Thermal Receipt (80mm -> 72mm printable & 58mm -> 48mm printable)
     doc.write(`
       <!DOCTYPE html>
       <html>
@@ -173,46 +178,51 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
           <meta charset="utf-8">
           <title>Ticket #${receiptId}</title>
           <style>
-            @page { margin: 0; size: auto; }
-            * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            body { 
-              width: ${paperWidth}; 
-              margin: 0 auto; 
-              padding: 4mm 2mm;
+            @page { size: ${pageSizeRule}; margin: 0mm; }
+            html, body {
+              width: ${paperWidth};
+              max-width: ${paperWidth};
+              height: auto;
+              margin: 0 !important;
+              padding: 1.5mm 1.5mm !important;
+              overflow-x: hidden;
               font-family: 'Courier New', Courier, monospace, sans-serif;
               color: #000;
-              line-height: 1.3;
+              line-height: 1.25;
               background: white;
               font-size: 10px;
               font-weight: 800;
             }
-            .header { text-align: center; margin-bottom: 8px; }
-            .business-name { font-weight: 900; font-size: 15px; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px; }
-            .business-info { font-size: 9px; font-weight: 700; line-height: 1.2; color: #222; }
+            * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header { text-align: center; margin-bottom: 6px; width: 100%; }
+            .business-name { font-weight: 900; font-size: 14px; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px; }
+            .business-info { font-size: 9px; font-weight: 700; line-height: 1.2; color: #111; }
             
             .ticket-info { 
-              padding: 6px 0; 
-              margin: 6px 0;
+              padding: 4px 0; 
+              margin: 4px 0;
               border-top: 1px dashed #000;
               border-bottom: 1px dashed #000;
               text-align: center;
+              width: 100%;
             }
-            .ticket-id { font-weight: 900; font-size: 12px; margin: 0; text-transform: uppercase; }
+            .ticket-id { font-weight: 900; font-size: 11px; margin: 0; text-transform: uppercase; }
             .ticket-date { font-size: 9px; margin: 2px 0 0 0; font-weight: 700; }
             
-            .summary-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+            .summary-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; width: 100%; font-size: 10px; }
             .grand-total { 
-              margin-top: 6px; 
-              padding-top: 6px; 
+              margin-top: 5px; 
+              padding-top: 5px; 
               border-top: 2px solid #000; 
               border-bottom: 2px solid #000; 
-              padding-bottom: 6px;
+              padding-bottom: 5px;
               display: flex; 
               justify-content: space-between; 
               align-items: center;
+              width: 100%;
             }
-            .total-label { font-weight: 900; font-size: 13px; text-transform: uppercase; }
-            .total-value { font-weight: 900; font-size: 16px; }
+            .total-label { font-weight: 900; font-size: 12px; text-transform: uppercase; }
+            .total-value { font-weight: 900; font-size: 15px; white-space: nowrap; }
   
             .customer-box { border: 1px solid #000; padding: 6px; margin-top: 8px; }
             .footer { text-align: center; margin-top: 14px; padding-top: 8px; border-top: 1px dashed #000; }
@@ -378,7 +388,8 @@ export const printDebtPaymentReceipt = async (data: DebtPaymentReceiptData, sett
 
   if (!doc) return;
 
-  const paperWidth = settings.paperFormat === '60mm' ? '58mm' : '80mm';
+  const paperWidth = settings.paperFormat === '60mm' ? '48mm' : '72mm';
+  const pageSizeRule = settings.paperFormat === '60mm' ? '58mm auto' : '80mm auto';
   const currency = settings.currency || 'DA';
 
   doc.open();
@@ -389,19 +400,21 @@ export const printDebtPaymentReceipt = async (data: DebtPaymentReceiptData, sett
         <title>Reçu de Règlement - ${escapeHtml(data.customerName)}</title>
         <meta charset="utf-8" />
         <style>
-          @page { size: auto; margin: 0; }
-          body {
+          @page { size: ${pageSizeRule}; margin: 0mm; }
+          html, body {
             font-family: 'Courier New', monospace;
             font-weight: 800;
             width: ${paperWidth};
             max-width: ${paperWidth};
-            margin: 0 auto;
-            padding: 4mm;
+            height: auto;
+            margin: 0 !important;
+            padding: 1.5mm !important;
+            overflow-x: hidden;
             color: #000;
             background: #fff;
             box-sizing: border-box;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 10px;
           }
           .center { text-align: center; }
           .header { margin-bottom: 8px; border-bottom: 2px dashed #000; padding-bottom: 6px; }

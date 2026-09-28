@@ -262,9 +262,10 @@ export const printCatalog = async (
         const wholesalePrice = Number((p as any).wholesalePrice || effectivePrice * 0.9);
         const oldPrice = ov.oldPrice !== undefined
           ? ov.oldPrice
-          : discountPct > 0
+          : priceMode === 'promo' && discountPct > 0
             ? Math.round(effectivePrice / (1 - discountPct / 100))
             : 0;
+        const hasPromo = oldPrice > effectivePrice;
 
         const badgeOverlay = ov.badge
           ? `<div style="position:absolute;top:6px;left:6px;background:${accentColor};color:#fff;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:900;text-transform:uppercase;z-index:2;">${escapeHtml(ov.badge)}</div>`
@@ -283,12 +284,12 @@ export const printCatalog = async (
             priceTag = `<div class="item-price" style="font-size: ${priceFontSize}px; color: #059669;">Gros: ${wholesalePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>`;
           } else if (priceMode === 'both') {
             priceTag = `<div>
-              <div class="item-price" style="font-size: ${priceFontSize}px; color: ${accentColor};">${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>
+              <div class="item-price" style="font-size: ${priceFontSize}px; color: ${accentColor};">${hasPromo ? `<span style="font-size: 10px; color: #ef4444; text-decoration: line-through; margin-right: 4px;">${oldPrice.toFixed(0)}</span>` : ''}${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>
               <div style="font-size: 10px; font-weight: 800; color: #059669;">Gros: ${wholesalePrice.toFixed(2)} ${companySettings.currency || 'DA'}</div>
             </div>`;
-          } else if (priceMode === 'promo' && oldPrice > effectivePrice) {
+          } else if (hasPromo) {
             priceTag = `<div>
-              <span style="font-size: 10px; color: #94a3b8; text-decoration: line-through; margin-right: 4px;">${oldPrice.toFixed(2)}</span>
+              <span style="font-size: 10px; color: #ef4444; font-weight: bold; text-decoration: line-through; margin-right: 4px;">${oldPrice.toFixed(0)}</span>
               <span class="item-price" style="font-size: ${priceFontSize}px; color: #dc2626;">${effectivePrice.toFixed(2)} ${companySettings.currency || 'DA'}</span>
             </div>`;
           } else {
