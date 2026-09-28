@@ -328,9 +328,11 @@ export const Sidebar = ({
                 {canAccess('canAccessAuditLogs') && <NavItem href="#audit_logs" icon={<ShieldCheck size={20} />} label={t("Audit")} active={activeTab === 'audit_logs'} onClick={() => { setActiveTab('audit_logs'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {(isCameraAgent || isAdmin || isManager) && settings.enableCameraPortal !== false && <NavItem href="#camera" icon={<Camera size={20} />} label={t("Audit Caméra")} active={activeTab === 'camera'} onClick={() => { setActiveTab('camera'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
                 {canAccess('canAccessSettings') && <NavItem href="#settings" icon={<SettingsIcon size={20} />} label={t("Paramètres")} active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
-                <NavItem href="#sync_studio" icon={<Activity size={20} />} label="Studio de Synchro" active={activeTab === 'sync_studio' || activeTab === 'sync'} onClick={() => { setActiveTab('sync_studio'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
+                {(settings as any)?.hideSyncStudioInSidebar !== true && (
+                  <NavItem href="#sync_studio" icon={<Activity size={20} />} label="Studio de Synchro" active={activeTab === 'sync_studio' || activeTab === 'sync'} onClick={() => { setActiveTab('sync_studio'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
+                )}
                 {canAccess('canAccessSettings') && <NavItem href="#archives" icon={<Database size={20} />} label={t("Clôture de Mois")} active={activeTab === 'archives'} onClick={() => { setActiveTab('archives'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />}
-                <NavItem href="#help" icon={<HelpCircle size={20} />} label={t("Aide")} active={activeTab === 'help'} onClick={() => { setActiveTab('help'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
+                <NavItem href="#help" icon={<HelpCircle size={20} />} label={t("Confidentialité & Aide")} active={activeTab === 'help'} onClick={() => { setActiveTab('help'); setIsMobileOverlayOpen(false); }} collapsed={!isSidebarOpen && !isMobile} />
               </motion.div>
             )}
           </AnimatePresence>

@@ -43,10 +43,14 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   // Print Settings State
   const [title, setTitle] = useState(settings.name ? `CATALOGUE — ${settings.name.toUpperCase()}` : 'CATALOGUE PRODUITS');
   const [subtitle, setSubtitle] = useState('Sélection officielle — Offres & Tarifs en vigueur');
+  const [validityBanner, setValidityBanner] = useState('');
+  const [headerQrLink, setHeaderQrLink] = useState(settings.phone ? `https://wa.me/${settings.phone.replace(/\s+/g, '')}` : '');
+  const [showHeaderQr, setShowHeaderQr] = useState(false);
+  const [blindInventoryMode, setBlindInventoryMode] = useState(false);
   const [contactPhone, setContactPhone] = useState(settings.phone || '');
   const [footerText, setFooterText] = useState('Nexus POS Pro — Tarification en Dinars Algériens (DA). Sous réserve de disponibilité.');
 
-  const [layoutMode, setLayoutMode] = useState<'grid' | 'table'>('grid');
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'table' | 'inventory_sheet'>('grid');
   const [priceDisplayMode, setPriceDisplayMode] = useState<'retail' | 'wholesale' | 'both' | 'promo' | 'none'>('retail');
   const [discountPercent, setDiscountPercent] = useState<number>(15);
   const [themeColor, setThemeColor] = useState<string>('#4f46e5');
@@ -189,7 +193,111 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
     setSelectedCategoryToAdd('');
   };
 
-  const applyLayoutPreset = (preset: '2x2' | '3x3' | '4x4' | '5x5' | 'table') => {
+  const handleQuickPick = (mode: 'top_stock' | 'newest' | 'low_stock') => {
+    let picked: Product[] = [];
+    if (mode === 'top_stock') {
+      picked = [...products]
+        .filter(p => (Number(p.stock) || 0) > 0)
+        .sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))
+        .slice(0, 12);
+    } else if (mode === 'newest') {
+      picked = [...products]
+        .filter(p => (Number(p.stock) || 0) > 0)
+        .slice(-12)
+        .reverse();
+    } else if (mode === 'low_stock') {
+      picked = [...products]
+        .filter(p => (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 5))
+        .slice(0, 18);
+    }
+    if (picked.length === 0) {
+      toast.info('Aucun article trouvé pour cette sélection rapide.');
+      return;
+    }
+    const ids = picked.map(p => p.id);
+    setSelectedProductIds(prev => Array.from(new Set([...prev, ...ids])));
+    toast.success(`${picked.length} article(s) ajoutés à la sélection.`);
+  };
+
+  const handleSortQueue = (criterion: 'name_asc' | 'price_asc' | 'price_desc' | 'stock_desc') => {
+    const sorted = [...queueProducts];
+    if (criterion === 'name_asc') sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (criterion === 'price_asc') sorted.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+    if (criterion === 'price_desc') sorted.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
+    if (criterion === 'stock_desc') sorted.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
+    setSelectedProductIds(sorted.map(p => p.id));
+    toast.success('Sélection triée avec succès.');
+  };
+
+  const handleApplyBadgeToAll = (badge: string) => {
+    const nextOverrides = { ...customOverrides };
+    for (const id of selectedProductIds) {
+      nextOverrides[id] = { ...(nextOverrides[id] || {}), badge };
+    }
+    setCustomOverrides(nextOverrides);
+    toast.success(badge ? `Badge "${badge}" appliqué à toute la sélection.` : 'Badges effacés.');
+  };
+
+  const handleSaveTemplatePreset = () => {
+    try {
+      const presetData = {
+        title,
+        subtitle,
+        validityBanner,
+        contactPhone,
+        footerText,
+        layoutMode,
+        priceDisplayMode,
+        discountPercent,
+        themeColor,
+        columns,
+        rowsPerPage,
+        showBarcode,
+        showQr,
+        showStock
+      };
+      localStorage.setItem('nexus_catalog_saved_preset_v1', JSON.stringify(presetData));
+      toast.success('Configuration du modèle A4 sauvegardée comme favori !');
+    } catch {
+      toast.error('Impossible de sauvegarder le modèle.');
+    }
+  };
+
+  const handleLoadTemplatePreset = () => {
+    try {
+      const raw = localStorage.getItem('nexus_catalog_saved_preset_v1');
+      if (!raw) {
+        toast.info('Aucun modèle favori sauvegardé pour le moment.');
+        return;
+      }
+      const d = JSON.parse(raw);
+      if (d.title) setTitle(d.title);
+      if (d.subtitle) setSubtitle(d.subtitle);
+      if (d.validityBanner !== undefined) setValidityBanner(d.validityBanner);
+      if (d.contactPhone !== undefined) setContactPhone(d.contactPhone);
+      if (d.footerText) setFooterText(d.footerText);
+      if (d.layoutMode) setLayoutMode(d.layoutMode);
+      if (d.priceDisplayMode) setPriceDisplayMode(d.priceDisplayMode);
+      if (d.discountPercent !== undefined) setDiscountPercent(d.discountPercent);
+      if (d.themeColor) setThemeColor(d.themeColor);
+      if (d.columns) setColumns(d.columns);
+      if (d.rowsPerPage) setRowsPerPage(d.rowsPerPage);
+      toast.success('Modèle favori chargé avec succès !');
+    } catch {
+      toast.error('Erreur lors du chargement du modèle.');
+    }
+  };
+
+  const applyLayoutPreset = (preset: '2x2' | '3x3' | '4x4' | '5x5' | 'table' | 'inventory_sheet') => {
+    if (preset === 'inventory_sheet') {
+      setLayoutMode('inventory_sheet');
+      setColumns(1);
+      setRowsPerPage(20);
+      setTitle(settings.name ? `FICHE D'INVENTAIRE PHYSIQUE — ${settings.name.toUpperCase()}` : "FICHE D'INVENTAIRE PHYSIQUE");
+      setSubtitle('Feuille de comptage et de vérification des stocks en rayon');
+      toast.info("Mode Fiche d'Inventaire Physique A4 activé");
+      return;
+    }
     if (preset === 'table') {
       setLayoutMode('table');
       setColumns(1);
@@ -243,9 +351,10 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   const pages = useMemo(() => {
     const result: Product[][] = [];
     let currentIndex = 0;
-    const effectiveCols = layoutMode === 'table' ? 1 : columns;
-    const effectiveRows = layoutMode === 'table' ? 18 : rowsPerPage;
-    const firstPageRows = showHeader ? Math.max(1, effectiveRows - (layoutMode === 'table' ? 3 : 1)) : effectiveRows;
+    const isTabular = layoutMode === 'table' || layoutMode === 'inventory_sheet';
+    const effectiveCols = isTabular ? 1 : columns;
+    const effectiveRows = layoutMode === 'inventory_sheet' ? 20 : layoutMode === 'table' ? 18 : rowsPerPage;
+    const firstPageRows = showHeader ? Math.max(1, effectiveRows - (isTabular ? 3 : 1)) : effectiveRows;
     const firstPageCapacity = effectiveCols * firstPageRows;
     const standardPageCapacity = effectiveCols * effectiveRows;
 
@@ -274,8 +383,8 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
     showFooter,
     showDate,
     showLogo,
-    columns: layoutMode === 'table' ? 1 : columns,
-    rowsPerPage: layoutMode === 'table' ? 18 : rowsPerPage,
+    columns: layoutMode === 'table' || layoutMode === 'inventory_sheet' ? 1 : columns,
+    rowsPerPage: layoutMode === 'inventory_sheet' ? 20 : layoutMode === 'table' ? 18 : rowsPerPage,
     pageMargin,
     cellGap,
     cellBorder,
@@ -295,7 +404,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
     barcodeWidth,
     qrSize,
     descFontSize,
-    layoutMode,
+    layoutMode: layoutMode === 'inventory_sheet' ? 'table' : layoutMode,
     priceDisplayMode,
     themeColor,
     contactPhone,
@@ -306,6 +415,74 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
   const handlePrint = async () => {
     if (queueProducts.length === 0) {
       toast.error("Recherchez et ajoutez au moins un produit avant d'imprimer.");
+      return;
+    }
+    if (layoutMode === 'inventory_sheet') {
+      const win = window.open('', '_blank', 'width=1050,height=800');
+      if (!win) return;
+      const rowsHtml = queueProducts
+        .map(
+          (p, idx) => `
+          <tr>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${idx + 1}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;font-family:monospace;font-size:11px;">${p.sku || p.barcode || '-'}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;font-weight:bold;font-size:11px;">${p.name}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${p.categoryId || '-'}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-weight:bold;font-size:11px;">
+              ${blindInventoryMode ? '🔒 Masqué' : (p.stock ?? 0)}
+            </td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:12px;">_________</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:12px;">_________</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;font-size:11px;"></td>
+          </tr>`
+        )
+        .join('');
+      win.document.write(`
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              @page { size: A4 ${orientation}; margin: 12mm; }
+              body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; }
+              table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+              th { background: ${themeColor}; color: white; padding: 8px; font-size: 10px; text-transform: uppercase; border: 1px solid ${themeColor}; }
+            </style>
+          </head>
+          <body>
+            <div style="border-bottom:3px solid ${themeColor};padding-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+              <div>
+                <h2 style="margin:0;color:${themeColor};">${title}</h2>
+                <p style="margin:3px 0 0;font-size:12px;color:#475569;">${subtitle}</p>
+              </div>
+              <div style="text-align:right;font-size:11px;">
+                <div>Date : <strong>${new Date().toLocaleDateString('fr-FR')}</strong></div>
+                <div>Total Références : <strong>${queueProducts.length}</strong></div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:32px;">N°</th>
+                  <th style="width:105px;">Réf / Code</th>
+                  <th>Désignation de l'Article</th>
+                  <th style="width:95px;">Rayon</th>
+                  <th style="width:85px;">Stock Théorique</th>
+                  <th style="width:95px;">Stock Compté</th>
+                  <th style="width:75px;">Écart</th>
+                  <th style="width:130px;">Observations</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+            <div style="margin-top:28px;display:flex;justify-content:space-between;font-size:12px;">
+              <div>Auditeur / Magasinier : _________________________</div>
+              <div>Visa Responsable : _________________________</div>
+            </div>
+            <script>window.onload = () => { window.print(); }</script>
+          </body>
+        </html>
+      `);
+      win.document.close();
       return;
     }
     toast.info('Préparation du Catalogue A4...');
@@ -528,6 +705,63 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
             </Button>
           </div>
         </div>
+
+        {/* BARRE DE SÉLECTIONS INTELLIGENTES EN 1 CLIC & MODÈLES FAVORIS */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-black uppercase text-slate-400 mr-1">Ajouts Rapides :</span>
+            <button
+              type="button"
+              onClick={() => handleQuickPick('top_stock')}
+              className="px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-xs font-bold cursor-pointer"
+            >
+              + Top 12 En Stock
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickPick('newest')}
+              className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold cursor-pointer"
+            >
+              + 12 Nouveautés
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickPick('low_stock')}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-xs font-bold cursor-pointer"
+            >
+              + Alertes Stock (Fiche Inventaire)
+            </button>
+            <button
+              type="button"
+              onClick={() => applyLayoutPreset('inventory_sheet')}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-black border cursor-pointer transition-all",
+                layoutMode === 'inventory_sheet'
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-xs"
+                  : "bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700"
+              )}
+            >
+              📋 Mode Fiche d'Inventaire A4
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSaveTemplatePreset}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
+            >
+              💾 Sauver Modèle
+            </button>
+            <button
+              type="button"
+              onClick={handleLoadTemplatePreset}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 text-xs font-bold cursor-pointer"
+            >
+              📂 Charger Modèle
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* MAIN WORKSPACE: Left = Selected Products & Options | Right = Live A4 Page Preview */}
@@ -536,23 +770,73 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
         <div className="xl:col-span-5 space-y-6">
           {/* Selected Products List with Per-Item Price/Badge Editor */}
           <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-zinc-800/50">
-              <div>
-                <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                  Articles Sélectionnés ({queueProducts.length})
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400">
-                  Personnalisez le prix affiché ou ajoutez un badge promo par article
-                </p>
+            <div className="p-4 border-b border-slate-100 dark:border-zinc-800 space-y-3 bg-slate-50/50 dark:bg-zinc-800/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Articles Sélectionnés ({queueProducts.length})
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400">
+                    Personnalisez le prix affiché ou ajoutez un badge promo par article
+                  </p>
+                </div>
+                {queueProducts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductIds([])}
+                    className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={13} /> Tout vider
+                  </button>
+                )}
               </div>
-              {queueProducts.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedProductIds([])}
-                  className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1"
-                >
-                  <Trash2 size={13} /> Tout vider
-                </button>
+
+              {queueProducts.length > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/70 dark:border-zinc-700">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-black uppercase text-slate-400 mr-1">Trier :</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSortQueue('name_asc')}
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[10px] font-bold text-slate-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      A → Z
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSortQueue('price_asc')}
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[10px] font-bold text-slate-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      Prix ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSortQueue('price_desc')}
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[10px] font-bold text-slate-700 dark:text-zinc-300 cursor-pointer"
+                    >
+                      Prix ↓
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <select
+                      onChange={e => {
+                        handleApplyBadgeToAll(e.target.value);
+                      }}
+                      defaultValue=""
+                      className="px-2 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 outline-none"
+                    >
+                      <option value="" disabled>
+                        🏷️ Badge sur tout...
+                      </option>
+                      <option value="PROMO">Tout en PROMO</option>
+                      <option value="NOUVEAU">Tout en NOUVEAU</option>
+                      <option value="ARRIVAGE">Tout en ARRIVAGE</option>
+                      <option value="PRIX CHOC">Tout en PRIX CHOC</option>
+                      <option value="">Effacer les badges</option>
+                    </select>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -678,7 +962,8 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                         { id: '3x3', title: '3×3 Standard', desc: '9 articles/page' },
                         { id: '4x4', title: '4×4 Compact', desc: '16 articles/page' },
                         { id: '5x5', title: '5×5 Grossiste', desc: '25 articles/page' },
-                        { id: 'table', title: '📊 Liste Tarifaire', desc: 'Tableau 18 lignes/page' }
+                        { id: 'table', title: '📊 Liste Tarifaire', desc: 'Tableau 18 lignes/page' },
+                        { id: 'inventory_sheet', title: '📋 Fiche d\'Inventaire', desc: 'Comptage physique 22 lignes' }
                       ].map(p => (
                         <button
                           key={p.id}
@@ -687,6 +972,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                           className={cn(
                             'p-2.5 rounded-xl border text-left transition-all',
                             (p.id === 'table' && layoutMode === 'table') ||
+                              (p.id === 'inventory_sheet' && layoutMode === 'inventory_sheet') ||
                               (layoutMode === 'grid' && `${columns}x${rowsPerPage}` === p.id)
                               ? 'border-indigo-600 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300'
                               : 'border-slate-200 dark:border-zinc-700 hover:border-indigo-400 text-slate-800 dark:text-zinc-200'
@@ -1032,15 +1318,48 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                 </div>
               )}
 
-              {/* A4 Body: Empty State vs Table Mode vs Grid Mode */}
+              {/* A4 Body: Empty State vs Inventory Sheet vs Table Mode vs Grid Mode */}
               <div className="flex-1 min-h-0">
                 {currentPageItems.length === 0 ? (
                   <div className="h-full border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-12 text-center">
                     <Sparkles size={40} className="text-indigo-400 mb-3" />
                     <h4 className="text-lg font-black text-slate-700">Aperçu de votre Page A4</h4>
                     <p className="text-xs text-slate-400 max-w-sm mt-1">
-                      Recherchez un article dans la barre ci-dessus et cliquez sur « + Ajouter » pour le voir apparaître instantanément sur cette feuille A4.
+                      Recherchez un article dans la barre ci-dessus ou utilisez un bouton d'ajout rapide 1-clic pour le voir apparaître sur cette feuille A4.
                     </p>
+                  </div>
+                ) : layoutMode === 'inventory_sheet' ? (
+                  <div className="space-y-3">
+                    <table className="w-full border-collapse border border-slate-300 text-left">
+                      <thead>
+                        <tr style={{ backgroundColor: themeColor }} className="text-white text-[9px] font-black uppercase">
+                          <th className="p-1.5">N°</th>
+                          <th className="p-1.5">Code / SKU</th>
+                          <th className="p-1.5">Désignation Article</th>
+                          <th className="p-1.5">Rayon</th>
+                          <th className="p-1.5 text-center">Stock Théorique</th>
+                          <th className="p-1.5 text-center">Comptage Physique</th>
+                          <th className="p-1.5 text-center">Écart</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-[10px]">
+                        {currentPageItems.map((p, idx) => (
+                          <tr key={p.id}>
+                            <td className="p-1.5 font-mono text-slate-500">{activePreviewPage * itemsPerPage + idx + 1}</td>
+                            <td className="p-1.5 font-mono text-slate-600">{p.sku || p.barcode || p.id.slice(0, 8)}</td>
+                            <td className="p-1.5 font-bold text-slate-900">{p.name}</td>
+                            <td className="p-1.5 text-slate-500">{p.category || 'Général'}</td>
+                            <td className="p-1.5 text-center font-black text-slate-800">{p.stock} {p.unit || 'u'}</td>
+                            <td className="p-1.5 text-center">
+                              <div className="h-4 border-b border-dashed border-slate-400 mx-auto w-16" />
+                            </td>
+                            <td className="p-1.5 text-center">
+                              <div className="h-4 border-b border-dashed border-slate-400 mx-auto w-12" />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : layoutMode === 'table' ? (
                   <table className="w-full border-collapse border border-slate-300 text-left">

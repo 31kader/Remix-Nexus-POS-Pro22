@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { RotateCcw, Pencil, Trash2 } from 'lucide-react';
+import { RotateCcw, Pencil, Trash2, ShieldAlert, AlertTriangle, Info } from 'lucide-react';
 import { AuditLog } from '../../types';
-import { formatSafe } from '../../lib/utils';
+import { formatSafe, cn } from '../../lib/utils';
 import { List } from 'react-window';
+import { inferLogSeverity } from '../../hooks/useAuditLogsLogic';
 
 interface AuditLogsTableProps {
   filteredLogs: AuditLog[];
@@ -19,68 +20,100 @@ export function AuditLogsTable({
 }: AuditLogsTableProps) {
   if (filteredLogs.length === 0) {
     return (
-      <div className="p-6 text-center text-industrial-600  font-mono text-sm">
-        AUCUN JOURNAL D'AUDIT TROUVÉ.
+      <div className="p-12 text-center text-slate-500 dark:text-zinc-400 font-bold text-sm">
+        Aucun enregistrement d'audit ne correspond aux filtres sélectionnés.
       </div>
     );
   }
 
-  // react-window v2 requires a rowComponent (not children render function)
-  // and rowProps must be an object (not undefined) or Object.values() crashes.
   const AuditRow = useMemo(() => {
-    return function AuditRowInner({ index, style, ...rest }: any) {
+    return function AuditRowInner({ index, style }: any) {
       const log = filteredLogs[index];
       if (!log) return null;
-      const isCancelled = (log as any).isCancelled;
+      const isCancelled = Boolean((log as any).isCancelled);
+      const sev = inferLogSeverity(log);
+
+      const sevBadge = {
+        critical: { label: 'CRITIQUE', cls: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30', icon: ShieldAlert },
+        high: { label: 'ÉLEVÉ', cls: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30', icon: AlertTriangle },
+        warning: { label: 'ATTENTION', cls: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30', icon: AlertTriangle },
+        info: { label: 'INFO', cls: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20', icon: Info },
+      }[sev];
+
+      const SevIcon = sevBadge.icon;
+
       return (
-        <div 
-          style={style} 
-          className={`flex w-full items-center hover:bg-industrial-800/30 transition-colors border-b border-industrial-800 ${isCancelled ? 'opacity-40 bg-rose-950/5' : ''}`}
+        <div
+          style={style}
+          className={cn(
+            "flex w-full items-center hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors border-b border-slate-100 dark:border-zinc-800/70",
+            isCancelled && "opacity-60 bg-rose-500/5"
+          )}
         >
-          <div className="w-1/5 p-4 text-xs font-mono text-industrial-400 truncate">
-            <div>{formatSafe(log.timestamp, 'dd/MM/yyyy HH:mm:ss')}</div>
-            {isCancelled && (
-              <span className="inline-block mt-0.5 px-1 py-0.5 bg-rose-500/20 text-rose-400 text-[7px] font-black rounded uppercase tracking-widest border border-rose-500/20">
-                ANNULÉ / ROLLBACK
+          <div className="w-[18%] px-4 py-2 text-xs font-mono text-slate-600 dark:text-zinc-400 truncate">
+            <div className="font-bold text-slate-800 dark:text-zinc-200">{formatSafe(log.timestamp, 'dd/MM/yyyy HH:mm:ss')}</div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase border", sevBadge.cls)}>
+                <SevIcon size={10} />
+                {sevBadge.label}
               </span>
-            )}
+              {isCancelled && (
+                <span className="inline-block px-1.5 py-0.5 bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[8px] font-black rounded uppercase border border-rose-500/30">
+                  ANNULÉ
+                </span>
+              )}
+            </div>
           </div>
-          <div className={`w-1/6 p-4 font-black text-white truncate ${isCancelled ? 'line-through decoration-rose-500' : ''}`}>
-            {log.userName}
+
+          <div className={cn("w-[15%] px-4 py-2 font-black text-slate-900 dark:text-white truncate text-xs", isCancelled && "line-through decoration-rose-500")}>
+            {log.userName || 'Système'}
           </div>
-          <div className="w-1/6 p-4 truncate">
-            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border ${
-              isCancelled 
-                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 line-through' 
-                : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-              }`}
+
+          <div className="w-[17%] px-4 py-2 truncate">
+            <span
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border inline-block max-w-full truncate",
+                isCancelled
+                  ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 line-through"
+                  : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20"
+              )}
             >
               {log.action}
             </span>
           </div>
-          <div className="w-1/8 p-4 text-xs font-bold text-industrial-500 truncate">
-            {log.module}
+
+          <div className="w-[12%] px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate uppercase">
+            {log.module || 'POS'}
           </div>
-          <div className={`w-1/4 p-4 text-xs text-industrial-400 truncate font-mono ${isCancelled ? 'line-through text-industrial-600' : ''}`} title={log.details}>
+
+          <div
+            className={cn(
+              "w-[28%] px-4 py-2 text-xs text-slate-700 dark:text-zinc-300 truncate font-mono",
+              isCancelled && "line-through text-slate-400"
+            )}
+            title={log.details}
+          >
             {log.details}
           </div>
-          <div className="w-1/12 p-4 text-right flex items-center justify-end gap-1 pr-6">
+
+          <div className="w-[10%] px-4 py-2 text-right flex items-center justify-end gap-1.5">
             <button
               onClick={() => handleOpenCancelUndo(log)}
-              title={isCancelled ? "Rétablir cette action" : "Annuler l'action"}
-              className={`p-1.5 rounded-lg transition-all ${
-                isCancelled 
-                  ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20' 
-                  : 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20'
-              }`}
+              title={isCancelled ? "Rétablir cette action" : "Annuler l'action (Rollback)"}
+              className={cn(
+                "p-1.5 rounded-lg transition-all cursor-pointer",
+                isCancelled
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 border border-amber-500/20"
+              )}
             >
               <RotateCcw size={13} className={isCancelled ? "rotate-180" : ""} />
             </button>
 
             <button
               onClick={() => handleOpenEdit(log)}
-              title="Modifier les détails de la log"
-              className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all"
+              title="Modifier les détails du journal"
+              className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all cursor-pointer"
             >
               <Pencil size={13} />
             </button>
@@ -88,7 +121,7 @@ export function AuditLogsTable({
             <button
               onClick={() => setDeletingLog(log)}
               title="Supprimer définitivement l'entrée"
-              className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-50/20 border border-rose-500/20 transition-all"
+              className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer"
             >
               <Trash2 size={13} />
             </button>
@@ -101,25 +134,26 @@ export function AuditLogsTable({
   return (
     <div className="overflow-hidden text-[13px] w-full">
       <div className="w-full overflow-x-auto">
-        <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
+        <table className="w-full text-left border-collapse table-fixed min-w-[900px]">
           <thead>
-            <tr className="bg-industrial-950 border-b border-industrial-800 flex w-full">
-              <th className="w-1/5 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest">Date / Statut</th>
-              <th className="w-1/6 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest">Utilisateur</th>
-              <th className="w-1/6 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest">Action</th>
-              <th className="w-1/8 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest">Module</th>
-              <th className="w-1/4 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest">Détails</th>
-              <th className="w-1/12 p-4 text-[10px] font-black text-industrial-500 uppercase tracking-widest text-right">Actions</th>
+            <tr className="bg-slate-100 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 flex w-full">
+              <th className="w-[18%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Date & Criticité</th>
+              <th className="w-[15%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Utilisateur</th>
+              <th className="w-[17%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Opération</th>
+              <th className="w-[12%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Module</th>
+              <th className="w-[28%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider">Détails & Valeurs</th>
+              <th className="w-[10%] px-4 py-3 text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
         </table>
 
         <List
           rowCount={filteredLogs.length}
-          rowHeight={65}
+          rowHeight={68}
           rowComponent={AuditRow}
           rowProps={{}}
-          className="min-w-[800px]"
+          style={{ height: Math.min(620, Math.max(280, filteredLogs.length * 68)) }}
+          className="min-w-[900px]"
         />
       </div>
     </div>

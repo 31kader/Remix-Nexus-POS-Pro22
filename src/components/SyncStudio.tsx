@@ -475,6 +475,64 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
         </div>
       </div>
 
+      {/* Bandeau Pilote Automatique & Contrôle des Notifications en bas à droite */}
+      <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0 mt-0.5">
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+              Pilote Automatique Cloud Actif — Aucune action manuelle requise au quotidien
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500 text-white">100% Auto</span>
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
+              Toutes vos ventes, stocks, clients et dépenses se synchronisent désormais automatiquement en arrière-plan avec Supabase. Ce Studio ne sert plus que de <strong>boîte à outils de secours</strong> (sauvegarde manuelle <code>.nexus-backup</code> ou diagnostic réseau).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={async () => {
+              const current = (settings as any)?.silentSyncNotifications !== false;
+              const nextVal = !current;
+              const updated = { ...settings, silentSyncNotifications: nextVal } as any;
+              useCoreStore.getState().setSettings(updated);
+              const { localDb } = await import('../services/LocalDatabase');
+              await localDb.insert('settings/company', updated);
+              toast.success(nextVal ? 'Notifications en bas à droite masquées (Mode Silencieux)' : 'Notifications de synchronisation réactivées');
+            }}
+            className={cn(
+              "px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+              (settings as any)?.silentSyncNotifications !== false
+                ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
+                : "bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700"
+            )}
+          >
+            {(settings as any)?.silentSyncNotifications !== false
+              ? "🔕 Notifications bas-droite : Masquées (Silencieux)"
+              : "🔔 Notifications bas-droite : Visibles"}
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              const updated = { ...settings, hideSyncStudioInSidebar: true } as any;
+              useCoreStore.getState().setSettings(updated);
+              const { localDb } = await import('../services/LocalDatabase');
+              await localDb.insert('settings/company', updated);
+              toast.success('Studio de Synchro masqué du menu latéral (réactivable dans Paramètres > Sécurité)');
+              if (setActiveTab) setActiveTab('settings');
+            }}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-zinc-700 hover:border-indigo-500 transition-all cursor-pointer"
+          >
+            👁️‍🗨️ Masquer ce Studio du menu latéral
+          </button>
+        </div>
+      </div>
+
       {/* Cartes de Diagnostic et d'État */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Carte 1 : État Réseau */}

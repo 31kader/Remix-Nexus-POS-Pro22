@@ -1,32 +1,34 @@
-import { createBackupArchive, restoreBackupArchive } from '../services/backupRestoreService';
-import { Download, UploadCloud, ShieldCheck, FileCheck } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import { 
-  Store, 
-  ShoppingCart, 
-  DollarSign, 
-  Users, 
-  Gift, 
-  Lock, 
-  Save, 
-  ChevronRight,
-  Settings as SettingsIcon,
-  Shield,
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Store,
+  ShoppingCart,
+  DollarSign,
+  Users,
+  Gift,
+  Lock,
+  Save,
   Printer,
-  MessageSquare} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+  MessageSquare,
+  Download,
+  UploadCloud,
+  Search,
+  CheckCircle2,
+  Sliders
+} from 'lucide-react';
+import { createBackupArchive, restoreBackupArchive } from '../services/backupRestoreService';
 import { useTranslation } from '../translations';
 import { localDb } from '../services/LocalDatabase';
+import { useCoreStore } from '../store/useCoreStore';
 import { CompanySettings } from '../types';
 import { cn } from '../lib/utils';
 import { DEFAULT_PERMISSIONS } from '../constants';
 import { toast } from 'sonner';
-import { 
-  StoreSection, 
-  PosSection, 
-  AccountingSection, 
-  StaffSection, 
-  LoyaltySection, 
+import {
+  StoreSection,
+  PosSection,
+  AccountingSection,
+  StaffSection,
+  LoyaltySection,
   SecuritySection,
   ReceiptSection,
   WhatsAppSection
@@ -36,122 +38,187 @@ interface SettingsProps {
   settings: CompanySettings;
 }
 
-type SettingsSection = 'store' | 'receipt' | 'whatsapp' | 'pos' | 'accounting' | 'staff' | 'loyalty' | 'security';
-
-
+type SettingsSection =
+  | 'store'
+  | 'pos'
+  | 'receipt'
+  | 'accounting'
+  | 'staff'
+  | 'loyalty'
+  | 'whatsapp'
+  | 'security';
 
 export function Settings({ settings }: SettingsProps) {
-const { t } = useTranslation();
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<SettingsSection>('store');
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<CompanySettings>({
-    ...settings,
-    name: settings.name || '',
-    logoUrl: settings.logoUrl || '',
-    address: settings.address || '',
-    phone: settings.phone || '',
-    email: settings.email || '',
-    taxNumber: settings.taxNumber || '',
-    receiptTemplate: settings.receiptTemplate || 'standard',
-    labelTemplate: settings.labelTemplate || 'standard',
-    currency: settings.currency || 'DA',
-    taxRate: settings.taxRate ?? 19,
-    loyaltyPointsPerCurrencyUnit: settings.loyaltyPointsPerCurrencyUnit ?? 1,
-    loyaltyPointValue: settings.loyaltyPointValue ?? 0.01,
-    footerText: settings.footerText || '',
-    accountingFormat: settings.accountingFormat || 'csv',
-    lockingPeriodDays: settings.lockingPeriodDays ?? 0,
-    paperFormat: settings.paperFormat || '80mm',
-    silentPrinting: settings.silentPrinting ?? false,
-    globalStockAlertThreshold: settings.globalStockAlertThreshold || 10,
-    apiKeys: settings.apiKeys || { twilioSid: '', twilioToken: '', twilioNumber: '', googleMapsKey: '' },
-    availableTaxes: settings.availableTaxes || [],
-    displayPriceHT: settings.displayPriceHT ?? false,
-    loyaltyTiers: settings.loyaltyTiers || [],
-    enableTimeClock: settings.enableTimeClock ?? false,
-    sessionTimeoutMinutes: settings.sessionTimeoutMinutes ?? 30,
-    auditLogRetentionDays: settings.auditLogRetentionDays ?? 90,
-    fastModeEnabled: settings.fastModeEnabled ?? false,
-    allowNegativeStock: settings.allowNegativeStock ?? true,
-    rolePermissions: settings.rolePermissions || DEFAULT_PERMISSIONS
+  const [quickSearch, setQuickSearch] = useState('');
+
+  const buildInitialData = (src: CompanySettings): CompanySettings => ({
+    ...src,
+    name: src.name || '',
+    logoUrl: src.logoUrl || '',
+    address: src.address || '',
+    phone: src.phone || '',
+    email: src.email || '',
+    taxNumber: src.taxNumber || '',
+    receiptTemplate: src.receiptTemplate || 'standard',
+    labelTemplate: src.labelTemplate || 'standard',
+    currency: src.currency || 'DA',
+    taxRate: src.taxRate ?? 19,
+    loyaltyPointsPerCurrencyUnit: src.loyaltyPointsPerCurrencyUnit ?? 1,
+    loyaltyPointValue: src.loyaltyPointValue ?? 0.01,
+    footerText: src.footerText || '',
+    accountingFormat: src.accountingFormat || 'csv',
+    lockingPeriodDays: src.lockingPeriodDays ?? 0,
+    paperFormat: src.paperFormat || '80mm',
+    silentPrinting: src.silentPrinting ?? false,
+    globalStockAlertThreshold: src.globalStockAlertThreshold || 10,
+    apiKeys: src.apiKeys || { twilioSid: '', twilioToken: '', twilioNumber: '', googleMapsKey: '' },
+    availableTaxes: src.availableTaxes || [],
+    displayPriceHT: src.displayPriceHT ?? false,
+    loyaltyTiers: src.loyaltyTiers || [],
+    enableTimeClock: src.enableTimeClock ?? false,
+    sessionTimeoutMinutes: src.sessionTimeoutMinutes ?? 30,
+    auditLogRetentionDays: src.auditLogRetentionDays ?? 90,
+    fastModeEnabled: src.fastModeEnabled ?? false,
+    allowNegativeStock: src.allowNegativeStock ?? true,
+    rolePermissions: src.rolePermissions || DEFAULT_PERMISSIONS
   });
 
+  const [formData, setFormData] = useState<CompanySettings>(() => buildInitialData(settings));
+
   useEffect(() => {
-    setFormData({
-      ...settings,
-      name: settings.name || '',
-      logoUrl: settings.logoUrl || '',
-      address: settings.address || '',
-      phone: settings.phone || '',
-      email: settings.email || '',
-      taxNumber: settings.taxNumber || '',
-      receiptTemplate: settings.receiptTemplate || 'standard',
-      labelTemplate: settings.labelTemplate || 'standard',
-      currency: settings.currency || 'DA',
-      taxRate: settings.taxRate ?? 19,
-      loyaltyPointsPerCurrencyUnit: settings.loyaltyPointsPerCurrencyUnit ?? 1,
-      loyaltyPointValue: settings.loyaltyPointValue ?? 0.01,
-      footerText: settings.footerText || '',
-      accountingFormat: settings.accountingFormat || 'csv',
-      lockingPeriodDays: settings.lockingPeriodDays ?? 0,
-      paperFormat: settings.paperFormat || '80mm',
-      silentPrinting: settings.silentPrinting ?? false,
-      globalStockAlertThreshold: settings.globalStockAlertThreshold || 10,
-      apiKeys: settings.apiKeys || { twilioSid: '', twilioToken: '', twilioNumber: '', googleMapsKey: '' },
-      availableTaxes: settings.availableTaxes || [],
-      displayPriceHT: settings.displayPriceHT ?? false,
-      loyaltyTiers: settings.loyaltyTiers || [],
-      enableTimeClock: settings.enableTimeClock ?? false,
-      sessionTimeoutMinutes: settings.sessionTimeoutMinutes ?? 30,
-      auditLogRetentionDays: settings.auditLogRetentionDays ?? 90,
-      fastModeEnabled: settings.fastModeEnabled ?? false,
-      allowNegativeStock: settings.allowNegativeStock ?? true,
-      rolePermissions: settings.rolePermissions || DEFAULT_PERMISSIONS
-    });
+    setFormData(buildInitialData(settings));
   }, [settings]);
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
     try {
-      // Save to settings/company in RTDB which triggers the Supabase sync
       await localDb.insert('settings/company', formData);
-      toast.success(t("Paramètres enregistrés avec succès."));
+      useCoreStore.getState().setSettings(formData);
+      toast.success(t('Paramètres enregistrés et appliqués en temps réel !'));
     } catch (error) {
-      console.error("Error saving settings:", error);
+      console.error('Error saving settings:', error);
       toast.error(t("Erreur lors de l'enregistrement."));
     } finally {
       setIsSaving(false);
     }
   };
 
-      const menuItems: { id: SettingsSection; label: string; icon: any; color: string }[] = [
-    { id: 'store', label: 'Magasin & Infos', icon: Store, color: 'text-blue-500' },
-    { id: 'receipt', label: 'Ticket & Impression', icon: Printer, color: 'text-purple-500' },
-    { id: 'whatsapp', label: 'Modèles WhatsApp', icon: MessageSquare, color: 'text-emerald-500' },
-    { id: 'pos', label: 'Caisse & Stock', icon: ShoppingCart, color: 'text-rose-500' },
-    { id: 'accounting', label: 'Tarifs & Taxes', icon: DollarSign, color: 'text-emerald-500' },
-    { id: 'staff', label: 'Personnel & Droits', icon: Users, color: 'text-indigo-500' },
-    { id: 'loyalty', label: 'Fidélité & Promos', icon: Gift, color: 'text-rose-500' },
-    { id: 'security', label: 'Sécurité & Sauvegardes', icon: Lock, color: 'text-slate-500' },
+  const menuItems: {
+    id: SettingsSection;
+    label: string;
+    subtitle: string;
+    keywords: string;
+    icon: any;
+    badgeColor: string;
+  }[] = [
+    {
+      id: 'store',
+      label: 'Magasin & Identité Légale',
+      subtitle: 'Nom, Logo, NIF/RC/AI, Multi-sites',
+      keywords: 'magasin nom logo adresse téléphone whatsapp email nif nis rc ai registre horaire site',
+      icon: Store,
+      badgeColor: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20'
+    },
+    {
+      id: 'pos',
+      label: 'Caisse (POS) & Règles Stock',
+      subtitle: 'Mode rapide, Remise max, Arrondi, Sons',
+      keywords: 'caisse pos stock remise arrondi son bip grossiste panier session alerte',
+      icon: ShoppingCart,
+      badgeColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
+    },
+    {
+      id: 'receipt',
+      label: 'Tickets, Imprimantes & Tiroir',
+      subtitle: 'Format 80mm/58mm/A4, Tiroir-caisse, QR',
+      keywords: 'ticket impression imprimante 80mm 58mm a4 tiroir caisse qr code pied terminal',
+      icon: Printer,
+      badgeColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20'
+    },
+    {
+      id: 'accounting',
+      label: 'Tarifs, Marges & Fiscalité',
+      subtitle: 'Devise DA, TVA 19%, Marges Détail/Gros',
+      keywords: 'devise da dzd tva taxe marge détail gros en ligne ht ttc comptabilité',
+      icon: DollarSign,
+      badgeColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+    },
+    {
+      id: 'staff',
+      label: 'Personnel & Droits par Rôle',
+      subtitle: 'Permissions Admin, Manager, Caissier',
+      keywords: 'personnel employé rôle permission accès caissier manager admin droit',
+      icon: Users,
+      badgeColor: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20'
+    },
+    {
+      id: 'loyalty',
+      label: 'Fidélité Clients & Paliers VIP',
+      subtitle: 'Points par DA, Valeur de rachat, Tiers',
+      keywords: 'fidélité client point palier vip bronze argent or cadeau remise',
+      icon: Gift,
+      badgeColor: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20'
+    },
+    {
+      id: 'whatsapp',
+      label: 'Modèles Messages WhatsApp',
+      subtitle: 'Notifications commandes, relances, reçus',
+      keywords: 'whatsapp sms message modèle client commande relance',
+      icon: MessageSquare,
+      badgeColor: 'text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/20'
+    },
+    {
+      id: 'security',
+      label: 'Sécurité, Cloud & Sauvegardes',
+      subtitle: 'Mode silencieux, Bcrypt, Backup .json',
+      keywords: 'sécurité sauvegarde backup restauration notification synchro studio caméra bcrypt audit',
+      icon: Lock,
+      badgeColor: 'text-slate-700 dark:text-slate-300 bg-slate-500/10 border-slate-500/20'
+    }
   ];
 
-      const renderSection = () => {
+  // Auto-filter/jump when user types in Quick Search
+  const filteredMenuItems = useMemo(() => {
+    const q = quickSearch.trim().toLowerCase();
+    if (!q) return menuItems;
+    return menuItems.filter(
+      m =>
+        m.label.toLowerCase().includes(q) ||
+        m.subtitle.toLowerCase().includes(q) ||
+        m.keywords.toLowerCase().includes(q)
+    );
+  }, [quickSearch]);
+
+  useEffect(() => {
+    if (quickSearch.trim().length >= 2 && filteredMenuItems.length > 0) {
+      if (!filteredMenuItems.some(m => m.id === activeSection)) {
+        setActiveSection(filteredMenuItems[0].id);
+      }
+    }
+  }, [quickSearch, filteredMenuItems, activeSection]);
+
+  const currentMenuMeta = menuItems.find(m => m.id === activeSection) || menuItems[0];
+
+  const renderSection = () => {
     switch (activeSection) {
       case 'store':
         return <StoreSection formData={formData} setFormData={setFormData} />;
-      case 'receipt':
-        return <ReceiptSection formData={formData} setFormData={setFormData} />;
-      case 'whatsapp':
-        return <WhatsAppSection formData={formData} setFormData={setFormData} />;
       case 'pos':
         return <PosSection formData={formData} setFormData={setFormData} />;
+      case 'receipt':
+        return <ReceiptSection formData={formData} setFormData={setFormData} />;
       case 'accounting':
         return <AccountingSection formData={formData} setFormData={setFormData} />;
       case 'staff':
         return <StaffSection formData={formData} setFormData={setFormData} />;
       case 'loyalty':
         return <LoyaltySection formData={formData} setFormData={setFormData} />;
+      case 'whatsapp':
+        return <WhatsAppSection formData={formData} setFormData={setFormData} />;
       case 'security':
         return <SecuritySection formData={formData} setFormData={setFormData} />;
       default:
@@ -160,152 +227,158 @@ const { t } = useTranslation();
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-5 lg:p-6 font-sans overflow-x-hidden bg-[#05070a]">
-      <div className="max-w-7xl mx-auto space-y-12">
-        {/* Header Section */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/5 pb-10 gap-5 animate-in fade-in slide-in-from-top-6 duration-700">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span className="text-[8px] font-black uppercase tracking-normal text-indigo-400">System Admin v1.2.14</span>
-            </div>
-            <h1 className="text-6xl font-black text-white tracking-tighter uppercase leading-none ">NEXUS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">CONFIG</span></h1>
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-normal ml-1">Terminal de Contrôle Centralisé</p>
+    <div className="space-y-6 text-left max-w-7xl mx-auto pb-12">
+      {/* Top Bar Compacte & Professionnelle */}
+      <div className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <Sliders size={22} />
           </div>
-          
-          <button 
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                Paramètres Généraux & Configuration POS
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                <CheckCircle2 size={11} /> v1.2.14
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+              Personnalisez l'identité fiscale de votre magasin, le comportement de la caisse, vos imprimantes et la sécurité Cloud
+            </p>
+          </div>
+        </div>
+
+        {/* Actions Globales : Recherche Rapide + Backup + Enregistrer */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative min-w-[230px]">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={quickSearch}
+              onChange={e => setQuickSearch(e.target.value)}
+              placeholder="Rechercher un réglage (TVA, NIF, Tiroir...)"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-900 dark:text-white text-xs font-bold outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => createBackupArchive()}
+            className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer"
+            title="Télécharger une sauvegarde complète .nexus-backup"
+          >
+            <Download size={14} className="text-emerald-500" />
+            <span>Backup</span>
+          </button>
+
+          <label
+            className="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-200 dark:border-zinc-700 flex items-center gap-1.5 cursor-pointer"
+            title="Restaurer une archive .nexus-backup"
+          >
+            <UploadCloud size={14} className="text-indigo-500" />
+            <span>Restaurer</span>
+            <input
+              type="file"
+              accept=".json,.nexus-backup"
+              className="hidden"
+              onChange={async e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  await restoreBackupArchive(file);
+                  e.target.value = '';
+                }
+              }}
+            />
+          </label>
+
+          <button
             disabled={isSaving}
             onClick={handleSave}
             className={cn(
-              "group relative overflow-hidden flex items-center justify-center gap-4 px-6 py-6 bg-indigo-600 text-white font-black uppercase tracking-normal text-[11px] rounded-xl transition-all hover:shadow-xs active:scale-95 shadow-md border border-indigo-400 ring-1 ring-white/20 ",
+              "px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all cursor-pointer",
               isSaving && "opacity-60 cursor-not-allowed"
             )}
           >
-            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12" />
-            <AnimatePresence mode="wait">
-              {isSaving ? (
-                <motion.div 
-                  initial={{ rotate: 0 }}
-                  animate={{ rotate: 360 }}
-                  className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full"
-                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                />
-              ) : (
-                <Save size={20} className="relative z-10 group-hover:scale-110 transition-transform" />
-              )}
-            </AnimatePresence>
-            <span className="relative z-10">
-              {isSaving ? 'SYNCHRONISATION...' : t('DÉPLOYER MODIFICATIONS')}
-            </span>
+            <Save size={15} />
+            <span>{isSaving ? 'Enregistrement...' : 'Enregistrer les modifications'}</span>
           </button>
-        </header>
+        </div>
+      </div>
 
-        <main className="flex flex-col lg:flex-row gap-12 items-start relative">
-          {/* Sidebar Menu */}
-          <nav className="w-full lg:w-80 flex flex-col gap-3 shrink-0 animate-in fade-in slide-in-from-left-6 duration-1000">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
-              
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+      {/* Layout Principal : Navigation Latérale Compacte (3 cols) + Contenu de la Section Active (9 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Sidebar des Rubriques */}
+        <nav className="lg:col-span-4 xl:col-span-3 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 p-2.5 space-y-1.5 shadow-sm lg:sticky lg:top-4">
+          {filteredMenuItems.map(item => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all cursor-pointer border",
+                  isActive
+                    ? "bg-indigo-600 text-white border-indigo-500 shadow-xs"
+                    : "bg-transparent text-slate-700 dark:text-zinc-300 border-transparent hover:bg-slate-50 dark:hover:bg-zinc-800/70"
+                )}
+              >
+                <div
                   className={cn(
-                    "relative group flex items-center gap-5 h-20 px-5 rounded-xl transition-all overflow-hidden border ring-1 ring-white/5 shadow-md",
-                    isActive
-                      ? "bg-indigo-600 text-white border-indigo-400 shadow-xs scale-[1.02]"
-                      : "bg-white/5 text-slate-500 border-white/5 hover:border-white/20 hover:bg-white/10"
+                    "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border",
+                    isActive ? "bg-white/20 text-white border-white/30" : item.badgeColor
                   )}
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-inner border",
-                    isActive ? "bg-white/20 border-white/30" : "bg-black/40 border-white/5"
-                  )}>
-                    <Icon size={24} className={cn("transition-colors", isActive ? "text-white" : "text-slate-600 group-hover:text-indigo-400")} />
-                  </div>
-                  
-                  <div className="flex flex-col items-start">
-                    <span className={cn(
-                      "text-[11px] font-black uppercase tracking-normal transition-colors ",
-                      isActive ? "text-white" : "text-slate-500 group-hover:text-white"
-                    )}>
-                      {item.label}
-                    </span>
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-normal mt-1",
-                      isActive ? "text-white/40" : "text-slate-700"
-                    )}>
-                      MODULE_{item.id.toUpperCase()}
-                    </span>
-                  </div>
+                  <Icon size={17} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={cn("text-xs font-black truncate", isActive ? "text-white" : "text-slate-900 dark:text-white")}>
+                    {item.label}
+                  </p>
+                  <p className={cn("text-[10px] truncate mt-0.5", isActive ? "text-indigo-100" : "text-slate-500 dark:text-zinc-400")}>
+                    {item.subtitle}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </nav>
 
-                  <ChevronRight 
-                    size={20}
-                    className={cn(
-                      "ml-auto transition-all duration-500",
-                      isActive ? "text-white opacity-100 translate-x-0" : "text-slate-800 opacity-0 -translate-x-4"
-                    )} 
-                  />
-                </button>
-              );
-            })}
-            
-            <div className="mt-8 p-5 bg-black/40 border border-white/5 rounded-xl relative overflow-hidden group ring-1 ring-white/5 shadow-md ">
-               <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none group-hover:rotate-12 group-hover:scale-125 transition-all duration-1000">
-                  <Shield size={160} className="text-indigo-500" />
-               </div>
-               <div className="flex items-center gap-3 mb-4">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-xs" />
-                  <p className="text-[10px] font-black text-white uppercase tracking-normal ">NEXUS SECURE</p>
-               </div>
-               <p className="text-[9px] font-black text-slate-500 uppercase leading-relaxed tracking-widest">Le moteur de règles RLS et les audits IA protègent l'intégrité de vos données en temps réel.</p>
-               <div className="flex gap-2 mt-6">
-                  <div className="h-1 flex-1 bg-indigo-500 rounded-full shadow-xs" />
-                  <div className="h-1 w-4 bg-white/10 rounded-full" />
-                  <div className="h-1 w-4 bg-white/10 rounded-full" />
-               </div>
-            </div>
-          </nav>
-
-          {/* Content Pane */}
-          <section className="flex-1 w-full glass-card rounded-[4rem] p-5 md:p-16 min-h-[700px] animate-in fade-in slide-in-from-right-8 duration-1000 relative">
-            <div className="absolute inset-0 bg-grid-white/[0.01] pointer-events-none" />
-            <div className="max-w-4xl space-y-16 relative z-10">
-               {/* Section Title Header */}
-               {menuItems.map(item => item.id === activeSection && (
-                  <div key={item.id} className="space-y-4 border-l-4 border-indigo-600 pl-8">
-                    <div className="flex items-center gap-5">
-                      <item.icon className="text-indigo-500 shadow-xs" size={32} />
-                      <h2 className="text-4xl font-black text-white uppercase tracking-tighter ">{item.label}</h2>
-                    </div>
-                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-normal ">INSTANCE_ID: <span className="text-indigo-400/60 font-mono tracking-normal not-">{item.id}_cluster_v4</span></p>
-                  </div>
-               ))}
-
-               {/* Section Form Component */}
-               <div className="card-reveal">
-                 {renderSection()}
-               </div>
-            </div>
-          </section>
-        </main>
-
-        <footer className="pt-12 text-center border-t border-white/5">
-           <div className="flex flex-col items-center gap-3 opacity-20 hover:opacity-100 transition-opacity duration-700">
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-[1px] bg-white/40" />
-                <SettingsIcon size={20} className="text-white hover:rotate-180 transition-transform duration-1000" />
-                <div className="w-8 h-[1px] bg-white/40" />
+        {/* Zone Principale de la Section */}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-5">
+          {/* En-tête de la section sélectionnée */}
+          <div className="bg-white dark:bg-zinc-900 px-5 py-4 rounded-2xl border border-slate-200 dark:border-zinc-800 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", currentMenuMeta.badgeColor)}>
+                {React.createElement(currentMenuMeta.icon, { size: 19 })}
               </div>
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.6em] select-none">SYSTEM ADMINISTRATOR CONSOLE</p>
-              <div className="flex gap-6 mt-2">
-                 <span className="text-[8px] font-bold text-slate-600 uppercase">Latency: 24ms</span>
-                 <span className="text-[8px] font-bold text-slate-600 uppercase">Region: Europe-West1</span>
-                 <span className="text-[8px] font-bold text-slate-600 uppercase">Status: OK</span>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase">
+                  {currentMenuMeta.label}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">
+                  {currentMenuMeta.subtitle}
+                </p>
               </div>
-           </div>
-        </footer>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider border border-indigo-500/20 transition-all cursor-pointer"
+            >
+              Sauvegarder
+            </button>
+          </div>
+
+          {/* Contenu du module */}
+          <form onSubmit={handleSave} className="space-y-6">
+            {renderSection()}
+          </form>
+        </div>
       </div>
     </div>
   );
