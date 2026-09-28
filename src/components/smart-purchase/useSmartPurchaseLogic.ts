@@ -254,12 +254,37 @@ export function useSmartPurchaseLogic({
   };
 
   const confirmPurchase = async (shouldPrint: any = false) => {
-    if (!selectedSupplierId) return;
+    if (!cart || cart.length === 0) {
+      toast.error("Veuillez d'abord ajouter ou scanner au moins un article dans le bon d'achat.");
+      return;
+    }
 
     const hasDrafts = cart.some(item => !item.productId || item.isDraft);
     if (hasDrafts) {
       toast.error("Veuillez d'abord ajouter les produits brouillons à l'inventaire ou les associer à un produit existant.");
       return;
+    }
+
+    let effectiveSupplierId = selectedSupplierId;
+    if (!effectiveSupplierId) {
+      const candidateName = (extractedData?.supplierName || 'Fournisseur Standard (Scan)').trim();
+      const matched = suppliers.find(s => (s?.name || '').toLowerCase() === candidateName.toLowerCase());
+      if (matched) {
+        effectiveSupplierId = matched.id;
+        setSelectedSupplierId(matched.id);
+      } else {
+        const autoId = generateUniqueId();
+        const autoSupplier: Supplier = {
+          id: autoId,
+          name: candidateName,
+          phone: '',
+          email: '',
+          balance: 0
+        };
+        await localDb.insert(`suppliers/${autoId}`, autoSupplier);
+        effectiveSupplierId = autoId;
+        setSelectedSupplierId(autoId);
+      }
     }
 
     const actualShouldPrint = shouldPrint === true;
@@ -268,7 +293,7 @@ export function useSmartPurchaseLogic({
       printPurchaseOrder({ 
         id: 'DRAFT', 
         items: cart, 
-        supplierName: suppliers.find(s => s.id === selectedSupplierId)?.name || 'Inconnu', 
+        supplierName: suppliers.find(s => s.id === effectiveSupplierId)?.name || extractedData?.supplierName || 'Fournisseur Standard', 
         total: cart.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0), 
         date: new Date().toISOString() 
       }, settings);
@@ -276,7 +301,7 @@ export function useSmartPurchaseLogic({
 
     await savePurchaseDb({
       cart,
-      selectedSupplierId,
+      selectedSupplierId: effectiveSupplierId,
       extractedData,
       invoiceNumber,
       receptionDate,

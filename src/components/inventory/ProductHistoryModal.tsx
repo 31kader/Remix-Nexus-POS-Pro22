@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ShoppingCart, ShoppingBag, History, Eye, RotateCcw } from 'lucide-react';
-import { toast } from 'sonner';
-import { localDb } from '../../services/LocalDatabase';
+import { ShoppingCart, ShoppingBag, History, Eye, RotateCcw, Image as ImageIcon, FileText, X, ZoomIn } from 'lucide-react';
 import { Button, Modal } from '../ui';
 import { Product, Transaction, Purchase, CompanySettings } from '../../types';
 import { cn, safeGetItems } from '../../lib/utils';
 import { useTransactionStore } from '../../store/useTransactionStore';
+import { useInventoryStore } from '../../store/useInventoryStore';
+import { usePeopleStore } from '../../store/usePeopleStore';
 
 export interface ProductHistoryModalProps {
   isOpen: boolean;
@@ -24,292 +24,466 @@ export function ProductHistoryModal({
   isOpen,
   onClose,
   viewingHistoryProduct,
-  setViewingHistoryProduct,
   transactions,
   purchases,
   settings,
   setViewingPurchaseVoucher
 }: ProductHistoryModalProps) {
   const [historyTab, setHistoryTab] = useState<'sales' | 'purchases' | 'price' | 'returns'>('sales');
+  const [zoomedVoucherImage, setZoomedVoucherImage] = useState<string | null>(null);
+
   const returns = useTransactionStore(s => s.returns) || [];
+  const goodsReceiptNotes = useInventoryStore(s => s.goodsReceiptNotes) || [];
+  const suppliers = usePeopleStore(s => s.suppliers) || [];
+
+  const getRecordItems = (record: any): any[] => safeGetItems(record);
+
+  // Vérifie si un item de facture/vente/BR correspond au produit inspecté (par ID, SKU, code-barres ou Nom normalisé)
+  const isMatchingProductItem = (item: any, product: Product): boolean => {
+    if (!item || !product) return false;
+    if (item.productId && item.productId === product.id) return true;
+    if (item.id && item.id === product.id) return true;
+    if (product.sku && item.sku && String(item.sku).trim().toLowerCase() === String(product.sku).trim().toLowerCase()) return true;
+    if (product.barcode && item.barcode && String(item.barcode).trim().toLowerCase() === String(product.barcode).trim().toLowerCase()) return true;
+    const itemName = String(item.name || item.productName || '').trim().toLowerCase();
+    const prodName = String(product.name || '').trim().toLowerCase();
+    if (itemName && prodName && itemName === prodName) return true;
+    return false;
+  };
+
+  // Récupère l'URL de la photo scannée du bon d'achat (depuis documents, invoiceImageUrl ou cache local)
+  const getPurchaseScannedImage = (p: any): string => {
+    if (!p) return '';
+    if (p.invoiceImageUrl) return p.invoiceImageUrl;
+    if (Array.isArray(p.documents) && p.documents.length > 0) {
+      const imgDoc = p.documents.find((d: any) => d?.url);
+      if (imgDoc?.url) return imgDoc.url;
+    }
+    try {
+      const rawCache = localStorage.getItem('nexus_scanned_vouchers_v1');
+      if (rawCache) {
+        const parsed = JSON.parse(rawCache);
+        if (p.id && parsed[p.id]) return parsed[p.id];
+        if (p.invoiceNumber && parsed[p.invoiceNumber]) return parsed[p.invoiceNumber];
+      }
+    } catch (_) {}
+    return '';
+  };
+
+  const productSales = useMemo(() => {
+    if (!viewingHistoryProduct) return [];
+    return (transactions || []).filter(t => {
+      const items = getRecordItems(t);
+      return items.some(i => isMatchingProductItem(i, viewingHistoryProduct));
+    });
+  }, [transactions, viewingHistoryProduct]);
+
+  const productReturns = useMemo(() => {
+    if (!viewingHistoryProduct) return [];
+    return (returns || []).filter(r => {
+      const items = getRecordItems(r);
+      return items.some(i => isMatchingProductItem(i, viewingHistoryProduct));
+    });
+  }, [returns, viewingHistoryProduct]);
+
+  // Fusionner les Achats (SmartPurchase) ET les Bons de Réception (GRN) pour ce produit
+  const productPurchases = useMemo(() => {
+    if (!viewingHistoryProduct) return [];
+    const fromPurchases = (purchases || []).filter(p => {
+      const items = getRecordItems(p);
+      return items.some(i => isMatchingProductItem(i, viewingHistoryProduct));
+    });
+
+    const existingIds = new Set(fromPurchases.map(p => p.id));
+    const fromGrns: Purchase[] = (goodsReceiptNotes || [])
+      .filter((grn: any) => {
+        if (!grn || existingIds.has(grn.id)) return false;
+        const items = getRecordItems(grn);
+        return items.some(i => isMatchingProductItem(i, viewingHistoryProduct));
+      })
+      .map((grn: any) => {
+        const supName = suppliers.find(s => s.id === grn.supplierId)?.name || grn.supplierName || 'Fournisseur BR';
+        const items = getRecordItems(grn);
+        const total = items.reduce((acc, it) => acc + (Number(it.quantity) || 0) * (Number(it.costPrice ?? it.price) || 0), 0);
+        return {
+          id: grn.id,
+          supplierId: grn.supplierId || '',
+          supplierName: supName,
+          items,
+          invoiceNumber: grn.invoiceNumber || `BR-${String(grn.id).slice(-6).toUpperCase()}`,
+          total,
+          date: grn.date || new Date().toISOString(),
+          status: 'completed'
+        } as Purchase;
+      });
+
+    return [...fromPurchases, ...fromGrns].sort(
+      (a, b) => new Date(b.date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).created_at || 0).getTime()
+    );
+  }, [purchases, goodsReceiptNotes, suppliers, viewingHistoryProduct]);
+
+  // Bascule intelligente : si aucune vente mais des achats existent, ouvrir directement l'onglet "Achats & Bons"
+  useEffect(() => {
+    if (!viewingHistoryProduct) return;
+    if (productSales.length === 0 && productPurchases.length > 0) {
+      setHistoryTab('purchases');
+    } else {
+      setHistoryTab('sales');
+    }
+  }, [viewingHistoryProduct?.id, productSales.length, productPurchases.length]);
 
   if (!viewingHistoryProduct) return null;
 
-  // Helper ultra-sécurisé pour extraire les items d'une transaction, achat ou retour (Array ou JSON string)
-  const getRecordItems = (record: any): any[] => safeGetItems(record);
-
-  // Filtrer les retours concernant ce produit
-  const productReturns = (returns || []).filter(r => {
-    const items = getRecordItems(r);
-    return items.some(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
-  });
-
-  // Filtrer les ventes concernant ce produit
-  const productSales = (transactions || []).filter(t => {
-    const items = getRecordItems(t);
-    return items.some(i => i && (i.id === viewingHistoryProduct.id || i.productId === viewingHistoryProduct.id));
-  });
-
-  // Filtrer les achats concernant ce produit
-  const productPurchases = (purchases || []).filter(p => {
-    const items = getRecordItems(p);
-    return items.some(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
-  });
-
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title={`Historique du produit: ${viewingHistoryProduct.name}`}
-      maxWidth="max-w-4xl"
-    >
-      <div className="space-y-6 text-left">
-        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-fit">
-          {[
-            { id: 'sales', label: 'Ventes', icon: ShoppingCart },
-            { id: 'returns', label: 'Retours', icon: RotateCcw },
-            { id: 'purchases', label: 'Achats', icon: ShoppingBag },
-            { id: 'price', label: 'Prix & Coût', icon: History },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setHistoryTab(tab.id as any)}
-              className={cn(
-                "flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] uppercase font-black tracking-widest transition-all cursor-pointer",
-                historyTab === tab.id 
-                  ? "bg-white/10 text-white shadow-inner ring-1 ring-white/5" 
-                  : "text-white/30 hover:text-white/60 hover:bg-white/5"
-              )}
-            >
-              <tab.icon size={14} className={cn(historyTab === tab.id ? "text-indigo-400" : "")} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Historique du produit : ${viewingHistoryProduct.name}`}
+        maxWidth="max-w-4xl"
+      >
+        <div className="space-y-5 text-left">
+          {/* Barre d'onglets avec compteurs en temps réel */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800">
+            {[
+              { id: 'sales', label: 'Ventes', count: productSales.length, icon: ShoppingCart, color: 'text-indigo-600 dark:text-indigo-400' },
+              { id: 'purchases', label: 'Achats & Bons Scannés', count: productPurchases.length, icon: ShoppingBag, color: 'text-amber-600 dark:text-amber-400' },
+              { id: 'returns', label: 'Retours', count: productReturns.length, icon: RotateCcw, color: 'text-rose-600 dark:text-rose-400' },
+              { id: 'price', label: 'Prix & Coût', count: (viewingHistoryProduct.priceHistory || []).length, icon: History, color: 'text-emerald-600 dark:text-emerald-400' },
+            ].map((tab) => {
+              const active = historyTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setHistoryTab(tab.id as any)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                    active
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800"
+                  )}
+                >
+                  <tab.icon size={14} className={active ? "text-white" : tab.color} />
+                  <span>{tab.label}</span>
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded-md text-[10px] font-mono",
+                    active ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  )}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-          {historyTab === 'sales' && (
-            <div className="space-y-3">
-              {productSales.length > 0 ? (
-                productSales
-                  .sort((a, b) => new Date(b.timestamp || (b as any).created_at || 0).getTime() - new Date(a.timestamp || (a as any).created_at || 0).getTime())
-                  .map((t) => {
-                    const items = getRecordItems(t);
-                    const item = items.find(i => i && (i.id === viewingHistoryProduct.id || i.productId === viewingHistoryProduct.id));
-                    return (
-                      <div key={t.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-indigo-500/30 transition-all group shadow-xl">
-                        <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-lg shadow-indigo-500/5">
-                            <ShoppingCart size={24} />
-                          </div>
-                          <div>
-                             <div className="flex items-center gap-3">
-                                <p className="font-black text-white  uppercase text-xs tracking-widest">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
-                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[8px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
-                             </div>
-                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(t.timestamp || (t as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Client: {t.customerName || 'Client anonyme'}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-white tabular-nums">{item?.quantity || 1} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
-                          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">P.U: {(item?.price || 0).toFixed(2)} {settings.currency}</p>
-                          <p className="text-sm font-black text-emerald-400 mt-2 tracking-tighter shadow-emerald-500/20 shadow-sm px-3 py-1 bg-emerald-500/10 rounded-full inline-block">Total: {((item?.quantity || 1) * (item?.price || 0)).toFixed(2)} {settings.currency}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
-                  <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                    <ShoppingCart size={32} />
-                  </div>
-                  <p className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Aucune vente enregistrée pour ce produit</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {historyTab === 'returns' && (
-            <div className="space-y-3">
-              {productReturns.length > 0 ? (
-                productReturns
-                  .sort((a, b) => new Date(b.timestamp || b.date || 0).getTime() - new Date(a.timestamp || a.date || 0).getTime())
-                  .map((r) => {
-                    const items = getRecordItems(r);
-                    const item = items.find(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
-                    const itemPrice = item?.price || 0;
-                    const itemQty = item?.quantity || 0;
-                    const returnDate = r.timestamp || r.date || new Date().toISOString();
-                    return (
-                      <div key={r.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-red-500/30 transition-all group shadow-xl">
-                        <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-all shadow-lg shadow-red-500/5">
-                            <RotateCcw size={24} />
-                          </div>
-                          <div>
-                             <div className="flex items-center gap-3">
-                                <p className="font-black text-white  uppercase text-xs tracking-widest">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
-                                <span className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded border border-red-500/20">Retourné</span>
-                             </div>
-                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(returnDate), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-                            {r.reason && <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mt-2 bg-red-500/5 px-2 py-0.5 rounded-full inline-block">Raison: {r.reason}</p>}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-white tabular-nums">-{itemQty} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
-                          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">P.U: {(itemPrice).toFixed(2)} {settings.currency}</p>
-                          <p className="text-sm font-black text-red-400 mt-2 tracking-tighter shadow-red-500/20 shadow-sm px-3 py-1 bg-red-500/10 rounded-full inline-block">Remboursé: {(itemQty * itemPrice).toFixed(2)} {settings.currency}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
-                  <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                    <RotateCcw size={32} />
-                  </div>
-                  <p className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Aucun retour enregistré pour ce produit</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {historyTab === 'purchases' && (
-            <div className="space-y-3">
-              {productPurchases.length > 0 ? (
-                productPurchases
-                  .sort((a, b) => new Date(b.date || (b as any).created_at || 0).getTime() - new Date(a.date || (a as any).created_at || 0).getTime())
-                  .map((p) => {
-                    const items = getRecordItems(p);
-                    const item = items.find(i => i && (i.productId === viewingHistoryProduct.id || i.id === viewingHistoryProduct.id));
-                    return (
-                      <div 
-                        key={p.id} 
-                        onClick={() => setViewingPurchaseVoucher(p)}
-                        className="p-6 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between hover:bg-white/10 hover:border-amber-500/30 transition-all cursor-pointer group shadow-xl"
-                      >
-                        <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-lg shadow-amber-500/5">
-                            <ShoppingBag size={24} />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-3">
-                              <p className="font-black text-white  uppercase text-xs tracking-widest">Achat - {p.supplierName}</p>
-                              <Eye size={14} className="text-amber-400 opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity" />
+          <div className="max-h-[520px] overflow-y-auto pr-1 custom-scrollbar">
+            {/* ONGLET VENTES */}
+            {historyTab === 'sales' && (
+              <div className="space-y-3">
+                {productSales.length > 0 ? (
+                  productSales
+                    .sort((a, b) => new Date(b.timestamp || (b as any).created_at || 0).getTime() - new Date(a.timestamp || (a as any).created_at || 0).getTime())
+                    .map((t) => {
+                      const items = getRecordItems(t);
+                      const item = items.find(i => isMatchingProductItem(i, viewingHistoryProduct));
+                      return (
+                        <div key={t.id} className="p-4 bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between hover:border-indigo-500/40 transition-all shadow-xs">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/20">
+                              <ShoppingCart size={20} />
                             </div>
-                            <p className="text-[10px] font-medium text-white/40 mt-1">{format(new Date(p.date || (p as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-                            {p.invoiceNumber && <p className="text-[9px] font-black text-indigo-400 uppercase tracking-normal mt-2 bg-indigo-500/5 px-2 py-0.5 rounded-full inline-block">Fiche: {p.invoiceNumber}</p>}
+                            <div>
+                              <div className="flex items-center gap-2.5">
+                                <p className="font-black text-slate-900 dark:text-white uppercase text-xs">Vente #{String(t.id || "").slice(-8).toUpperCase()}</p>
+                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded border border-emerald-500/20">Payé</span>
+                              </div>
+                              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                {format(new Date(t.timestamp || (t as any).created_at || Date.now()), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                              </p>
+                              <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mt-1">
+                                Client : {t.customerName || 'Client de passage'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-base font-black text-slate-900 dark:text-white tabular-nums">
+                              {item?.quantity || 1} <span className="text-[10px] text-slate-400 uppercase">{viewingHistoryProduct.unit}</span>
+                            </p>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                              P.U : {(item?.price || 0).toFixed(2)} {settings.currency}
+                            </p>
+                            <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-1 px-2.5 py-0.5 bg-emerald-500/10 rounded-lg inline-block">
+                              Total : {((item?.quantity || 1) * (item?.price || 0)).toFixed(2)} {settings.currency}
+                            </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-black text-white tabular-nums">+{item?.quantity || 1} <span className="text-[10px] text-white/30 uppercase ml-1">{viewingHistoryProduct.unit}</span></p>
-                          <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mt-1">Coût: {(item?.costPrice || 0).toFixed(2)} {settings.currency}</p>
-                          <p className="text-sm font-black text-amber-400 mt-2 tracking-tighter shadow-amber-500/20 shadow-sm px-3 py-1 bg-amber-500/10 rounded-full inline-block">Total: {((item?.quantity || 1) * (item?.costPrice || 0)).toFixed(2)} {settings.currency}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
-                  <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                    <ShoppingBag size={32} />
-                  </div>
-                  <p className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Aucun achat enregistré pour ce produit</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {historyTab === 'price' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-6 bg-white/5 rounded-xl border border-white/10 shadow-md relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
-                <div className="relative z-10">
-                  <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mb-2 pl-1">Prix de vente actuel</p>
-                  <p className="text-3xl font-black text-white tabular-nums">{(viewingHistoryProduct.price || 0).toFixed(2)} <span className="text-xs text-emerald-400 font-black uppercase tracking-widest ml-1">{settings.currency}</span></p>
-                </div>
-                <div className="text-right relative z-10">
-                  <p className="text-[10px] font-black text-white/30 uppercase tracking-normal mb-2 pr-1">Coût d'achat actuel</p>
-                  <p className="text-3xl font-black text-white tabular-nums">{(viewingHistoryProduct.costPrice || 0).toFixed(2)} <span className="text-xs text-rose-400 font-black uppercase tracking-widest ml-1">{settings.currency}</span></p>
-                </div>
-              </div>
-
-              <div className="space-y-3 pr-1">
-                {viewingHistoryProduct.priceHistory && viewingHistoryProduct.priceHistory.length > 0 ? (
-                  viewingHistoryProduct.priceHistory.map((entry, idx) => (
-                    <div key={`price-history-${idx}`} className="p-4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between group hover:border-indigo-500/40 transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-lg flex items-center justify-center border border-indigo-500/20">
-                          <History size={18} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <p className="font-black text-white text-xs uppercase leading-none">{(entry.price || 0).toFixed(2)} {settings.currency}</p>
-                            <div className="h-3 w-px bg-white/15" />
-                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Coût: {(entry.costPrice || 0).toFixed(2)} {settings.currency}</span>
-                          </div>
-                          <p className="text-[9px] text-white/40 font-bold uppercase mt-1.5">{format(new Date(entry.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-                          {entry.reason && <p className="text-[8px] text-indigo-300 font-black uppercase tracking-widest mt-1.5 bg-indigo-500/10 px-2 py-0.5 rounded w-fit border border-indigo-500/15">{entry.reason}</p>}
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="opacity-100 sm:opacity-60 group-hover:opacity-100 transition-opacity bg-indigo-600 hover:bg-indigo-700 text-white border-none py-1.5 px-3 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-pointer"
-                        onClick={async () => {
-                          if (!viewingHistoryProduct) return;
-                          try {
-                            const newHistory = [
-                              {
-                                price: viewingHistoryProduct.price,
-                                costPrice: viewingHistoryProduct.costPrice || 0,
-                                timestamp: new Date().toISOString(),
-                                reason: 'Restauration historique'
-                              },
-                              ...viewingHistoryProduct.priceHistory!
-                            ].slice(0, 50);
-
-                            const newProductData = {
-                              ...viewingHistoryProduct,
-                              price: entry.price,
-                              costPrice: entry.costPrice,
-                              priceHistory: newHistory,
-                              updatedAt: new Date().toISOString()
-                            };
-                            window.dispatchEvent(new CustomEvent('product-cache-update', { detail: newProductData }));
-                            if (viewingHistoryProduct.id) {
-                              await localDb.update(`products/${viewingHistoryProduct.id}`, {
-                                price: entry.price,
-                                costPrice: entry.costPrice,
-                                updatedAt: newProductData.updatedAt
-                              });
-                            }
-                            setViewingHistoryProduct(newProductData);
-                            toast.success("Ancien prix restauré avec succès.");
-                          } catch (e) {
-                            console.error(e);
-                            toast.error("Erreur lors de la restauration.");
-                          }
-                        }}
-                      >
-                        Restaurer
-                      </Button>
-                    </div>
-                  ))
+                      );
+                    })
                 ) : (
-                  <div className="py-12 text-center bg-white/[0.02] rounded-xl border border-white/5">
-                    <div className="w-16 h-16 bg-white/5 text-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
-                      <History size={32} />
-                    </div>
-                    <p className="text-white/40 font-bold uppercase text-[10px] tracking-widest">Aucune modification de prix enregistrée</p>
+                  <div className="py-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <ShoppingCart size={32} className="mx-auto mb-3 text-slate-400" />
+                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">Aucune vente enregistrée pour ce produit</p>
+                    {productPurchases.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryTab('purchases')}
+                        className="mt-3 px-4 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-lg text-xs font-black uppercase cursor-pointer"
+                      >
+                        👉 Voir les {productPurchases.length} Bon(s) d'Achat de ce produit
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* ONGLET RETOURS */}
+            {historyTab === 'returns' && (
+              <div className="space-y-3">
+                {productReturns.length > 0 ? (
+                  productReturns
+                    .sort((a, b) => new Date(b.timestamp || b.date || 0).getTime() - new Date(a.timestamp || a.date || 0).getTime())
+                    .map((r) => {
+                      const items = getRecordItems(r);
+                      const item = items.find(i => isMatchingProductItem(i, viewingHistoryProduct));
+                      const itemPrice = item?.price || 0;
+                      const itemQty = item?.quantity || 0;
+                      const returnDate = r.timestamp || r.date || new Date().toISOString();
+                      return (
+                        <div key={r.id} className="p-4 bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between hover:border-rose-500/40 transition-all shadow-xs">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center border border-rose-500/20">
+                              <RotateCcw size={20} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2.5">
+                                <p className="font-black text-slate-900 dark:text-white uppercase text-xs">Retour #{String(r.id || "").slice(-8).toUpperCase()}</p>
+                                <span className="px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase rounded border border-rose-500/20">Retourné</span>
+                              </div>
+                              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">{format(new Date(returnDate), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
+                              {r.reason && <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase mt-1">Motif : {r.reason}</p>}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-base font-black text-slate-900 dark:text-white tabular-nums">-{itemQty} <span className="text-[10px] text-slate-400 uppercase">{viewingHistoryProduct.unit}</span></p>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">P.U : {itemPrice.toFixed(2)} {settings.currency}</p>
+                            <p className="text-xs font-black text-rose-600 dark:text-rose-400 mt-1 px-2.5 py-0.5 bg-rose-500/10 rounded-lg inline-block">Remboursé : {(itemQty * itemPrice).toFixed(2)} {settings.currency}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                ) : (
+                  <div className="py-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <RotateCcw size={32} className="mx-auto mb-3 text-slate-400" />
+                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">Aucun retour enregistré pour ce produit</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ONGLET ACHATS & BONS SCANNÉS */}
+            {historyTab === 'purchases' && (
+              <div className="space-y-3">
+                {productPurchases.length > 0 ? (
+                  productPurchases.map((p) => {
+                    const items = getRecordItems(p);
+                    const item = items.find(i => isMatchingProductItem(i, viewingHistoryProduct));
+                    const scannedImg = getPurchaseScannedImage(p);
+                    const qty = Number(item?.quantity || 1);
+                    const cost = Number(item?.costPrice ?? item?.price ?? viewingHistoryProduct.costPrice ?? 0);
+
+                    return (
+                      <div
+                        key={p.id}
+                        className="p-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-amber-500/50 transition-all shadow-xs"
+                      >
+                        <div className="flex items-start sm:items-center gap-4">
+                          {/* Miniature Photo Bon Scanné ou Icône */}
+                          {scannedImg ? (
+                            <button
+                              type="button"
+                              onClick={() => setZoomedVoucherImage(scannedImg)}
+                              className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-amber-500/40 shrink-0 group/img cursor-pointer shadow-sm"
+                              title="Cliquer pour agrandir la photo scannée du bon d'achat"
+                            >
+                              <img src={scannedImg} alt="Bon scanné" className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                                <ZoomIn size={18} className="text-white" />
+                              </div>
+                            </button>
+                          ) : (
+                            <div className="w-14 h-14 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl flex items-center justify-center border border-amber-500/20 shrink-0">
+                              <ShoppingBag size={22} />
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-black text-slate-900 dark:text-white uppercase text-xs">
+                                {p.supplierName || 'Fournisseur Standard'}
+                              </p>
+                              <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-mono font-bold rounded border border-indigo-500/20">
+                                N° {p.invoiceNumber || `BON-${String(p.id).slice(-6).toUpperCase()}`}
+                              </span>
+                              {scannedImg && (
+                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded border border-emerald-500/20 flex items-center gap-1">
+                                  <ImageIcon size={11} /> Photo Bon Scanné
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                              Date de réception : {format(new Date(p.date || (p as any).created_at || Date.now()), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setViewingPurchaseVoucher(p)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer shadow-xs"
+                              >
+                                <FileText size={12} /> Ouvrir le Bon Complet ({items.length} art.)
+                              </button>
+                              {scannedImg && (
+                                <button
+                                  type="button"
+                                  onClick={() => setZoomedVoucherImage(scannedImg)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                  <ZoomIn size={12} /> Voir Photo Scannée
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 dark:border-slate-800 shrink-0">
+                          <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            +{qty} <span className="text-[10px] text-slate-400 uppercase">{viewingHistoryProduct.unit}</span>
+                          </p>
+                          <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                            P.A Unitaire : <span className="font-mono font-black">{cost.toFixed(2)} {settings.currency}</span>
+                          </p>
+                          <p className="text-xs font-black text-amber-600 dark:text-amber-400 mt-1 px-2.5 py-0.5 bg-amber-500/10 rounded-lg inline-block font-mono">
+                            Total Ligne : {(qty * cost).toFixed(2)} {settings.currency}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <ShoppingBag size={32} className="mx-auto mb-3 text-slate-400" />
+                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">
+                      Aucun bon d'achat enregistré pour ce produit
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ONGLET PRIX & COÛT */}
+            {historyTab === 'price' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Prix d'Achat Actuel</p>
+                    <p className="text-2xl font-black text-rose-600 dark:text-rose-400 tabular-nums font-mono">
+                      {(viewingHistoryProduct.costPrice || 0).toFixed(2)} <span className="text-xs">{settings.currency}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Prix de Gros Actuel</p>
+                    <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums font-mono">
+                      {(viewingHistoryProduct.wholesalePrice || 0).toFixed(2)} <span className="text-xs">{settings.currency}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Prix Détail Actuel</p>
+                    <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums font-mono">
+                      {(viewingHistoryProduct.price || 0).toFixed(2)} <span className="text-xs">{settings.currency}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {viewingHistoryProduct.priceHistory && viewingHistoryProduct.priceHistory.length > 0 ? (
+                    viewingHistoryProduct.priceHistory.map((entry: any, idx: number) => (
+                      <div key={`price-history-${idx}`} className="p-3.5 bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center border border-indigo-500/20">
+                            <History size={16} />
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-black text-slate-900 dark:text-white text-xs">
+                                Vente : {(entry.price || 0).toFixed(2)} {settings.currency}
+                              </span>
+                              <span className="text-slate-300 dark:text-slate-700">|</span>
+                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                                Achat : {(entry.costPrice || 0).toFixed(2)} {settings.currency}
+                              </span>
+                              {entry.invoiceNumber && (
+                                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-mono font-bold rounded">
+                                  Bon : {entry.invoiceNumber}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              {format(new Date(entry.date || Date.now()), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                              {entry.supplierName ? ` • Fournisseur : ${entry.supplierName}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-10 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                      <History size={28} className="mx-auto mb-2 text-slate-400" />
+                      <p className="text-slate-500 dark:text-slate-400 font-bold uppercase text-xs">Aucun historique de variation de prix</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+            <Button onClick={onClose} variant="secondary">Fermer</Button>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {/* Modal Zoom Plein Écran pour la Photo Scannée du Bon d'Achat */}
+      {zoomedVoucherImage && (
+        <Modal
+          isOpen={!!zoomedVoucherImage}
+          onClose={() => setZoomedVoucherImage(null)}
+          title="📸 Photo Scannée du Bon d'Achat (Achat Intelligent)"
+          maxWidth="max-w-4xl"
+        >
+          <div className="space-y-4 text-center">
+            <div className="max-h-[72vh] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-950 p-2">
+              <img
+                src={zoomedVoucherImage}
+                alt="Photo du bon d'achat scanné"
+                className="max-w-full h-auto mx-auto rounded-lg"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <a
+                href={zoomedVoucherImage}
+                download={`Bon_Achat_${viewingHistoryProduct.name}.jpg`}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider"
+              >
+                Télécharger l'image
+              </a>
+              <Button onClick={() => setZoomedVoucherImage(null)} variant="secondary">
+                Fermer l'aperçu
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

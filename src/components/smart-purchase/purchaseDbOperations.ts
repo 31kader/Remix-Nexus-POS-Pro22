@@ -123,19 +123,26 @@ export async function savePurchaseDb({
     }, 0) * (1 - (globalDiscount || 0) / 100) * (1 + (globalTax || 0) / 100);
 
     const computedPaymentStatus = paidAmount >= totalValue ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid';
+    const scannedImageUrl = extractedData?.scannedImageUrl || '';
+    const autoInvoiceNum = finalInvoiceNumber || ('BON-SCAN-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(100 + Math.random() * 900));
 
     const purchaseData: any = {
       supplierId: selectedSupplierId || '',
       supplierName: supplierName || 'Inconnu',
       items: purchaseItems,
-      invoiceNumber: finalInvoiceNumber || '',
+      invoiceNumber: autoInvoiceNum,
       total: totalValue,
+      totalAmount: totalValue,
       date: receptionDate ? new Date(receptionDate).toISOString() : new Date().toISOString(),
       status: purchaseStatus,
       paymentStatus: computedPaymentStatus,
       paidAmount: paidAmount || 0,
       globalDiscount: globalDiscount || 0,
       globalTax: globalTax || 0,
+      notes: scannedImageUrl ? 'Bon scanné par photo (Achat Intelligent)' : 'Réception enregistrée',
+      documents: scannedImageUrl
+        ? [{ name: `Photo Bon ${autoInvoiceNum}`, url: scannedImageUrl, type: 'image', date: new Date().toISOString() }]
+        : []
     };
 
     let purchaseId = editingPurchaseId;
@@ -152,6 +159,22 @@ export async function savePurchaseDb({
        purchaseId = Math.random().toString(36).substring(2, 11);
        purchaseData.id = purchaseId;
        await localDb.insert(`purchases/${purchaseId}`, purchaseData);
+    }
+
+    // Sauvegarder la photo scannée dans un cache local dédié par ID d'achat pour accès immédiat hors-ligne
+    if (scannedImageUrl && purchaseId) {
+      try {
+        const rawCache = localStorage.getItem('nexus_scanned_vouchers_v1');
+        const parsedCache = rawCache ? JSON.parse(rawCache) : {};
+        parsedCache[purchaseId] = scannedImageUrl;
+        if (autoInvoiceNum) parsedCache[autoInvoiceNum] = scannedImageUrl;
+        // Garder les 30 derniers bons scannés en cache rapide
+        const keys = Object.keys(parsedCache);
+        if (keys.length > 60) {
+          delete parsedCache[keys[0]];
+        }
+        localStorage.setItem('nexus_scanned_vouchers_v1', JSON.stringify(parsedCache));
+      } catch (_) {}
     }
 
     // Instantly update Zustand store so the UI is updated immediately
@@ -224,25 +247,41 @@ export async function savePurchaseDb({
        const delta = stockDeltas[productId];
        const product = products.find(p => p.id === productId);
        if (product) {
+          const newStockVal = (Number(product.stock) || 0) + delta;
           const updates: any = {
-             stock: (product.stock || 0) + delta,
+             stock: newStockVal,
              updatedAt: new Date().toISOString()
           };
           
           const newItem = purchaseItems.find(i => i.productId === productId);
           if (purchaseStatus === 'completed' && newItem && newItem.costPrice !== undefined) {
              updates.costPrice = newItem.costPrice;
+             let newSellPrice = product.price || 0;
              if (autoMargin && newItem.costPrice > (product.costPrice || 0)) {
                 const oldCost = product.costPrice || 0;
                 const oldPrice = product.price || 0;
                 if (oldCost > 0) {
                   const marginPercent = (oldPrice - oldCost) / oldCost;
-                  updates.price = parseFloat((newItem.costPrice * (1 + marginPercent)).toFixed(2));
+                  newSellPrice = parseFloat((newItem.costPrice * (1 + marginPercent)).toFixed(2));
+                  updates.price = newSellPrice;
                 }
              }
+             const prevHistory = Array.isArray(product.priceHistory) ? product.priceHistory : [];
+             updates.priceHistory = [
+               {
+                 date: purchaseData.date,
+                 price: newSellPrice,
+                 costPrice: Number(newItem.costPrice) || 0,
+                 supplierName: purchaseData.supplierName,
+                 invoiceNumber: autoInvoiceNum,
+                 purchaseId
+               },
+               ...prevHistory.slice(0, 29)
+             ];
           }
           if (productId && productId !== 'undefined') {
             await localDb.update(`products/${productId}`, updates);
+            window.dispatchEvent(new CustomEvent('product-cache-update', { detail: { ...product, ...updates } }));
           }
        }
     }
@@ -253,7 +292,7 @@ export async function savePurchaseDb({
 
     setLastPurchaseItems(purchaseItems);
     setStep('updatePrices');
-    toast.success("Achat enregistré avec succès !");
+    toast.success(`Bon d'achat (${autoInvoiceNum}) enregistré avec succès dans l'historique produit !`);
   } catch (error: any) {
     console.error("Confirmation error:", error);
     toast.error(`Erreur lors de l'enregistrement de l'achat : ${error?.message || error}`);
@@ -451,7 +490,17 @@ export async function handleDeletePurchaseDb({
 }
 
 export interface QuickSupplierParams {
-  quickSupplierData: { name: string; phone: string; email: string };
+  quickSupplierData: {
+    name: string;
+    contactName?: string;
+    phone: string;
+    email: string;
+    address?: string;
+    balance?: string | number;
+    deliveryDays?: string[];
+    paymentDays?: string[];
+    planningNotes?: string;
+  };
   suppliers: Supplier[];
   setSelectedSupplierId: (v: string) => void;
   setIsQuickSupplierModalOpen: (v: boolean) => void;
@@ -465,7 +514,7 @@ export async function handleQuickSupplierSubmitDb({
   setIsQuickSupplierModalOpen,
   setQuickSupplierData
 }: QuickSupplierParams) {
-  const trimmedName = quickSupplierData.name.trim();
+  const trimmedName = (quickSupplierData.name || '').trim();
   if (!trimmedName) {
     toast.error("Le nom du fournisseur est obligatoire.");
     return;
@@ -476,26 +525,38 @@ export async function handleQuickSupplierSubmitDb({
     toast.warning(`Un fournisseur nommé "${duplicate.name}" existe déjà.`);
     setSelectedSupplierId(duplicate.id);
     setIsQuickSupplierModalOpen(false);
-    setQuickSupplierData({ name: '', phone: '', email: '' });
+    setQuickSupplierData({ name: '', contactName: '', phone: '', email: '', address: '', balance: 0, deliveryDays: [], paymentDays: [], planningNotes: '' });
     return;
   }
 
   try {
     const supplierId = generateUniqueId();
-    const newSupplier = {
-      ...quickSupplierData,
+    const newSupplier: any = {
       id: supplierId,
       name: trimmedName,
+      contactName: (quickSupplierData.contactName || '').trim(),
       phone: (quickSupplierData.phone || '').trim(),
       email: (quickSupplierData.email || '').trim().toLowerCase(),
-      balance: 0
+      address: (quickSupplierData.address || '').trim(),
+      balance: parseFloat(String(quickSupplierData.balance || '0')) || 0,
+      deliveryDays: Array.isArray(quickSupplierData.deliveryDays) ? quickSupplierData.deliveryDays : [],
+      paymentDays: Array.isArray(quickSupplierData.paymentDays) ? quickSupplierData.paymentDays : [],
+      planningNotes: (quickSupplierData.planningNotes || '').trim(),
+      updatedAt: new Date().toISOString()
     };
 
     await localDb.insert(`suppliers/${supplierId}`, newSupplier);
+    try {
+      const { usePeopleStore } = await import('../../store/usePeopleStore');
+      usePeopleStore.setState(state => ({
+        suppliers: [newSupplier, ...(state.suppliers || [])]
+      }));
+    } catch (_) {}
+
     setSelectedSupplierId(supplierId);
     setIsQuickSupplierModalOpen(false);
-    setQuickSupplierData({ name: '', phone: '', email: '' });
-    toast.success("Fournisseur créé avec succès.");
+    setQuickSupplierData({ name: '', contactName: '', phone: '', email: '', address: '', balance: 0, deliveryDays: [], paymentDays: [], planningNotes: '' });
+    toast.success(`Fournisseur "${trimmedName}" créé et sélectionné avec succès !`);
   } catch (error: any) {
      console.error("Error creating supplier:", error);
      toast.error("Erreur de création: " + (error?.message || "Erreur inconnue"));

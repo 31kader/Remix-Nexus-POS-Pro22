@@ -278,24 +278,33 @@ html.light [class*="bg-industrial-900"] {
   border-color: #e2e8f0 !important;
 }
 
-html.light [class*="bg-slate-800"],
-html.light [class*="bg-zinc-800"],
-html.light [class*="bg-industrial-800"],
 html.light [class*="bg-white/5"],
+html.light .industrial-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light [class*="bg-slate-800"]:not([class*="text-white"]),
+html.light [class*="bg-zinc-800"]:not([class*="text-white"]),
+html.light [class*="bg-industrial-800"],
 html.light [class*="bg-white/10"],
 html.light [class*="bg-black/20"],
 html.light [class*="bg-black/30"],
 html.light [class*="bg-black/40"],
 html.light [class*="bg-black/50"],
 html.light [class*="bg-black/60"] {
-  background-color: #f1f5f9 !important;
+  background-color: #f8fafc !important;
   border-color: #cbd5e1 !important;
 }
 
-html.light input:not([id="direct-barcode-input"]),
+html.light .industrial-input,
+html.light input:not([id="direct-barcode-input"]):not([type="checkbox"]):not([type="radio"]),
 html.light select,
 html.light textarea,
 html.light option {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
@@ -305,20 +314,22 @@ html.light option {
 
 html.light input:not([id="direct-barcode-input"])::placeholder,
 html.light textarea::placeholder {
-  color: #94a3b8 !important;
+  color: #64748b !important;
 }
 
 html.light [class*="border-slate-800"],
 html.light [class*="border-slate-700"],
 html.light [class*="border-zinc-800"],
 html.light [class*="border-zinc-700"],
+html.light [class*="border-industrial-800"],
+html.light [class*="border-industrial-700"],
 html.light [class*="border-white/5"],
 html.light [class*="border-white/10"],
 html.light [class*="border-white/20"] {
   border-color: #e2e8f0 !important;
 }
 
-/* Flat Clean Borders Instead of Heavy Shadows */
+/* Subtle Clean Shadows in Light Mode */
 html.light [class*="shadow-2xl"],
 html.light .shadow-2xl,
 html.light [class*="shadow-xl"],
@@ -327,7 +338,7 @@ html.light [class*="shadow-lg"],
 html.light .shadow-lg,
 html.light [class*="shadow-sm"],
 html.light .shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04) !important;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.06) !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -538,15 +549,16 @@ html.light div[id="checkout-panel"] button[class*="rounded-[2rem]"][class*="bg-i
 }
 
 /* --------------------------------------------------------------------------
-   Universal High-Contrast Text Color Management
+   Universal High-Contrast Text Color Management (Light Mode)
    -------------------------------------------------------------------------- */
 /* Subdued / Secondary text */
-html.light [class*="text-slate-400"],
-html.light [class*="text-slate-500"],
-html.light [class*="text-slate-600"],
-html.light [class*="text-zinc-400"],
-html.light [class*="text-zinc-500"],
-html.light [class*="text-zinc-600"],
+html.light [class*="text-slate-400"]:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *),
+html.light [class*="text-slate-500"]:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *),
+html.light [class*="text-zinc-400"]:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *),
+html.light [class*="text-zinc-500"]:not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *),
+html.light [class*="text-industrial-500"],
+html.light [class*="text-white/20"],
+html.light [class*="text-white/30"],
 html.light [class*="text-white/40"],
 html.light [class*="text-white/50"],
 html.light [class*="text-white/60"],
@@ -554,42 +566,67 @@ html.light [class*="text-white/70"] {
   color: #475569 !important;
 }
 
-/* Primary text */
-html.light [class*="text-white"]:not([class*="aspect-square"] *):not(button[class*="bg-indigo"] *):not(button[class*="bg-emerald"] *):not(button[class*="bg-rose"] *):not(button[class*="bg-red"] *):not(button[class*="bg-amber"] *):not(button.bg-indigo-600):not(button.bg-emerald-600):not(a[class*="bg-indigo-600"] *),
+/* Primary text (excluding solid colored badges/cards/buttons and semantic accent text) */
+html.light [class*="text-white"]:not([class*="text-white/"]):not([class*="aspect-square"] *):not([class*="bg-indigo-600"]):not([class*="bg-indigo-600"] *):not([class*="bg-indigo-500"]):not([class*="bg-indigo-500"] *):not([class*="bg-emerald-600"]):not([class*="bg-emerald-600"] *):not([class*="bg-emerald-500"]):not([class*="bg-emerald-500"] *):not([class*="bg-rose-600"]):not([class*="bg-rose-600"] *):not([class*="bg-red-600"]):not([class*="bg-red-600"] *):not([class*="bg-amber-600"]):not([class*="bg-amber-600"] *):not([class*="bg-amber-500"]):not([class*="bg-amber-500"] *):not([class*="bg-purple-600"]):not([class*="bg-purple-600"] *):not([class*="bg-slate-800"]):not([class*="bg-slate-800"] *),
 html.light [class*="text-slate-100"],
 html.light [class*="text-slate-200"],
 html.light [class*="text-slate-300"],
 html.light [class*="text-zinc-100"],
 html.light [class*="text-zinc-200"],
 html.light [class*="text-zinc-300"],
-html.light h1:not(button *),
-html.light h2:not(button *),
-html.light h3:not(button *),
-html.light h4:not(button *),
-html.light p:not(button *),
-html.light span:not([class*="bg-"] *):not(button *) {
+html.light [class*="text-industrial-400"],
+html.light [class*="text-industrial-300"],
+html.light h1:not(button *):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *),
+html.light h2:not(button *):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *),
+html.light h3:not(button *):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *),
+html.light h4:not(button *):not([class*="bg-indigo-600"] *):not([class*="bg-emerald-600"] *):not([class*="bg-amber-600"] *):not([class*="bg-rose-600"] *):not([class*="bg-slate-800"] *):not([class*="text-emerald-"]):not([class*="text-rose-"]):not([class*="text-amber-"]):not([class*="text-indigo-"]) {
   color: #0f172a !important;
 }
 
-/* Solid Colored Buttons Must Retain Pure White Text */
-html.light button[class*="bg-indigo-600"],
-html.light button[class*="bg-indigo-600"] *,
-html.light button[class*="bg-indigo-500"],
-html.light button[class*="bg-indigo-500"] *,
-html.light button[class*="bg-emerald-600"],
-html.light button[class*="bg-emerald-600"] *,
-html.light button[class*="bg-emerald-500"],
-html.light button[class*="bg-emerald-500"] *,
-html.light button[class*="bg-rose-600"],
-html.light button[class*="bg-rose-600"] *,
-html.light button[class*="bg-red-600"],
-html.light button[class*="bg-red-600"] *,
-html.light button[class*="bg-red-500"],
-html.light button[class*="bg-red-500"] *,
-html.light button[class*="bg-amber-500"],
-html.light button[class*="bg-amber-500"] *,
-html.light button[class*="bg-amber-600"],
-html.light button[class*="bg-amber-600"] *,
+/* Semantic Accent Colors High-Contrast in Light Mode */
+html.light [class*="text-emerald-400"]:not(button *):not([class*="bg-emerald-600"] *),
+html.light [class*="text-emerald-300"]:not(button *):not([class*="bg-emerald-600"] *) {
+  color: #059669 !important;
+}
+html.light [class*="text-rose-400"]:not(button *):not([class*="bg-rose-600"] *),
+html.light [class*="text-rose-300"]:not(button *):not([class*="bg-rose-600"] *),
+html.light [class*="text-red-400"]:not(button *):not([class*="bg-red-600"] *) {
+  color: #e11d48 !important;
+}
+html.light [class*="text-amber-400"]:not(button *):not([class*="bg-amber-600"] *):not([class*="aspect-square"] *),
+html.light [class*="text-amber-300"]:not(button *):not([class*="bg-amber-600"] *) {
+  color: #d97706 !important;
+}
+html.light [class*="text-indigo-400"]:not(button *):not([class*="bg-indigo-600"] *),
+html.light [class*="text-indigo-300"]:not(button *):not([class*="bg-indigo-600"] *) {
+  color: #4f46e5 !important;
+}
+html.light [class*="text-purple-400"]:not(button *):not([class*="bg-purple-600"] *),
+html.light [class*="text-purple-300"]:not(button *):not([class*="bg-purple-600"] *) {
+  color: #7c3aed !important;
+}
+
+/* Solid Colored Containers & Buttons Must Retain Pure White Text */
+html.light [class*="bg-indigo-600"],
+html.light [class*="bg-indigo-600"] *,
+html.light [class*="bg-indigo-500"],
+html.light [class*="bg-indigo-500"] *,
+html.light [class*="bg-emerald-600"],
+html.light [class*="bg-emerald-600"] *,
+html.light [class*="bg-emerald-500"],
+html.light [class*="bg-emerald-500"] *,
+html.light [class*="bg-rose-600"],
+html.light [class*="bg-rose-600"] *,
+html.light [class*="bg-red-600"],
+html.light [class*="bg-red-600"] *,
+html.light [class*="bg-red-500"],
+html.light [class*="bg-red-500"] *,
+html.light [class*="bg-amber-500"],
+html.light [class*="bg-amber-500"] *,
+html.light [class*="bg-amber-600"],
+html.light [class*="bg-amber-600"] *,
+html.light [class*="bg-purple-600"],
+html.light [class*="bg-purple-600"] *,
 html.light div[class*="from-emerald-"] *,
 html.light [class*="toast"] * {
   color: #ffffff !important;

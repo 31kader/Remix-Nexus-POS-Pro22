@@ -37,6 +37,7 @@ export function useSmartPurchaseScanner({
   invoiceNumber,
 }: UseSmartPurchaseScannerProps) {
   const [file, setFile] = useState<File | null>(null);
+  const [scannedImageUrl, setScannedImageUrl] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +50,49 @@ export function useSmartPurchaseScanner({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const applyExtractedInvoice = (results: any) => {
-    setExtractedData(results);
+  // Compresse la photo du bon d'achat (max 1100px, JPEG 0.72) pour sauvegarde dans l'historique produit & Supabase
+  const createCompactInvoiceImage = (rawFile: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 1100;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', 0.72));
+              return;
+            }
+          } catch (_) {}
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(rawFile);
+    });
+  };
+
+  const applyExtractedInvoice = (results: any, imageOverrideUrl?: string) => {
+    const finalScannedImage = imageOverrideUrl || scannedImageUrl || results?.scannedImageUrl || '';
+    setExtractedData({ ...results, scannedImageUrl: finalScannedImage });
     setDetectedOcrType(results.isPosScreenshot ? 'pos' : 'standard');
 
     if (results.supplierName && !selectedSupplierId) {
@@ -161,6 +203,9 @@ export function useSmartPurchaseScanner({
     setError(null);
 
     try {
+      const compactImg = await createCompactInvoiceImage(imageFile);
+      if (compactImg) setScannedImageUrl(compactImg);
+
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -214,7 +259,7 @@ export function useSmartPurchaseScanner({
         );
       }
 
-      applyExtractedInvoice(parsedInvoice);
+      applyExtractedInvoice(parsedInvoice, compactImg);
       toast.success(
         `Photo analysée (${storedKey.startsWith('gsk_') ? 'OCR + Groq IA' : 'OCR Local'}) : ${parsedInvoice.items.length} ligne(s) extraite(s) !`,
         { icon: '📸' }
@@ -285,6 +330,9 @@ export function useSmartPurchaseScanner({
 
     setIsScanning(true);
     try {
+      const compactImg = await createCompactInvoiceImage(selectedFile);
+      if (compactImg) setScannedImageUrl(compactImg);
+
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -298,7 +346,7 @@ export function useSmartPurchaseScanner({
       try {
         const results = await scanInvoice(base64, selectedFile.type || 'image/jpeg', storedKey);
         if (results && Array.isArray(results.items) && results.items.length > 0) {
-          applyExtractedInvoice(results);
+          applyExtractedInvoice(results, compactImg);
           const providerLabel = storedKey.startsWith('gsk_')
             ? 'Groq Vision IA'
             : storedKey.startsWith('sk-or-')

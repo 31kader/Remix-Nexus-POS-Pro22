@@ -27,6 +27,8 @@ interface SupplierPlanningTabProps {
   handleAddReminder: (e: React.FormEvent) => void;
   handleDeleteReminder: (supplierId: string, reminderId: string) => void;
   handleToggleReminderComplete: (supplierId: string, reminderId: string, completed: boolean) => void;
+  onQuickPaySupplier?: (s: Supplier) => void;
+  currency?: string;
 }
 
 export const SupplierPlanningTab = memo(function SupplierPlanningTab({
@@ -38,7 +40,9 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
   setNewReminderData,
   handleAddReminder,
   handleDeleteReminder,
-  handleToggleReminderComplete
+  handleToggleReminderComplete,
+  onQuickPaySupplier,
+  currency = 'DA'
 }: SupplierPlanningTabProps) {
   const [reminderFilter, setReminderFilter] = useState<'all' | 'active' | 'completed'>('active');
   const [selectedReminderDate, setSelectedReminderDate] = useState<string | null>(null);
@@ -63,12 +67,10 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
     const prevLastDay = new Date(year, month, 0).getDate();
     
     let startDayIndex = firstDay.getDay();
-    // Shift from Sunday-first to Monday-first
     startDayIndex = startDayIndex === 0 ? 6 : startDayIndex - 1;
     
     const days: { date: Date; isCurrentMonth: boolean }[] = [];
     
-    // Previous month filler days
     for (let i = startDayIndex; i > 0; i--) {
       days.push({
         date: new Date(year, month - 1, prevLastDay - i + 1),
@@ -76,7 +78,6 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
       });
     }
     
-    // Current month days
     for (let i = 1; i <= lastDay.getDate(); i++) {
       days.push({
         date: new Date(year, month, i),
@@ -84,7 +85,6 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
       });
     }
     
-    // Next month filler days to complete 42-day calendar grid
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       days.push({
@@ -105,6 +105,8 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
         setViewingDetailsSupplier={setViewingDetailsSupplier}
         setActiveDetailsTab={setActiveDetailsTab}
         setIsDetailsModalOpen={setIsDetailsModalOpen}
+        onQuickPaySupplier={onQuickPaySupplier}
+        currency={currency}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start mt-10 text-left">
@@ -119,7 +121,7 @@ export const SupplierPlanningTab = memo(function SupplierPlanningTab({
           formatDateKey={formatDateKey}
         />
 
-        <div className="xl:col-span-7 space-y-6 text-white grid grid-cols-1 md:grid-cols-2 lg:gap-5 items-start">
+        <div className="xl:col-span-7 space-y-6 text-slate-900 dark:text-white grid grid-cols-1 md:grid-cols-2 lg:gap-5 items-start">
           <ReminderForm
             newReminderData={newReminderData}
             setNewReminderData={setNewReminderData}

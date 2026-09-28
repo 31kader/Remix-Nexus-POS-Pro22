@@ -1,10 +1,9 @@
-import React, { memo } from 'react';
-import { Plus } from 'lucide-react';
+import React, { memo, useMemo } from 'react';
+import { Plus, Truck, Wallet, AlertCircle, CalendarCheck } from 'lucide-react';
 import { Supplier, Product, CompanySettings, Category, DamagedRecord } from '../types';
 import { Button, ConfirmDialog } from './ui';
-import { cn } from '../lib/utils';
+import { cn, formatPrice } from '../lib/utils';
 
-// Import newly refactored sub-components
 import { SupplierPlanningTab } from './suppliers/SupplierPlanningTab';
 import { SupplierDetailsModal } from './suppliers/SupplierDetailsModal';
 import { SupplierFormModal } from './suppliers/SupplierFormModal';
@@ -25,10 +24,12 @@ export interface SuppliersProps {
   damagedItems: DamagedRecord[];
 }
 
+const FRENCH_DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
 export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
   const { 
     suppliers, products, settings, purchases, supplierPayments, 
-    setViewingPurchaseVoucher, categories, user, damagedItems 
+    setViewingPurchaseVoucher, categories, damagedItems 
   } = props;
 
   const {
@@ -37,7 +38,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     editingSupplier,
     setEditingSupplier,
     isSyncing,
-    setIsSyncing,
     viewingDetailsSupplier,
     setViewingDetailsSupplier,
     isDetailsModalOpen,
@@ -53,7 +53,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     paymentData,
     setPaymentData,
     isProcessingPayment,
-    setIsProcessingPayment,
     isDamageModalOpen,
     setIsDamageModalOpen,
     selectedProductForDamage,
@@ -61,7 +60,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     damageData,
     setDamageData,
     isProcessingDamage,
-    setIsProcessingDamage,
     isDeleteConfirmOpen,
     setIsDeleteConfirmOpen,
     supplierToDelete,
@@ -71,12 +69,10 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     isPODraftOpen,
     setIsPODraftOpen,
     isSavingPurchaseOrder,
-    setIsSavingPurchaseOrder,
     newReminderData,
     setNewReminderData,
     formData,
     setFormData,
-    t,
     handleDeleteSupplier,
     handlePaymentSubmit,
     handlePaymentDelete,
@@ -90,50 +86,138 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
     selectedSupplierPurchases,
     handleSubmit
   } = useSuppliersLogic(props);
-  
+
+  const todayName = FRENCH_DAYS[new Date().getDay()];
+
+  const metrics = useMemo(() => {
+    const totalDebt = (suppliers || []).reduce((acc, s) => acc + Math.max(0, Number(s?.balance) || 0), 0);
+    const withDebtCount = (suppliers || []).filter(s => (Number(s?.balance) || 0) > 0).length;
+    const todayEventsCount = (suppliers || []).filter(
+      s => s?.preSaleDays?.includes(todayName) || s?.deliveryDays?.includes(todayName) || s?.paymentDays?.includes(todayName)
+    ).length;
+    return { totalDebt, withDebtCount, todayEventsCount };
+  }, [suppliers, todayName]);
+
+  const handleOpenQuickPayment = (supplier: Supplier) => {
+    setViewingDetailsSupplier(supplier);
+    setPaymentData({
+      supplierId: supplier.id,
+      amount: Math.max(0, Number(supplier.balance) || 0),
+      method: 'cash',
+      note: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+    setIsPaymentModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="bg-white/5  p-5 rounded-xl border border-white/10 shadow-md relative overflow-hidden group mb-8 text-left">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-indigo-500/10" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+      {/* Header Principal Suppliers.hub */}
+      <div className="bg-white dark:bg-slate-900/90 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden text-left">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
           <div>
-            <h3 className="text-3xl font-black text-white tracking-widest uppercase ">Suppliers<span className="text-indigo-500">.hub</span></h3>
-            <div className="text-[10px] font-black text-white/40 flex items-center gap-2 uppercase tracking-normal mt-1 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5 w-fit">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              Réseau de {suppliers.length} partenaires commerciaux
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-indigo-600/10 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                <Truck size={22} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                  Suppliers<span className="text-indigo-600 dark:text-indigo-400">.hub</span> & Partenaires
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Gestion des fournisseurs, soldes, dettes et tableau de bord des activités hebdomadaires ({todayName})
+                </p>
+              </div>
             </div>
           </div>
-          <Button 
-            onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-[1.25rem] px-5 py-6 font-black uppercase tracking-widest text-[11px] shadow-xs transition-all hover:scale-105 active:scale-95 flex items-center gap-3 border border-indigo-400/50 cursor-pointer"
-          >
-            <Plus size={20} strokeWidth={3} /> Nouveau Partenaire
-          </Button>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setActiveSupplierTab('list')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                  activeSupplierTab === 'list'
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                )}
+              >
+                💼 Annuaire & Soldes ({suppliers.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSupplierTab('planning')}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                  activeSupplierTab === 'planning'
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                )}
+              >
+                📆 Tableau de Bord des Activités ({metrics.todayEventsCount} auj.)
+              </button>
+            </div>
+
+            <Button 
+              onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-4 py-2.5 font-black uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer shadow-sm"
+            >
+              <Plus size={18} /> Nouveau Fournisseur
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex gap-4 mt-8 pt-6 border-t border-white/10 relative z-10">
-          <button
-            onClick={() => setActiveSupplierTab('list')}
-            className={cn(
-              "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
-              activeSupplierTab === 'list'
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
-                : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            💼 Liste d'Affaires
-          </button>
-          <button
+
+        {/* Cartes KPIs Fournisseurs */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/70 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Total Partenaires</p>
+              <p className="text-xl font-black text-slate-900 dark:text-white mt-0.5 tabular-nums">{suppliers.length}</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Truck size={18} />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase">Total Dettes Fournisseurs</p>
+              <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5 tabular-nums font-mono">
+                {formatPrice(metrics.totalDebt)} {settings.currency || 'DA'}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+              <Wallet size={18} />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">Fournisseurs à Régler</p>
+              <p className="text-xl font-black text-amber-600 dark:text-amber-400 mt-0.5 tabular-nums">
+                {metrics.withDebtCount} <span className="text-xs font-bold">sur {suppliers.length}</span>
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <AlertCircle size={18} />
+            </div>
+          </div>
+
+          <div
             onClick={() => setActiveSupplierTab('planning')}
-            className={cn(
-              "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 cursor-pointer",
-              activeSupplierTab === 'planning'
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-xs scale-105"
-                : "bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white"
-            )}
+            className="p-3.5 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition-all"
           >
-            📆 Planning & Agendas
-          </button>
+            <div>
+              <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Activités ({todayName})</p>
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 tabular-nums">
+                {metrics.todayEventsCount} <span className="text-xs font-bold">prévue(s)</span>
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <CalendarCheck size={18} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -148,6 +232,8 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           handleAddReminder={handleAddReminder}
           handleDeleteReminder={handleDeleteReminder}
           handleToggleReminderComplete={handleToggleReminderComplete}
+          onQuickPaySupplier={handleOpenQuickPayment}
+          currency={settings.currency || 'DA'}
         />
       ) : (
         <SupplierList
@@ -161,6 +247,8 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
           setEditingSupplier={setEditingSupplier}
           setIsModalOpen={setIsModalOpen}
+          onQuickPaySupplier={handleOpenQuickPayment}
+          currency={settings.currency || 'DA'}
         />
       )}
 
