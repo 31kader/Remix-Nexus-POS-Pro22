@@ -84,7 +84,31 @@ export function ProductPricingSection({
 
         {/* Prix de gros */}
         <div className="space-y-2 group">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">PRIX DE GROS</label>
+          <div className="flex items-center justify-between">
+            <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal ml-1">PRIX DE GROS</label>
+            <div className="flex items-center gap-1">
+              {costPrice > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, wholesalePrice: (costPrice * 1.10).toFixed(2) })}
+                  className="text-[8px] font-black uppercase text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-1.5 py-0.5 rounded border border-sky-500/20 transition-all active:scale-95 cursor-pointer"
+                  title="Calculer Prix d'Achat + 10%"
+                >
+                  Achat+10%
+                </button>
+              )}
+              {price > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, wholesalePrice: (price * 0.90).toFixed(2) })}
+                  className="text-[8px] font-black uppercase text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-500/20 transition-all active:scale-95 cursor-pointer"
+                  title="Calculer Prix Détail - 10%"
+                >
+                  Détail-10%
+                </button>
+              )}
+            </div>
+          </div>
           <div className="relative">
             <input
               type="number"
@@ -129,16 +153,38 @@ export function ProductPricingSection({
         <div className="space-y-2 group">
           <div className="flex items-center justify-between">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-normal  ml-1">TARIF EN LIGNE</label>
-            {costPrice > 0 && (
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, onlinePrice: (costPrice * 1.05).toFixed(2) })}
-                className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/20 transition-all active:scale-95 cursor-pointer"
-                title="Générer automatiquement +5% du prix d'achat"
-              >
-                +5%
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {price > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, onlinePrice: price.toFixed(2) })}
+                  className="text-[8px] font-black uppercase text-violet-400 hover:text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 px-1.5 py-0.5 rounded border border-violet-500/20 transition-all active:scale-95 cursor-pointer"
+                  title="Aligner sur le prix détail"
+                >
+                  =Détail
+                </button>
+              )}
+              {price > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, onlinePrice: (price * 0.95).toFixed(2) })}
+                  className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/20 transition-all active:scale-95 cursor-pointer"
+                  title="Calculer Prix Détail - 5%"
+                >
+                  -5%
+                </button>
+              )}
+              {costPrice > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, onlinePrice: (costPrice * 1.15).toFixed(2) })}
+                  className="text-[8px] font-black uppercase text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-500/20 transition-all active:scale-95 cursor-pointer"
+                  title="Calculer Prix d'Achat + 15%"
+                >
+                  +15%
+                </button>
+              )}
+            </div>
           </div>
           <div className="relative">
             <input
@@ -252,7 +298,7 @@ export function ProductPricingSection({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Option A : Bénéfice fixe (Mise à jour directe)</label>
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Option A : Bénéfice Détail fixe (DA)</label>
               <input
                 type="number"
                 step="0.01"
@@ -264,7 +310,7 @@ export function ProductPricingSection({
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Option B : Marge Cible % (Mise à jour directe)</label>
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Option B : Marge Détail Cible % (sur Achat)</label>
               <input
                 type="number"
                 step="0.1"
@@ -273,6 +319,74 @@ export function ProductPricingSection({
                 onChange={(e) => handleDesiredMarginChange(e.target.value)}
                 className="w-full bg-black/50 border border-emerald-500/30 rounded-xl px-3 py-2 text-white font-mono text-sm outline-none focus:border-emerald-400 transition-all"
               />
+            </div>
+          </div>
+
+          {/* Réglage rapide par % pour Prix de Gros et Tarif en Ligne */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-indigo-500/20">
+            <div className="space-y-2 bg-sky-500/5 border border-sky-500/20 p-3 rounded-xl">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-sky-300 uppercase tracking-wider">📦 Régler Prix de Gros par %</label>
+                <span className="text-[9px] font-mono text-sky-400 font-bold">{formData.wholesalePrice || '0.00'} {settings?.currency}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[5, 8, 10, 12, 15, 20].map(pct => (
+                  <button
+                    key={'ws-cost-' + pct}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, wholesalePrice: Math.max(0, costPrice * (1 + pct / 100)).toFixed(2) })}
+                    className="px-2 py-1 bg-sky-500/10 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer"
+                  >
+                    Achat +{pct}%
+                  </button>
+                ))}
+                {[5, 10, 15, 20].map(pct => (
+                  <button
+                    key={'ws-ret-' + pct}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, wholesalePrice: Math.max(0, price * (1 - pct / 100)).toFixed(2) })}
+                    className="px-2 py-1 bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer"
+                  >
+                    Détail -{pct}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 bg-violet-500/5 border border-violet-500/20 p-3 rounded-xl">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black text-violet-300 uppercase tracking-wider">🌐 Régler Tarif en Ligne par %</label>
+                <span className="text-[9px] font-mono text-violet-400 font-bold">{formData.onlinePrice || '0.00'} {settings?.currency}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, onlinePrice: price.toFixed(2) })}
+                  className="px-2 py-1 bg-violet-500/20 hover:bg-violet-500/35 text-violet-200 border border-violet-500/40 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer"
+                >
+                  = Prix Détail
+                </button>
+                {[-10, -5, 5, 10].map(pct => (
+                  <button
+                    key={'on-ret-' + pct}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, onlinePrice: Math.max(0, price * (1 + pct / 100)).toFixed(2) })}
+                    className="px-2 py-1 bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer"
+                  >
+                    Détail {pct > 0 ? `+${pct}%` : `${pct}%`}
+                  </button>
+                ))}
+                {[10, 15, 20, 25].map(pct => (
+                  <button
+                    key={'on-cost-' + pct}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, onlinePrice: Math.max(0, costPrice * (1 + pct / 100)).toFixed(2) })}
+                    className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer"
+                  >
+                    Achat +{pct}%
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

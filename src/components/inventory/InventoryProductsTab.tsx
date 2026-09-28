@@ -1,20 +1,25 @@
-import React from 'react';
-import { Package, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Package, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle2, AlertOctagon, AlertTriangle, Percent, RotateCcw } from 'lucide-react';
+import { set as idbSet } from 'idb-keyval';
+import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { useCoreStore } from '../../store/useCoreStore';
 import { DuplicateSKUAlert } from './DuplicateSKUAlert';
 import { InventoryActionBar } from './InventoryActionBar';
+import { BulkPricingStudioModal } from './BulkPricingStudioModal';
 import { BarcodeScanner } from '../BarcodeScanner';
 import { Modal, Button, SafeImage } from '../ui';
 import { InventoryProductCard } from './InventoryProductCard';
 import { InventoryProductRow } from './InventoryProductRow';
+import { supabase, isSupabaseConfigured } from '../../supabase';
 
 export function InventoryProductsTab(props: any) {
   const isDataLoading = useCoreStore(s => s.isDataLoading);
   const storeProducts = useCoreStore(s => s.products);
+  const [isPricingStudioOpen, setIsPricingStudioOpen] = useState(false);
 
   const {
-    products, duplicateSKUGroups, setIsDuplicateModalOpen, handleAutoResolveAll, 
+    products = [], duplicateSKUGroups, setIsDuplicateModalOpen, handleAutoResolveAll, 
     isAutoMerging, autoMergeProgress, search, setSearch, showFilters, setShowFilters, 
     hasActiveFilters, isScannerOpen, setIsScannerOpen, selectedProductIds, handleBulkDelete, 
     setIsMassDeleteConfirmOpen, setIsQuickSelectMode, isQuickSelectMode, setViewMode, 
@@ -24,8 +29,37 @@ export function InventoryProductsTab(props: any) {
     setSelectedProductForAdjustment, setIsAdjustmentModalOpen, handleDelete, 
     setViewingHistoryProduct, setIsProductHistoryModalOpen, setHistoryTab, 
     printQuickLabel, isDeletingId, marginExtremes, currentPage, setCurrentPage, totalPages,
-    requestSort, sortConfig
+    requestSort, sortConfig, stockLevelFilter = 'all', setStockLevelFilter, categories = []
   } = props;
+
+  // Synchroniser une fois le cache local avec la remise à zéro du stock effectuée sur Supabase (v1.2.14)
+  useEffect(() => {
+    if (products.length > 0 && !localStorage.getItem('nexus_zero_stock_mcp_sync_v1')) {
+      const hasNonZero = products.some((p: any) => (Number(p.stock) || 0) !== 0);
+      if (hasNonZero) {
+        const zeroed = products.map((p: any) => ({ ...p, stock: 0 }));
+        useCoreStore.getState().setProducts(zeroed);
+        idbSet('nexus_products_cache', zeroed).catch(() => {});
+      }
+      localStorage.setItem('nexus_zero_stock_mcp_sync_v1', 'true');
+    }
+  }, [products]);
+
+  const inStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) > 0).length, [products]);
+  const outOfStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) <= 0).length, [products]);
+  const lowStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (p.minStock || 5)).length, [products]);
+
+  const handleResetAllStockToZero = async () => {
+    if (!window.confirm(`Voulez-vous remettre la quantité (Stock) de tous les ${products.length} articles à 0 ?`)) return;
+    const nowIso = new Date().toISOString();
+    const zeroed = products.map((p: any) => ({ ...p, stock: 0, updatedAt: nowIso }));
+    useCoreStore.getState().setProducts(zeroed);
+    await idbSet('nexus_products_cache', zeroed).catch(() => {});
+    if (isSupabaseConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
+      await supabase.from('products').update({ stock: 0, updated_at: nowIso }).neq('stock', 0);
+    }
+    toast.success(`Quantité mise à 0 sur tous les ${products.length} articles !`);
+  };
 
   const renderSortHeader = (label: string, sortKey: string, align: 'left' | 'right' = 'right', widthClass: string = '') => {
     const isActive = sortConfig?.key === sortKey;
@@ -62,6 +96,112 @@ export function InventoryProductsTab(props: any) {
         onAutoResolveAll={handleAutoResolveAll} 
         isAutoMerging={isAutoMerging} 
         autoMergeProgress={autoMergeProgress} 
+      />
+
+      {/* Barre de Boutons Rapides : En Stock / En Rupture + Studio Prix Gros & En Ligne (%) */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStockLevelFilter && setStockLevelFilter('all')}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer",
+              stockLevelFilter === 'all'
+                ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/20"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+            )}
+          >
+            <Package size={14} />
+            <span>Tous</span>
+            <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-mono", stockLevelFilter === 'all' ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300")}>
+              {products.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'in' ? 'all' : 'in')}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer",
+              stockLevelFilter === 'in'
+                ? "bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/25"
+                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
+            )}
+          >
+            <CheckCircle2 size={14} />
+            <span>En Stock</span>
+            <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-mono", stockLevelFilter === 'in' ? "bg-white/20 text-white" : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300")}>
+              {inStockCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'out' ? 'all' : 'out')}
+            className={cn(
+              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer",
+              stockLevelFilter === 'out'
+                ? "bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-600/25"
+                : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25 hover:bg-rose-500/20"
+            )}
+          >
+            <AlertOctagon size={14} />
+            <span>En Rupture</span>
+            <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-mono", stockLevelFilter === 'out' ? "bg-white/20 text-white" : "bg-rose-500/20 text-rose-700 dark:text-rose-300")}>
+              {outOfStockCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'low' ? 'all' : 'low')}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer",
+              stockLevelFilter === 'low'
+                ? "bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-600/25"
+                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25 hover:bg-amber-500/20"
+            )}
+          >
+            <AlertTriangle size={14} />
+            <span className="hidden sm:inline">Stock Faible</span>
+            <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-mono", stockLevelFilter === 'low' ? "bg-white/20 text-white" : "bg-amber-500/20 text-amber-700 dark:text-amber-300")}>
+              {lowStockCount}
+            </span>
+          </button>
+        </div>
+
+        {/* Boutons d'actions globales sur les Prix Gros/En Ligne (%) et Remise à 0 du Stock */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPricingStudioOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-indigo-600/20 transition-all active:scale-95 cursor-pointer"
+          >
+            <Percent size={14} />
+            <span>Régler Prix Gros & En Ligne (%)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetAllStockToZero}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
+            title="Remettre la quantité (stock) de tous les articles à 0"
+          >
+            <RotateCcw size={13} />
+            <span>Stock = 0</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Studio de Réglage Global des Prix de Gros & En Ligne (%) */}
+      <BulkPricingStudioModal
+        isOpen={isPricingStudioOpen}
+        onClose={() => setIsPricingStudioOpen(false)}
+        products={products}
+        filteredProducts={sortedProducts}
+        selectedProductIds={selectedProductIds}
+        categories={categories}
+        settings={settings}
       />
       
       {/* Search & Actions Bar */}

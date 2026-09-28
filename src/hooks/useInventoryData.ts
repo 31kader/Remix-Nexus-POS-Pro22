@@ -48,13 +48,16 @@ export function useInventoryData({
       const matchesSupplier = selectedSupplier === 'all' || (p.supplier || 'Sans fournisseur') === selectedSupplier;
       const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
 
+      const currentStock = Number(p.stock) || 0;
       const matchesStock = stockLevelFilter === 'all' 
         ? true 
-        : stockLevelFilter === 'low' 
-          ? p.stock <= (p.minStock || 5) && p.stock > 0
+        : stockLevelFilter === 'in'
+          ? currentStock > 0
           : stockLevelFilter === 'out'
-            ? p.stock <= 0
-            : p.stock > (p.minStock || 5);
+            ? currentStock <= 0
+            : stockLevelFilter === 'low' 
+              ? currentStock <= (p.minStock || 5) && currentStock > 0
+              : currentStock > 0;
 
       const matchesDate = (!dateRange.start || safeDate(p.createdAt || p.updatedAt) >= safeDate(dateRange.start)) &&
                          (!dateRange.end || safeDate(p.createdAt || p.updatedAt) <= safeDate(dateRange.end));

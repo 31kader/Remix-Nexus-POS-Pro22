@@ -79,7 +79,7 @@ return () => window.removeEventListener('resize', checkMobile);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [stockLevelFilter, setStockLevelFilter] = useState<'all' | 'low' | 'out'>('all');
+  const [stockLevelFilter, setStockLevelFilter] = useState<'all' | 'low' | 'out' | 'in'>('all');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'grouped'>('grid');
@@ -284,6 +284,7 @@ return () => window.removeEventListener('resize', checkMobile);
     setIsProductHistoryModalOpen, setHistoryTab, printQuickLabel, isDeletingId, setIsDeletingId,
     isMassDeleting, marginExtremes, requestSort, sortConfig, showMarginExtremes,
     setShowMarginExtremes, currentPage, setCurrentPage, totalPages, productsBySupplier,
+    stockLevelFilter, setStockLevelFilter,
     onExportExcel: handleExportExcel
   };
 
