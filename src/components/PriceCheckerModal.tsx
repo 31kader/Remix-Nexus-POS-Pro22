@@ -26,8 +26,8 @@ interface PriceCheckerModalProps {
   brands: Brand[];
 }
 
-import { useCoreStore } from '../store/useCoreStore';
-import { useUIStore } from '../store/useUIStore';
+import { useCoreStore } from '../stores/useCoreStore';
+import { useUIStore } from '../stores/useUIStore';
 import { executePrintLabels } from '../services/labelPrintService';
 
 export function PriceCheckerModal({ isOpen, onClose, products, settings, categories, brands }: PriceCheckerModalProps) {
