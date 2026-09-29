@@ -124,7 +124,8 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'status', 'description', 'is_bundle', 'bundle_items', 'quantity_discounts', 
     'tags', 'expiration_date', 'batch_number', 'location', 'show_in_pos', 
     'damaged_stock', 'created_at', 'updated_at',
-    'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select'
+    'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select',
+    'price_history'
   ],
   customers: [
     'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 

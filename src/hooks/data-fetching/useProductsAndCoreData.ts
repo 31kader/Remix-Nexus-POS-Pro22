@@ -63,7 +63,7 @@ export function useProductsAndCoreData({
     if (loading) return;
 
     // Migration du cache pour aligner tous les appareils avec les produits et bons d'achat Supabase
-    const CACHE_VERSION = '2.2';
+    const CACHE_VERSION = '2.3';
     const currentVersion = localStorage.getItem('nexus_products_cache_version');
     if (currentVersion !== CACHE_VERSION) {
       localStorage.removeItem('last_sync_timestamp');
@@ -71,6 +71,26 @@ export function useProductsAndCoreData({
       localStorage.removeItem('last_sync_supplierPayments');
       localStorage.removeItem('last_sync_expenses');
       localStorage.removeItem('last_sync_returns');
+      // Purger les anciens bons d'achat de test/init du cache local
+      const legacyPurchaseIds = [
+        'pur_zaimi_init', 'pur_montdor_init', 'pur_patifour_init',
+        's25yta5cu', 'a23t6keqx', '2g45zkpa2', 'qs9qfhrj6', '9m9aji1jb', '6e94xbcjb'
+      ];
+      legacyPurchaseIds.forEach(id => {
+        try { localDb.delete(`purchases/${id}`); } catch (_) {}
+      });
+      idbSet('nexus_purchases_cache', []).catch(() => {});
+      idbSet('nexus_db_purchases', {}).catch(() => {});
+      idbGet<Product[]>('nexus_products_cache').then(cachedProds => {
+        if (Array.isArray(cachedProds) && cachedProds.length > 0) {
+          const staleIds = new Set(['vhk8wr9xz', '77haf1ut6', 'qlnl27gff']);
+          const cleanedProds = cachedProds.map(p =>
+            p && staleIds.has(String(p.id)) ? { ...p, stock: 0, priceHistory: [] } : p
+          );
+          idbSet('nexus_products_cache', cleanedProds).catch(() => {});
+          setProducts(cleanedProds);
+        }
+      }).catch(() => {});
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
     }
 
@@ -360,17 +380,30 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         { 
           cacheKey: 'nexus_online_orders_cache', 
           collectionName: 'onlineOrders', 
-          setState: (orders: any) => { 
-            const arr = Array.isArray(orders) ? orders : [];
-            useTransactionStore.getState().setOnlineOrders(arr);
-            const map: Record<string, any> = {};
-            arr.forEach(o => { if (o && o.id) map[o.id] = o; });
-            localDb.insertBatch('onlineOrders', map).catch(() => {});
+          setState: (ordersOrUpdater: any) => { 
+            useTransactionStore.getState().setOnlineOrders((prev: any[]) => {
+              const raw = typeof ordersOrUpdater === 'function' ? ordersOrUpdater(prev || []) : ordersOrUpdater;
+              const arr = Array.isArray(raw) ? raw : [];
+              const map: Record<string, any> = {};
+              arr.forEach(o => { if (o && o.id) map[o.id] = o; });
+              localDb.insertBatch('onlineOrders', map).catch(() => {});
+              return arr;
+            });
           }, 
           limit: 500, 
           timestampColumn: 'timestamp' 
         }
       );
+
+      const filterCleanPurchases = (arr: any[]) => {
+        const deletedIds = getDeletedRecordIds('purchases');
+        return (Array.isArray(arr) ? arr : []).filter(p => {
+          if (!p || !p.id || deletedIds.has(String(p.id))) return false;
+          const sId = p?.supplierId || p?.supplier_id;
+          const sName = (p?.supplierName || p?.supplier_name || '').toLowerCase();
+          return sId !== 'low-stock-auto' && !sName.includes('auto-réapprovisionnement') && !sName.includes('auto-reapprovisionnement');
+        });
+      };
 
       deferredQueueConfig.push(
         { cacheKey: 'nexus_expenses_cache', collectionName: 'expenses', setState: setExpenses, limit: 500, timestampColumn: 'date' },
@@ -378,14 +411,12 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         { 
           cacheKey: 'nexus_purchases_cache', 
           collectionName: 'purchases', 
-          setState: (purchases: any) => {
-            const arr = Array.isArray(purchases) ? purchases : [];
-            const clean = arr.filter(p => {
-              const sId = p?.supplierId || p?.supplier_id;
-              const sName = (p?.supplierName || p?.supplier_name || '').toLowerCase();
-              return sId !== 'low-stock-auto' && !sName.includes('auto-réapprovisionnement') && !sName.includes('auto-reapprovisionnement');
-            });
-            setPurchases(clean);
+          setState: (purchasesOrUpdater: any) => {
+            if (typeof purchasesOrUpdater === 'function') {
+              setPurchases((prev: any[]) => filterCleanPurchases(purchasesOrUpdater(prev || [])));
+            } else {
+              setPurchases(filterCleanPurchases(purchasesOrUpdater));
+            }
           }, 
           limit: 500, 
           timestampColumn: 'date' 
@@ -393,7 +424,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
         { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
         { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'updated_at', enableRealtime: false },
-        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notes: any[]) => { if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 }
+        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notesOrUpdater: any) => { const notes = typeof notesOrUpdater === 'function' ? notesOrUpdater([]) : notesOrUpdater; if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 }
       );
     }
 

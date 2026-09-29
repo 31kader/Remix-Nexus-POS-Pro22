@@ -291,8 +291,22 @@ export async function savePurchaseDb({
              ];
           }
           if (productId && productId !== 'undefined') {
-            await localDb.update(`products/${productId}`, updates);
-            window.dispatchEvent(new CustomEvent('product-cache-update', { detail: { ...product, ...updates } }));
+            const fullUpdatedProduct = { ...product, ...updates };
+            await localDb.update(`products/${productId}`, fullUpdatedProduct);
+            useCoreStore.setState(state => ({
+              products: (state.products || []).map(p => p.id === productId ? fullUpdatedProduct : p)
+            }));
+            window.dispatchEvent(new CustomEvent('product-cache-update', { detail: fullUpdatedProduct }));
+            if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+              const supaUpdate: any = {
+                stock: newStockVal,
+                updated_at: updates.updatedAt
+              };
+              if (updates.costPrice !== undefined) supaUpdate.cost_price = updates.costPrice;
+              if (updates.price !== undefined) supaUpdate.price = updates.price;
+              if (updates.priceHistory !== undefined) supaUpdate.price_history = updates.priceHistory;
+              await supabase.from('products').update(supaUpdate).eq('id', productId);
+            }
           }
        }
     }
@@ -491,6 +505,15 @@ export async function handleDeletePurchaseDb({
         targetPurchase = snap.val();
       }
     }
+    if (!targetPurchase) {
+      try {
+        const { get: idbGet } = await import('idb-keyval');
+        const cachedPurchases = await idbGet<any[]>('nexus_purchases_cache');
+        if (Array.isArray(cachedPurchases)) {
+          targetPurchase = cachedPurchases.find(p => p && String(p.id) === String(purchaseId));
+        }
+      } catch (_) {}
+    }
 
     const allProducts: Product[] = useCoreStore.getState().products || [];
     const allSuppliers: Supplier[] = usePeopleStore.getState().suppliers || [];
@@ -503,10 +526,22 @@ export async function handleDeletePurchaseDb({
       const stockDeltas: Record<string, number> = {};
 
       purchaseItems.forEach((item: any) => {
-        const prodId = item?.productId || item?.product_id || item?.id;
+        const rawProdId = item?.productId || item?.product_id || item?.id;
         const qty = Number(item?.quantity) || 0;
-        if (prodId && qty > 0) {
-          const product = allProducts.find(p => p && String(p.id) === String(prodId));
+        if (qty <= 0) return;
+
+        let product = rawProdId ? allProducts.find(p => p && String(p.id) === String(rawProdId)) : undefined;
+        if (!product && item?.name) {
+          const normalizedItemName = String(item.name).trim().toLowerCase();
+          product = allProducts.find(p => p && String(p.name || '').trim().toLowerCase() === normalizedItemName);
+        }
+        if (!product && item?.barcode) {
+          const normalizedBarcode = String(item.barcode).trim();
+          product = allProducts.find(p => p && String(p.barcode || '').trim() === normalizedBarcode);
+        }
+
+        const prodId = product?.id || rawProdId;
+        if (prodId) {
           if (product?.isBundle && Array.isArray(product.bundleItems) && product.bundleItems.length > 0) {
             product.bundleItems.forEach(bi => {
               if (bi.productId) {
@@ -548,11 +583,19 @@ export async function handleDeletePurchaseDb({
             updates.costPrice = Number(filteredHistory[0].costPrice) || product.costPrice;
           }
 
-          await localDb.update(`products/${prodId}`, updates);
-          window.dispatchEvent(new CustomEvent('product-cache-update', { detail: { ...product, ...updates } }));
+          const fullUpdatedProduct = { ...product, ...updates };
+          await localDb.update(`products/${prodId}`, fullUpdatedProduct);
+          useCoreStore.setState(state => {
+            const nextProducts = (state.products || []).map(p => p.id === prodId ? fullUpdatedProduct : p);
+            import('idb-keyval').then(({ set: idbSet }) => {
+              idbSet('nexus_products_cache', nextProducts).catch(() => {});
+            }).catch(() => {});
+            return { products: nextProducts };
+          });
+          window.dispatchEvent(new CustomEvent('product-cache-update', { detail: fullUpdatedProduct }));
 
           if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-            supabase
+            await supabase
               .from('products')
               .update({
                 stock: newStockVal,
@@ -560,9 +603,7 @@ export async function handleDeletePurchaseDb({
                 price_history: filteredHistory,
                 updated_at: updates.updatedAt
               })
-              .eq('id', prodId)
-              .then(() => {})
-              .catch(() => {});
+              .eq('id', prodId);
           }
         }
       }

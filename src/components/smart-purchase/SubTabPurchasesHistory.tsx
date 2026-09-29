@@ -53,9 +53,30 @@ export function SubTabPurchasesHistory({
           <input type="date" className="industrial-input p-3" value={historyStartDate} onChange={e => setHistoryStartDate(e.target.value)} />
           <input type="date" className="industrial-input p-3" value={historyEndDate} onChange={e => setHistoryEndDate(e.target.value)} />
         </div>
-        <Button onClick={() => printHistory(filteredPurchases, settings)} className="industrial-button-primary bg-industrial-800 text-industrial-300 border border-industrial-700 py-3 px-6 shadow-none flex gap-2">
-          <Printer size={18}/> Rapport
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => printHistory(filteredPurchases, settings)} className="industrial-button-primary bg-industrial-800 text-industrial-300 border border-industrial-700 py-3 px-6 shadow-none flex gap-2">
+            <Printer size={18}/> Rapport
+          </Button>
+          {filteredPurchases.length > 0 && (
+            <Button
+              onClick={async () => {
+                if (!window.confirm(`Voulez-vous vraiment supprimer ces ${filteredPurchases.length} bon(s) d'achat et réajuster automatiquement les stocks correspondants ?`)) return;
+                const { handleDeletePurchaseDb } = await import('./purchaseDbOperations');
+                for (const p of filteredPurchases) {
+                  await handleDeletePurchaseDb({
+                    purchaseId: p.id,
+                    setIsProcessing: () => {},
+                    setPurchaseToDelete: () => {}
+                  });
+                }
+              }}
+              className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all"
+              title="Supprimer tous les bons affichés et ajuster les stocks"
+            >
+              <Trash2 size={16} /> Nettoyer ({filteredPurchases.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="industrial-card p-0 overflow-hidden">
