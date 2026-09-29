@@ -27,7 +27,7 @@ interface PriceCheckerModalProps {
 }
 
 import { useCoreStore } from '../store/useCoreStore';
-import { executePrintLabels } from '../services/labelPrintService';
+import { printLabels } from '../services/labelPrintService';
 
 export function PriceCheckerModal({ isOpen, onClose, products, settings, categories, brands }: PriceCheckerModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,7 +71,8 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
       return;
     }
     const allProds = (products && products.length > 0) ? products : (useCoreStore.getState().products || []);
-    const queueForPrint = remoteQueue.map(item => {
+    const expandedProducts: Product[] = [];
+    remoteQueue.forEach(item => {
       const fullProd = allProds.find(p => p && String(p.id) === String(item.productId)) || ({
         id: item.productId,
         name: item.name,
@@ -82,35 +83,17 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
         stock: 1,
         categoryId: 'uncategorized'
       } as Product);
-      return { product: fullProd, quantity: item.quantity || 1 };
+      const count = Math.max(1, Number(item.quantity) || 1);
+      for (let i = 0; i < count; i++) {
+        expandedProducts.push(fullProd);
+      }
     });
 
-    executePrintLabels({
-      queue: queueForPrint,
-      labelSize: '40x30',
-      printerType: 'receipt_printer',
-      paperRollWidth: 80,
-      columns: 1,
-      showPrice: true,
-      showBarcode: true,
-      showSku: true,
-      showName: true,
-      showStoreName: true,
-      showDate: false,
-      showUnitPrice: false,
-      showLinearPrice: false,
-      showPromoBadge: false,
-      promoPercentage: 20,
-      barcodeFormat: 'CODE128',
-      fontSize: 'medium',
-      labelStyle: 'modern',
-      customWidth: 50,
-      customHeight: 30,
-      labelOrientation: 'landscape',
-      labelRotation: 0,
-      settings
-    });
-    toast.success(`Impression directe lancée (${remoteQueue.length} article(s)) !`);
+    printLabels(expandedProducts, {
+      ...settings,
+      labelPrinterType: 'receipt_printer'
+    } as any);
+    toast.success(`Impression directe lancée (${expandedProducts.length} étiquette(s)) !`);
     focusScannerInput();
   };
 
