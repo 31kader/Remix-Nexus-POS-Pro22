@@ -666,8 +666,10 @@ export async function processSyncQueue(): Promise<void> {
         }
       }
 
-      for (let i = 0; i < fullProducts.length; i += 50) {
-        const chunk = fullProducts.slice(i, i + 50);
+      // Lots de 15 produits (au lieu de 50) pour garantir que la trame HTTP/2 ne sature jamais, même avec des images base64 ou connexion 4G/ADSL
+      const PRODUCT_BATCH_SIZE = 15;
+      for (let i = 0; i < fullProducts.length; i += PRODUCT_BATCH_SIZE) {
+        const chunk = fullProducts.slice(i, i + PRODUCT_BATCH_SIZE);
         const payloads = chunk.map(c => c.payload);
         try {
           const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
