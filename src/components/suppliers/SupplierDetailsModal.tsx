@@ -12,6 +12,7 @@ import { cn, formatSafe } from '../../lib/utils';
 import { fr } from 'date-fns/locale';
 import { SupplierDamagedTab } from './SupplierDamagedTab';
 import { SupplierProductsTab } from './SupplierProductsTab';
+import { handleDeletePurchaseDb } from '../smart-purchase/purchaseDbOperations';
 
 
 interface SupplierDetailsModalProps {
@@ -317,12 +318,30 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
                                 {remaining.toFixed(2)} {settings.currency}
                               </p>
                             </div>
-                            <Button 
-                              onClick={() => { onClose(); setViewingPurchaseVoucher({ ...p, total: totalVal, totalAmount: totalVal }); }}
-                              className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl h-11 px-4 shadow-sm text-xs cursor-pointer"
-                            >
-                              VOIR LE BON
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button 
+                                onClick={() => { onClose(); setViewingPurchaseVoucher({ ...p, total: totalVal, totalAmount: totalVal }); }}
+                                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl h-11 px-4 shadow-sm text-xs cursor-pointer"
+                              >
+                                VOIR LE BON
+                              </Button>
+                              <button
+                                type="button"
+                                title="Supprimer ce bon et réajuster automatiquement le stock et la dette"
+                                onClick={async () => {
+                                  if (window.confirm(`Voulez-vous vraiment supprimer le bon "${invNum}" ?\nLes quantités reçues seront automatiquement déduites du stock et la dette fournisseur sera réajustée.`)) {
+                                    await handleDeletePurchaseDb({
+                                      purchaseId: p.id,
+                                      setIsProcessing: () => {},
+                                      setPurchaseToDelete: () => {}
+                                    });
+                                  }
+                                }}
+                                className="p-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/20 rounded-xl transition-all cursor-pointer"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
