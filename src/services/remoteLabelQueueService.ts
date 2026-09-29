@@ -8,9 +8,11 @@ export interface RemoteLabelQueueItem {
   barcode?: string;
   price: number;
   originalPrice?: number;
+  unit?: string;
   quantity: number;
   addedAt: string;
   sourceTerminal: string;
+  pendingOfflineSync?: boolean;
 }
 
 const LOCAL_QUEUE_KEY = 'nexus_remote_label_print_queue_v1';
@@ -57,46 +59,74 @@ export async function fetchRemoteLabelQueue(): Promise<RemoteLabelQueueItem[]> {
       .eq('id', SUPABASE_SETTINGS_ID)
       .maybeSingle();
 
-    if (!error && data && data.footer_text) {
-      const cloudItems: RemoteLabelQueueItem[] = JSON.parse(data.footer_text);
+    if (!error && data && typeof data.footer_text === 'string') {
+      const cloudItems: RemoteLabelQueueItem[] = JSON.parse(data.footer_text || '[]');
       if (Array.isArray(cloudItems)) {
-        // Merge cloud and local items by productId (keeping latest/max quantity)
-        const map = new Map<string, RemoteLabelQueueItem>();
-        localItems.forEach(item => { if (item?.productId) map.set(item.productId, item); });
-        cloudItems.forEach(item => { if (item?.productId) map.set(item.productId, item); });
-        const merged = Array.from(map.values()).sort(
-          (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
-        );
-        saveLocalLabelQueue(merged);
-        return merged;
+        // Only merge local items that were explicitly added while offline (pendingOfflineSync === true)
+        const offlineUnsynced = localItems.filter(i => i?.pendingOfflineSync === true);
+        if (offlineUnsynced.length > 0) {
+          const map = new Map<string, RemoteLabelQueueItem>();
+          cloudItems.forEach(item => { if (item?.productId) map.set(item.productId, { ...item, pendingOfflineSync: false }); });
+          offlineUnsynced.forEach(item => {
+            if (item?.productId) {
+              const existing = map.get(item.productId);
+              map.set(item.productId, {
+                ...item,
+                quantity: existing ? Math.max(existing.quantity, item.quantity) : item.quantity,
+                pendingOfflineSync: false
+              });
+            }
+          });
+          const merged = Array.from(map.values()).sort(
+            (a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+          );
+          await persistQueueToCloud(merged);
+          return merged;
+        }
+
+        // Otherwise, Supabase Cloud is the authoritative shared state across all devices!
+        const normalizedCloud = cloudItems.map(i => ({ ...i, pendingOfflineSync: false }));
+        saveLocalLabelQueue(normalizedCloud);
+        return normalizedCloud;
       }
+    } else if (!error && !data && localItems.length > 0) {
+      // First time pushing existing local queue to Supabase
+      await persistQueueToCloud(localItems);
+      return localItems;
     }
   } catch (_) {}
 
   return localItems;
 }
 
-async function persistQueueToCloud(items: RemoteLabelQueueItem[]): Promise<void> {
-  saveLocalLabelQueue(items);
-  if (!isSupabaseConfigured || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+export async function persistQueueToCloud(items: RemoteLabelQueueItem[]): Promise<boolean> {
+  const isOnline = isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine);
+  const markedItems = items.map(i => ({ ...i, pendingOfflineSync: !isOnline }));
+  saveLocalLabelQueue(markedItems);
+
+  if (!isOnline) return false;
 
   try {
-    await supabase.from('settings').upsert(
+    const { error } = await supabase.from('settings').upsert(
       {
         id: SUPABASE_SETTINGS_ID,
         name: 'File Impression Etiquettes Distante',
-        footer_text: JSON.stringify(items),
-        updated_at: new Date().toISOString()
+        footer_text: JSON.stringify(markedItems.map(i => ({ ...i, pendingOfflineSync: false }))),
       },
       { onConflict: 'id' }
     );
+    if (!error) {
+      saveLocalLabelQueue(markedItems.map(i => ({ ...i, pendingOfflineSync: false })));
+      return true;
+    }
   } catch (_) {}
+  return false;
 }
 
 export async function addProductToRemoteLabelQueue(
   product: Product,
   quantity: number = 1,
-  sourceTerminal: string = 'Vérificateur de Prix'
+  sourceTerminal: string = 'Poste Mobile / Rayon'
 ): Promise<RemoteLabelQueueItem[]> {
   const current = await fetchRemoteLabelQueue();
   const existingIndex = current.findIndex(i => i.productId === product.id);
@@ -109,6 +139,7 @@ export async function addProductToRemoteLabelQueue(
       ...updated[existingIndex],
       price: Number(product.price) || 0,
       originalPrice: product.originalPrice ? Number(product.originalPrice) : undefined,
+      unit: product.unit || updated[existingIndex].unit || 'pcs',
       quantity: Math.max(1, (updated[existingIndex].quantity || 0) + quantity),
       addedAt: nowIso,
       sourceTerminal
@@ -121,6 +152,7 @@ export async function addProductToRemoteLabelQueue(
       barcode: product.barcode || '',
       price: Number(product.price) || 0,
       originalPrice: product.originalPrice ? Number(product.originalPrice) : undefined,
+      unit: product.unit || 'pcs',
       quantity: Math.max(1, quantity),
       addedAt: nowIso,
       sourceTerminal
@@ -173,16 +205,53 @@ export function subscribeToRemoteLabelQueue(
   window.addEventListener('nexus-remote-label-queue-updated', handleCustomEvent);
   queueChannel?.addEventListener('message', handleBroadcast);
 
-  // Periodic cloud poll every 10s when window is active so other workstations receive scanned items automatically
+  // Supabase Realtime channel so the PC with the printer receives scans from other devices in < 1 second
+  let realtimeChannel: any = null;
+  if (isSupabaseConfigured) {
+    try {
+      realtimeChannel = supabase
+        .channel('remote_label_queue_realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'settings',
+            filter: `id=eq.${SUPABASE_SETTINGS_ID}`
+          },
+          (payload: any) => {
+            try {
+              const raw = payload?.new?.footer_text;
+              if (typeof raw === 'string') {
+                const parsed = JSON.parse(raw || '[]');
+                if (Array.isArray(parsed)) {
+                  saveLocalLabelQueue(parsed);
+                  onUpdate(parsed);
+                }
+              }
+            } catch (_) {}
+          }
+        )
+        .subscribe();
+    } catch (_) {}
+  }
+
+  // Periodic cloud poll every 4s when window is active as a fallback
   const interval = setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       fetchRemoteLabelQueue().then(onUpdate).catch(() => {});
     }
-  }, 10000);
+  }, 4000);
 
   return () => {
     window.removeEventListener('nexus-remote-label-queue-updated', handleCustomEvent);
     queueChannel?.removeEventListener('message', handleBroadcast);
     clearInterval(interval);
+    if (realtimeChannel) {
+      try {
+        supabase.removeChannel(realtimeChannel);
+      } catch (_) {}
+    }
   };
 }
+

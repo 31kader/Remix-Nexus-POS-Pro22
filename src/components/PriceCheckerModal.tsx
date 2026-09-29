@@ -14,7 +14,8 @@ import {
   updateRemoteLabelQueueQuantity,
   removeFromRemoteLabelQueue,
   clearRemoteLabelQueue,
-  subscribeToRemoteLabelQueue
+  subscribeToRemoteLabelQueue,
+  persistQueueToCloud
 } from '../services/remoteLabelQueueService';
 
 interface PriceCheckerModalProps {
@@ -548,13 +549,30 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    onClick={async (e) => {
+                      e.currentTarget.blur();
+                      const ok = await persistQueueToCloud(remoteQueue);
+                      if (ok) {
+                        toast.success(`✅ ${remoteQueue.length} article(s) envoyé(s) sur le Cloud ! Allez sur le PC relié à l'imprimante -> menu Étiquettes Codes-Barres pour imprimer.`);
+                      } else {
+                        toast.warning("File sauvegardée en local. Vérifiez votre connexion Internet pour l'envoyer à l'autre appareil.");
+                      }
+                      focusScannerInput();
+                    }}
+                    className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    title="Si cet appareil n'a pas d'imprimante, cliquez ici pour envoyer la liste vers le PC qui possède l'imprimante"
+                  >
+                    <CloudUpload size={14} /> ☁️ Envoyer au Poste avec Imprimante
+                  </button>
+                  <button
+                    type="button"
                     onClick={(e) => {
                       e.currentTarget.blur();
                       handlePrintQueueNow();
                     }}
                     className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
                   >
-                    <Printer size={14} /> 🖨️ Imprimer Maintenant (80mm)
+                    <Printer size={14} /> 🖨️ Imprimer sur cet appareil
                   </button>
                   <button
                     type="button"
