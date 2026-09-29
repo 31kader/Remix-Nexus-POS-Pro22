@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { RotateCcw, Pencil, Trash2, ShieldAlert, AlertTriangle, Info } from 'lucide-react';
+import { RotateCcw, Pencil, Trash2, ShieldAlert, AlertTriangle, Info, Eye } from 'lucide-react';
 import { AuditLog } from '../../types';
 import { formatSafe, cn } from '../../lib/utils';
 import { List } from 'react-window';
@@ -7,6 +7,7 @@ import { inferLogSeverity } from '../../hooks/useAuditLogsLogic';
 
 interface AuditLogsTableProps {
   filteredLogs: AuditLog[];
+  setViewingLog?: (log: AuditLog) => void;
   handleOpenCancelUndo: (log: AuditLog) => void;
   handleOpenEdit: (log: AuditLog) => void;
   setDeletingLog: (log: AuditLog) => void;
@@ -14,6 +15,7 @@ interface AuditLogsTableProps {
 
 export function AuditLogsTable({
   filteredLogs,
+  setViewingLog,
   handleOpenCancelUndo,
   handleOpenEdit,
   setDeletingLog
@@ -45,8 +47,9 @@ export function AuditLogsTable({
       return (
         <div
           style={style}
+          onClick={() => setViewingLog && setViewingLog(log)}
           className={cn(
-            "flex w-full items-center hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors border-b border-slate-100 dark:border-zinc-800/70",
+            "flex w-full items-center hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors border-b border-slate-100 dark:border-zinc-800/70 cursor-pointer",
             isCancelled && "opacity-60 bg-rose-500/5"
           )}
         >
@@ -69,7 +72,7 @@ export function AuditLogsTable({
             {log.userName || 'Système'}
           </div>
 
-          <div className="w-[17%] px-4 py-2 truncate">
+          <div className="w-[16%] px-4 py-2 truncate">
             <span
               className={cn(
                 "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border inline-block max-w-full truncate",
@@ -82,7 +85,7 @@ export function AuditLogsTable({
             </span>
           </div>
 
-          <div className="w-[12%] px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate uppercase">
+          <div className="w-[11%] px-4 py-2 text-xs font-bold text-slate-500 dark:text-zinc-400 truncate uppercase">
             {log.module || 'POS'}
           </div>
 
@@ -91,12 +94,20 @@ export function AuditLogsTable({
               "w-[28%] px-4 py-2 text-xs text-slate-700 dark:text-zinc-300 truncate font-mono",
               isCancelled && "line-through text-slate-400"
             )}
-            title={log.details}
+            title={String(log.details || '')}
           >
-            {log.details}
+            {String(log.details || '')}
           </div>
 
-          <div className="w-[10%] px-4 py-2 text-right flex items-center justify-end gap-1.5">
+          <div className="w-[12%] px-4 py-2 text-right flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setViewingLog && setViewingLog(log)}
+              title="Consulter les détails complets de l'action"
+              className="p-1.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 border border-sky-500/20 transition-all cursor-pointer"
+            >
+              <Eye size={13} />
+            </button>
+
             <button
               onClick={() => handleOpenCancelUndo(log)}
               title={isCancelled ? "Rétablir cette action" : "Annuler l'action (Rollback)"}
@@ -129,7 +140,7 @@ export function AuditLogsTable({
         </div>
       );
     };
-  }, [filteredLogs, handleOpenCancelUndo, handleOpenEdit, setDeletingLog]);
+  }, [filteredLogs, setViewingLog, handleOpenCancelUndo, handleOpenEdit, setDeletingLog]);
 
   return (
     <div className="overflow-hidden text-[13px] w-full">

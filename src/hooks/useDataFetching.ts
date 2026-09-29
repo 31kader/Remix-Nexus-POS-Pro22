@@ -63,6 +63,9 @@ export function useDataFetching(
   const safeSetSupplierPayments = safeSetter(setSupplierPayments);
   const safeSetDamagedItems = safeSetter(setDamagedItems);
   const safeSetAuditLogs = safeSetter(setAuditLogs);
+  const safeSetAdvances = safeSetter(setAdvances);
+  const safeSetAttendance = safeSetter(setAttendance);
+  const safeSetAudits = safeSetter(setAudits);
   const safeSetPurchaseOrders = safeSetter(setPurchaseOrders);
   const safeSetPatterns = safeSetter(setPatterns);
   const safeSetSupplierSyncs = safeSetter(setSupplierSyncs);
@@ -91,6 +94,9 @@ export function useDataFetching(
     setSupplierPayments: safeSetSupplierPayments, 
     setDamagedItems: safeSetDamagedItems, 
     setAuditLogs: safeSetAuditLogs,
+    setAdvances: safeSetAdvances,
+    setAttendance: safeSetAttendance,
+    setAudits: safeSetAudits,
     setIsDataLoading
   });
 

@@ -54,6 +54,43 @@ export function extractAmountFromLog(log: AuditLog): number {
   return isNaN(num) ? 0 : num;
 }
 
+export function formatAuditDetails(log: AuditLog, transactions: Transaction[] = []): string {
+  const raw = log?.details;
+  let str = '';
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed !== '' && trimmed !== '[]' && trimmed !== '{}' && trimmed !== 'null') {
+      str = trimmed;
+    }
+  } else if (Array.isArray(raw) && raw.length > 0) {
+    str = raw.map(x => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(' • ');
+  } else if (raw && typeof raw === 'object' && Object.keys(raw).length > 0) {
+    str = JSON.stringify(raw);
+  }
+
+  if (str) return str;
+
+  // Enrichissement automatique si details était vide/[] sur d'anciens logs
+  const act = String(log?.action || 'Opération').trim();
+  const mod = String(log?.module || 'POS').trim();
+  const usr = String(log?.userName || 'Opérateur').trim();
+  const logTime = new Date(log?.timestamp || 0).getTime();
+
+  if (act.toLowerCase().includes('vente') && !isNaN(logTime) && transactions.length > 0) {
+    const matchedTx = transactions.find(t => {
+      const txTime = new Date(t.timestamp || (t as any).date || 0).getTime();
+      return !isNaN(txTime) && Math.abs(txTime - logTime) < 120000;
+    });
+    if (matchedTx) {
+      const itemsCount = Array.isArray(matchedTx.items) ? matchedTx.items.reduce((s, i) => s + (Number(i.quantity) || 1), 0) : 0;
+      const itemNames = Array.isArray(matchedTx.items) ? matchedTx.items.slice(0, 3).map(i => `${i.name} (x${i.quantity || 1})`).join(', ') : '';
+      return `Ticket #${String(matchedTx.id).slice(-8)} • Total: ${Number(matchedTx.total || 0).toFixed(2)} DA • Paiement: ${matchedTx.paymentMethod || 'Espèces'} • ${itemsCount} art. (${itemNames})`;
+    }
+  }
+
+  return `Action "${act}" exécutée dans le module [${mod}] par ${usr}`;
+}
+
 export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [], transactions: Transaction[] = []) {
   // 11 Filtres Combinables
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,6 +105,9 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
   const [shiftHourFilter, setShiftHourFilter] = useState<AuditShiftHourFilter>('all');
   const [minAmountFilter, setMinAmountFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<AuditSortBy>('newest');
+
+  // Modal State for Inspecting Full Details of Log Action
+  const [viewingLog, setViewingLog] = useState<AuditLog | null>(null);
 
   // Modal State for Editing Log
   const [editingLog, setEditingLog] = useState<AuditLog | null>(null);
@@ -154,7 +194,15 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
     const minAmt = minAmountFilter ? parseFloat(minAmountFilter) : 0;
     const searchLow = (searchTerm || '').trim().toLowerCase();
 
-    const result = logs.filter(log => {
+    const enrichedLogs = logs.map(log => {
+      if (!log) return log;
+      return {
+        ...log,
+        details: formatAuditDetails(log, transactions)
+      };
+    });
+
+    const result = enrichedLogs.filter(log => {
       if (!log) return false;
 
       // 1. Search
@@ -406,6 +454,8 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
     resetAllFilters,
     stats,
     usersList,
+    viewingLog,
+    setViewingLog,
     editingLog,
     setEditingLog,
     editUserName,

@@ -190,6 +190,13 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
     toast.success(`${importedCount} article(s) importé(s) depuis le Vérificateur de Prix avec leurs quantités !`);
   };
 
+  useEffect(() => {
+    if (sessionStorage.getItem('nexus_auto_import_remote_labels') === 'true' && products && products.length > 0) {
+      sessionStorage.removeItem('nexus_auto_import_remote_labels');
+      handleImportRemoteQueue(false);
+    }
+  }, [products]);
+
   const applyQuickMention = (type: 'store' | 'dates' | 'promo') => {
     if (type === 'store') {
       stateContext.setCustomText(settings.name || 'MAGASIN');

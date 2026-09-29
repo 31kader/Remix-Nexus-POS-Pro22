@@ -4,7 +4,8 @@ import { localDb, getDeletedRecordIds } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
 import { 
   Product, Category, Brand, Transaction, Promotion, Customer, Supplier, UserProfile,
-  ProductReturn, Expense, StockAdjustment, Purchase, SupplierPayment, DamagedRecord, AuditLog
+  ProductReturn, Expense, StockAdjustment, Purchase, SupplierPayment, DamagedRecord, AuditLog,
+  AdvanceRecord, AttendanceRecord, InventoryAudit
 } from '../../types';
 import { fetchProductsFromSupabase, fetchTableFromSupabase } from './supabaseFetchHelper';
 import { convertKeysToCamel } from '../../lib/db-converters';
@@ -33,6 +34,9 @@ interface useProductsAndCoreDataParams {
   setSupplierPayments: React.Dispatch<React.SetStateAction<SupplierPayment[]>>;
   setDamagedItems: React.Dispatch<React.SetStateAction<DamagedRecord[]>>;
   setAuditLogs: React.Dispatch<React.SetStateAction<AuditLog[]>>;
+  setAdvances?: React.Dispatch<React.SetStateAction<AdvanceRecord[]>>;
+  setAttendance?: React.Dispatch<React.SetStateAction<AttendanceRecord[]>>;
+  setAudits?: React.Dispatch<React.SetStateAction<InventoryAudit[]>>;
   setIsDataLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -55,6 +59,9 @@ export function useProductsAndCoreData({
   setSupplierPayments,
   setDamagedItems,
   setAuditLogs,
+  setAdvances,
+  setAttendance,
+  setAudits,
   setIsDataLoading
 }: useProductsAndCoreDataParams) {
   const isFetching = useRef(false);
@@ -62,8 +69,8 @@ export function useProductsAndCoreData({
   useEffect(() => {
     if (loading) return;
 
-    // Migration du cache pour aligner tous les appareils avec les produits et bons d'achat Supabase
-    const CACHE_VERSION = '2.3';
+    // Migration du cache pour aligner tous les appareils avec les produits, acomptes, journaux d'audit et bons d'achat Supabase
+    const CACHE_VERSION = '2.4';
     const currentVersion = localStorage.getItem('nexus_products_cache_version');
     if (currentVersion !== CACHE_VERSION) {
       localStorage.removeItem('last_sync_timestamp');
@@ -71,6 +78,10 @@ export function useProductsAndCoreData({
       localStorage.removeItem('last_sync_supplierPayments');
       localStorage.removeItem('last_sync_expenses');
       localStorage.removeItem('last_sync_returns');
+      localStorage.removeItem('last_sync_audit_logs');
+      localStorage.removeItem('last_sync_advances');
+      localStorage.removeItem('last_sync_attendance');
+      idbSet('nexus_audit_logs_cache', []).catch(() => {});
       // Purger les anciens bons d'achat de test/init du cache local
       const legacyPurchaseIds = [
         'pur_zaimi_init', 'pur_montdor_init', 'pur_patifour_init',
@@ -423,9 +434,36 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         },
         { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
         { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
-        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'updated_at', enableRealtime: false },
+        { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'timestamp', enableRealtime: true },
         { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notesOrUpdater: any) => { const notes = typeof notesOrUpdater === 'function' ? notesOrUpdater([]) : notesOrUpdater; if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 }
       );
+      if (setAdvances) {
+        deferredQueueConfig.push({
+          cacheKey: 'nexus_advances_cache',
+          collectionName: 'advances',
+          setState: setAdvances,
+          limit: 500,
+          timestampColumn: 'date'
+        });
+      }
+      if (setAttendance) {
+        deferredQueueConfig.push({
+          cacheKey: 'nexus_attendance_cache',
+          collectionName: 'attendance',
+          setState: setAttendance,
+          limit: 500,
+          timestampColumn: 'date'
+        });
+      }
+      if (setAudits) {
+        deferredQueueConfig.push({
+          cacheKey: 'nexus_audits_cache',
+          collectionName: 'audits',
+          setState: setAudits,
+          limit: 500,
+          timestampColumn: 'date'
+        });
+      }
     }
 
     const queueConfig: QueueConfig[] = [...coreQueueConfig, ...deferredQueueConfig];
@@ -803,6 +841,11 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
               const localDbPurchases = await idbGet<Record<string, any>>('nexus_db_purchases').catch(() => ({}));
               if (localDbPurchases) {
                 Object.values(localDbPurchases).forEach((p: any) => p && p.id && !deletedIds.has(String(p.id)) && mergedMap.set(p.id, p));
+              }
+            } else if (collectionName === 'advances') {
+              const localDbAdvances = await idbGet<Record<string, any>>('nexus_db_advances').catch(() => ({}));
+              if (localDbAdvances) {
+                Object.values(localDbAdvances).forEach((a: any) => a && a.id && !deletedIds.has(String(a.id)) && mergedMap.set(a.id, a));
               }
             }
 

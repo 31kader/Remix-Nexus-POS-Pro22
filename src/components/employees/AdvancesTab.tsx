@@ -10,6 +10,10 @@ import { Card, Modal } from '../ui';
 import { cn, generateUniqueId } from '../../lib/utils';
 import { toast } from 'sonner';
 
+import { Trash2 } from 'lucide-react';
+import { useFinanceStore } from '../../store/useFinanceStore';
+import { set as idbSet } from 'idb-keyval';
+
 export const AdvancesTab = memo(function AdvancesTab({ advances, employees, settings }: { advances: AdvanceRecord[], employees: Employee[], settings: CompanySettings }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -23,13 +27,19 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
     e.preventDefault();
     try {
       const newId = generateUniqueId();
-      await localDb.insert(`advances/${newId}`, {
+      const newAdvance: AdvanceRecord = {
         id: newId,
         employeeId: formData.employeeId,
-        amount: formData.amount,
+        amount: Number(formData.amount) || 0,
         date: formData.date,
-        reason: formData.reason,
+        reason: formData.reason || 'Acompte sur salaire',
         status: 'pending'
+      };
+      await localDb.insert(`advances/${newId}`, newAdvance);
+      useFinanceStore.getState().setAdvances(prev => {
+        const next = [newAdvance, ...(prev || []).filter(a => a.id !== newId)];
+        idbSet('nexus_advances_cache', next).catch(() => {});
+        return next;
       });
       setIsModalOpen(false);
       setFormData({ employeeId: '', amount: 0, date: format(new Date(), 'yyyy-MM-dd'), reason: '' });
@@ -42,7 +52,27 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
   const updateStatus = async (id: string, status: 'approved' | 'paid' | 'rejected') => {
     try {
       await localDb.update(`advances/${id}`, { status });
+      useFinanceStore.getState().setAdvances(prev => {
+        const next = (prev || []).map(a => a.id === id ? { ...a, status } : a);
+        idbSet('nexus_advances_cache', next).catch(() => {});
+        return next;
+      });
       toast.success(`Statut de l'acompte mis à jour (${status}) !`);
+    } catch (error: any) {
+      toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
+    }
+  };
+
+  const handleDeleteAdvance = async (id: string) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer cet acompte ?")) return;
+    try {
+      await localDb.delete(`advances/${id}`);
+      useFinanceStore.getState().setAdvances(prev => {
+        const next = (prev || []).filter(a => a.id !== id);
+        idbSet('nexus_advances_cache', next).catch(() => {});
+        return next;
+      });
+      toast.success("Acompte supprimé avec succès.");
     } catch (error: any) {
       toast.error("Erreur: " + (error?.message || "Erreur inconnue"));
     }
@@ -113,22 +143,23 @@ export const AdvancesTab = memo(function AdvancesTab({ advances, employees, sett
                       </span>
                     </td>
                     <td className="p-6 text-right">
-                      {record.status === 'pending' && (
-                        <div className="flex justify-end gap-2">
-                           <button onClick={() => updateStatus(record.id, 'approved')} className="p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-xl transition-all shadow-lg active:scale-95"><Check size={18} /></button>
-                           <button onClick={() => updateStatus(record.id, 'rejected')} className="p-2 text-rose-400 hover:bg-rose-400/10 rounded-xl transition-all shadow-lg active:scale-95"><X size={18} /></button>
-                        </div>
-                      )}
-                      {record.status === 'approved' && (
-                        <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
+                        {record.status === 'pending' && (
+                          <>
+                             <button onClick={() => updateStatus(record.id, 'approved')} title="Approuver" className="p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-xl transition-all shadow-lg active:scale-95"><Check size={18} /></button>
+                             <button onClick={() => updateStatus(record.id, 'rejected')} title="Rejeter" className="p-2 text-rose-400 hover:bg-rose-400/10 rounded-xl transition-all shadow-lg active:scale-95"><X size={18} /></button>
+                          </>
+                        )}
+                        {record.status === 'approved' && (
                            <button 
                               onClick={() => updateStatus(record.id, 'paid')}
                               className="px-6 py-2 rounded-xl bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg active:scale-95"
                            >
                               MARQUER PAYÉ
                            </button>
-                        </div>
-                      )}
+                        )}
+                        <button onClick={() => handleDeleteAdvance(record.id)} title="Supprimer l'acompte" className="p-2 text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"><Trash2 size={16} /></button>
+                      </div>
                     </td>
                   </motion.tr>
                 );

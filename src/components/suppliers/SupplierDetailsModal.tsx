@@ -108,10 +108,10 @@ export const SupplierDetailsModal = memo(function SupplierDetailsModal({
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 mb-10">
             <div className="flex items-center gap-6 text-left">
               <div className="w-20 h-20 bg-indigo-600 text-white rounded-xl flex items-center justify-center text-3xl font-black shadow-md relative group overflow-hidden">
-                <span className="relative z-10">{viewingDetailsSupplier.name.charAt(0).toUpperCase()}</span>
+                <span className="relative z-10">{String(viewingDetailsSupplier?.name || 'F').charAt(0).toUpperCase()}</span>
               </div>
               <div>
-                <h2 className="text-4xl font-black text-white tracking-tight leading-none mb-2 uppercase font-sans">{viewingDetailsSupplier.name}</h2>
+                <h2 className="text-4xl font-black text-white tracking-tight leading-none mb-2 uppercase font-sans">{viewingDetailsSupplier?.name || 'Fournisseur'}</h2>
                 <div className="flex flex-wrap items-center gap-4">
                   <span className="px-3 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-full tracking-widest shadow-lg shadow-emerald-500/20">Actif</span>
                   {viewingDetailsSupplier.hasFullInventoryAccess && (

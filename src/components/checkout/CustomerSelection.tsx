@@ -329,7 +329,7 @@ export const CustomerSelection = memo(function CustomerSelection({
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center font-black text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-white/5 group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all ">
-                              {c.name.charAt(0).toUpperCase()}
+                              {String(c?.name || 'C').charAt(0).toUpperCase()}
                             </div>
                             <div>
                               <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover/item:text-indigo-900 dark:group-hover/item:text-white transition-colors">{c.name}</p>

@@ -419,11 +419,18 @@ export function preparePayload(table: string, id: string, data: any) {
       return JSON.stringify(val || []);
     }
 
+    if (key === 'details') {
+      if (Array.isArray(val)) return val.length === 0 ? '' : JSON.stringify(val);
+      if (val && typeof val === 'object') return JSON.stringify(val);
+      return String(val ?? '');
+    }
+
     const jsonKeys = [
       'bundle_items', 'quantity_discounts', 'usage_logs', 'items', 'alerts', 
       'favorite_items', 'usage_logs', 'batches', 'status_history', 'conditions',
-      'documents', 'discrepancies', 'notifications', 'role_kpis', 'details',
-      'role_permissions', 'favorite_category_ids', 'quick_select_groups'
+      'documents', 'discrepancies', 'notifications', 'role_kpis',
+      'role_permissions', 'favorite_category_ids', 'quick_select_groups',
+      'price_history'
     ];
     if (jsonKeys.includes(key)) {
       if (typeof val === 'string') {

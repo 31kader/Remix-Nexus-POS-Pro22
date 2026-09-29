@@ -26,29 +26,153 @@ interface PriceCheckerModalProps {
   brands: Brand[];
 }
 
+import { useCoreStore } from '../store/useCoreStore';
+import { useUIStore } from '../store/useUIStore';
+import { executePrintLabels } from '../services/labelPrintService';
+
 export function PriceCheckerModal({ isOpen, onClose, products, settings, categories, brands }: PriceCheckerModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
-  const [isScanning, setIsScanning] = useState(true);
+  const [notFoundCode, setNotFoundCode] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [remoteQueue, setRemoteQueue] = useState<RemoteLabelQueueItem[]>([]);
-  const [autoQueueOnScan, setAutoQueueOnScan] = useState<boolean>(false);
+  const [autoQueueOnScan, setAutoQueueOnScan] = useState<boolean>(true);
   const [labelQty, setLabelQty] = useState<number>(1);
   const [showQueueDrawer, setShowQueueDrawer] = useState<boolean>(false);
   const wakeLockRef = useRef<any>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const lastProcessedScanRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
+
+  const focusScannerInput = () => {
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 30);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
     fetchRemoteLabelQueue().then(setRemoteQueue).catch(() => {});
     const unsub = subscribeToRemoteLabelQueue(setRemoteQueue);
+    focusScannerInput();
     return () => unsub();
   }, [isOpen]);
 
   const handleAddToRemoteQueue = async (prod: Product, qty: number = labelQty) => {
     const updated = await addProductToRemoteLabelQueue(prod, qty, 'Poste Vérificateur');
     setRemoteQueue(updated);
-    toast.success(`"${prod.name}" (x${qty}) envoyé à la file d'impression multi-postes !`);
+    toast.success(`"${prod.name}" (${prod.price.toFixed(2)} ${settings?.currency || 'DA'}) ajouté à la file d'impression (x${qty}) !`);
+    focusScannerInput();
+  };
+
+  const handlePrintQueueNow = () => {
+    if (remoteQueue.length === 0) {
+      toast.warning("La file d'étiquettes est vide. Bipez d'abord vos articles.");
+      return;
+    }
+    const allProds = (products && products.length > 0) ? products : (useCoreStore.getState().products || []);
+    const queueForPrint = remoteQueue.map(item => {
+      const fullProd = allProds.find(p => p && String(p.id) === String(item.productId)) || ({
+        id: item.productId,
+        name: item.name,
+        sku: item.sku,
+        barcode: item.barcode,
+        price: item.price,
+        unit: item.unit || 'pcs',
+        stock: 1,
+        categoryId: 'uncategorized'
+      } as Product);
+      return { product: fullProd, quantity: item.quantity || 1 };
+    });
+
+    executePrintLabels({
+      queue: queueForPrint,
+      labelSize: '40x30',
+      printerType: 'receipt_printer',
+      paperRollWidth: 80,
+      columns: 1,
+      showPrice: true,
+      showBarcode: true,
+      showSku: true,
+      showName: true,
+      showStoreName: true,
+      showDate: false,
+      showUnitPrice: false,
+      showLinearPrice: false,
+      showPromoBadge: false,
+      promoPercentage: 20,
+      barcodeFormat: 'CODE128',
+      fontSize: 'medium',
+      labelStyle: 'modern',
+      customWidth: 50,
+      customHeight: 30,
+      labelOrientation: 'landscape',
+      labelRotation: 0,
+      settings
+    });
+    toast.success(`Impression directe lancée (${remoteQueue.length} article(s)) !`);
+    focusScannerInput();
+  };
+
+  const handleOpenInLabelStudio = () => {
+    try {
+      sessionStorage.setItem('nexus_auto_import_remote_labels', 'true');
+      useUIStore.getState().setActiveTab('labels');
+      onClose();
+      toast.success("Ouverture du Studio d'Étiquettes avec votre file d'articles...");
+    } catch (_) {}
+  };
+
+  const executeProductLookup = (rawCode: string, isFromEnterOrScanner: boolean = false) => {
+    const cleanTerm = String(rawCode || '').trim().toLowerCase();
+    if (!cleanTerm) return false;
+
+    const now = Date.now();
+    if (
+      isFromEnterOrScanner &&
+      lastProcessedScanRef.current.code === cleanTerm &&
+      now - lastProcessedScanRef.current.time < 400
+    ) {
+      return true;
+    }
+
+    const allProds = (products && products.length > 0) ? products : (useCoreStore.getState().products || []);
+    const exactMatch = allProds.find(p => p && (
+      (p.barcode && String(p.barcode).trim().toLowerCase() === cleanTerm) ||
+      (p.sku && String(p.sku).trim().toLowerCase() === cleanTerm) ||
+      ((p as any).reference && String((p as any).reference).trim().toLowerCase() === cleanTerm) ||
+      (p.name && String(p.name).trim().toLowerCase() === cleanTerm)
+    ));
+
+    const partialMatch = isFromEnterOrScanner && !exactMatch
+      ? allProds.find(p => p && (
+          (p.barcode && String(p.barcode).toLowerCase().includes(cleanTerm)) ||
+          (p.sku && String(p.sku).toLowerCase().includes(cleanTerm)) ||
+          (p.name && String(p.name).toLowerCase().includes(cleanTerm))
+        ))
+      : undefined;
+
+    const product = exactMatch || partialMatch;
+    if (product) {
+      lastProcessedScanRef.current = { code: cleanTerm, time: now };
+      setFoundProduct(product);
+      setNotFoundCode(null);
+      setSearchTerm('');
+      playScanSound();
+      announcePrice(product.name, product.price, settings?.currency || 'DA');
+      if (autoQueueOnScan) {
+        handleAddToRemoteQueue(product, labelQty);
+      }
+      focusScannerInput();
+      return true;
+    } else if (isFromEnterOrScanner) {
+      setFoundProduct(null);
+      setNotFoundCode(rawCode.trim());
+      setSearchTerm('');
+      focusScannerInput();
+    }
+    return false;
   };
 
   // Wake Lock implementation
@@ -57,28 +181,18 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
       try {
         if (isOpen && 'wakeLock' in navigator) {
           wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-          console.log('Wake Lock is active');
         }
-      } catch (err) {
-        console.warn('Wake Lock request failed:', err);
-      }
+      } catch (err) {}
     };
-
-    if (isOpen) {
-      requestWakeLock();
-    }
-
+    if (isOpen) requestWakeLock();
     return () => {
       if (wakeLockRef.current) {
-        wakeLockRef.current.release().then(() => {
-          wakeLockRef.current = null;
-          console.log('Wake Lock released');
-        });
+        wakeLockRef.current.release().then(() => { wakeLockRef.current = null; }).catch(() => {});
       }
     };
   }, [isOpen]);
 
-  // Global scanner support (HID)
+  // Global scanner support (HID USB/Bluetooth barcode reader)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -86,37 +200,49 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
     let lastKeyTime = Date.now();
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Ignore if focus is in an input that is NOT the search input
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' && target !== document.querySelector('#price-checker-input')) {
+      const isPriceInput = target === inputRef.current || target?.id === 'price-checker-input';
+
+      // Si le focus est déjà dans le champ de recherche, laisser le formulaire gérer Enter sans cliquer sur un bouton
+      if (isPriceInput) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          const currentVal = (inputRef.current?.value || searchTerm || buffer).trim();
+          if (currentVal) {
+            executeProductLookup(currentVal, true);
+          }
+          buffer = '';
+        }
+        return;
+      }
+
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
         return;
       }
 
       const currentTime = Date.now();
-      
-      // If it's been more than 50ms since last key, it's likely a new scan or manual typing
-      if (currentTime - lastKeyTime > 50) {
-        // We could reset buffer here if we wanted to be strict about scan speed,
-        // but scanners usually dump the whole code at once.
+      if (currentTime - lastKeyTime > 120) {
+        buffer = '';
       }
-      
       lastKeyTime = currentTime;
 
       if (e.key === 'Enter') {
-        if (buffer.length > 2) {
-          setSearchTerm(buffer);
+        if (buffer.length >= 2) {
+          e.preventDefault();
+          e.stopPropagation();
+          executeProductLookup(buffer, true);
           buffer = '';
         }
-      } else if (e.key.length === 1) {
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         buffer += e.key;
-        // Auto-clear buffer if too long or stale
         if (buffer.length > 50) buffer = buffer.slice(-50);
       }
     };
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isOpen]);
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, [isOpen, products, autoQueueOnScan, labelQty, searchTerm]);
 
   useEffect(() => {
     let codeReader: BrowserMultiFormatReader | null = null;
@@ -222,46 +348,24 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
 
   useEffect(() => {
     if (!isOpen) {
-      setIsScanning(true);
+      setIsScanning(false);
       setSearchTerm('');
       setFoundProduct(null);
+      setNotFoundCode(null);
       setCameraError(null);
     }
   }, [isOpen]);
 
-
   useEffect(() => {
-    if (searchTerm) {
-      const cleanTerm = searchTerm.trim().toLowerCase();
-      const product = (products || []).find(p => p && (
-        (p.barcode && p.barcode.trim().toLowerCase() === cleanTerm) ||
-        (p.sku && p.sku.toLowerCase() === cleanTerm) ||
-        (p.name && p.name.toLowerCase() === cleanTerm)
-      ));
-      if (product) {
-        setFoundProduct(product);
-        setSearchTerm('');
-        announcePrice(product.name, product.price, settings?.currency || 'DA');
-        if (autoQueueOnScan) {
-          handleAddToRemoteQueue(product, labelQty);
-        }
-      }
+    if (searchTerm && searchTerm.trim().length >= 3) {
+      executeProductLookup(searchTerm, false);
     }
   }, [searchTerm, products, settings?.currency, autoQueueOnScan, labelQty]);
 
   const handleManualSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanTerm = searchTerm.trim().toLowerCase();
-    if (!cleanTerm) return;
-    const product = (products || []).find(p => p && (
-      (p.barcode && p.barcode.trim().toLowerCase() === cleanTerm) ||
-      (p.sku && p.sku.toLowerCase().includes(cleanTerm)) ||
-      (p.name && p.name.toLowerCase().includes(cleanTerm))
-    ));
-    setFoundProduct(product || null);
-    if (product && autoQueueOnScan) {
-      handleAddToRemoteQueue(product, labelQty);
-    }
+    if (!searchTerm.trim()) return;
+    executeProductLookup(searchTerm, true);
   };
 
   const totalLabelsInQueue = remoteQueue.reduce((acc, i) => acc + (i.quantity || 1), 0);
@@ -269,12 +373,121 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Vérificateur de Prix & Collecteur d'Étiquettes Multi-Postes" maxWidth="max-w-4xl">
       <div className="space-y-4 p-2">
-        {/* Barre d'outils : Collecte d'Étiquettes pour Impression sur un Autre Poste */}
+        {/* 1. Champ de Scan Code-Barres (Toujours actif en haut) */}
+        <form onSubmit={handleManualSearch} className="relative group flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+            <input
+              ref={inputRef}
+              id="price-checker-input"
+              type="text"
+              placeholder="Bipez un code-barres avec la douchette ou tapez le nom..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-zinc-900 border-2 border-indigo-500/50 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-black text-lg text-slate-900 dark:text-white"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                if (searchTerm.trim()) executeProductLookup(searchTerm, true);
+                focusScannerInput();
+              }}
+              className="px-5 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider cursor-pointer"
+            >
+              Vérifier Prix
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                setIsScanning(!isScanning);
+                focusScannerInput();
+              }}
+              className={`p-4 rounded-xl border transition-colors flex items-center justify-center cursor-pointer ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 dark:border-zinc-800 text-slate-600 hover:bg-slate-100'}`}
+              title={isScanning ? "Arrêter la caméra" : "Activer la caméra"}
+            >
+              <Camera size={22} />
+            </button>
+          </div>
+        </form>
+
+        {/* 2. AFFICHAGE IMMÉDIAT DU PRIX EN GÉANT DÈS QU'ON BIPE UN ARTICLE */}
+        {foundProduct && (
+          <div className="p-5 bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border-2 border-emerald-500/60 rounded-2xl shadow-xl text-white flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in duration-150">
+            <div className="flex items-center gap-4 min-w-0 w-full md:w-auto">
+              <div className="w-20 h-20 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                <SafeImage src={foundProduct.imageUrl} alt={foundProduct.name} className="w-full h-full object-contain" fallback={<Package size={40} className="text-emerald-400" />} />
+              </div>
+              <div className="min-w-0 text-left">
+                <span className="inline-block px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[10px] font-black uppercase tracking-widest mb-1">
+                  ✅ Article Scanné • Stock: {foundProduct.stock} {foundProduct.unit || 'u.'}
+                </span>
+                <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight truncate">
+                  {foundProduct.name}
+                </h3>
+                <p className="text-xs font-mono text-indigo-300 mt-0.5">
+                  Code-barres: {foundProduct.barcode || 'N/A'} • SKU: {foundProduct.sku || 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end justify-center bg-emerald-500/15 border border-emerald-400/40 px-6 py-3 rounded-2xl shrink-0 w-full md:w-auto text-right">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">PRIX DE VENTE TTC</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl md:text-6xl font-black text-emerald-400 tracking-tighter font-mono">
+                  {Number(foundProduct.price || 0).toFixed(2)}
+                </span>
+                <span className="text-2xl font-black text-emerald-300 uppercase">{settings?.currency || 'DA'}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    handleAddToRemoteQueue(foundProduct, labelQty);
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Printer size={12} /> + Ajouter Étiquette (x{labelQty})
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {notFoundCode && !foundProduct && (
+          <div className="p-4 bg-rose-950/80 border-2 border-rose-500/60 rounded-xl text-white flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={28} className="text-rose-400 shrink-0" />
+              <div className="text-left">
+                <p className="text-base font-black uppercase text-rose-300">Aucun article trouvé pour le code « {notFoundCode} »</p>
+                <p className="text-xs text-rose-200/80">Bipez un autre article ou vérifiez le code-barres dans l'inventaire.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setNotFoundCode(null); focusScannerInput(); }}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold cursor-pointer"
+            >
+              Effacer
+            </button>
+          </div>
+        )}
+
+        {/* 3. Barre d'outils : Collecte d'Étiquettes & Impression */}
         <div className="p-3 bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-xl flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setAutoQueueOnScan(!autoQueueOnScan)}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                setAutoQueueOnScan(!autoQueueOnScan);
+                focusScannerInput();
+              }}
               className={cn(
                 "px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer border",
                 autoQueueOnScan
@@ -292,7 +505,11 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
                 <button
                   key={q}
                   type="button"
-                  onClick={() => setLabelQty(q)}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    setLabelQty(q);
+                    focusScannerInput();
+                  }}
                   className={cn(
                     "px-2 py-0.5 rounded text-xs font-black cursor-pointer",
                     labelQty === q ? "bg-indigo-600 text-white" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100"
@@ -304,63 +521,108 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowQueueDrawer(!showQueueDrawer)}
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-xs"
-          >
-            <Printer size={15} />
-            File d'Impression Autre Poste ({remoteQueue.length} art. / {totalLabelsInQueue} étiq.)
-          </button>
+          <div className="flex items-center gap-2">
+            {remoteQueue.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  handlePrintQueueNow();
+                }}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Printer size={15} />
+                🖨️ Imprimer ({totalLabelsInQueue})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.currentTarget.blur();
+                setShowQueueDrawer(!showQueueDrawer);
+                focusScannerInput();
+              }}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <Printer size={15} />
+              File d'Impression ({remoteQueue.length} art. / {totalLabelsInQueue} étiq.)
+            </button>
+          </div>
         </div>
 
-        {/* Liste des articles enregistrés pour impression sur un autre poste */}
+        {/* 4. Liste des articles enregistrés & Boutons directs pour continuer l'impression */}
         {showQueueDrawer && (
-          <div className="p-4 bg-white dark:bg-zinc-900 border border-indigo-200 dark:border-indigo-800 rounded-xl space-y-3 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800 pb-2">
+          <div className="p-4 bg-white dark:bg-zinc-900 border-2 border-indigo-500/40 rounded-xl space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
               <div>
                 <h4 className="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
-                  📡 File d'Étiquettes Synchronisée (Prête à imprimer sur le Poste Principal)
+                  📡 File d'Étiquettes Synchronisée ({remoteQueue.length} article(s) • {totalLabelsInQueue} étiquette(s))
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Ouvrez « Studio d'Étiquettes » sur l'autre ordinateur et cliquez sur « Importer File Vérificateur ».
+                  Vous pouvez imprimer directement ci-dessous, ouvrir le Studio d'Étiquettes, ou récupérer la file depuis un autre PC.
                 </p>
               </div>
               {remoteQueue.length > 0 && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await clearRemoteLabelQueue();
-                    setRemoteQueue([]);
-                    toast.info("File d'impression distante vidée.");
-                  }}
-                  className="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                >
-                  <Trash2 size={13} /> Vider la file
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      handlePrintQueueNow();
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Printer size={14} /> 🖨️ Imprimer Maintenant (80mm)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.currentTarget.blur();
+                      handleOpenInLabelStudio();
+                    }}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    🚀 Ouvrir Studio d'Étiquettes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.currentTarget.blur();
+                      await clearRemoteLabelQueue();
+                      setRemoteQueue([]);
+                      toast.info("File d'impression distante vidée.");
+                      focusScannerInput();
+                    }}
+                    className="px-2.5 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={13} /> Vider
+                  </button>
+                </div>
               )}
             </div>
 
             {remoteQueue.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-3">
-                Aucun article enregistré pour le moment. Scannez un article et cliquez sur « Envoyer à l'impression (Autre Poste) ».
+                Aucun article dans la file. Bipez un article avec le lecteur code-barres : son prix s'affichera en grand et il s'ajoutera automatiquement ici !
               </p>
             ) : (
               <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-zinc-800">
                 {remoteQueue.map(item => (
                   <div key={item.productId} className="py-2 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 text-left">
                       <p className="text-xs font-black text-slate-800 dark:text-white truncate">{item.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">
-                        SKU: {item.sku} • {item.price.toFixed(2)} {settings.currency}
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-black font-mono">
+                        Prix: {Number(item.price || 0).toFixed(2)} {settings.currency} • SKU: {item.sku}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.currentTarget.blur();
                           const next = Math.max(1, item.quantity - 1);
                           setRemoteQueue(await updateRemoteLabelQueueQuantity(item.productId, next));
+                          focusScannerInput();
                         }}
                         className="p-1 bg-slate-100 dark:bg-zinc-800 rounded hover:bg-slate-200 cursor-pointer"
                       >
@@ -369,8 +631,10 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
                       <span className="text-xs font-black w-8 text-center">{item.quantity}</span>
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.currentTarget.blur();
                           setRemoteQueue(await updateRemoteLabelQueueQuantity(item.productId, item.quantity + 1));
+                          focusScannerInput();
                         }}
                         className="p-1 bg-slate-100 dark:bg-zinc-800 rounded hover:bg-slate-200 cursor-pointer"
                       >
@@ -378,8 +642,10 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
                       </button>
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.currentTarget.blur();
                           setRemoteQueue(await removeFromRemoteLabelQueue(item.productId));
+                          focusScannerInput();
                         }}
                         className="p-1 text-rose-500 hover:bg-rose-50 rounded cursor-pointer ml-1"
                       >
@@ -392,41 +658,6 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
             )}
           </div>
         )}
-
-        <form onSubmit={handleManualSearch} className="relative group flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
-            <input
-              id="price-checker-input"
-              type="text"
-              placeholder="Scanner un code-barres ou rechercher..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 dark:border-zinc-800 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50 focus:border-indigo-500 transition-all font-bold text-lg"
-              autoFocus
-            />
-          </div>
-          <div className="flex gap-2">
-            {isScanning && (
-              <button
-                type="button"
-                onClick={() => setFacingMode(prev => prev === "environment" ? "user" : "environment")}
-                className="p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-600 hover:bg-slate-50 transition-colors flex items-center justify-center"
-                title="Changer de caméra"
-              >
-                <RefreshCw size={24} className={cn(facingMode === "user" ? "rotate-180" : "")} />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setIsScanning(!isScanning)}
-              className={`p-4 rounded-xl border transition-colors flex items-center justify-center ${isScanning ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-slate-50 border-slate-200 dark:border-zinc-800 text-slate-600 hover:bg-slate-100'}`}
-              title={isScanning ? "Arrêter la caméra" : "Démarrer la caméra"}
-            >
-              <Camera size={24} />
-            </button>
-          </div>
-        </form>
 
         {cameraError && (
           <div className="p-4 bg-rose-50 text-rose-700 rounded-xl text-sm font-medium border border-rose-100 mb-4 flex items-center justify-center">

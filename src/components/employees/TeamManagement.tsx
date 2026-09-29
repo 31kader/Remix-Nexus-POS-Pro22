@@ -365,7 +365,7 @@ export const TeamManagement = React.memo(function TeamManagement({
                         <td className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm shrink-0">
-                              {member.name.charAt(0).toUpperCase()}
+                              {String(member?.name || 'M').charAt(0).toUpperCase()}
                             </div>
                             <div>
                               <p className="font-black text-sm text-slate-900 dark:text-white">{member.name}</p>
