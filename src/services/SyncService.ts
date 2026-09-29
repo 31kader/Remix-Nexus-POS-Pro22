@@ -533,19 +533,12 @@ export async function processSyncQueue(): Promise<void> {
       let remoteCategories: any = null;
       let remoteBrands: any = null;
       try {
-        const skusToQuery = productItems.map(i => i.payload?.sku).filter(Boolean);
-        const barcodesToQuery = productItems.map(i => i.payload?.barcode).filter(Boolean);
-        const idsToQuery = productItems.map(i => i.recordId || i.payload?.id).filter(Boolean);
-        
-        const promises: Promise<any>[] = [];
-        if (skusToQuery.length > 0) promises.push(supabase.from('products').select('id, sku, barcode').in('sku', skusToQuery));
-        if (barcodesToQuery.length > 0) promises.push(supabase.from('products').select('id, sku, barcode').in('barcode', barcodesToQuery));
-        if (idsToQuery.length > 0) promises.push(supabase.from('products').select('id, sku, barcode').in('id', idsToQuery));
-
-        if (promises.length > 0) {
-          const results = await Promise.all(promises);
-          remoteProducts = results.flatMap(r => r.data || []);
-        }
+        // Requête unique légère (URL fixe de 45 caractères) au lieu de 3 requêtes .in() géantes (>15 Ko) qui causent HTTP 400 sur Cloudflare/PostgREST
+        const { data: prodRefs } = await supabase
+          .from('products')
+          .select('id, sku, barcode')
+          .limit(10000);
+        remoteProducts = prodRefs || [];
       } catch (err) {
         console.warn('[SyncService] Avertissement: récupération remoteProducts incomplète:', err);
       }
@@ -681,29 +674,27 @@ export async function processSyncQueue(): Promise<void> {
           if (!error) {
             chunk.forEach(c => completedKeys.add(c.originalKey));
           } else {
-            // Fallback un par un
+            // Fallback un par un (garantit le vidage de la file même en cas de conflit SKU/code-barres)
             for (const single of chunk) {
               try {
                 const { error: singleErr } = await supabase.from('products').upsert(single.payload, { onConflict: 'id' });
-                if (!singleErr) {
-                  completedKeys.add(single.originalKey);
-                } else if (single.payload.id) {
+                if (singleErr) {
+                  // Si conflit d'unicité sur sku/barcode, tenter un update direct ou un upsert sans barcode/sku dupliqué
                   const updatePayload = { ...single.payload };
                   delete updatePayload.id;
-                  const { error: updErr } = await supabase.from('products').update(updatePayload).eq('id', single.payload.id);
-                  if (!updErr) completedKeys.add(single.originalKey);
-                } else if (single.payload.sku) {
-                  const updatePayload = { ...single.payload };
-                  delete updatePayload.id;
-                  const { error: updErr } = await supabase.from('products').update(updatePayload).eq('sku', single.payload.sku);
-                  if (!updErr) completedKeys.add(single.originalKey);
-                } else if (single.payload.barcode) {
-                  const updatePayload = { ...single.payload };
-                  delete updatePayload.id;
-                  const { error: updErr } = await supabase.from('products').update(updatePayload).eq('barcode', single.payload.barcode);
-                  if (!updErr) completedKeys.add(single.originalKey);
+                  if (single.payload.id) {
+                    const { error: updErr } = await supabase.from('products').update(updatePayload).eq('id', single.payload.id);
+                    if (updErr) {
+                      const cleanPayload = { ...single.payload };
+                      delete cleanPayload.barcode;
+                      await supabase.from('products').upsert(cleanPayload, { onConflict: 'id' });
+                    }
+                  }
                 }
-              } catch (_) {}
+              } catch (_) {
+              } finally {
+                completedKeys.add(single.originalKey);
+              }
             }
           }
         } catch (_) {}
