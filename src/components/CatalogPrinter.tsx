@@ -1345,7 +1345,9 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                       <tbody className="divide-y divide-slate-200 text-[10px]">
                         {currentPageItems.map((p, idx) => (
                           <tr key={p.id}>
-                            <td className="p-1.5 font-mono text-slate-500">{activePreviewPage * itemsPerPage + idx + 1}</td>
+                            <td className="p-1.5 font-mono text-slate-500">
+                              {pages.slice(0, activePreviewPage).reduce((acc, pg) => acc + pg.length, 0) + idx + 1}
+                            </td>
                             <td className="p-1.5 font-mono text-slate-600">{p.sku || p.barcode || p.id.slice(0, 8)}</td>
                             <td className="p-1.5 font-bold text-slate-900">{p.name}</td>
                             <td className="p-1.5 text-slate-500">{p.category || 'Général'}</td>
