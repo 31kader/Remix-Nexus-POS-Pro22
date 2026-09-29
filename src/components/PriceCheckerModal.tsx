@@ -26,8 +26,7 @@ interface PriceCheckerModalProps {
   brands: Brand[];
 }
 
-import { useCoreStore } from '../stores/useCoreStore';
-import { useUIStore } from '../stores/useUIStore';
+import { useCoreStore } from '../store/useCoreStore';
 import { executePrintLabels } from '../services/labelPrintService';
 
 export function PriceCheckerModal({ isOpen, onClose, products, settings, categories, brands }: PriceCheckerModalProps) {
@@ -118,7 +117,7 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
   const handleOpenInLabelStudio = () => {
     try {
       sessionStorage.setItem('nexus_auto_import_remote_labels', 'true');
-      useUIStore.getState().setActiveTab('labels');
+      window.location.hash = 'labels';
       onClose();
       toast.success("Ouverture du Studio d'Étiquettes avec votre file d'articles...");
     } catch (_) {}
