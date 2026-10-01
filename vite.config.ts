@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import legacy from '@vitejs/plugin-legacy';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,6 +58,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(), 
       tailwindcss(),
+      legacy({
+        targets: ['chrome >= 49', 'android >= 7', 'defaults', 'not IE 11'],
+        modernTargets: ['chrome >= 87', 'edge >= 88', 'firefox >= 78', 'safari >= 15'],
+        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+        renderModernChunks: true
+      }),
       VitePWA(pwaConfig)
     ],
     server: {
@@ -74,10 +81,8 @@ export default defineConfig(({ mode }) => {
     },
     esbuild: {
       drop: ['console', 'debugger'],
-      target: 'es2018',
     },
     build: {
-      target: ['es2018', 'chrome58'],
       outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,

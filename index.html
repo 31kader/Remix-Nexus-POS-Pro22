@@ -60,7 +60,10 @@
           str.indexOf('resizeobserver') > -1 ||
           str.indexOf('script error') > -1 ||
           str.indexOf('websocket') > -1 ||
-          str.indexOf('operation-specific reason') > -1
+          str.indexOf('operation-specific reason') > -1 ||
+          str.indexOf('unexpected token import') > -1 ||
+          str.indexOf('unexpected token \'import\'') > -1 ||
+          (str.indexOf('import') > -1 && str.indexOf('syntax') > -1)
         ) {
           console.warn('[Error ignored - Benign]:', msg);
           return true;

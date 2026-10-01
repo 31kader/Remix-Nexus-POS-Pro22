@@ -152,7 +152,10 @@ function deleteSingleProduct(id: string) {
 }
 
 self.onmessage = (e: MessageEvent) => {
-  const { id, type, payload } = e.data;
+  const data = e.data || {};
+  const id = data.id;
+  const type = data.type;
+  const payload = data.payload;
 
   try {
     switch (type) {
