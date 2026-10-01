@@ -445,7 +445,10 @@ export async function processSyncQueue(): Promise<void> {
     for (const item of deleteList) {
       try {
         const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
-        const res = await supabase.from(targetTable).delete().eq('id', item.recordId);
+        const targetId = (targetTable === 'online_orders' && !isNaN(Number(item.recordId)) && Number(item.recordId) > 0)
+          ? Number(item.recordId)
+          : item.recordId;
+        const res = await supabase.from(targetTable).delete().eq('id', targetId);
         if (!res.error) {
           completedKeys.add(`${item.table}:${item.recordId}`);
         }

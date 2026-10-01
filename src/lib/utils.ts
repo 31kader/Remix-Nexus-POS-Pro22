@@ -3,10 +3,50 @@ import { twMerge } from 'tailwind-merge';
 import { format } from 'date-fns';
 import { Category } from '../types';
 import { localDb } from '../services/LocalDatabase';
+import { exportToExcelSafely } from './excelSecurity';
 
 /** Utility for Tailwind class merging */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * 🛡️ Assainissement HTML strict anti-XSS (CWE-79) pour les modèles d'impression et l'affichage
+ */
+export function escapeHtml(str: any): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * 🛡️ Validation d'URL stricte anti-SSRF (CWE-918)
+ * Bloque les protocoles non HTTP/HTTPS ainsi que les adresses privées / de métadonnées cloud
+ */
+export function isSafeExternalUrl(rawUrl: string): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    // Bloquer les adresses de métadonnées Cloud (AWS, GCP, Azure, OpenStack)
+    if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal' || hostname === 'instance-data') {
+      return false;
+    }
+    // Bloquer les plages loopback locales
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      return false;
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 export const logAction = async (userId: string, userName: string, action: string, module: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
@@ -102,25 +142,7 @@ export const calculateItemPrice = (item: any, isWholesale: boolean = false) => {
 
 export const exportToExcel = async (data: any[], fileName: string) => {
   try {
-    const XLSX = await import('xlsx');
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Catalogue");
-
-    // Write binary buffer and trigger browser/electron blob download
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${fileName}.xlsx`;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    }, 200);
+    await exportToExcelSafely(data, fileName, "Catalogue");
   } catch (err: any) {
     console.warn("XLSX direct export failed, using CSV fallback:", err);
     await exportToCSV(data, fileName);
@@ -262,9 +284,35 @@ export const announcePrice = (name: string, price: number, currency: string) => 
     const canUseNew = Utterance.prototype && typeof Utterance.prototype === 'object';
     const msg = canUseNew ? new Utterance() : (typeof Utterance === 'function' ? Utterance() : null);
     if (!msg) return;
-    msg.text = `${name}. ${formatPrice(price, 2)} ${currency || 'DA'}`;
+
+    // Traduction de la devise en mot français complet pour la voix
+    const cleanCurrency = String(currency || '').trim().toUpperCase();
+    let spokenCurrency = 'dinars';
+    if (cleanCurrency === 'DA' || cleanCurrency === 'DZD' || !cleanCurrency) {
+      spokenCurrency = Math.abs(price) <= 1 ? 'dinar' : 'dinars';
+    } else if (cleanCurrency === 'EUR' || cleanCurrency === '€') {
+      spokenCurrency = Math.abs(price) <= 1 ? 'euro' : 'euros';
+    } else if (cleanCurrency === 'USD' || cleanCurrency === '$') {
+      spokenCurrency = Math.abs(price) <= 1 ? 'dollar' : 'dollars';
+    } else {
+      spokenCurrency = currency;
+    }
+
+    // Formatage du prix pour la voix : pas de 'virgule zéro zéro' pour les nombres entiers
+    const rounded = Math.round(Number(price || 0) * 100) / 100;
+    let spokenPrice = '';
+    if (Number.isInteger(rounded)) {
+      spokenPrice = `${rounded} ${spokenCurrency}`;
+    } else {
+      const parts = rounded.toFixed(2).split('.');
+      const integerPart = parts[0];
+      const decimalPart = parts[1].replace(/0+$/, '');
+      spokenPrice = `${integerPart} virgule ${decimalPart} ${spokenCurrency}`;
+    }
+
+    msg.text = `${name}. ${spokenPrice}`;
     msg.lang = 'fr-FR';
-    msg.rate = 1.1;
+    msg.rate = 1.05;
     msg.pitch = 1;
     
     window.speechSynthesis.speak(msg);

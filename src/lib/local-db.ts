@@ -16,6 +16,7 @@ export function cleanupLegacyStorage() {
   } catch (_) {}
 }
 import { get as getIDB, set as setIDB } from 'idb-keyval';
+import { encryptLocalData, decryptLocalData } from './security';
 
 export type ObserverCallback = (snapshot: { exists: () => boolean, val: () => any }) => void;
 
@@ -24,6 +25,54 @@ const observers: Record<string, ObserverCallback[]> = {};
 
 const dirtyTables = new Set<string>();
 let saveStorageTimeout: any = null;
+
+/**
+ * Tables à haute sensibilité protégées par chiffrement AES-256-GCM au repos dans IndexedDB
+ */
+export const SENSITIVE_STORAGE_TABLES = new Set([
+  'users',
+  'employees',
+  'cash_shifts'
+]);
+
+/**
+ * Persiste l'état d'une table dans IndexedDB (chiffré pour les tables sensibles, brut pour le catalogue/transactions)
+ */
+export async function persistTableState(table: string): Promise<void> {
+  const normTable = normalizePath(table).split('/')[0];
+  const data = dbState[normTable] || {};
+  if (SENSITIVE_STORAGE_TABLES.has(normTable)) {
+    try {
+      const json = JSON.stringify(data);
+      const encrypted = await encryptLocalData(json);
+      await setIDB(`nexus_db_${normTable}`, {
+        __encrypted: true,
+        __version: 2,
+        data: encrypted
+      });
+      return;
+    } catch (err) {
+      console.warn(`[LocalDB] Erreur chiffrement table sensible ${normTable}:`, err);
+    }
+  }
+  await setIDB(`nexus_db_${normTable}`, data);
+}
+
+/**
+ * Restaure l'état d'une table depuis IndexedDB (déchiffre si __encrypted = true, rétrocompatible avec données brutes)
+ */
+export async function restoreTableState(table: string, storedValue: any): Promise<any> {
+  if (storedValue && typeof storedValue === 'object' && storedValue.__encrypted && typeof storedValue.data === 'string') {
+    try {
+      const decrypted = await decryptLocalData(storedValue.data);
+      return JSON.parse(decrypted);
+    } catch (err) {
+      console.warn(`[LocalDB] Erreur déchiffrement table sensible ${table}:`, err);
+      return {};
+    }
+  }
+  return storedValue || {};
+}
 
 export async function saveStateToStorage(table?: string) {
   if (table) {
@@ -36,13 +85,13 @@ export async function saveStateToStorage(table?: string) {
     try {
       if (dirtyTables.size > 0) {
         for (const t of dirtyTables) {
-          await setIDB(`nexus_db_${t}`, dbState[t] || {});
+          await persistTableState(t);
         }
         dirtyTables.clear();
       } else {
         const tables = Object.keys(dbState);
         for (const t of tables) {
-          await setIDB(`nexus_db_${t}`, dbState[t] || {});
+          await persistTableState(t);
         }
       }
       await setIDB('nexus_db_split_v1', true);
@@ -69,12 +118,12 @@ export async function saveStateToStorageImmediate(table?: string): Promise<void>
       const tablesToSave = Array.from(dirtyTables);
       dirtyTables.clear();
       for (const t of tablesToSave) {
-        await setIDB(`nexus_db_${t}`, dbState[t] || {});
+        await persistTableState(t);
       }
     } else {
       const tables = Object.keys(dbState);
       for (const t of tables) {
-        await setIDB(`nexus_db_${t}`, dbState[t] || {});
+        await persistTableState(t);
       }
     }
     await setIDB('nexus_db_split_v1', true);
@@ -187,9 +236,10 @@ export async function loadInitialState() {
         'goods_receipt_notes'
       ];
       const loaded = await Promise.all(tables.map(t => getIDB(`nexus_db_${t}`)));
-      tables.forEach((t, i) => {
-        dbState[t] = loaded[i] || {};
-      });
+      for (let i = 0; i < tables.length; i++) {
+        const t = tables[i];
+        dbState[t] = await restoreTableState(t, loaded[i]);
+      }
       // Partitionner les anciennes transactions pour alléger la RAM
       partitionOldTransactions().catch(() => {});
       Object.keys(dbState).forEach(triggerObservers);
@@ -198,7 +248,7 @@ export async function loadInitialState() {
       if (stored) {
         dbState = stored;
         const tables = Object.keys(dbState);
-        await Promise.all(tables.map(t => setIDB(`nexus_db_${t}`, dbState[t])));
+        await Promise.all(tables.map(t => persistTableState(t)));
         await setIDB('nexus_db_split_v1', true);
         partitionOldTransactions().catch(() => {});
         Object.keys(dbState).forEach(triggerObservers);
@@ -207,7 +257,7 @@ export async function loadInitialState() {
         if (legacy) {
           dbState = JSON.parse(legacy);
           const tables = Object.keys(dbState);
-          await Promise.all(tables.map(t => setIDB(`nexus_db_${t}`, dbState[t])));
+          await Promise.all(tables.map(t => persistTableState(t)));
           await setIDB('nexus_db_split_v1', true);
           localStorage.removeItem('nexus_supabase_emulator_db');
           partitionOldTransactions().catch(() => {});

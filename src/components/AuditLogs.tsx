@@ -17,7 +17,7 @@ import {
   ArrowUpDown,
   DollarSign
 } from 'lucide-react';
-import { exportToExcel, exportToCSV, cn, formatSafe } from '../lib/utils';
+import { exportToExcel, exportToCSV, cn, formatSafe, escapeHtml } from '../lib/utils';
 import { EditLogModal } from './audit-logs/EditLogModal';
 import { UndoLogModal } from './audit-logs/UndoLogModal';
 import { AuditLogsTable } from './audit-logs/AuditLogsTable';
@@ -114,11 +114,11 @@ export function AuditLogs({ logs = [], settings, products = [], transactions = [
         <tr>
           <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${idx + 1}</td>
           <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${formatSafe(l.timestamp, 'dd/MM/yyyy HH:mm:ss')}</td>
-          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;font-weight:bold;">${inferLogSeverity(l).toUpperCase()}</td>
-          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;font-weight:bold;">${l.userName || 'Système'}</td>
-          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${l.action || ''}</td>
-          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${l.module || ''}</td>
-          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${l.details || ''}</td>
+          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;font-weight:bold;">${escapeHtml(inferLogSeverity(l).toUpperCase())}</td>
+          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;font-weight:bold;">${escapeHtml(l.userName || 'Système')}</td>
+          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${escapeHtml(l.action || '')}</td>
+          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${escapeHtml(l.module || '')}</td>
+          <td style="padding:6px 8px;border:1px solid #cbd5e1;font-size:11px;">${escapeHtml(l.details || '')}</td>
         </tr>`
       )
       .join('');
@@ -126,7 +126,7 @@ export function AuditLogs({ logs = [], settings, products = [], transactions = [
     win.document.write(`
       <html>
         <head>
-          <title>Rapport Officiel des Journaux d'Audit — ${settings.name || 'Nexus POS Pro'}</title>
+          <title>Rapport Officiel des Journaux d'Audit — ${escapeHtml(settings.name || 'Nexus POS Pro')}</title>
           <style>
             body { font-family: Arial, sans-serif; color: #0f172a; padding: 20px; }
             table { width: 100%; border-collapse: collapse; margin-top: 15px; }
@@ -136,7 +136,7 @@ export function AuditLogs({ logs = [], settings, products = [], transactions = [
         <body>
           <h2 style="margin:0;">RAPPORT D'INVESTIGATION & JOURNAUX D'AUDIT</h2>
           <p style="margin:4px 0 12px;font-size:12px;color:#475569;">
-            Établissement : <strong>${settings.name || 'Nexus POS Pro'}</strong> • Généré le ${new Date().toLocaleString('fr-FR')} • Total filtré : <strong>${filteredLogs.length}</strong> événement(s)
+            Établissement : <strong>${escapeHtml(settings.name || 'Nexus POS Pro')}</strong> • Généré le ${new Date().toLocaleString('fr-FR')} • Total filtré : <strong>${filteredLogs.length}</strong> événement(s)
           </p>
           <table>
             <thead>

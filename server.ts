@@ -103,6 +103,9 @@ async function startServer() {
   try {
     const app = express();
 
+    // 🛡️ Sécurité : Utiliser le parseur natif Node.js 'querystring' au lieu de la bibliothèque 'qs' (CWE-476, CWE-770)
+    app.set('query parser', 'simple');
+
     // Restrict CORS to local development, local network IPs, production desktop electron and local mobile wrappers
     const allowedOrigins = [
       'http://localhost:3000',
@@ -134,14 +137,23 @@ async function startServer() {
     }));
 
     app.use(express.json({ limit: '50mb' }));
-    app.use(express.urlencoded({ limit: '50mb', extended: true }));
+    // 🛡️ Sécurité : extended: false bascule vers le module natif 'querystring' de Node.js, neutralisant les CVEs de 'qs'
+    app.use(express.urlencoded({ limit: '50mb', extended: false }));
 
-    // Custom Security Headers (equivalent to basic Helmet setup)
+    // Custom Hardened Security Headers
     app.use((req, res, next) => {
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('X-XSS-Protection', '1; mode=block');
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+      );
+      if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+      }
       next();
     });
     

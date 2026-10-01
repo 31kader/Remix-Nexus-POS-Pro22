@@ -1,11 +1,20 @@
-// Local storage data encryption helper
+// Local storage data encryption helper — Nexus POS Pro v1.2.19
+// Chiffrement moderne AES-256-GCM (Web Crypto API SubtleCrypto) + PBKDF2
+// Rétrocompatibilité descendante complète avec nx2: (XOR salé) et JSON brut
+
 const DEFAULT_KEY = 'default-nexus-key-salt-2026';
 const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 const SECRET_KEY = envKey || DEFAULT_KEY;
+const LOCAL_SALT_STORAGE_KEY = 'nexus_local_salt_v1';
+const PBKDF2_ITERATIONS = 100000;
 
 if (!envKey && typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
   console.warn('[Security] ⚠️ Attention: VITE_SUPABASE_ANON_KEY non défini dans l\'environnement. Utilisation de la clé de secours par défaut.');
 }
+
+// ==========================================
+// Utilitaires de conversion d'octets / texte
+// ==========================================
 
 function textToBytes(text: string): Uint8Array {
   if (typeof TextEncoder !== 'undefined') {
@@ -47,7 +56,241 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-// Multi-round hash helper for keystream generation
+function bytesToHex(bytes: Uint8Array): string {
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const cleanHex = hex.replace(/[^0-9a-fA-F]/g, '');
+  const bytes = new Uint8Array(Math.floor(cleanHex.length / 2));
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(cleanHex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+// ==========================================
+// Primitives Aléatoires et SubtleCrypto
+// ==========================================
+
+function getSubtleCrypto(): SubtleCrypto {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    return crypto.subtle;
+  }
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    return window.crypto.subtle;
+  }
+  if (typeof globalThis !== 'undefined' && (globalThis as any).crypto && (globalThis as any).crypto.subtle) {
+    return (globalThis as any).crypto.subtle;
+  }
+  throw new Error('[Security] SubtleCrypto non disponible dans l\'environnement actuel.');
+}
+
+function getRandomValues(array: Uint8Array): Uint8Array {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    return crypto.getRandomValues(array);
+  }
+  if (typeof window !== 'undefined' && window.crypto && typeof window.crypto.getRandomValues === 'function') {
+    return window.crypto.getRandomValues(array);
+  }
+  if (typeof globalThis !== 'undefined' && (globalThis as any).crypto && typeof (globalThis as any).crypto.getRandomValues === 'function') {
+    return (globalThis as any).crypto.getRandomValues(array);
+  }
+  for (let i = 0; i < array.length; i++) {
+    array[i] = Math.floor(Math.random() * 256);
+  }
+  return array;
+}
+
+// ==========================================
+// Gestion du Sel Persistant & Dérivation PBKDF2
+// ==========================================
+
+let memorySaltCache: Uint8Array | null = null;
+let cachedAESKey: CryptoKey | null = null;
+let cachedAESKeySaltHex: string = '';
+
+/**
+ * Obtient ou génère un sel cryptographique local de 16 octets persistant sur le terminal
+ */
+export function getOrCreateLocalSalt(): Uint8Array {
+  if (memorySaltCache && memorySaltCache.length >= 16) {
+    return memorySaltCache;
+  }
+
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const storedHex = localStorage.getItem(LOCAL_SALT_STORAGE_KEY);
+      if (storedHex && storedHex.length >= 32) {
+        const bytes = hexToBytes(storedHex);
+        if (bytes.length >= 16) {
+          memorySaltCache = bytes;
+          return bytes;
+        }
+      }
+      const newSalt = new Uint8Array(16);
+      getRandomValues(newSalt);
+      const hex = bytesToHex(newSalt);
+      localStorage.setItem(LOCAL_SALT_STORAGE_KEY, hex);
+      memorySaltCache = newSalt;
+      return newSalt;
+    }
+  } catch (_) {}
+
+  if (!memorySaltCache) {
+    memorySaltCache = new Uint8Array(16);
+    getRandomValues(memorySaltCache);
+  }
+  return memorySaltCache;
+}
+
+/**
+ * Dérive une clé AES-256-GCM à partir de PBKDF2 (100 000 itérations SHA-256)
+ */
+async function deriveAESKey(salt: Uint8Array): Promise<CryptoKey> {
+  const saltHex = bytesToHex(salt);
+  if (cachedAESKey && cachedAESKeySaltHex === saltHex) {
+    return cachedAESKey;
+  }
+
+  const subtle = getSubtleCrypto();
+  const rawSecret = textToBytes(`${SECRET_KEY}:nexus-pos-aes-2026`);
+  const baseKey = await subtle.importKey(
+    'raw',
+    rawSecret,
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  );
+
+  const derivedKey = await subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+
+  cachedAESKey = derivedKey;
+  cachedAESKeySaltHex = saltHex;
+  return derivedKey;
+}
+
+// ==========================================
+// Chiffrement AES-256-GCM (Web Crypto API)
+// ==========================================
+
+/**
+ * Chiffre une chaîne en AES-256-GCM via SubtleCrypto avec dérivation PBKDF2 et sel persistant
+ * Préfixe du résultat : 'aes:v1:...'
+ */
+export async function encryptLocalData(text: string): Promise<string> {
+  if (!text) return text;
+  try {
+    const subtle = getSubtleCrypto();
+    const salt = getOrCreateLocalSalt();
+    const key = await deriveAESKey(salt);
+
+    // IV cryptographiquement sécurisé de 12 octets (standard AES-GCM)
+    const iv = new Uint8Array(12);
+    getRandomValues(iv);
+
+    const inputBytes = textToBytes(text);
+    const cipherBuffer = await subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv
+      },
+      key,
+      inputBytes
+    );
+
+    const cipherBytes = new Uint8Array(cipherBuffer);
+    const saltHex = bytesToHex(salt);
+    const ivBase64 = bytesToBase64(iv);
+    const cipherBase64 = bytesToBase64(cipherBytes);
+
+    return `aes:v1:${saltHex}:${ivBase64}:${cipherBase64}`;
+  } catch (err) {
+    console.warn('[Security] Échec du chiffrement AES-256-GCM, repli nx2:', err);
+    return encryptData(text);
+  }
+}
+
+/**
+ * Déchiffre une chaîne chiffrée en AES-256-GCM, nx2 (XOR legacy), ou texte brut
+ * Rétrocompatibilité descendante totale et transparente
+ */
+export async function decryptLocalData(cipherText: string): Promise<string> {
+  if (!cipherText || typeof cipherText !== 'string') return cipherText;
+
+  // 1. Détection AES-256-GCM
+  if (cipherText.startsWith('aes:')) {
+    try {
+      const parts = cipherText.split(':');
+      let salt: Uint8Array;
+      let ivBase64: string;
+      let cipherBase64: string;
+
+      if (parts[1] === 'v1' && parts.length === 5) {
+        salt = hexToBytes(parts[2]);
+        ivBase64 = parts[3];
+        cipherBase64 = parts[4];
+      } else if (parts.length === 3) {
+        salt = getOrCreateLocalSalt();
+        ivBase64 = parts[1];
+        cipherBase64 = parts[2];
+      } else {
+        throw new Error('Format de payload aes invalide');
+      }
+
+      const iv = base64ToBytes(ivBase64);
+      const cipherBytes = base64ToBytes(cipherBase64);
+      const subtle = getSubtleCrypto();
+      const key = await deriveAESKey(salt);
+
+      const decryptedBuffer = await subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv
+        },
+        key,
+        cipherBytes
+      );
+
+      return bytesToText(new Uint8Array(decryptedBuffer));
+    } catch (err) {
+      console.warn('[Security] Échec du déchiffrement AES, tentative de repli:', err);
+      return decryptData(cipherText);
+    }
+  }
+
+  // 2. Détection format JSON brut non chiffré
+  if (cipherText.startsWith('{') || cipherText.startsWith('[')) {
+    return cipherText;
+  }
+
+  // 3. Repli vers le déchiffrement synchrone hérité (nx2 / v1)
+  return decryptData(cipherText);
+}
+
+// Alias explicites
+export const encryptDataAES = encryptLocalData;
+export const decryptDataAES = decryptLocalData;
+
+// ==========================================
+// Moteur Synchrone Legacy (nx2: flux XOR)
+// ==========================================
+
 function hashKeyWithSalt(key: string, salt: string): number[] {
   const combined = `${salt}:${key}:${salt.split('').reverse().join('')}`;
   let h1 = 0x811c9dc5;
@@ -70,20 +313,16 @@ function hashKeyWithSalt(key: string, salt: string): number[] {
 }
 
 /**
- * Encrypts a plain text string using a salted dynamic keystream (nx2 format)
- * Returns Base64-encoded encrypted string prefixed with 'nx2:'
+ * Chiffre une chaîne en mode synchrone (format nx2: flux XOR salé)
+ * Utilisé pour conserver la compatibilité des signatures synchrones
  */
 export function encryptData(text: string): string {
   if (!text) return text;
   try {
     let salt = '';
-    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-      const bytes = new Uint8Array(8);
-      crypto.getRandomValues(bytes);
-      salt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    } else {
-      salt = Math.random().toString(36).substring(2, 10);
-    }
+    const bytes = new Uint8Array(8);
+    getRandomValues(bytes);
+    salt = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
     const keyStream = hashKeyWithSalt(SECRET_KEY, salt);
     const inputBytes = textToBytes(text);
@@ -97,7 +336,7 @@ export function encryptData(text: string): string {
     const payload = `${salt}:${bytesToBase64(encryptedBytes)}`;
     return `nx2:${btoa(payload)}`;
   } catch (err) {
-    console.warn('[Security] Enhanced encryption failed, using fallback:', err);
+    console.warn('[Security] nx2 encryption failed, using fallback:', err);
     return legacyEncrypt(text);
   }
 }
@@ -125,13 +364,17 @@ function legacyDecrypt(cipherText: string): string {
 }
 
 /**
- * Decrypts a cipherText string back into its original plain text.
- * Automatically detects nx2 (salted keystream), legacy v1 (XOR), or plain fallback.
+ * Déchiffre une chaîne chiffrée de manière synchrone (nx2, v1 XOR ou JSON brut)
  */
 export function decryptData(cipherText: string): string {
-  if (!cipherText) return cipherText;
+  if (!cipherText || typeof cipherText !== 'string') return cipherText;
 
-  // 1. Detect nx2 salted cipher
+  // 1. JSON brut en clair
+  if (cipherText.startsWith('{') || cipherText.startsWith('[')) {
+    return cipherText;
+  }
+
+  // 2. Détection du préfixe nx2:
   if (cipherText.startsWith('nx2:')) {
     try {
       const rawPayload = atob(cipherText.substring(4));
@@ -155,7 +398,12 @@ export function decryptData(cipherText: string): string {
     }
   }
 
-  // 2. Fallback to legacy v1 XOR decryption
+  // 3. Si un payload aes est fourni en appel synchrone
+  if (cipherText.startsWith('aes:')) {
+    return '';
+  }
+
+  // 4. Repli vers le déchiffrement legacy v1 XOR
   try {
     return legacyDecrypt(cipherText);
   } catch (err) {
@@ -163,8 +411,12 @@ export function decryptData(cipherText: string): string {
   }
 }
 
+// ==========================================
+// Méthodes de Stockage Local Sécurisé
+// ==========================================
+
 /**
- * Encrypts an object and stores it in localStorage.
+ * Chiffre un objet et le stocke dans localStorage (synchrone).
  */
 export function setSecureItem(key: string, value: any): void {
   try {
@@ -176,7 +428,8 @@ export function setSecureItem(key: string, value: any): void {
 }
 
 /**
- * Retrieves and decrypts an item from localStorage.
+ * Récupère et déchiffre un élément de localStorage (synchrone).
+ * Rétrocompatible avec JSON en clair existant et nx2:.
  */
 export function getSecureItem<T = any>(key: string): T | null {
   try {
@@ -205,7 +458,7 @@ export function getSecureItem<T = any>(key: string): T | null {
 }
 
 /**
- * Removes an encrypted item from localStorage safely.
+ * Supprime un élément sécurisé de localStorage.
  */
 export function removeSecureItem(key: string): void {
   try {
@@ -215,10 +468,81 @@ export function removeSecureItem(key: string): void {
   }
 }
 
-export async function encryptLocalData(text: string): Promise<string> {
-  return encryptData(text);
+/**
+ * Purge tous les secrets locaux et réinitialise les clés dérivées en mémoire
+ */
+export function clearSecureItems(): void {
+  try {
+    cachedAESKey = null;
+    cachedAESKeySaltHex = '';
+    memorySaltCache = null;
+
+    if (typeof localStorage === 'undefined') return;
+
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (
+        k.startsWith('nexus_sec_') ||
+        k === 'nexus_offline_credentials' ||
+        k === 'nexus_pos_master_pin' ||
+        k === 'nexus_active_offline_session' ||
+        k === 'nexus_active_online_session' ||
+        k === 'nexus_login_lock_until' ||
+        k === 'nexus_login_failures'
+      ) {
+        keysToRemove.push(k);
+      }
+    }
+    keysToRemove.forEach(k => {
+      try {
+        localStorage.removeItem(k);
+      } catch (_) {}
+    });
+  } catch (err) {
+    console.warn('[Security] Failed to clear secure items:', err);
+  }
 }
 
-export async function decryptLocalData(cipherText: string): Promise<string> {
-  return decryptData(cipherText);
+/**
+ * Chiffre un objet avec AES-256-GCM et le stocke dans localStorage (asynchrone).
+ */
+export async function setSecureItemAsync(key: string, value: any): Promise<void> {
+  try {
+    const str = typeof value === 'string' ? value : JSON.stringify(value);
+    const encrypted = await encryptLocalData(str);
+    localStorage.setItem(key, encrypted);
+  } catch (err) {
+    console.warn('[Security] Failed to set secure item async:', err);
+  }
 }
+
+/**
+ * Récupère et déchiffre un élément de localStorage avec AES-256-GCM / nx2 (asynchrone).
+ */
+export async function getSecureItemAsync<T = any>(key: string): Promise<T | null> {
+  try {
+    const cipherText = localStorage.getItem(key);
+    if (!cipherText) return null;
+
+    if (cipherText.startsWith('{') || cipherText.startsWith('[')) {
+      try {
+        const plain = JSON.parse(cipherText) as T;
+        await setSecureItemAsync(key, plain);
+        return plain;
+      } catch (_) {}
+    }
+
+    const decrypted = await decryptLocalData(cipherText);
+    try {
+      return JSON.parse(decrypted) as T;
+    } catch (_) {
+      return decrypted as any;
+    }
+  } catch (err) {
+    console.warn('[Security] Failed to get secure item async:', err);
+    return null;
+  }
+}
+

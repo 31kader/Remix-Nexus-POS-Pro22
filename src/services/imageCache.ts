@@ -1,4 +1,5 @@
 import { get as getIDB, set as setIDB } from 'idb-keyval';
+import { isSafeExternalUrl } from '../lib/utils';
 
 const MAX_CACHED_OBJECT_URLS = 2000;
 const objectUrlMap = new Map<string, string>();
@@ -204,6 +205,15 @@ export async function cacheImage(url: string): Promise<string | null> {
         const objUrl = URL.createObjectURL(cachedBlob);
         setBoundedObjectUrl(key, objUrl);
         return objUrl;
+      }
+
+      // 🛡️ Protection Anti-SSRF (CWE-918)
+      if (key.startsWith('http://') || key.startsWith('https://')) {
+        if (!isSafeExternalUrl(key)) {
+          return null;
+        }
+      } else if (!key.startsWith('data:image/') && !key.startsWith('blob:')) {
+        return null;
       }
 
       await acquireFetchSlot();

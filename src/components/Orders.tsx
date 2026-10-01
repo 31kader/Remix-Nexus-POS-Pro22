@@ -52,7 +52,8 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
     toggleSelectAll = () => {},
     clearSelection = () => {},
     handleBulkCancel = () => {},
-    handleBulkConfirm = () => {}
+    handleBulkConfirm = () => {},
+    handleBulkDelete = () => {}
   } = logic || {};
 
   const products = props.products || [];
@@ -262,13 +263,19 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
               onClick={handleBulkConfirm}
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-emerald-600/20"
             >
-              ✓ Confirmer la sélection
+              ✓ Confirmer ({selectedOrderIds.size})
             </Button>
             <Button
               onClick={handleBulkCancel}
+              className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-amber-600/20"
+            >
+              ✕ Annuler ({selectedOrderIds.size})
+            </Button>
+            <Button
+              onClick={handleBulkDelete}
               className="bg-rose-600 hover:bg-rose-500 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-rose-600/20"
             >
-              ✕ Annuler la sélection
+              🗑️ Supprimer ({selectedOrderIds.size})
             </Button>
           </div>
         </div>
@@ -324,7 +331,7 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
           <Card className="max-w-md w-full p-6 bg-slate-900 border-slate-800 shadow-md">
             <h3 className="text-xl font-bold text-white mb-4">Confirmer la suppression</h3>
             <p className="text-slate-400 mb-6">
-              Êtes-vous sûr de vouloir supprimer cette commande sur Supabase ? Cette action est irréversible.
+              Êtes-vous sûr de vouloir supprimer la commande <span className="text-white font-bold">#{orderToDelete}</span> ? Cette action retirera la commande du système.
             </p>
             <div className="flex justify-end gap-3">
               <button

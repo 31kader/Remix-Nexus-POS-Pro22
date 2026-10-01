@@ -55,7 +55,7 @@ export function extractAmountFromLog(log: AuditLog): number {
 }
 
 export function formatAuditDetails(log: AuditLog, transactions: Transaction[] = []): string {
-  const raw = log?.details;
+  const raw: any = log?.details;
   let str = '';
   if (typeof raw === 'string') {
     const trimmed = raw.trim();

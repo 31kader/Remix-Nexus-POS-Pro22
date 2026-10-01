@@ -3,6 +3,7 @@ import { Award, Printer, MessageSquare } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Button } from './ui';
 import { CompanySettings, Customer } from '../types';
+import { escapeHtml } from '../lib/utils';
 
 interface CustomerDigitalCardProps {
   selectedCustomer: Customer;
@@ -105,7 +106,7 @@ export function CustomerDigitalCard({ selectedCustomer, settings }: CustomerDigi
                 <div class="card">
                   <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                      <div style="font-size: 16px; font-weight: 800;">${settings.name}</div>
+                      <div style="font-size: 16px; font-weight: 800;">${escapeHtml(settings.name)}</div>
                       <div style="font-size: 9px; opacity: 0.8; letter-spacing: 1px; margin-top: 2px;">CARTE FIDÉLITÉ</div>
                     </div>
                     <div class="qr-section">
@@ -115,9 +116,9 @@ export function CustomerDigitalCard({ selectedCustomer, settings }: CustomerDigi
                   
                   <div style="margin-top: 10px;">
                     <div style="font-size: 9px; opacity: 0.8; margin-bottom: 2px;">TITULAIRE</div>
-                    <div class="name">${selectedCustomer.name}</div>
+                    <div class="name">${escapeHtml(selectedCustomer.name)}</div>
                     <div style="font-family: monospace; font-size: 12px; letter-spacing: 2px; opacity: 0.9; margin-top: 4px;">
-                      ${selectedCustomer.loyaltyCardNumber || '#### #### #### ####'}
+                      ${escapeHtml(selectedCustomer.loyaltyCardNumber || '#### #### #### ####')}
                     </div>
                   </div>
                   

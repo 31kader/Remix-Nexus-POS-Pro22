@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { DollarSign, Trash2, Plus, Percent, TrendingUp, Filter, Zap, CheckCircle2, RefreshCw } from 'lucide-react';
 import { CompanySettings } from '../../types';
 import { useCoreStore } from '../../store/useCoreStore';
+import { usePeopleStore } from '../../store/usePeopleStore';
 import { localDb } from '../../services/LocalDatabase';
 import { set as idbSet } from 'idb-keyval';
 import { toast } from 'sonner';
@@ -20,7 +21,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
   const products = useCoreStore(s => s.products) || [];
   const setProducts = useCoreStore(s => s.setProducts);
   const categories = useCoreStore(s => s.categories) || [];
-  const suppliers = useCoreStore(s => s.suppliers) || [];
+  const suppliers = usePeopleStore(s => s.suppliers) || [];
   const brands = useCoreStore(s => s.brands) || [];
 
   // États des filtres d'exécution des règles de marges
@@ -108,7 +109,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
       if (execCategory !== 'ALL') {
         const catObj = categories.find(c => c.id === execCategory);
         const pCatId = p.categoryId || (p as any).category_id || '';
-        const pCatName = (p.category || '').toLowerCase();
+        const pCatName = ((p as any).category || '').toLowerCase();
         if (pCatId !== execCategory && (!catObj || pCatName !== (catObj.name || '').toLowerCase())) {
           return false;
         }
@@ -420,7 +421,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
                 className="w-full h-9 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="ALL">Tous les fournisseurs ({suppliers.length})</option>
-                {suppliers.map(s => (
+                {suppliers.map((s: any) => (
                   <option key={s.id} value={s.name}>{s.name}</option>
                 ))}
               </select>

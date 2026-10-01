@@ -21,6 +21,7 @@ import { useTransactionStore } from '../store/useTransactionStore';
 import { usePeopleStore } from '../store/usePeopleStore';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { createBackupArchive } from '../services/backupRestoreService';
+import { escapeHtml } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function Help() {
@@ -36,8 +37,8 @@ export function Help() {
   const handlePrintComplianceCertificate = () => {
     const win = window.open('', '_blank', 'width=950,height=800');
     if (!win) return;
-    const storeName = settings.name || 'Établissement Utilisateur Nexus POS Pro';
-    const nif = settings.taxNumber || 'Non renseigné';
+    const storeName = escapeHtml(settings.name || 'Établissement Utilisateur Nexus POS Pro');
+    const nif = escapeHtml(settings.taxNumber || 'Non renseigné');
     win.document.write(`
       <html>
         <head>

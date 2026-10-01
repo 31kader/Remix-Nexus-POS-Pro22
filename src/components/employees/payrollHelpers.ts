@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { CompanySettings, Employee, AdvanceRecord } from '../../types';
-import { formatSafe } from '../../lib/utils';
+import { formatSafe, escapeHtml } from '../../lib/utils';
 import { toast } from 'sonner';
 
 export interface ComputedPayrollData {
@@ -36,7 +36,7 @@ export function printPayslip(
   printWindow.document.write(`
     <html>
       <head>
-        <title>Fiche de Paie - ${empName.toUpperCase()}</title>
+        <title>Fiche de Paie - ${escapeHtml(empName.toUpperCase())}</title>
         <style>
           @page { size: A4 portrait; margin: 15mm; }
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #222; line-height: 1.5; }
@@ -63,33 +63,33 @@ export function printPayslip(
       <body>
         <div class="header">
           <h1>BULLETIN DE PAIE</h1>
-          <p>${settings.name || 'NEXUS AUTOMATION'} - SYSTEME DE POINTAGE & PAIE</p>
+          <p>${escapeHtml(settings.name || 'NEXUS AUTOMATION')} - SYSTEME DE POINTAGE & PAIE</p>
         </div>
         
         <table class="details-table">
           <tr>
             <td class="label">Bénéficiaire</td>
-            <td><strong>${empName.toUpperCase()}</strong></td>
+            <td><strong>${escapeHtml(empName.toUpperCase())}</strong></td>
             <td class="label">Période de Paie</td>
-            <td><strong>${selectedMonth}</strong></td>
+            <td><strong>${escapeHtml(selectedMonth)}</strong></td>
           </tr>
           <tr>
             <td class="label">Rôle / Poste</td>
-            <td>${computedPayroll.role.toUpperCase()}</td>
+            <td>${escapeHtml(computedPayroll.role.toUpperCase())}</td>
             <td class="label">Date d'édition</td>
             <td>${new Date().toLocaleDateString('fr-FR')}</td>
           </tr>
           <tr>
             <td class="label">Mode Contrat</td>
-            <td>${computedPayroll.salaryTypeLabel.toUpperCase()}</td>
+            <td>${escapeHtml(computedPayroll.salaryTypeLabel.toUpperCase())}</td>
             <td class="label">Devise de compte</td>
-            <td>${settings.currency.toUpperCase()}</td>
+            <td>${escapeHtml(settings.currency.toUpperCase())}</td>
           </tr>
           <tr>
             <td class="label">Mail / Contact</td>
-            <td>${computedPayroll.employee.email || 'N/A'}</td>
+            <td>${escapeHtml(computedPayroll.employee.email || 'N/A')}</td>
             <td class="label">Téléphone</td>
-            <td>${computedPayroll.employee.phone || 'N/A'}</td>
+            <td>${escapeHtml(computedPayroll.employee.phone || 'N/A')}</td>
           </tr>
         </table>
 
@@ -97,19 +97,19 @@ export function printPayslip(
           <thead>
             <tr>
               <th>Rubrique de Paie</th>
-              <th class="number" style="width: 140px;">Gains / Brut (${settings.currency})</th>
-              <th class="number" style="width: 140px;">Retenues (${settings.currency})</th>
+              <th class="number" style="width: 140px;">Gains / Brut (${escapeHtml(settings.currency)})</th>
+              <th class="number" style="width: 140px;">Retenues (${escapeHtml(settings.currency)})</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Salaire de base (${computedPayroll.salaryBasisText})</td>
+              <td>Salaire de base (${escapeHtml(computedPayroll.salaryBasisText)})</td>
               <td class="number">${computedPayroll.calculatedSalary.toFixed(2)}</td>
               <td class="number">-</td>
             </tr>
             ${bonusAmount > 0 ? `
             <tr>
-              <td>Primes & Indemnités (${bonusReason || 'Bonus Exceptionnel'})</td>
+              <td>Primes & Indemnités (${escapeHtml(bonusReason || 'Bonus Exceptionnel')})</td>
               <td class="number">${bonusAmount.toFixed(2)}</td>
               <td class="number">-</td>
             </tr>
@@ -123,14 +123,14 @@ export function printPayslip(
             ` : ''}
             ${penaltyAmount > 0 ? `
             <tr>
-              <td>Retenue sur salaire (${penaltyReason || 'Pénalité / Heures manquantes'})</td>
+              <td>Retenue sur salaire (${escapeHtml(penaltyReason || 'Pénalité / Heures manquantes')})</td>
               <td class="number">-</td>
               <td class="number">${penaltyAmount.toFixed(2)}</td>
             </tr>
             ` : ''}
             <tr class="total-row">
               <td>NET À PAYER TOTAL (VIREMENT NET)</td>
-              <td class="number" colspan="2" style="text-align: right; color: #111; font-size: 18px; font-family: monospace;">${netAmount} ${settings.currency}</td>
+              <td class="number" colspan="2" style="text-align: right; color: #111; font-size: 18px; font-family: monospace;">${netAmount} ${escapeHtml(settings.currency)}</td>
             </tr>
           </tbody>
         </table>

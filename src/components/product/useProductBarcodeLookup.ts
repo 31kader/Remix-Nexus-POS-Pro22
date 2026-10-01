@@ -49,6 +49,9 @@ export function useProductBarcodeLookup({
 
       if (cleanBc.length < 8 || name) return;
 
+      // 🛡️ Protection Anti-Trust Boundary Violation & Injection d'URL (CWE-501 / CWE-918)
+      if (!/^[a-zA-Z0-9_-]{8,30}$/.test(cleanBc)) return;
+
       // 2. Recherche externe OpenFoodFacts avec timeout strict de 1.2s
       setIsGlobalLoading(true);
       const controller = new AbortController();

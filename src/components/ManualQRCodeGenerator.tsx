@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Printer, MessageSquare } from 'lucide-react';
+import { escapeHtml } from '../lib/utils';
 
 export function ManualQRCodeGenerator() {
   const [inputValue, setInputValue] = useState('');
@@ -17,7 +18,7 @@ export function ManualQRCodeGenerator() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>QR Code - ${qrValue}</title>
+          <title>QR Code - ${escapeHtml(qrValue)}</title>
           <style>
             body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; }
             img { width: 300px; height: 300px; }
@@ -26,7 +27,7 @@ export function ManualQRCodeGenerator() {
         </head>
         <body>
           <div id="qr-container"></div>
-          <p>${qrValue}</p>
+          <p>${escapeHtml(qrValue)}</p>
           <script>
             window.onload = () => {
               const canvas = opener.document.querySelector('canvas');

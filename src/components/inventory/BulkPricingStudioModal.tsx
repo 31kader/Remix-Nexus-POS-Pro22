@@ -160,7 +160,7 @@ export const BulkPricingStudioModal: React.FC<BulkPricingStudioModalProps> = ({
         const batchSize = 200;
         for (let i = 0; i < changedProducts.length; i += batchSize) {
           const chunk = changedProducts.slice(i, i + batchSize).map(item =>
-            preparePayload('products', {
+            preparePayload('products', item.id, {
               id: item.id,
               name: item.name,
               price: item.price,

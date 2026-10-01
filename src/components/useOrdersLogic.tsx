@@ -1,10 +1,10 @@
 import { DEFAULT_PERMISSIONS } from '../constants';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase';
-import { enqueueStockAdjustment } from '../services/SyncService';
-import { localDb } from '../services/LocalDatabase';
+import { enqueueStockAdjustment, enqueueSync } from '../services/SyncService';
+import { localDb, getDeletedRecordIds } from '../services/LocalDatabase';
 import { OnlineOrder, Employee, Customer, CartItem, CompanySettings, Product } from '../types';
-import { isLocked, generateUniqueId } from '../lib/utils';
+import { isLocked, generateUniqueId, escapeHtml } from '../lib/utils';
 import { convertKeysToCamel } from '../lib/db-converters';
 import { format, isToday, subDays } from 'date-fns';
 import { toast } from 'sonner';
@@ -12,6 +12,12 @@ import { useTranslation } from '../translations';
 import { useOrderActions } from '../hooks/useOrderActions';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { set as idbSet } from 'idb-keyval';
+
+function toSupabaseId(id: any): number | string {
+  const n = Number(id);
+  return (!isNaN(n) && n > 0) ? n : id;
+}
+
 
 export interface OrdersProps {
   orders?: OnlineOrder[];
@@ -294,56 +300,92 @@ export function useOrdersLogic(props: OrdersProps) {
     clearSelection();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedOrderIds.size === 0) return;
+    const idsToDelete = Array.from(selectedOrderIds);
+    const count = idsToDelete.length;
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement ces ${count} commande(s) ?`)) return;
+
+    // 1. SUPPRESSION LOCALE OPTIMISTE IMMÉDIATE
+    const currentOrders = useTransactionStore.getState().onlineOrders || [];
+    const targetOrders = currentOrders.filter(o => selectedOrderIds.has(String(o.id)));
+    const extIds = targetOrders.map(o => o.externalOrderId).filter(Boolean) as string[];
+
+    const updatedList = (Array.isArray(currentOrders) ? currentOrders : [])
+      .filter(o => !selectedOrderIds.has(String(o.id)));
+    useTransactionStore.getState().setOnlineOrders(updatedList);
+    clearSelection();
+
+    await idbSet('nexus_online_orders_cache', updatedList).catch(() => {});
+    for (const id of idsToDelete) {
+      await localDb.delete(`onlineOrders/${id}`);
+    }
+
+    // 2. SYNCHRONISATION SUPABASE EN ARRIÈRE-PLAN
+    if (isSupabaseConfigured && navigator.onLine) {
+      try {
+        const numIds = idsToDelete.map(id => Number(id)).filter(n => !isNaN(n) && n > 0);
+        const strIds = idsToDelete.filter(id => isNaN(Number(id)) || Number(id) <= 0);
+
+        if (numIds.length > 0) {
+          await supabase.from('online_orders').delete().in('id', numIds);
+        }
+        if (strIds.length > 0) {
+          await supabase.from('online_orders').delete().in('id', strIds);
+        }
+        if (extIds.length > 0) {
+          await supabase.from('online_orders').delete().in('external_order_id', extIds).catch(() => {});
+        }
+        toast.success(`${count} commande(s) supprimée(s) avec succès.`);
+      } catch (err) {
+        console.warn('[handleBulkDelete] Supabase delete failed, queued offline:', err);
+        idsToDelete.forEach(id => enqueueSync('online_orders', id, 'DELETE', null));
+        toast.info(`${count} commande(s) supprimée(s) en local (synchro différée).`);
+      }
+    } else {
+      idsToDelete.forEach(id => enqueueSync('online_orders', id, 'DELETE', null));
+      toast.info(`${count} commande(s) supprimée(s) en local (synchro différée).`);
+    }
+  };
+
   const updateDeliveryMethod = async (order: OnlineOrder, newMethod: 'delivery' | 'pickup') => {
     const orderId = order.id;
 
-    // SUPABASE-FIRST
-    if (isSupabaseConfigured) {
-      try {
-        const { error } = await supabase
-          .from('online_orders')
-          .update({ delivery_method: newMethod })
-          .eq('id', orderId);
-        if (error) {
-          toast.error(`Erreur Supabase: ${error.message}`);
-          return;
-        }
-      } catch (e: any) {
-        toast.error(`Erreur Supabase: ${e?.message}`);
-        return;
-      }
-    }
-
+    // 1. SUPPRESSION / MISE À JOUR LOCALE IMMÉDIATE (Offline-First)
     useTransactionStore.getState().setOnlineOrders(prev => 
       (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, deliveryMethod: newMethod } : o)
     );
     await localDb.update(`onlineOrders/${orderId}`, { deliveryMethod: newMethod });
-    toast.success('Méthode de livraison mise à jour sur Supabase.');
+    const currentList = useTransactionStore.getState().onlineOrders;
+    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
+
+    // 2. SYNCHRONISATION SUPABASE
+    if (isSupabaseConfigured && navigator.onLine) {
+      try {
+        const dbId = toSupabaseId(orderId);
+        const { error } = await supabase
+          .from('online_orders')
+          .update({ delivery_method: newMethod })
+          .eq('id', dbId);
+        if (error) throw error;
+        toast.success('Méthode de livraison mise à jour sur Supabase.');
+      } catch (e: any) {
+        console.warn('[updateDeliveryMethod] Offline queued:', e);
+        enqueueSync('online_orders', String(orderId), 'UPSERT', { id: toSupabaseId(orderId), delivery_method: newMethod });
+        toast.info('Méthode de livraison mise à jour en local (synchronisation différée).');
+      }
+    } else {
+      enqueueSync('online_orders', String(orderId), 'UPSERT', { id: toSupabaseId(orderId), delivery_method: newMethod });
+      toast.info('Méthode de livraison mise à jour en local.');
+    }
   };
 
   const saveOrderItems = async (order: OnlineOrder, newItems: OnlineOrder['items']) => {
     const orderId = order.id;
     try {
-      const oldItems = Array.isArray(order.items) ? order.items : [];
       const newTotal = (newItems || []).reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0);
 
-      // 1. SUPABASE-FIRST: Update Supabase
-      if (isSupabaseConfigured) {
-        const { error } = await supabase
-          .from('online_orders')
-          .update({ 
-              items: newItems,
-              total: newTotal
-          })
-          .eq('id', orderId);
-          
-        if (error) {
-          toast.error(`Erreur Supabase lors de la modification: ${error.message}`);
-          return;
-        }
-      }
-
-      // 2. SYNC LOCAL
+      // 1. MISE À JOUR LOCALE IMMÉDIATE
       useTransactionStore.getState().setOnlineOrders(prev => 
         (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, items: newItems, total: newTotal } : o)
       );
@@ -354,7 +396,38 @@ export function useOrdersLogic(props: OrdersProps) {
 
       setIsEditingItems(false);
       setSelectedOrderId(null);
-      toast.success('Articles et total enregistrés sur Supabase.');
+
+      // 2. SYNCHRONISATION SUPABASE
+      if (isSupabaseConfigured && navigator.onLine) {
+        try {
+          const dbId = toSupabaseId(orderId);
+          const { error } = await supabase
+            .from('online_orders')
+            .update({ 
+                items: newItems,
+                total: newTotal
+            })
+            .eq('id', dbId);
+            
+          if (error) throw error;
+          toast.success('Articles et total enregistrés sur Supabase.');
+        } catch (supaErr: any) {
+          console.warn('[saveOrderItems] Offline queued:', supaErr);
+          enqueueSync('online_orders', String(orderId), 'UPSERT', { 
+            id: toSupabaseId(orderId), 
+            items: newItems, 
+            total: newTotal 
+          });
+          toast.info('Articles enregistrés en local (synchronisation en attente de réseau).');
+        }
+      } else {
+        enqueueSync('online_orders', String(orderId), 'UPSERT', { 
+          id: toSupabaseId(orderId), 
+          items: newItems, 
+          total: newTotal 
+        });
+        toast.info('Articles enregistrés en local.');
+      }
     } catch (error: any) {
       console.error('Error saving order items:', error);
       toast.error('Erreur lors de la sauvegarde des articles.');
@@ -365,35 +438,59 @@ export function useOrdersLogic(props: OrdersProps) {
     const targetId = orderIdToDelete || orderToDelete;
     if (!targetId) return;
     
-    // 1. SUPABASE-FIRST
-    if (isSupabaseConfigured) {
+    // Retrouver la commande correspondante pour externalOrderId
+    const currentOrders = useTransactionStore.getState().onlineOrders || [];
+    const targetOrder = currentOrders.find(o => String(o.id) === String(targetId));
+    const extId = targetOrder?.externalOrderId;
+
+    // 1. SUPPRESSION OPTIMISTE IMMÉDIATE (Store + LocalDatabase + IDB)
+    // Ne bloque JAMAIS l'utilisateur même en cas de coupure Internet ou de socket reset !
+    const updatedList = (Array.isArray(currentOrders) ? currentOrders : [])
+      .filter(o => String(o.id) !== String(targetId));
+    useTransactionStore.getState().setOnlineOrders(updatedList);
+
+    setSelectedOrderIds(prev => {
+      const next = new Set(prev);
+      next.delete(String(targetId));
+      return next;
+    });
+
+    setOrderToDelete(null);
+
+    await idbSet('nexus_online_orders_cache', updatedList).catch(() => {});
+    await localDb.delete(`onlineOrders/${targetId}`);
+
+    // 2. SYNCHRONISATION SUPABASE EN ARRIÈRE-PLAN
+    const dbId = toSupabaseId(targetId);
+    if (isSupabaseConfigured && navigator.onLine) {
       try {
         const { error } = await supabase
           .from('online_orders')
           .delete()
-          .eq('id', targetId);
+          .eq('id', dbId);
+
+        if (extId) {
+          await supabase.from('online_orders').delete().eq('external_order_id', extId).catch(() => {});
+        }
+
         if (error) {
-          toast.error(`Erreur Supabase lors de la suppression: ${error.message}`);
-          return;
+          console.warn('[confirmDeleteOrder] Supabase delete warning, queued offline:', error);
+          enqueueSync('online_orders', String(targetId), 'DELETE', null);
+          toast.info("Commande supprimée en local (synchronisation en attente de reconnexion).");
+        } else {
+          toast.success("Commande supprimée avec succès.");
         }
       } catch (e: any) {
-        toast.error(`Erreur Supabase: ${e?.message}`);
-        return;
+        console.warn('[confirmDeleteOrder] Network/reset error during delete, queued offline:', e);
+        enqueueSync('online_orders', String(targetId), 'DELETE', null);
+        toast.info("Commande supprimée en local (synchronisation différée).");
       }
+    } else {
+      enqueueSync('online_orders', String(targetId), 'DELETE', null);
+      toast.info("Commande supprimée en local (sera synchronisée au retour d'Internet).");
     }
-
-    // 2. SYNC LOCAL
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).filter(o => String(o.id) !== String(targetId))
-    );
-    await localDb.delete(`onlineOrders/${targetId}`);
-    
-    const currentList = useTransactionStore.getState().onlineOrders;
-    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-
-    setOrderToDelete(null);
-    toast.success("Commande supprimée sur Supabase et en local.");
   };
+
 
   const createTestOrder = async () => {
     try {
@@ -508,15 +605,15 @@ export function useOrdersLogic(props: OrdersProps) {
     const items = Array.isArray(order.items) ? order.items : [];
     const itemsHtml = items.map(item => `
       <tr>
-        <td style="padding: 8px 0;">${item.name} x${item.quantity}</td>
-        <td style="padding: 8px 0; text-align: right;">${(item.price || 0).toFixed(2)} ${settings.currency || 'DA'}</td>
+        <td style="padding: 8px 0;">${escapeHtml(item.name)} x${item.quantity}</td>
+        <td style="padding: 8px 0; text-align: right;">${(item.price || 0).toFixed(2)} ${escapeHtml(settings.currency || 'DA')}</td>
       </tr>
     `).join('');
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Commande #${order.externalOrderId || String(order.id || '').slice(0, 8)}</title>
+          <title>Commande #${escapeHtml(order.externalOrderId || String(order.id || '').slice(0, 8))}</title>
           <style>
             body { font-family: 'Courier New', Courier, monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
             .header { text-align: center; margin-bottom: 20px; }
@@ -529,18 +626,18 @@ export function useOrdersLogic(props: OrdersProps) {
         </head>
         <body>
           <div class="header">
-            ${settings.logoUrl ? `<img src="${settings.logoUrl}" class="logo" />` : ''}
-            <h2>${settings.name || 'NEXUS POS'}</h2>
+            ${settings.logoUrl ? `<img src="${escapeHtml(settings.logoUrl)}" class="logo" />` : ''}
+            <h2>${escapeHtml(settings.name || 'NEXUS POS')}</h2>
             <p>COMMANDE EN LIGNE</p>
-            <p>#${order.externalOrderId || String(order.id || '').slice(0, 8)}</p>
+            <p>#${escapeHtml(order.externalOrderId || String(order.id || '').slice(0, 8))}</p>
             <p>Type: ${order.deliveryMethod === 'delivery' ? 'LIVRAISON' : 'RETRAIT'}</p>
             <p>${format(new Date(order.timestamp || Date.now()), 'dd/MM/yyyy HH:mm')}</p>
           </div>
           <div class="divider"></div>
           <div style="font-size: 0.9em; margin-bottom: 10px;">
-            <p><strong>Client:</strong> ${order.customerName || 'N/A'}</p>
-            <p><strong>Tél:</strong> ${order.customerPhone || 'N/A'}</p>
-            <p><strong>Adresse:</strong> ${order.shippingAddress || 'N/A'}</p>
+            <p><strong>Client:</strong> ${escapeHtml(order.customerName || 'N/A')}</p>
+            <p><strong>Tél:</strong> ${escapeHtml(order.customerPhone || 'N/A')}</p>
+            <p><strong>Adresse:</strong> ${escapeHtml(order.shippingAddress || 'N/A')}</p>
           </div>
           <div class="divider"></div>
           <table>
@@ -549,10 +646,10 @@ export function useOrdersLogic(props: OrdersProps) {
           <div class="divider"></div>
           <div style="display: flex; justify-content: space-between;" class="total">
             <span>TOTAL</span>
-            <span>${(order.total || 0).toFixed(2)} ${settings.currency || 'DA'}</span>
+            <span>${(order.total || 0).toFixed(2)} ${escapeHtml(settings.currency || 'DA')}</span>
           </div>
           <div class="footer">
-            <p>${settings.footerText || 'Merci de votre confiance !'}</p>
+            <p>${escapeHtml(settings.footerText || 'Merci de votre confiance !')}</p>
           </div>
           <script>
             window.onload = () => {
@@ -611,6 +708,7 @@ export function useOrdersLogic(props: OrdersProps) {
     toggleSelectAll,
     clearSelection,
     handleBulkCancel,
-    handleBulkConfirm
+    handleBulkConfirm,
+    handleBulkDelete
   };
 }

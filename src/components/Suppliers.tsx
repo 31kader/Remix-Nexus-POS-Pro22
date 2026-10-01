@@ -101,7 +101,6 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
   const handleOpenQuickPayment = (supplier: Supplier) => {
     setViewingDetailsSupplier(supplier);
     setPaymentData({
-      supplierId: supplier.id,
       amount: Math.max(0, Number(supplier.balance) || 0),
       method: 'cash',
       note: '',

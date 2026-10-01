@@ -63,10 +63,12 @@ export function useAppPermissionsAndTheme() {
     if (isOwner) return true;
     if (!profile || !profile.role) return false;
 
-    // Renforcement de sécurité : Vérifier l'authenticité du rôle admin
+    // 🛡️ Renforcement de sécurité (CWE-863 / CWE-269) : Vérifier l'authenticité stricte du rôle admin
     if (profile.role === 'admin') {
       const isVerifiedAdmin = isOwner || (user?.email && (user.email === profile.email || user.email === settings?.email));
       if (isVerifiedAdmin) return true;
+      // Empêcher l'escalade de privilèges si le rôle admin a été manipulé côté client
+      return false;
     }
 
     return !!permissions[permission];

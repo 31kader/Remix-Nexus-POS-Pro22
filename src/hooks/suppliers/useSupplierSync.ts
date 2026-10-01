@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { supabase } from '../../supabase';
 import { convertKeysToSnake } from '../../lib/db-converters';
 import { Supplier, Product } from '../../types';
+import { isSafeExternalUrl } from '../../lib/utils';
 
 interface UseSupplierSyncParams {
   products: Product[];
@@ -13,6 +14,13 @@ export function useSupplierSync({ products }: UseSupplierSyncParams) {
 
   const handleSync = async (supplier: Supplier) => {
     if (!supplier.feedUrl) return;
+
+    // 🛡️ Protection Anti-SSRF (CWE-918)
+    if (!isSafeExternalUrl(supplier.feedUrl)) {
+      toast.error("URL de flux fournisseur non sécurisée ou interdite (SSRF bloqué).");
+      return;
+    }
+
     setIsSyncing(supplier.id);
     try {
       console.log(`Syncing from ${supplier.feedUrl} (${supplier.feedFormat})...`);

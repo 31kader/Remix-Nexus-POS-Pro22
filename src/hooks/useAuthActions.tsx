@@ -196,10 +196,17 @@ export function useAuthActions(
   };
 
   const handleLogout = async (user: any) => {
+    // 🛡️ Protection Anti-Session Fixation (CWE-384) : Purge exhaustive de tous les jetons et sessions
     removeSecureItem('nexus_active_offline_session');
     removeSecureItem('nexus_active_online_session');
-    sessionStorage.removeItem('nexus_auth_user');
-    localStorage.removeItem('nexus_auth_user');
+    try {
+      sessionStorage.removeItem('nexus_active_online_session');
+      sessionStorage.removeItem('nexus_active_offline_session');
+      sessionStorage.removeItem('nexus_auth_user');
+      localStorage.removeItem('nexus_active_online_session');
+      localStorage.removeItem('nexus_active_offline_session');
+      localStorage.removeItem('nexus_auth_user');
+    } catch (_) {}
     if (user && !(user as any).isOffline) {
       try {
         await logAction(user.uid, user.displayName || 'Utilisateur', 'Déconnexion', 'Auth', 'Utilisateur déconnecté');

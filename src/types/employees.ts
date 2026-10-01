@@ -4,7 +4,7 @@ export interface AdvanceRecord {
   amount: number; 
   date: string; 
   reason: string; 
-  status: 'pending' | 'approved' | 'paid'; 
+  status: 'pending' | 'approved' | 'paid' | 'rejected'; 
 }
 
 export interface Employee {

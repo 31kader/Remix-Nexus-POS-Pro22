@@ -3,6 +3,7 @@ import { logAction } from '../../lib/utils';
 import Papa from 'papaparse';
 import { Product, CompanySettings } from '../../types';
 import { toast } from 'sonner';
+import { readWorkbookSafely, sanitizeRowObject } from '../../lib/excelSecurity';
 
 export function useInventoryHandlers({
   products,
@@ -134,19 +135,14 @@ export function useInventoryHandlers({
       });
     } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
       try {
-        const XLSX = await import('xlsx');
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][];
+        const { rawRows } = await readWorkbookSafely(file);
         
-        if (!rawJson || rawJson.length === 0) {
+        if (!rawRows || rawRows.length === 0) {
           toast.error("Le fichier Excel est vide.");
           return;
         }
 
-        const firstRow = rawJson[0] || [];
+        const firstRow = rawRows[0] || [];
         const knownHeaderTerms = ['nom', 'name', 'désignation', 'designation', 'article', 'produit', 'product', 'prix', 'price', 'sku', 'code', 'barcode', 'stock', 'qte', 'quantite', 'categorie', 'category', 'achat', 'cout', 'cost'];
         
         const isHeaderRow = firstRow.some((col: any) => {
@@ -160,7 +156,7 @@ export function useInventoryHandlers({
 
         if (isHeaderRow) {
           headers = firstRow.map((h: any, idx: number) => (h && h.toString().trim()) || `Colonne ${idx + 1}`);
-          const dataRows = rawJson.slice(1);
+          const dataRows = rawRows.slice(1);
           dataObjects = dataRows
             .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
             .map((row: any[]) => {
@@ -168,18 +164,18 @@ export function useInventoryHandlers({
               headers.forEach((h, idx) => {
                 obj[h] = row[idx] !== undefined ? row[idx] : '';
               });
-              return obj;
+              return sanitizeRowObject(obj);
             });
         } else {
           headers = firstRow.map((_, idx: number) => `Colonne ${idx + 1}`);
-          dataObjects = rawJson
+          dataObjects = rawRows
             .filter((row: any[]) => row && row.some(cell => cell && cell.toString().trim() !== ''))
             .map((row: any[]) => {
               const obj: Record<string, any> = {};
               headers.forEach((h, idx) => {
                 obj[h] = row[idx] !== undefined ? row[idx] : '';
               });
-              return obj;
+              return sanitizeRowObject(obj);
             });
         }
 
@@ -192,7 +188,7 @@ export function useInventoryHandlers({
         }
       } catch (error: any) {
         console.error('Error parsing XLSX:', error);
-        toast.error('Erreur lors de la lecture du fichier Excel: ' + error.message);
+        toast.error('Erreur lors de la lecture du fichier Excel: ' + (error.message || 'Fichier invalide'));
       }
     }
   };

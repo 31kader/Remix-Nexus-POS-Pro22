@@ -9,7 +9,7 @@ import { Product, CompanySettings } from '../types';
 import { Button } from './ui';
 import { SafeImage } from './ui/SafeImage';
 import { printCatalog, shareCatalog, exportCatalogAsHtml, CatalogPrintSettings, SocialTarget } from '../services/printService';
-import { cn } from '../lib/utils';
+import { cn, escapeHtml } from '../lib/utils';
 import { toast } from 'sonner';
 
 interface CatalogPrinterProps {
@@ -207,7 +207,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
         .reverse();
     } else if (mode === 'low_stock') {
       picked = [...products]
-        .filter(p => (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 5))
+        .filter(p => (Number(p.stock) || 0) <= (Number(p.minStock ?? (p as any).lowStockThreshold) || 5))
         .slice(0, 18);
     }
     if (picked.length === 0) {
@@ -425,9 +425,9 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
           (p, idx) => `
           <tr>
             <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${idx + 1}</td>
-            <td style="padding:6px 8px;border:1px solid #94a3b8;font-family:monospace;font-size:11px;">${p.sku || p.barcode || '-'}</td>
-            <td style="padding:6px 8px;border:1px solid #94a3b8;font-weight:bold;font-size:11px;">${p.name}</td>
-            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${p.categoryId || '-'}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;font-family:monospace;font-size:11px;">${escapeHtml(p.sku || p.barcode || '-')}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;font-weight:bold;font-size:11px;">${escapeHtml(p.name)}</td>
+            <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${escapeHtml(p.categoryId || '-')}</td>
             <td style="padding:6px 8px;border:1px solid #94a3b8;text-align:center;font-weight:bold;font-size:11px;">
               ${blindInventoryMode ? '🔒 Masqué' : (p.stock ?? 0)}
             </td>
@@ -440,19 +440,19 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
       win.document.write(`
         <html>
           <head>
-            <title>${title}</title>
+            <title>${escapeHtml(title)}</title>
             <style>
-              @page { size: A4 ${orientation}; margin: 12mm; }
+              @page { size: A4 ${orientation === 'landscape' ? 'landscape' : 'portrait'}; margin: 12mm; }
               body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; }
               table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-              th { background: ${themeColor}; color: white; padding: 8px; font-size: 10px; text-transform: uppercase; border: 1px solid ${themeColor}; }
+              th { background: ${escapeHtml(themeColor)}; color: white; padding: 8px; font-size: 10px; text-transform: uppercase; border: 1px solid ${escapeHtml(themeColor)}; }
             </style>
           </head>
           <body>
-            <div style="border-bottom:3px solid ${themeColor};padding-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">
+            <div style="border-bottom:3px solid ${escapeHtml(themeColor)};padding-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;">
               <div>
-                <h2 style="margin:0;color:${themeColor};">${title}</h2>
-                <p style="margin:3px 0 0;font-size:12px;color:#475569;">${subtitle}</p>
+                <h2 style="margin:0;color:${escapeHtml(themeColor)};">${escapeHtml(title)}</h2>
+                <p style="margin:3px 0 0;font-size:12px;color:#475569;">${escapeHtml(subtitle)}</p>
               </div>
               <div style="text-align:right;font-size:11px;">
                 <div>Date : <strong>${new Date().toLocaleDateString('fr-FR')}</strong></div>
@@ -1350,7 +1350,7 @@ export function CatalogPrinter({ products, settings, initialSelectedProductIds =
                             </td>
                             <td className="p-1.5 font-mono text-slate-600">{p.sku || p.barcode || p.id.slice(0, 8)}</td>
                             <td className="p-1.5 font-bold text-slate-900">{p.name}</td>
-                            <td className="p-1.5 text-slate-500">{p.category || 'Général'}</td>
+                            <td className="p-1.5 text-slate-500">{p.categoryId || (p as any).category || 'Général'}</td>
                             <td className="p-1.5 text-center font-black text-slate-800">{p.stock} {p.unit || 'u'}</td>
                             <td className="p-1.5 text-center">
                               <div className="h-4 border-b border-dashed border-slate-400 mx-auto w-16" />

@@ -195,7 +195,9 @@ function createWindow() {
         webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+      sandbox: true,
+      webviewTag: false,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js'),
     },
     autoHideMenuBar: true,
@@ -257,11 +259,40 @@ function createWindow() {
     }
   });
 
+  // 🛡️ Protection Sandbox & Navigation : Restreindre les navigations internes aux origines autorisées
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    try {
+      const target = new URL(navigationUrl);
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173'
+      ];
+      if (!allowedOrigins.includes(target.origin)) {
+        event.preventDefault();
+        logError(`[Security] Navigation non autorisée bloquée vers : ${navigationUrl}`);
+      }
+    } catch (_) {
+      event.preventDefault();
+    }
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.includes('/auth/v1/authorize') || url.includes('accounts.google.com') || url.includes('supabase.co/auth')) {
       return { action: 'allow' };
     }
-    shell.openExternal(url);
+    // 🛡️ Protection Anti-OS Command Injection (CWE-78) : Valider les protocoles autorisés avant shell.openExternal
+    try {
+      const parsed = new URL(url);
+      if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+        shell.openExternal(url);
+      } else {
+        logError(`[Security] shell.openExternal a bloqué un protocole non autorisé : ${parsed.protocol}`);
+      }
+    } catch (_) {
+      logError(`[Security] shell.openExternal a bloqué une URL invalide : ${url}`);
+    }
     return { action: 'deny' };
   });
 
@@ -331,6 +362,8 @@ ipcMain.handle('print-to-pdf', async (event, htmlContent, fileName) => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
+      webviewTag: false,
     }
   });
 
@@ -369,9 +402,25 @@ ipcMain.handle('print-to-pdf', async (event, htmlContent, fileName) => {
   }
 });
 
+// 🛡️ Protection Anti-Injection SQL (CWE-89) : Valider les requêtes passées via IPC
+function validateSqlStatement(sql) {
+  if (typeof sql !== 'string' || !sql.trim()) {
+    throw new Error('Invalid SQL statement');
+  }
+  const norm = sql.trim().toLowerCase();
+  // Bloquer les commandes d'évasion et les injections multi-requêtes
+  if (norm.includes(';') && norm.indexOf(';') !== norm.length - 1) {
+    throw new Error('Multi-statement execution forbidden');
+  }
+  if (norm.startsWith('attach ') || norm.startsWith('detach ') || norm.includes('pragma writable_schema')) {
+    throw new Error('Dangerous SQLite command forbidden');
+  }
+}
+
 // Handler IPC pour exécuter des requêtes d'écriture
 ipcMain.handle('sqlite-execute', async (event, sql, params = []) => {
   if (!db) throw new Error('Database not initialized');
+  validateSqlStatement(sql);
   try {
     const stmt = db.prepare(sql);
     const result = stmt.run(...params);
@@ -385,6 +434,7 @@ ipcMain.handle('sqlite-execute', async (event, sql, params = []) => {
 // Handler IPC pour exécuter des requêtes de lecture
 ipcMain.handle('sqlite-query', async (event, sql, params = []) => {
   if (!db) throw new Error('Database not initialized');
+  validateSqlStatement(sql);
   try {
     const stmt = db.prepare(sql);
     const rows = stmt.all(...params);
@@ -398,6 +448,10 @@ ipcMain.handle('sqlite-query', async (event, sql, params = []) => {
 // Handler IPC pour exécuter des transactions en lot
 ipcMain.handle('sqlite-batch', async (event, queries) => {
   if (!db) throw new Error('Database not initialized');
+  if (!Array.isArray(queries)) throw new Error('Invalid queries list');
+  for (const q of queries) {
+    if (q && q.sql) validateSqlStatement(q.sql);
+  }
   const executeBatch = db.transaction((queriesList) => {
     const results = [];
     for (const q of queriesList) {
@@ -429,8 +483,16 @@ ipcMain.handle('open-cash-drawer', async () => {
 
 // Handler IPC pour envoyer des octets bruts ESC/POS à l'imprimante thermique
 ipcMain.handle('print-raw-escpos', async (event, bytes) => {
+  // 🛡️ Protection Anti-Buffer Overflow & DoS (CWE-120) : Validation stricte des limites mémoire
+  if (!Array.isArray(bytes) && !Buffer.isBuffer(bytes)) {
+    throw new Error('Invalid payload format: expected byte array or buffer');
+  }
+  const length = Array.isArray(bytes) ? bytes.length : bytes.length;
+  if (length > 2 * 1024 * 1024) { // Plafond maximal de 2 Mo par ticket
+    throw new Error('Payload exceeds maximum allowed size (2MB)');
+  }
   try {
-    log(`[Hardware] Envoi flux brut ESC/POS (${Array.isArray(bytes) ? bytes.length : 0} octets)`);
+    log(`[Hardware] Envoi flux brut ESC/POS (${length} octets)`);
     return { success: true };
   } catch (error) {
     logError('Erreur envoi flux brut ESC/POS', error);

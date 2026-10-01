@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import bcrypt from 'bcryptjs';
-import * as XLSX from 'xlsx';
+import { exportToExcelSafely, readExcelObjectsSafely, sanitizeRowObject } from '../lib/excelSecurity';
 import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { usePeopleStore } from '../store/usePeopleStore';
@@ -475,7 +475,7 @@ export function useCustomersLogic(props: CustomersProps) {
   };
 
   // Excel Export
-  const exportCustomersToExcel = () => {
+  const exportCustomersToExcel = async () => {
     if (!customers || customers.length === 0) {
       toast.error("Aucun client à exporter.");
       return;
@@ -501,25 +501,24 @@ export function useCustomersLogic(props: CustomersProps) {
       "Notes": c.notes || ''
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Clients");
-
     const dateStr = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `Clients_${settings.name ? settings.name.replace(/\s+/g, '_') : 'NexusPOS'}_${dateStr}.xlsx`);
-    toast.success(`${customers.length} clients exportés avec succès !`);
+    const fileName = `Clients_${settings.name ? settings.name.replace(/\s+/g, '_') : 'NexusPOS'}_${dateStr}`;
+    try {
+      await exportToExcelSafely(exportRows, fileName, "Clients");
+      toast.success(`${customers.length} clients exportés avec succès !`);
+    } catch (err: any) {
+      console.error("Erreur lors de l'export des clients :", err);
+      toast.error("Échec de l'exportation Excel : " + (err.message || "Erreur"));
+    }
   };
 
-  // Excel / CSV Import
+  // Excel / CSV Import sécurisé
   const importCustomersFromExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rawRows: any[] = XLSX.utils.sheet_to_json(firstSheet);
+      const rawRows = await readExcelObjectsSafely<Record<string, any>>(file);
 
       if (!rawRows || rawRows.length === 0) {
         toast.error("Le fichier Excel est vide.");
@@ -529,7 +528,8 @@ export function useCustomersLogic(props: CustomersProps) {
       let count = 0;
       const nowIso = new Date().toISOString();
 
-      const newCustomers: Customer[] = rawRows.map(row => {
+      const newCustomers: Customer[] = rawRows.map(rawRow => {
+        const row = sanitizeRowObject(rawRow);
         const name = row["Nom Complet"] || row["Nom"] || row["name"] || row["Client"] || '';
         const phone = String(row["Téléphone"] || row["Tel"] || row["phone"] || '');
         const email = String(row["Email"] || row["email"] || '').toLowerCase().trim();

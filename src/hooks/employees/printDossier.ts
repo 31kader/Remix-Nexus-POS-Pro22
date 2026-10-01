@@ -1,4 +1,5 @@
 import { Employee, CompanySettings } from '../../types';
+import { escapeHtml } from '../../lib/utils';
 import { toast } from 'sonner';
 
 export function handlePrintDossier(employee: Employee, settings: CompanySettings) {
@@ -33,10 +34,16 @@ La base de rémunération brute est fixée à : ${
 
 Fait de manière numérique de plein accord des deux parties.`;
 
+  const safeEmpName = escapeHtml(String(employee.name || 'SALARIÉ').toUpperCase());
+  const safeContractText = escapeHtml(contractText);
+  const safeSigUrl = employee.digitalSignatureUrl ? escapeHtml(employee.digitalSignatureUrl) : null;
+  const safeRectoUrl = employee.idCardRectoUrl ? escapeHtml(employee.idCardRectoUrl) : null;
+  const safeVersoUrl = employee.idCardVersoUrl ? escapeHtml(employee.idCardVersoUrl) : null;
+
   printWindow.document.write(`
     <html>
       <head>
-        <title>Dossier Employé - ${String(employee.name || 'SALARIÉ').toUpperCase()}</title>
+        <title>Dossier Employé - ${safeEmpName}</title>
         <style>
           @page { size: A4 portrait; margin: 15mm; }
           body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 10px; color: #111; line-height: 1.6; }
@@ -55,10 +62,10 @@ Fait de manière numérique de plein accord des deux parties.`;
       </head>
       <body>
         <div class="badge">Dossier Numérique Certifié</div>
-        <h1 class="header-title">Nexus Staff dossier : ${String(employee.name || 'SALARIÉ').toUpperCase()}</h1>
+        <h1 class="header-title">Nexus Staff dossier : ${safeEmpName}</h1>
         
         <div class="section-title">Contrat de Travail Numérique</div>
-        <div class="contract-paper">${contractText}</div>
+        <div class="contract-paper">${safeContractText}</div>
 
         <div class="sig-grid">
           <div class="sig-box">
@@ -67,7 +74,7 @@ Fait de manière numérique de plein accord des deux parties.`;
           </div>
           <div class="sig-box">
             <p>Signature du Salarié</p>
-            ${employee.digitalSignatureUrl ? `<img class="sig-img" src="${employee.digitalSignatureUrl}" />` : '<div style="height: 40px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 10px;">[NON SIGNÉ ENCORE]</div>'}
+            ${safeSigUrl ? `<img class="sig-img" src="${safeSigUrl}" />` : '<div style="height: 40px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 10px;">[NON SIGNÉ ENCORE]</div>'}
           </div>
         </div>
 
@@ -75,11 +82,11 @@ Fait de manière numérique de plein accord des deux parties.`;
         <div class="grid-docs">
           <div class="doc-box">
             <p>Pièce d'Identité (Recto)</p>
-            ${employee.idCardRectoUrl ? `<img class="doc-img" src="${employee.idCardRectoUrl}" />` : '<div style="height: 120px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #999; border: 1px dashed #ccc; border-radius: 6px;">Image Non Fournie</div>'}
+            ${safeRectoUrl ? `<img class="doc-img" src="${safeRectoUrl}" />` : '<div style="height: 120px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #999; border: 1px dashed #ccc; border-radius: 6px;">Image Non Fournie</div>'}
           </div>
           <div class="doc-box">
             <p>Pièce d'Identité (Verso)</p>
-            ${employee.idCardVersoUrl ? `<img class="doc-img" src="${employee.idCardVersoUrl}" />` : '<div style="height: 120px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #999; border: 1px dashed #ccc; border-radius: 6px;">Image Non Fournie</div>'}
+            ${safeVersoUrl ? `<img class="doc-img" src="${safeVersoUrl}" />` : '<div style="height: 120px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #999; border: 1px dashed #ccc; border-radius: 6px;">Image Non Fournie</div>'}
           </div>
         </div>
         

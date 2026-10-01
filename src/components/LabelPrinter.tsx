@@ -16,6 +16,7 @@ import {
   clearRemoteLabelQueue,
   subscribeToRemoteLabelQueue
 } from '../services/remoteLabelQueueService';
+import { escapeHtml } from '../lib/utils';
 
 export * from './label-printer/types';
 
@@ -248,10 +249,10 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
                 ? `<span class="old-price">${Number(item.originalPrice).toFixed(0)}</span>`
                 : '';
             return `<div class="sticker">
-              ${stateContext.customText ? `<div class="custom-line">${stateContext.customText}</div>` : ''}
-              <div class="prod-name">${item.name}</div>
-              <div class="price-line">${oldPriceHtml}<span class="price">${Number(item.price).toFixed(2)} ${currency}</span></div>
-              <div class="code-line">*${code}*</div>
+              ${stateContext.customText ? `<div class="custom-line">${escapeHtml(stateContext.customText)}</div>` : ''}
+              <div class="prod-name">${escapeHtml(item.name)}</div>
+              <div class="price-line">${oldPriceHtml}<span class="price">${Number(item.price).toFixed(2)} ${escapeHtml(currency || '')}</span></div>
+              <div class="code-line">*${escapeHtml(code)}*</div>
             </div>`;
           })
           .join('');
@@ -266,7 +267,7 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>Planche Étiquettes A4 — ${sheet.label}</title>
+          <title>Planche Étiquettes A4 — ${escapeHtml(sheet.label)}</title>
           <style>
             @page { size: A4 portrait; margin: 4mm; }
             body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #fff; }

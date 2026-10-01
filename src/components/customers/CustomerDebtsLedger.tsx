@@ -9,7 +9,7 @@ import { Customer, Transaction, CompanySettings } from '../../types';
 import { usePeopleStore } from '../../store/usePeopleStore';
 import { useCoreStore } from '../../store/useCoreStore';
 import { localDb } from '../../services/LocalDatabase';
-import { formatSafe } from '../../lib/utils';
+import { formatSafe, escapeHtml } from '../../lib/utils';
 import { toast } from 'sonner';
 
 interface CustomerDebtsLedgerProps {
@@ -157,7 +157,7 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
     win.document.write(`
       <html>
         <head>
-          <title>Relevé de Dette - ${c.name}</title>
+          <title>Relevé de Dette - ${escapeHtml(c.name)}</title>
           <style>
             body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 30px; color: #111; line-height: 1.5; }
             .header { border-bottom: 2px solid #222; padding-bottom: 15px; margin-bottom: 25px; }
@@ -169,21 +169,21 @@ export const CustomerDebtsLedger: React.FC<CustomerDebtsLedgerProps> = ({
         </head>
         <body>
           <div class="header">
-            <h2>${settings.name || 'NEXUS POS PRO'}</h2>
-            <p style="margin: 0; font-size: 12px; color: #555;">Tél : ${settings.phone || 'Non renseigné'} | ${settings.address || ''}</p>
+            <h2>${escapeHtml(settings.name || 'NEXUS POS PRO')}</h2>
+            <p style="margin: 0; font-size: 12px; color: #555;">Tél : ${escapeHtml(settings.phone || 'Non renseigné')} | ${escapeHtml(settings.address || '')}</p>
           </div>
 
           <div class="title">RELEVÉ DE DETTE & CRÉDIT CLIENT</div>
           <p style="font-size: 12px; color: #666;">Date d'édition : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
 
           <div class="info-box">
-            <p style="margin: 4px 0;"><strong>Client :</strong> ${c.name}</p>
-            <p style="margin: 4px 0;"><strong>Téléphone :</strong> ${c.phone || 'Non renseigné'}</p>
-            ${c.address ? `<p style="margin: 4px 0;"><strong>Adresse :</strong> ${c.address}</p>` : ''}
+            <p style="margin: 4px 0;"><strong>Client :</strong> ${escapeHtml(c.name)}</p>
+            <p style="margin: 4px 0;"><strong>Téléphone :</strong> ${escapeHtml(c.phone || 'Non renseigné')}</p>
+            ${c.address ? `<p style="margin: 4px 0;"><strong>Adresse :</strong> ${escapeHtml(c.address)}</p>` : ''}
           </div>
 
           <div class="total-box">
-            SOLDE RESTANT DÛ : ${debt} ${settings.currency || 'DA'}
+            SOLDE RESTANT DÛ : ${debt} ${escapeHtml(settings.currency || 'DA')}
           </div>
 
           <div class="footer">

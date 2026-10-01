@@ -6,6 +6,7 @@ import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
 import { setLocalState, saveStateToStorage } from '../../lib/local-db';
+import { getDeletedRecordIds } from '../../services/LocalDatabase';
 import { getTerminalId } from '../../services/terminalService';
 import { withNetworkTimeout } from '../../services/networkErrorHandler';
 
@@ -48,10 +49,12 @@ export function useFastChangingData({
       try {
         const cachedOrders = await idbGet<OnlineOrder[]>('nexus_online_orders_cache');
         const cachedShifts = await idbGet<CashShift[]>('nexus_cash_shifts_cache');
+        const deletedOrderIds = getDeletedRecordIds('online_orders');
         
         if (isSubscribed) {
           if (cachedOrders && cachedOrders.length > 0) {
-            setOnlineOrders(cachedOrders);
+            const filteredOrders = cachedOrders.filter(o => o && o.id && !deletedOrderIds.has(String(o.id)));
+            setOnlineOrders(filteredOrders);
           }
           if (cachedShifts && cachedShifts.length > 0) {
             setShifts(cachedShifts);
@@ -118,12 +121,15 @@ export function useFastChangingData({
         
         const onlineDataRaw = (onlineRes as any)?.data;
         if (Array.isArray(onlineDataRaw)) {
-          const onlineData = onlineDataRaw.map((item: any) => {
-            if (item.items && typeof item.items === 'string') {
-              try { item.items = JSON.parse(item.items); } catch(e) {}
-            }
-            return convertKeysToCamel(item) as OnlineOrder;
-          });
+          const deletedOrderIds = getDeletedRecordIds('online_orders');
+          const onlineData = onlineDataRaw
+            .filter((item: any) => item && item.id && !deletedOrderIds.has(String(item.id)))
+            .map((item: any) => {
+              if (item.items && typeof item.items === 'string') {
+                try { item.items = JSON.parse(item.items); } catch(e) {}
+              }
+              return convertKeysToCamel(item) as OnlineOrder;
+            });
           setOnlineOrders(onlineData);
           idbSet('nexus_online_orders_cache', onlineData).catch(err => console.warn('[IDB Error]', err));
         }

@@ -395,10 +395,12 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             useTransactionStore.getState().setOnlineOrders((prev: any[]) => {
               const raw = typeof ordersOrUpdater === 'function' ? ordersOrUpdater(prev || []) : ordersOrUpdater;
               const arr = Array.isArray(raw) ? raw : [];
+              const deletedIds = getDeletedRecordIds('online_orders');
+              const filtered = arr.filter(o => o && o.id && !deletedIds.has(String(o.id)));
               const map: Record<string, any> = {};
-              arr.forEach(o => { if (o && o.id) map[o.id] = o; });
+              filtered.forEach(o => { if (o && o.id) map[o.id] = o; });
               localDb.insertBatch('onlineOrders', map).catch(() => {});
-              return arr;
+              return filtered;
             });
           }, 
           limit: 500, 

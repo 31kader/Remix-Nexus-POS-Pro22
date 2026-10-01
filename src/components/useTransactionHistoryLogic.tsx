@@ -1,7 +1,7 @@
 import React, { useState, useMemo, memo, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { Product, Category, Brand, StockAdjustment, CompanySettings, SupplierSync, Supplier, Purchase, Transaction, OnlineOrder, Employee, Customer, CartItem, ProductReturn, RolePermissions, UserProfile } from '../types';
-import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked } from '../lib/utils';
+import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, formatSafe, exportToCSV, generateUniqueId, isLocked, escapeHtml } from '../lib/utils';
 import { convertKeysToCamel } from '../lib/db-converters';
 import { printReceipt } from '../services/printService';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, isYesterday, subDays } from 'date-fns';
@@ -385,10 +385,10 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
 
     const itemsHtml = (t.items || []).map(item => `
       <tr>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #eee;">${item.name || 'Article'}</td>
+        <td style="padding: 12px 8px; border-bottom: 1px solid #eee;">${escapeHtml(item.name || 'Article')}</td>
         <td style="padding: 12px 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity || 0}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #eee; text-align: right;">${Number(item.price || 0).toFixed(2)} ${settings.currency}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #eee; text-align: right;">${(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)} ${settings.currency}</td>
+        <td style="padding: 12px 8px; border-bottom: 1px solid #eee; text-align: right;">${Number(item.price || 0).toFixed(2)} ${escapeHtml(settings.currency)}</td>
+        <td style="padding: 12px 8px; border-bottom: 1px solid #eee; text-align: right;">${(Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)} ${escapeHtml(settings.currency)}</td>
       </tr>
     `).join('');
 
@@ -398,7 +398,7 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Facture #${String(t.id || '').slice(-8).toUpperCase()}</title>
+          <title>Facture #${escapeHtml(String(t.id || '').slice(-8).toUpperCase())}</title>
           <style>
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #334155; line-height: 1.5; padding: 40px; }
             .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
@@ -418,25 +418,25 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
         <body>
           <div class="header">
             <div class="company-info">
-              <h1>${settings.name}</h1>
-              <p>${settings.address || ''}<br>${settings.phone || ''}<br>${settings.email || ''}</p>
+              <h1>${escapeHtml(settings.name)}</h1>
+              <p>${escapeHtml(settings.address || '')}<br>${escapeHtml(settings.phone || '')}<br>${escapeHtml(settings.email || '')}</p>
             </div>
             <div class="invoice-details">
               <h2>Facture ${t.status === 'returned' ? '(RETOURNÉ)' : t.status === 'partially_returned' ? '(RETOUR PARTIEL)' : ''}</h2>
-              <p>#${String(t.id || '').slice(-8).toUpperCase()}<br>Date: ${formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
+              <p>#${escapeHtml(String(t.id || '').slice(-8).toUpperCase())}<br>Date: ${formatSafe(t.timestamp, 'dd/MM/yyyy HH:mm')}</p>
             </div>
           </div>
 
           <div class="section">
             <div>
               <div class="section-title">Facturé à</div>
-              <p><strong>${t.customerName || 'Client de passage'}</strong></p>
+              <p><strong>${escapeHtml(t.customerName || 'Client de passage')}</strong></p>
             </div>
             <div style="text-align: right;">
               <div class="section-title">Mode de Paiement</div>
-              <p>${String(t.paymentMethod || 'Espèces').toUpperCase()}</p>
+              <p>${escapeHtml(String(t.paymentMethod || 'Espèces').toUpperCase())}</p>
               <div class="section-title" style="margin-top: 10px;">Type de Commande</div>
-              <p>${String(t.deliveryMethod || 'in_store').toUpperCase().replace('_', ' ')}</p>
+              <p>${escapeHtml(String(t.deliveryMethod || 'in_store').toUpperCase().replace('_', ' '))}</p>
             </div>
           </div>
 
@@ -503,9 +503,9 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
             ${t.status === 'returned' ? 'Retourné' : t.status === 'partially_returned' ? 'Retour Partiel' : 'Payé'}
           </span>
         </td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${t.deliveryMethod || 'in_store'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${t.paymentMethod}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${Number(t.total || 0).toFixed(2)} ${settings.currency}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${escapeHtml(t.deliveryMethod || 'in_store')}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${escapeHtml(t.paymentMethod)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${Number(t.total || 0).toFixed(2)} ${escapeHtml(settings.currency)}</td>
       </tr>
     `).join('');
 
@@ -522,7 +522,7 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
           </style>
         </head>
         <body>
-          <h1>Rapport de Transactions - ${dateFilter === 'all' ? 'Toutes' : dateFilter}</h1>
+          <h1>Rapport de Transactions - ${escapeHtml(dateFilter === 'all' ? 'Toutes' : dateFilter)}</h1>
           <p>Généré le: ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
           <table>
             <thead>
@@ -540,7 +540,7 @@ export function useTransactionHistoryLogic(props: TransactionHistoryProps) {
             </tbody>
           </table>
           <div class="summary">
-            Total Période: ${totalPeriod.toFixed(2)} ${settings.currency}
+            Total Période: ${totalPeriod.toFixed(2)} ${escapeHtml(settings.currency)}
           </div>
           <script>
             window.onload = () => {

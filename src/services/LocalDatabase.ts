@@ -21,13 +21,46 @@ import {
 
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { supabase, isSupabaseConfigured } from '../supabase';
+import { setSecureItemAsync, getSecureItemAsync, removeSecureItem } from '../lib/security';
+import { SENSITIVE_STORAGE_TABLES } from '../lib/local-db';
 
 // Tables requiring zero-latency immediate IndexedDB flush (no 150ms debounce)
 const CRITICAL_IMMEDIATE_TABLES = new Set([
   'transactions', 'returns', 'shifts', 'cash_shifts', 'stock_adjustments',
   'damaged_items', 'purchases', 'supplier_payments', 'supplierPayments',
-  'expenses', 'goods_receipt_notes', 'goodsReceiptNotes'
+  'expenses', 'goods_receipt_notes', 'goodsReceiptNotes', 'users', 'employees'
 ]);
+
+export { SENSITIVE_STORAGE_TABLES };
+
+/**
+ * Détermine si une table est classée hautement sensible (chiffrée au repos dans IndexedDB)
+ */
+export function isSensitiveTable(table: string): boolean {
+  const norm = TABLE_NAME_MAPPINGS[table] || table;
+  return SENSITIVE_STORAGE_TABLES.has(norm);
+}
+
+/**
+ * Stocke une valeur sensible de manière asynchrone chiffrée avec AES-256-GCM
+ */
+export async function storeSensitiveItem(key: string, value: any): Promise<void> {
+  await setSecureItemAsync(key, value);
+}
+
+/**
+ * Récupère une valeur sensible chiffrée avec AES-256-GCM / rétrocompatible
+ */
+export async function getSensitiveItem<T = any>(key: string): Promise<T | null> {
+  return await getSecureItemAsync<T>(key);
+}
+
+/**
+ * Supprime une valeur sensible du stockage
+ */
+export function removeSensitiveItem(key: string): void {
+  removeSecureItem(key);
+}
 
 const DELETED_IDS_STORAGE_KEY = 'nexus_deleted_records_v1';
 

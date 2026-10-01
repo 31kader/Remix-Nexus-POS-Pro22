@@ -1,5 +1,6 @@
 import { Product, Supplier } from '../../types';
 import { matchProductInCatalog, normalizeForMatching } from './invoiceParser';
+import { readWorkbookSafely, sanitizeRowObject } from '../../lib/excelSecurity';
 
 /**
  * ═══════════════════════════════════════════════════════════════════
@@ -119,17 +120,16 @@ export const parseCSV = (text: string): string[][] => {
 
 // ─── Excel Parser ───
 export const parseExcel = async (file: File): Promise<string[][]> => {
-  const XLSX = await import('xlsx');
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  
-  // Use first sheet
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  
-  // Convert to array of arrays
-  const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-  return data.map(row => row.map((cell: any) => String(cell ?? '')));
+  const { rawRows } = await readWorkbookSafely(file);
+  return rawRows.map(row => {
+    return (row || []).map((cell: any) => {
+      if (cell !== null && typeof cell === 'object') {
+        const clean = sanitizeRowObject(cell);
+        return String(clean ?? '');
+      }
+      return String(cell ?? '');
+    });
+  });
 };
 
 // ─── PDF Text Extractor (digital PDFs) ───

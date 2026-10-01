@@ -3,10 +3,12 @@ import bcrypt from 'bcryptjs';
 import { Browser } from '@capacitor/browser';
 import {
   generateLocalId,
+  convertKeysToCamel
 } from '../lib/db-converters';
 import {
   getLocalValue,
 } from '../lib/local-db';
+import { localDb } from './LocalDatabase';
 import {
   initAndSyncSupabase,
 } from './SupabaseSync';
@@ -175,7 +177,6 @@ export const signInWithPopup = async (...args: any[]) => {
   throw new Error("Connexion par Google impossible : Supabase n'est pas configuré. Veuillez utiliser l'e-mail et le mot de passe.");
 };
 
-import { localDb } from './LocalDatabase';
 import { checkIsOwner, PRIMARY_OWNER_UID } from '../config/ownerConfig';
 
 const ensureOwnerExists = async (cleanEmail: string, password: string): Promise<any> => {
@@ -208,34 +209,75 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
   const cleanEmail = email.toLowerCase().trim();
   await ensureOwnerExists(cleanEmail, password);
 
-  const findLocalUser = (identifier: string) => {
-    const cleanId = identifier.toLowerCase().trim();
+  const matchUserInList = (list: any[], identifier: string) => {
+    if (!Array.isArray(list)) return null;
+    const cleanId = (identifier || '').toLowerCase().trim();
     const cleanIdNoDomain = cleanId.endsWith('@nexus-pos.internal')
       ? cleanId.replace('@nexus-pos.internal', '')
-      : cleanId.split('@')[0];
+      : (cleanId.includes('@') ? cleanId.split('@')[0] : cleanId);
+    const cleanDigits = cleanIdNoDomain.replace(/\D/g, '');
 
+    return list.find((u: any) => {
+      if (!u) return false;
+      const uEmail = (u.email || '').toLowerCase().trim();
+      const uEmailNoDomain = uEmail.endsWith('@nexus-pos.internal')
+        ? uEmail.replace('@nexus-pos.internal', '')
+        : (uEmail.includes('@') ? uEmail.split('@')[0] : uEmail);
+      const uPhone = (u.phone || '').replace(/\D/g, '');
+      const uName = (u.displayName || u.display_name || u.name || '').toLowerCase().trim();
+      const uId = (u.id || u.uid || '').toLowerCase().trim();
+
+      return uEmail === cleanId ||
+             (cleanIdNoDomain && uEmail === cleanIdNoDomain) ||
+             (cleanIdNoDomain && uEmailNoDomain === cleanIdNoDomain) ||
+             (cleanDigits && uPhone && (uPhone === cleanDigits || uPhone.endsWith(cleanDigits) || cleanDigits.endsWith(uPhone))) ||
+             (cleanIdNoDomain && uName === cleanIdNoDomain) ||
+             uName === cleanId ||
+             uId === cleanId ||
+             uId === cleanIdNoDomain;
+    }) || null;
+  };
+
+  const findLocalUser = (identifier: string) => {
     const lookup = (table: string) => {
       const data = getLocalValue(table) || {};
-      return Object.values(data).find((u: any) => {
-        const uEmail = (u.email || '').toLowerCase().trim();
-        const uEmailNoDomain = uEmail.endsWith('@nexus-pos.internal')
-          ? uEmail.replace('@nexus-pos.internal', '')
-          : uEmail.split('@')[0];
-        const uPhone = (u.phone || '').replace(/\s+/g, '');
-        const uName = (u.displayName || u.name || '').toLowerCase().trim();
-        const uId = (u.id || u.uid || '').toLowerCase().trim();
-
-        return uEmail === cleanId ||
-               uEmailNoDomain === cleanIdNoDomain ||
-               uPhone === cleanId.replace(/\s+/g, '') ||
-               uName === cleanIdNoDomain ||
-               uName === cleanId ||
-               uId === cleanIdNoDomain;
-      });
+      const list = Object.values(data);
+      return matchUserInList(list, identifier);
     };
 
-    // Restriction de sécurité : Seules les tables d'utilisateurs système (users, employees) peuvent se connecter
     return lookup('users') || lookup('employees');
+  };
+
+  const findRemoteUser = async (identifier: string) => {
+    if (!isSupabaseConfigured || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      return null;
+    }
+    try {
+      // 1. Chercher dans la table public.users de Supabase
+      const { data: dbUsers, error: uErr } = await supabase.from('users').select('*');
+      if (!uErr && Array.isArray(dbUsers) && dbUsers.length > 0) {
+        for (const u of dbUsers) {
+          const camel = convertKeysToCamel(u);
+          localDb.update(`users/${camel.id || camel.uid}`, camel);
+        }
+        const matched = matchUserInList(dbUsers.map(convertKeysToCamel), identifier);
+        if (matched) return matched;
+      }
+
+      // 2. Chercher dans la table public.employees de Supabase
+      const { data: dbEmp, error: eErr } = await supabase.from('employees').select('*');
+      if (!eErr && Array.isArray(dbEmp) && dbEmp.length > 0) {
+        for (const e of dbEmp) {
+          const camel = convertKeysToCamel(e);
+          localDb.update(`employees/${camel.id}`, camel);
+        }
+        const matched = matchUserInList(dbEmp.map(convertKeysToCamel), identifier);
+        if (matched) return matched;
+      }
+    } catch (err) {
+      console.warn('[AuthService] findRemoteUser lookup error:', err);
+    }
+    return null;
   };
 
   if (isSupabaseConfigured) {
@@ -260,51 +302,58 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       const errMsg = err?.message || '';
       const isNetwork = errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network') || err?.name === 'TypeError';
       
-      if (isNetwork) {
-        const foundUser: any = findLocalUser(cleanEmail);
-        if (foundUser) {
-          if (foundUser.status === 'inactive') {
-            throw new Error("Ce compte a été désactivé");
-          }
-          const hash = foundUser.passwordHash || foundUser.password_hash;
-          if (hash && bcrypt.compareSync(password, hash)) {
-            const user = { uid: foundUser.uid || foundUser.id, email: foundUser.email, displayName: foundUser.displayName || foundUser.name };
-            auth.trigger(user);
-            return { user };
-          }
+      let foundUser: any = findLocalUser(cleanEmail);
+      if (!foundUser && !isNetwork) {
+        foundUser = await findRemoteUser(cleanEmail);
+      }
+
+      if (foundUser) {
+        if (foundUser.status === 'inactive') {
+          throw new Error("Ce compte a été désactivé");
         }
+        const hash = foundUser.passwordHash || foundUser.password_hash;
+        if (hash && bcrypt.compareSync(password, hash)) {
+          const user = { 
+            uid: foundUser.uid || foundUser.id, 
+            email: foundUser.email || cleanEmail, 
+            displayName: foundUser.displayName || foundUser.name || 'Utilisateur',
+            role: foundUser.role || 'cashier'
+          };
+          auth.trigger(user);
+          return { user };
+        }
+        throw new Error("Mot de passe ou code PIN incorrect");
+      }
+
+      if (isNetwork) {
         const fetchErr = new Error("Failed to fetch");
         (fetchErr as any).code = 'auth/network-request-failed';
         throw fetchErr;
       }
 
       if (errMsg === 'Invalid login credentials' || err?.status === 400 || errMsg.toLowerCase().includes('invalid')) {
-        const foundUser: any = findLocalUser(cleanEmail);
-        if (foundUser) {
-          if (foundUser.status === 'inactive') {
-            throw new Error("Ce compte a été désactivé");
-          }
-          const hash = foundUser.passwordHash || foundUser.password_hash;
-          if (hash && bcrypt.compareSync(password, hash)) {
-            const user = { uid: foundUser.uid || foundUser.id, email: foundUser.email, displayName: foundUser.displayName || foundUser.name };
-            auth.trigger(user);
-            return { user };
-          }
-        }
         throw new Error("Identifiant ou mot de passe incorrect");
       }
       throw err;
     }
   }
 
-  const foundUser: any = findLocalUser(cleanEmail);
+  let foundUser: any = findLocalUser(cleanEmail);
+  if (!foundUser) {
+    foundUser = await findRemoteUser(cleanEmail);
+  }
   if (!foundUser) throw new Error("Utilisateur non trouvé");
   if (foundUser.status === 'inactive') throw new Error("Ce compte a été désactivé");
   const hash = foundUser.passwordHash || foundUser.password_hash;
   if (!hash) throw new Error("Ce compte n'a pas de mot de passe (créé via Google).");
-  if (!bcrypt.compareSync(password, hash)) throw new Error("Mot de passe incorrect");
+  if (!bcrypt.compareSync(password, hash)) throw new Error("Mot de passe ou code PIN incorrect");
 
-  const user = { uid: foundUser.uid || foundUser.id, email: foundUser.email, displayName: foundUser.displayName || foundUser.name };
+  const user = { 
+    uid: foundUser.uid || foundUser.id, 
+    email: foundUser.email || cleanEmail, 
+    displayName: foundUser.displayName || foundUser.name || 'Utilisateur',
+    role: foundUser.role || 'cashier'
+  };
   auth.trigger(user);
   return { user };
 };

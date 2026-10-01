@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { InventoryAudit as InventoryAuditType, Product, CompanySettings } from '../types';
 import { localDb } from '../services/LocalDatabase';
-import { formatSafe, cn, generateUniqueId, safeGetItems } from '../lib/utils';
+import { formatSafe, cn, generateUniqueId, safeGetItems, escapeHtml } from '../lib/utils';
 import { Button, Card, Modal, ConfirmDialog } from './ui';
 import { toast } from 'sonner';
 
@@ -138,7 +138,7 @@ export const InventoryAudit = memo(function InventoryAudit({
   const handleAddLowStockProducts = () => {
     const existingIds = new Set(auditItems.map(i => i.productId));
     const toAdd = products
-      .filter(p => (Number(p.stock) || 0) <= (Number(p.lowStockThreshold) || 5) && !existingIds.has(p.id))
+      .filter(p => (Number(p.stock) || 0) <= (Number(p.minStock ?? (p as any).lowStockThreshold) || 5) && !existingIds.has(p.id))
       .slice(0, 40)
       .map(p => ({
         productId: p.id,
@@ -199,8 +199,8 @@ export const InventoryAudit = memo(function InventoryAudit({
         return `
           <tr>
             <td style="padding:7px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;">${idx + 1}</td>
-            <td style="padding:7px 8px;border:1px solid #94a3b8;font-family:monospace;font-size:11px;">${ref}</td>
-            <td style="padding:7px 8px;border:1px solid #94a3b8;font-weight:bold;font-size:11px;">${item.productName}</td>
+            <td style="padding:7px 8px;border:1px solid #94a3b8;font-family:monospace;font-size:11px;">${escapeHtml(ref)}</td>
+            <td style="padding:7px 8px;border:1px solid #94a3b8;font-weight:bold;font-size:11px;">${escapeHtml(item.productName)}</td>
             <td style="padding:7px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;font-weight:bold;">
               ${blindCountMode ? '🔒 Masqué' : item.expectedStock}
             </td>
@@ -210,7 +210,7 @@ export const InventoryAudit = memo(function InventoryAudit({
             <td style="padding:7px 8px;border:1px solid #94a3b8;text-align:center;font-size:11px;font-weight:bold;">
               ${blindCountMode ? '_________' : (item.discrepancy > 0 ? `+${item.discrepancy}` : item.discrepancy)}
             </td>
-            <td style="padding:7px 8px;border:1px solid #94a3b8;font-size:11px;">${item.notes || ''}</td>
+            <td style="padding:7px 8px;border:1px solid #94a3b8;font-size:11px;">${escapeHtml(item.notes || '')}</td>
           </tr>
         `;
       })
@@ -219,7 +219,7 @@ export const InventoryAudit = memo(function InventoryAudit({
     win.document.write(`
       <html>
         <head>
-          <title>Fiche d'Inventaire Physique A4 — ${settings.name || 'Nexus POS Pro'}</title>
+          <title>Fiche d'Inventaire Physique A4 — ${escapeHtml(settings.name || 'Nexus POS Pro')}</title>
           <style>
             @page { size: A4 portrait; margin: 12mm; }
             body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; }
@@ -234,7 +234,7 @@ export const InventoryAudit = memo(function InventoryAudit({
             <div>
               <h2 style="margin:0;text-transform:uppercase;">FICHE D'INVENTAIRE PHYSIQUE & COMPTAGE</h2>
               <p style="margin:4px 0 0;font-size:12px;color:#475569;">
-                Établissement : <strong>${settings.name || 'Magasin'}</strong> • Mode : <strong>${blindCountMode ? 'Comptage à l’aveugle (Stock théorique masqué)' : 'Fiche de Réconciliation Complète'}</strong>
+                Établissement : <strong>${escapeHtml(settings.name || 'Magasin')}</strong> • Mode : <strong>${blindCountMode ? 'Comptage à l’aveugle (Stock théorique masqué)' : 'Fiche de Réconciliation Complète'}</strong>
               </p>
             </div>
             <div style="text-align:right;font-size:12px;">

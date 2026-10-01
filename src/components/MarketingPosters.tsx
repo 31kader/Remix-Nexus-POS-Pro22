@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Card, Button, Modal } from './ui';
 import { Product, CompanySettings } from '../types';
-import { cn } from '../lib/utils';
+import { cn, escapeHtml } from '../lib/utils';
 import { toPng, toBlob } from 'html-to-image';
 import { toast } from 'sonner';
 import { SafeImage } from './ui/SafeImage';
@@ -310,35 +310,35 @@ export const MarketingPosters: React.FC<MarketingPostersProps> = ({ products, se
         </head>
         <body>
           <div>
-            <div class="badge">${currentBadgeText}</div>
+            <div class="badge">${escapeHtml(currentBadgeText)}</div>
           </div>
           
           <div class="content-row">
             <div class="info-col">
-              <div class="product-name">${selectedProduct.name}</div>
-              <div class="description">${customText || selectedProduct.description || 'Profitez de la meilleure qualité au meilleur prix en magasin.'}</div>
+              <div class="product-name">${escapeHtml(selectedProduct.name)}</div>
+              <div class="description">${escapeHtml(customText || selectedProduct.description || 'Profitez de la meilleure qualité au meilleur prix en magasin.')}</div>
               
               <div class="price-container">
                 ${showOldPrice && safeOldPrice > safePrice ? `<div class="old-price">${safeOldPrice.toFixed(2)}</div>` : ''}
                 <div class="price">
-                  ${safePrice.toFixed(2)}<span class="currency">${currency}</span>
+                  ${safePrice.toFixed(2)}<span class="currency">${escapeHtml(currency)}</span>
                 </div>
               </div>
             </div>
 
             ${showImage && productImage ? `
               <div class="img-container">
-                <img src="${productImage}" alt="${selectedProduct.name}" />
+                <img src="${escapeHtml(productImage)}" alt="${escapeHtml(selectedProduct.name)}" />
               </div>
             ` : ''}
           </div>
 
           <div class="footer">
             <div>
-              <div class="store-name">${settings.name || 'Nexus POS Pro'}</div>
-              <div class="promo-text">${settings.address || 'Offre valable selon stocks disponibles'}</div>
+              <div class="store-name">${escapeHtml(settings.name || 'Nexus POS Pro')}</div>
+              <div class="promo-text">${escapeHtml(settings.address || 'Offre valable selon stocks disponibles')}</div>
             </div>
-            <div class="promo-text">${settings.phone ? 'Tél : ' + settings.phone : 'Nexus POS Pro'}</div>
+            <div class="promo-text">${escapeHtml(settings.phone ? 'Tél : ' + settings.phone : 'Nexus POS Pro')}</div>
           </div>
 
           <script>

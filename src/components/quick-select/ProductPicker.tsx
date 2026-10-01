@@ -66,9 +66,14 @@ export const ProductPicker: React.FC<ProductPickerProps> = ({
         .from('products')
         .select('id, name, price, cost_price, stock, min_stock, unit, image_url, category_id, sku, status, tax_rate, show_in_pos, is_quick_select, updated_at')
         .order('name', { ascending: true })
-        .range(from, to);
-      if (currentSearch) query = query.or(`name.ilike.%${currentSearch}%,sku.ilike.%${currentSearch}%,barcode.ilike.%${currentSearch}%`);
-      const { data, error } = await query;
+      if (currentSearch) {
+        // 🛡️ Protection Anti-Injection PostgREST (CWE-89) : Éliminer les délimiteurs de syntaxe PostgREST
+        const safeSearch = currentSearch.replace(/[,()]/g, ' ').trim();
+        if (safeSearch) {
+          query = query.or(`name.ilike.%${safeSearch}%,sku.ilike.%${safeSearch}%,barcode.ilike.%${safeSearch}%`);
+        }
+      }
+      const { data, error } = await query.range(from, to);
       if (error) throw error;
       const mappedResults: Product[] = (data || []).map((p: any) => ({
         id: p.id, name: p.name, price: p.price, costPrice: p.cost_price, stock: p.stock,

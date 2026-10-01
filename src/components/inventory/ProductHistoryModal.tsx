@@ -33,7 +33,7 @@ export function ProductHistoryModal({
   const [zoomedVoucherImage, setZoomedVoucherImage] = useState<string | null>(null);
 
   const returns = useTransactionStore(s => s.returns) || [];
-  const goodsReceiptNotes = useInventoryStore(s => s.goodsReceiptNotes) || [];
+  const goodsReceiptNotes: any[] = useInventoryStore((s: any) => s.goodsReceiptNotes) || [];
   const suppliers = usePeopleStore(s => s.suppliers) || [];
 
   const getRecordItems = (record: any): any[] => safeGetItems(record);

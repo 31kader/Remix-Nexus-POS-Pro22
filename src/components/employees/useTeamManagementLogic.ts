@@ -194,6 +194,13 @@ export function useTeamManagementLogic({
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserUid = user?.id;
 
+      // 🛡️ Renforcement de sécurité (CWE-306 / CWE-862) : Seul le propriétaire légitime peut exécuter une purge globale
+      const isAuthorizedOwner = checkIsOwner(user?.email, currentUserUid);
+      if (!isAuthorizedOwner) {
+        toast.error("Action non autorisée : Seul le propriétaire légitime du magasin peut exécuter la purge globale des comptes.");
+        return;
+      }
+
       const userVictims = users.filter(u => u.uid !== currentUserUid && !checkIsOwner(u.email, u.uid));
       if (userVictims.length === 0) {
         toast.info("Aucun compte à purger.");
