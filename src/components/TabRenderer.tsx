@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { isTabAllowed } from '../lib/permissions';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
@@ -378,6 +379,38 @@ const CatalogPrinterTab: React.FC<any> = () => {
 };
 
 export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props }) => {
+  const profile = useAuthStore(s => s.profile);
+  const isAllowed = isTabAllowed(activeTab, props.canAccess, {
+    isAdmin: props.isAdmin || profile?.role === 'admin',
+    isOwner: props.isOwner,
+    isManager: props.isManager || profile?.role === 'manager',
+    isCameraAgent: props.isCameraAgent || profile?.role === 'camera_agent'
+  });
+
+  const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
+
+  if (!isAllowed) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[420px] h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 text-center space-y-4 shadow-sm my-4">
+        <div className="w-14 h-14 bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto border border-rose-500/20 text-rose-500 shadow-sm">
+          <ShieldAlert size={28} />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Accès Non Autorisé</h3>
+          <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto font-medium">
+            Votre profil employé ne dispose pas des droits requis pour consulter ce module ({tabName}).
+          </p>
+        </div>
+        <Button
+          onClick={() => props.setActiveTab('checkout')}
+          className="px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-bold text-xs uppercase tracking-wider shadow-md"
+        >
+          Retourner à la caisse
+        </Button>
+      </div>
+    );
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'checkout':
@@ -469,7 +502,6 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
     }
   };
 
-  const tabName = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   const fallbackUI = (
     <div className="flex flex-col items-center justify-center min-h-[400px] h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 text-center space-y-4">
       <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center mx-auto border border-rose-500/20">

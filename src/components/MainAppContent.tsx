@@ -131,6 +131,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
           employees={employees}
           profile={profile}
           user={user}
+          canAccess={props.canAccess}
           t={props.t}
           toast={props.toast}
           deferredPrompt={props.deferredPrompt}
@@ -151,6 +152,10 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             onOpenMenu={() => setIsMobileOverlayOpen(true)}
+            canAccess={props.canAccess}
+            isAdmin={profile?.role === 'admin'}
+            isOwner={props.isOwner}
+            isManager={profile?.role === 'manager'}
           />
         )}
       </main>

@@ -123,14 +123,16 @@ export const TransactionTable: React.FC<Props> = ({
                         <RotateCcw size={16} />
                       </button>
                     )}
-                    <button 
-                      type="button"
-                      onClick={() => onRestore?.(t)} 
-                      className="p-2 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 rounded-lg transition-colors"
-                      title="Modifier la vente en caisse"
-                    >
-                      <ShoppingBag size={16} />
-                    </button>
+                    {(canAccess('canModifyPrices') || canAccess('canVoidTransaction')) && (
+                      <button 
+                        type="button"
+                        onClick={() => onRestore?.(t)} 
+                        className="p-2 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 rounded-lg transition-colors"
+                        title="Modifier la vente en caisse"
+                      >
+                        <ShoppingBag size={16} />
+                      </button>
+                    )}
                     {t.status === 'pending' && (
                       <button type="button" onClick={() => !locked && onEdit(t)} className="p-2 text-amber-400 hover:bg-amber-500/20 rounded-lg">
                         <Edit size={16} />

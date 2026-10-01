@@ -40,6 +40,7 @@ import { SyncIndicator } from './components/SyncIndicator';
 import { UnauthorizedView } from './components/UnauthorizedView';
 import { MainAppContent } from './components/MainAppContent';
 import { TabRenderer } from './components/TabRenderer';
+import { isTabAllowed } from './lib/permissions';
 
 // Modales et login en lazy-loading (Règle GEMINI.md : bundle optimisé)
 const LoginView = React.lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })));
@@ -211,36 +212,55 @@ export default function App() {
     },
   });
 
-  // --- Navigation ---
+  // --- Navigation & Sécurité des Onglets ---
+  const isCameraAgent = (profile?.role as string) === 'camera_agent';
   const getInitialTab = useCallback(() => {
-    if (profile?.role === 'camera_agent') return 'camera';
+    if (isCameraAgent) return 'camera';
     const hash = window.location.hash.replace('#', '');
     if (!hash || hash.includes('=') || hash.includes('&') || hash === 'dashboard' || hash === 'ai_assistant') return 'checkout';
+    if (!isTabAllowed(hash, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
+      return 'checkout';
+    }
     return hash;
-  }, [profile]);
+  }, [profile, canAccess, isOwner, isCameraAgent]);
 
   const [activeTab, setActiveTabState] = useState(getInitialTab());
   const setActiveTab = useCallback((tab: string) => {
     const targetTab = (tab === 'dashboard' || tab === 'ai_assistant') ? 'checkout' : tab;
+    // 🛡️ Vérification d'autorisation (Défense en profondeur)
+    if (!isTabAllowed(targetTab, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
+      toast.error(t("Accès refusé : vous n'avez pas l'autorisation pour ce module."));
+      window.location.hash = 'checkout';
+      setActiveTabState('checkout');
+      return;
+    }
     window.location.hash = targetTab;
     setActiveTabState(targetTab);
-  }, []);
+  }, [canAccess, profile, isOwner, isCameraAgent, t]);
 
   // Synchronisation dynamique avec la barre d'adresse pour support multi-fenêtres & multi-onglets
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash && !hash.includes('=') && !hash.includes('&')) {
-        if (hash === 'dashboard' || hash === 'ai_assistant') {
+        const target = (hash === 'dashboard' || hash === 'ai_assistant') ? 'checkout' : hash;
+        if (!isTabAllowed(target, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
           setActiveTab('checkout');
         } else {
-          setActiveTabState(hash);
+          setActiveTabState(target);
         }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setActiveTab]);
+  }, [setActiveTab, canAccess, profile, isOwner, isCameraAgent]);
+
+  // Si le profil utilisateur change (connexion d'un employé), forcer le retour à un onglet permis
+  useEffect(() => {
+    if (profile && !isTabAllowed(activeTab, canAccess, { isAdmin: profile.role === 'admin', isOwner, isManager: profile.role === 'manager', isCameraAgent })) {
+      setActiveTab('checkout');
+    }
+  }, [profile, activeTab, canAccess, isOwner, isCameraAgent, setActiveTab]);
 
   // --- Panier (Sélecteurs d'action ciblés et stables : évite tout re-render de l'App) ---
   const loadTransactionToCart = useCartStore(s => s.loadTransactionToCart);
@@ -423,6 +443,10 @@ export default function App() {
         isThemeMenuOpen={isThemeMenuOpen} setIsThemeMenuOpen={setIsThemeMenuOpen}
         activeStaffId={activeStaffId} t={t} toast={toast}
         permissions={permissions}
+        canAccess={canAccess}
+        isOwner={isOwner}
+        isAdmin={profile?.role === 'admin'}
+        isManager={profile?.role === 'manager'}
         handleLogout={handleLogout}
         handleInstallApp={handleInstallApp}
         deferredPrompt={deferredPrompt}
@@ -438,6 +462,10 @@ export default function App() {
           setEditingProduct={setEditingProduct}
           activeStaffId={activeStaffId}
           canAccess={canAccess}
+          isOwner={isOwner}
+          isAdmin={profile?.role === 'admin'}
+          isManager={profile?.role === 'manager'}
+          isCameraAgent={profile?.role === 'camera_agent'}
           onUpdateProduct={handleUpdateProduct}
           onAdjustStock={handleAdjustStock}
           onEditProduct={handleEditProduct}

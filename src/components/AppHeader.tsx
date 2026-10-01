@@ -39,6 +39,7 @@ interface AppHeaderProps {
   employees: any[];
   profile: any;
   user: any;
+  canAccess?: (permission: any) => boolean;
   t: (key: string) => string;
   toast: any;
   deferredPrompt?: any;
@@ -72,11 +73,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   employees,
   profile,
   user,
+  canAccess,
   t,
   toast,
   deferredPrompt,
   handleInstallApp
 }) => {
+  const hasInventoryAccess = canAccess ? canAccess('canAccessInventory') : (profile?.role === 'admin' || profile?.role === 'manager');
   const [isPinLockOpen, setIsPinLockOpen] = React.useState(false);
   const [isIOSInstallModalOpen, setIsIOSInstallModalOpen] = React.useState(false);
   const [syncStatus, setSyncStatus] = React.useState<{ isSyncing: boolean; pendingCount: number }>({ isSyncing: false, pendingCount: 0 });
@@ -152,7 +155,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {getTabTitle(activeTab)}
         </h2>
 
-        {lowStockProducts.length > 0 && (
+        {hasInventoryAccess && lowStockProducts.length > 0 && (
           <button 
             type="button"
             onClick={() => setIsLowStockModalOpen(true)}
@@ -168,7 +171,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </button>
         )}
 
-        {expiringProducts.length > 0 && (
+        {hasInventoryAccess && expiringProducts.length > 0 && (
           <button 
             type="button"
             onClick={() => setIsExpirationModalOpen(true)}
