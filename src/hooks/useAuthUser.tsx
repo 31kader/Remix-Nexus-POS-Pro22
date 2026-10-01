@@ -7,6 +7,8 @@ import { getSecureItem } from '../lib/security';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { checkIsOwner, PRIMARY_OWNER_EMAIL, PRIMARY_OWNER_UID } from '../config/ownerConfig';
+import { supabase, isSupabaseConfigured } from '../supabase';
+import { convertKeysToCamel } from '../lib/db-converters';
 
 export function useAuthUser(appMode: string, setLoading: (loading: boolean) => void) {
   const { user, setUser, profile, setProfile, authError, setAuthError, isLoggingIn, setIsLoggingIn, isUnauthorized, setIsUnauthorized } = useAuthStore();
@@ -126,8 +128,26 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
         // Check if user is an employee (for non-owners or to get additional info)
         try {
           const employeesSnap = await localDb.get('employees');
-          if (employeesSnap.exists()) {
-            const employeesData = employeesSnap.val();
+          let employeesData: any = employeesSnap.exists() ? employeesSnap.val() : null;
+
+          // 🛡️ REPLI SUPABASE DISTANT : Si IndexedDB est encore vierge (nouveau terminal/téléphone), interroger Supabase
+          if (!employeesData && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+            try {
+              const { data: remoteEmps } = await supabase.from('employees').select('*');
+              if (Array.isArray(remoteEmps) && remoteEmps.length > 0) {
+                employeesData = {};
+                for (const emp of remoteEmps) {
+                  const camel = convertKeysToCamel(emp);
+                  employeesData[camel.id] = camel;
+                  localDb.update(`employees/${camel.id}`, camel);
+                }
+              }
+            } catch (rErr) {
+              console.warn("Could not fetch remote employees:", rErr);
+            }
+          }
+
+          if (employeesData) {
             const employeeEntry = Object.entries(employeesData).find(([id, data]: [string, any]) => {
                 return (data.email && data.email.toLowerCase() === matchEmail) || 
                        (matchPhone && data.phone === matchPhone);
@@ -136,6 +156,34 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
                const [id, data] = employeeEntry;
                employee = { id, ...(data as any) } as Employee;
                employeeId = id;
+            }
+          }
+
+          // 🛡️ Deuxième vérification dans public.users si l'employé est déclaré dans users
+          if (!employee && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+            try {
+              const { data: remoteUsers } = await supabase.from('users').select('*');
+              if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+                for (const u of remoteUsers) {
+                  const camel = convertKeysToCamel(u);
+                  localDb.update(`users/${camel.id || camel.uid}`, camel);
+                }
+                const matchedUser = remoteUsers.find((u: any) => 
+                  (u.email && u.email.toLowerCase() === matchEmail) || (u.uid === currentUser.uid)
+                );
+                if (matchedUser) {
+                  employee = {
+                    id: matchedUser.id || matchedUser.uid,
+                    name: matchedUser.display_name || matchedUser.name || 'Employé',
+                    email: matchedUser.email,
+                    role: matchedUser.role || 'cashier',
+                    status: 'active'
+                  } as any;
+                  employeeId = employee?.id;
+                }
+              }
+            } catch (uErr) {
+              console.warn("Could not fetch remote users:", uErr);
             }
           }
         } catch (ee) {
