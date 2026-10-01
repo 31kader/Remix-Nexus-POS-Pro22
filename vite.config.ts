@@ -74,8 +74,10 @@ export default defineConfig(({ mode }) => {
     },
     esbuild: {
       drop: ['console', 'debugger'],
+      target: 'es2018',
     },
     build: {
+      target: ['es2018', 'chrome58'],
       outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,

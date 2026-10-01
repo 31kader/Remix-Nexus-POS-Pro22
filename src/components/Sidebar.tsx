@@ -46,7 +46,7 @@ function NavItem({ icon, label, active, onClick, collapsed, href, badge, badgePu
         }
       }}
       className={cn(
-        "flex items-center gap-2.5 py-2 rounded-lg transition-colors duration-100 group relative cursor-pointer border",
+        "flex items-center gap-2.5 py-2 rounded-lg transition-colors duration-100 group relative cursor-pointer border touch-manipulation",
         collapsed 
           ? "justify-center px-0 w-10 h-10 mx-auto" 
           : "px-3",
@@ -201,7 +201,8 @@ export const Sidebar = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setIsMobileOverlayOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] cursor-pointer"
+            onTouchEnd={() => setIsMobileOverlayOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[70] cursor-pointer touch-manipulation"
             aria-hidden="true"
           />
         )}
@@ -218,7 +219,10 @@ export const Sidebar = ({
         className={cn(
           "flex flex-col h-full bg-zinc-950 border-r border-zinc-800 shadow-xl overflow-hidden select-none",
           isMobile 
-            ? "fixed inset-y-0 left-0 z-[75] w-[285px] max-w-[85vw] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" 
+            ? cn(
+                "fixed inset-y-0 left-0 z-[75] w-[285px] max-w-[85vw] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+                !isMobileOverlayOpen && "pointer-events-none invisible"
+              )
             : "relative z-40 shrink-0"
         )}
       >
@@ -275,7 +279,7 @@ export const Sidebar = ({
 
         {/* Contenu Défilant des Liens */}
         <nav className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar text-left rtl:text-right relative z-10",
+          "flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar touch-pan-y overscroll-contain text-left rtl:text-right relative z-10",
           isCollapsed ? "p-2 space-y-3" : "p-4 space-y-5"
         )}>
           {/* Section Ventes */}

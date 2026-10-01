@@ -2,7 +2,7 @@
 <html lang="fr" class="light">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' capacitor: content: https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: capacitor:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data: capacitor:; img-src 'self' data: blob: https: capacitor: content: https://*.supabase.co https://images.unsplash.com; connect-src 'self' capacitor: https: wss: https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data: capacitor:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -18,6 +18,14 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Nexus POS Pro" />
     <script>
+      // Polyfill globalThis pour les WebViews Android 7 (Chrome < 71)
+      if (typeof globalThis === 'undefined') {
+        (function() {
+          if (typeof self !== 'undefined') { self.globalThis = self; }
+          else if (typeof window !== 'undefined') { window.globalThis = window; }
+          else if (typeof global !== 'undefined') { global.globalThis = global; }
+        })();
+      }
       (function() {
         try {
           var t = localStorage.getItem('nexus-pos-theme-v3') || 'light';
@@ -37,15 +45,29 @@
   <body>
     <div id="root" class="notranslate"></div>
     <div id="debug-error" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; color:red; padding:20px; z-index:9999; overflow:auto; font-family:monospace;">
-      <h1>Runtime Error Caught:</h1>
+      <h1>Erreur d'exécution :</h1>
       <pre id="error-message"></pre>
-      <button onclick="location.reload()" style="padding:10px; margin-top:20px;">Reload Page</button>
+      <button onclick="location.reload()" style="padding:10px; margin-top:20px; background:#4f46e5; color:white; border:none; border-radius:8px; cursor:pointer;">Recharger la caisse</button>
     </div>
     <script>
       window.onerror = function(msg, url, line, col, error) {
         var str = String(msg).toLowerCase();
-        if (str.indexOf('failed to fetch') > -1 || str.indexOf('load failed') > -1 || str.indexOf('networkerror') > -1 || str.indexOf('supabase') > -1) {
-          console.warn('[Error ignored] Network/Supabase issue:', msg);
+        if (
+          str.indexOf('failed to fetch') > -1 || 
+          str.indexOf('load failed') > -1 || 
+          str.indexOf('networkerror') > -1 || 
+          str.indexOf('supabase') > -1 ||
+          str.indexOf('resizeobserver') > -1 ||
+          str.indexOf('script error') > -1 ||
+          str.indexOf('websocket') > -1 ||
+          str.indexOf('operation-specific reason') > -1
+        ) {
+          console.warn('[Error ignored - Benign]:', msg);
+          return true;
+        }
+        // Ne pas bloquer l'écran sur Android Capacitor si React ErrorBoundary peut récupérer
+        if (document.getElementById('root') && document.getElementById('root').hasChildNodes()) {
+          console.error('[Window Error Handled]:', msg);
           return true;
         }
         document.getElementById('debug-error').style.display = 'block';
@@ -63,15 +85,21 @@
           reasonStr.indexOf('networkerror') > -1 || 
           reasonStr.indexOf('supabase') > -1 ||
           reasonStr.indexOf('fetch') > -1 ||
-          reasonStr.indexOf('net::') > -1
+          reasonStr.indexOf('net::') > -1 ||
+          reasonStr.indexOf('operation-specific reason') > -1
         ) {
-          console.warn('[Unhandled Rejection ignored] Benign or Network/Supabase issue:', reason);
+          console.warn('[Unhandled Rejection ignored - Benign]:', reason);
+          return;
+        }
+        if (document.getElementById('root') && document.getElementById('root').hasChildNodes()) {
+          console.error('[Unhandled Rejection Handled]:', reason);
           return;
         }
         document.getElementById('debug-error').style.display = 'block';
         document.getElementById('error-message').textContent = 
           'Unhandled Rejection: ' + reason + '\n\n' + (event.reason && event.reason.stack ? event.reason.stack : '');
       });
+
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -14,6 +14,7 @@ import { onBackgroundSyncStatus, flushSyncQueueImmediate } from '../services/Syn
 
 interface AppHeaderProps {
   isMobile: boolean;
+  isMobileOverlayOpen?: boolean;
   setIsMobileOverlayOpen: (open: boolean) => void;
   sidebarMode?: 'open' | 'collapsed' | 'closed';
   setSidebarMode?: (mode: 'open' | 'collapsed' | 'closed') => void;
@@ -46,6 +47,7 @@ interface AppHeaderProps {
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   isMobile,
+  isMobileOverlayOpen = false,
   setIsMobileOverlayOpen,
   sidebarMode = 'open',
   setSidebarMode,
@@ -119,20 +121,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           type="button"
           onClick={() => {
             if (isMobile) {
-              setIsMobileOverlayOpen(true);
+              setIsMobileOverlayOpen(!isMobileOverlayOpen);
             } else if (cycleSidebarMode) {
               cycleSidebarMode();
             }
           }}
           className={cn(
             "p-2 border rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
-            !isMobile && sidebarMode === 'closed'
+            (isMobile ? isMobileOverlayOpen : (!isMobile && sidebarMode === 'closed'))
               ? "bg-indigo-600 text-white border-indigo-500 shadow-sm hover:bg-indigo-500"
               : "bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700"
           )}
           title={
             isMobile
-              ? "Ouvrir le menu"
+              ? (isMobileOverlayOpen ? "Fermer le menu" : "Ouvrir le menu")
               : sidebarMode === 'open'
                 ? "Réduire le menu en icônes (puis clic suivant : fermer complètement)"
                 : sidebarMode === 'collapsed'

@@ -17,10 +17,16 @@ export interface AppSyncState {
   pendingCount: number;
 }
 
+const checkIsMobile = () => {
+  if (typeof window === 'undefined') return false;
+  const isCapacitor = Boolean((window as any).Capacitor?.isNativePlatform());
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const isSmallScreen = window.innerWidth < 1024;
+  return isCapacitor || (isMobileUA && isSmallScreen) || window.innerWidth < 768;
+};
+
 export function useAppInitialization() {
-  const [isMobile, setIsMobile] = useState<boolean>(
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  );
+  const [isMobile, setIsMobile] = useState<boolean>(checkIsMobile);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
@@ -50,7 +56,7 @@ export function useAppInitialization() {
   });
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(checkIsMobile());
     const handleOnline = () => {
       setIsOnline(true);
       notifyNetworkRestored(bgPendingChanges);

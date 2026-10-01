@@ -106,6 +106,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
       <main className="flex-1 flex flex-col min-w-0 relative bg-transparent overflow-hidden">
         <AppHeader 
           isMobile={isMobile}
+          isMobileOverlayOpen={isMobileOverlayOpen}
           setIsMobileOverlayOpen={setIsMobileOverlayOpen}
           sidebarMode={sidebarMode}
           setSidebarMode={setSidebarMode}
