@@ -27,6 +27,7 @@ describe('Public Price Checker — Options 1 & 3 Suite', () => {
     supplier: 'Fournisseur National',
     unit: 'bouteille',
     status: 'active',
+    updatedAt: '2026-10-02T11:00:00Z',
   };
 
   it('1. Calcule le prix normal en DA sans fuite de marge ni de coût d’achat', () => {

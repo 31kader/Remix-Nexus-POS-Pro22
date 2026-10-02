@@ -44,6 +44,24 @@ export function useAdminStaticData({
           setSettings(cachedSettingsSnap.val() as CompanySettings);
         }
 
+        if (isPublicPriceMode) {
+          if (isSupabaseConfigured) {
+            try {
+              const res: any = await withNetworkTimeout(
+                supabase.from('settings').select('*').limit(1),
+                5000,
+                { data: null, error: null },
+                'settings'
+              );
+              const remoteSettings = res?.data;
+              if (remoteSettings && Array.isArray(remoteSettings) && remoteSettings.length > 0 && isSubscribed) {
+                setSettings(convertKeysToCamel(remoteSettings[0]) as CompanySettings);
+              }
+            } catch (_) {}
+          }
+          return;
+        }
+
         const cachedEmployees = await idbGet<Employee[]>('nexus_employees_cache');
         if (cachedEmployees && isSubscribed) setEmployees(cachedEmployees);
 

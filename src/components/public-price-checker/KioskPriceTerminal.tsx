@@ -67,6 +67,15 @@ export function KioskPriceTerminal({
     return () => clearInterval(interval);
   }, []);
 
+  // Assainissement défensif des articles (suppression absolue du prix d'achat et des marges)
+  const safeProducts = useMemo(() => {
+    return products.map(p => {
+      if (!p) return p;
+      const { costPrice, cost_price, ...clean } = p as any;
+      return clean as Product;
+    });
+  }, [products]);
+
   // 2. Recherche produit dans le catalogue
   const executeLookup = (rawCode: string) => {
     const clean = rawCode.trim().toLowerCase();
@@ -78,11 +87,11 @@ export function KioskPriceTerminal({
     }
     lastScanRef.current = { code: clean, time: now };
 
-    const match = products.find(p => p && (
+    const match = safeProducts.find(p => p && (
       (p.barcode && String(p.barcode).trim().toLowerCase() === clean) ||
       (p.sku && String(p.sku).trim().toLowerCase() === clean) ||
       (p.name && p.name.trim().toLowerCase() === clean)
-    )) || (clean.length >= 3 ? products.find(p => p && (
+    )) || (clean.length >= 3 ? safeProducts.find(p => p && (
       (p.barcode && String(p.barcode).toLowerCase().includes(clean)) ||
       (p.name && p.name.toLowerCase().includes(clean))
     )) : null);

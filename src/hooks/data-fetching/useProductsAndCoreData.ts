@@ -375,17 +375,22 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
       { cacheKey: 'nexus_categories', collectionName: 'categories', setState: setCategories },
       { cacheKey: 'nexus_brands', collectionName: 'brands', setState: setBrands },
       { cacheKey: 'nexus_promotions', collectionName: 'promotions', setState: setPromotions },
-      { cacheKey: 'nexus_customers', collectionName: 'customers', setState: setCustomers, timestampColumn: 'updated_at' },
-      { cacheKey: 'nexus_suppliers', collectionName: 'suppliers', setState: setSuppliers, timestampColumn: 'updated_at' },
-      { cacheKey: 'nexus_users', collectionName: 'users', setState: setUsers }
     ];
+
+    if (!isPublicPriceMode) {
+      coreQueueConfig.push(
+        { cacheKey: 'nexus_customers', collectionName: 'customers', setState: setCustomers, timestampColumn: 'updated_at' },
+        { cacheKey: 'nexus_suppliers', collectionName: 'suppliers', setState: setSuppliers, timestampColumn: 'updated_at' },
+        { cacheKey: 'nexus_users', collectionName: 'users', setState: setUsers }
+      );
+    }
 
     // Tables administratives secondaires (synchronisation différée en arrière-plan pour ne pas saturer la caisse)
     const deferredQueueConfig: QueueConfig[] = [];
 
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    if (appMode !== 'customer') {
+    if (appMode !== 'customer' && !isPublicPriceMode) {
       coreQueueConfig.push(
         { cacheKey: 'nexus_transactions_cache', collectionName: 'transactions', setState: setTransactions as any, limit: 500, startDate: ninetyDaysAgo, timestampColumn: 'timestamp' },
         { cacheKey: 'nexus_returns_cache', collectionName: 'returns', setState: setReturns, limit: 500, timestampColumn: 'date' },

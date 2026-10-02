@@ -45,25 +45,34 @@ export function ClientPriceScanner({
 
   const storeName = settings?.name || 'Notre Magasin';
 
+  // Assainissement défensif des articles (suppression absolue du prix d'achat et des marges)
+  const safeProducts = useMemo(() => {
+    return products.map(p => {
+      if (!p) return p;
+      const { costPrice, cost_price, ...clean } = p as any;
+      return clean as Product;
+    });
+  }, [products]);
+
   // Recherche produit dans le catalogue local
   const lookupProduct = (rawQuery: string): Product | null => {
     const term = rawQuery.trim().toLowerCase();
     if (!term) return null;
 
     // 1. Recherche exacte par code-barre ou SKU
-    const exact = products.find(p => p && (
+    const exact = safeProducts.find(p => p && (
       (p.barcode && String(p.barcode).trim().toLowerCase() === term) ||
       (p.sku && String(p.sku).trim().toLowerCase() === term)
     ));
     if (exact) return exact;
 
     // 2. Recherche exacte par nom
-    const exactName = products.find(p => p && p.name && p.name.trim().toLowerCase() === term);
+    const exactName = safeProducts.find(p => p && p.name && p.name.trim().toLowerCase() === term);
     if (exactName) return exactName;
 
     // 3. Recherche partielle si >= 3 caractères
     if (term.length >= 3) {
-      const partial = products.find(p => p && (
+      const partial = safeProducts.find(p => p && (
         (p.barcode && String(p.barcode).toLowerCase().includes(term)) ||
         (p.name && p.name.toLowerCase().includes(term))
       ));
@@ -289,7 +298,7 @@ export function ClientPriceScanner({
   const searchResults = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const term = searchTerm.trim().toLowerCase();
-    return products
+    return safeProducts
       .filter(p => p && (
         (p.name && p.name.toLowerCase().includes(term)) ||
         (p.barcode && String(p.barcode).toLowerCase().includes(term)) ||
