@@ -105,7 +105,8 @@ export function useProductsAndCoreData({
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
     }
 
-    if (appMode !== 'price_checker' && (!userId || userId === 'unauthenticated')) {
+    const isPublicPriceMode = appMode === 'price_checker' || appMode === 'client_scan' || appMode === 'kiosk';
+    if (!isPublicPriceMode && (!userId || userId === 'unauthenticated')) {
       setIsDataLoading(false);
       idbGet<UserProfile[]>('nexus_users').then(cachedUsers => {
         if (cachedUsers && cachedUsers.length > 0) setUsers(cachedUsers);

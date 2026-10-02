@@ -10,6 +10,9 @@ export type AppMode =
   | 'supplier' 
   | 'delivery' 
   | 'camera' 
+  | 'client_scan'
+  | 'kiosk'
+  | 'price_checker'
   | string;
 
 export interface AppSyncState {
@@ -40,8 +43,15 @@ export function useAppInitialization() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const m = params.get('mode');
-      if (m) return m as AppMode;
+      if (m) {
+        const lower = m.toLowerCase();
+        if (lower === 'client_scan' || lower === 'scan' || lower === 'client-scan') return 'client_scan';
+        if (lower === 'kiosk' || lower === 'borne' || lower === 'price_checker') return 'kiosk';
+        return m as AppMode;
+      }
       const hash = window.location.hash.toLowerCase();
+      if (hash.includes('client_scan') || hash === '#scan' || hash.includes('client-scan')) return 'client_scan';
+      if (hash.includes('kiosk') || hash.includes('borne') || hash.includes('price_checker')) return 'kiosk';
       if (hash.includes('customer') || hash.includes('client')) return 'customer';
       if (hash.includes('supplier') || hash.includes('fournisseur')) return 'supplier';
     }

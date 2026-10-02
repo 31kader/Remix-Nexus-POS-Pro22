@@ -101,6 +101,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         handleInstallApp={props.handleInstallApp}
         deferredPrompt={props.deferredPrompt}
         setIsPriceCheckerModalOpen={props.setIsPriceCheckerModalOpen}
+        setIsStorePosterModalOpen={props.setIsStorePosterModalOpen}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative bg-transparent overflow-hidden">

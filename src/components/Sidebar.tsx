@@ -7,7 +7,7 @@ import {
   Camera, Settings as SettingsIcon, Database, HelpCircle, Download, 
   Menu, X, LogOut, ChevronDown, ChevronUp, Activity,
   FileCheck, ClipboardCheck, UserCheck, Image as ImageIcon, Printer,
-  ExternalLink
+  ExternalLink, Monitor, QrCode
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTranslation } from '../translations';
@@ -127,6 +127,7 @@ interface SidebarProps {
   handleInstallApp: () => void;
   deferredPrompt: any;
   setIsPriceCheckerModalOpen: (open: boolean) => void;
+  setIsStorePosterModalOpen?: (open: boolean) => void;
 }
 
 export const Sidebar = ({
@@ -150,7 +151,8 @@ export const Sidebar = ({
   handleLogout,
   handleInstallApp,
   deferredPrompt,
-  setIsPriceCheckerModalOpen
+  setIsPriceCheckerModalOpen,
+  setIsStorePosterModalOpen
 }: SidebarProps) => {
   const { t } = useTranslation();
   const canAccess = (perm: keyof RolePermissions) => permissions[perm];
@@ -311,6 +313,10 @@ export const Sidebar = ({
                   {canAccess('canAccessReturns') && <NavItem href="#returns" icon={<RotateCcw size={20} />} label={t("Retours")} active={activeTab === 'returns'} onClick={() => { setActiveTab('returns'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}
                   {canAccess('canAccessPromotions') && <NavItem href="#promotions" icon={<Tag size={20} />} label={t("Promotions")} active={activeTab === 'promotions'} onClick={() => { setActiveTab('promotions'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}
                   <NavItem icon={<Eye size={20} />} label={t("Vérificateur")} active={false} onClick={() => { setIsPriceCheckerModalOpen(true); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />
+                  <NavItem href="/?mode=kiosk" icon={<Monitor size={20} />} label={t("Borne Kiosque")} active={false} onClick={() => { window.open('/?mode=kiosk', '_blank'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />
+                  {setIsStorePosterModalOpen && (
+                    <NavItem icon={<QrCode size={20} />} label={t("Affiche QR Client")} active={false} onClick={() => { setIsStorePosterModalOpen(true); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

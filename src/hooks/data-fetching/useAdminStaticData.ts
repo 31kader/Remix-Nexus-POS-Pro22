@@ -32,7 +32,8 @@ export function useAdminStaticData({
 }: useAdminStaticDataParams) {
   useEffect(() => {
     if (loading) return;
-    if (appMode !== 'price_checker' && !userId) return;
+    const isPublicPriceMode = appMode === 'price_checker' || appMode === 'client_scan' || appMode === 'kiosk';
+    if (!isPublicPriceMode && !userId) return;
 
     let isSubscribed = true;
 

@@ -19,8 +19,9 @@ export function useModalState() {
   // Ajustement de stock
   const [isStockAdjustmentModalOpen, setIsStockAdjustmentModalOpen] = useState(false);
 
-  // Vérificateur de prix
+  // Vérificateur de prix & Affiche Magasin QR
   const [isPriceCheckerModalOpen, setIsPriceCheckerModalOpen] = useState(false);
+  const [isStorePosterModalOpen, setIsStorePosterModalOpen] = useState(false);
 
   // Modale client POS (attacher un client à une vente)
   const [isPOSCustomerModalOpen, setIsPOSCustomerModalOpen] = useState(false);
@@ -41,8 +42,9 @@ export function useModalState() {
     isLowStockModalOpen, setIsLowStockModalOpen,
     isExpirationModalOpen, setIsExpirationModalOpen,
     isStockAdjustmentModalOpen, setIsStockAdjustmentModalOpen,
-    // Prix
+    // Prix & Affiche QR
     isPriceCheckerModalOpen, setIsPriceCheckerModalOpen,
+    isStorePosterModalOpen, setIsStorePosterModalOpen,
     // Client POS
     isPOSCustomerModalOpen, setIsPOSCustomerModalOpen,
     // Produit

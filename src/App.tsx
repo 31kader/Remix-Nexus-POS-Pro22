@@ -53,6 +53,8 @@ const CameraLogin = React.lazy(() => import('./components/CameraLogin').then(m =
 const SupplierDashboard = React.lazy(() => import('./components/SupplierDashboard').then(m => ({ default: m.SupplierDashboard })));
 const CustomerDashboard = React.lazy(() => import('./components/CustomerDashboard').then(m => ({ default: m.CustomerDashboard })));
 const DeliveryDashboard = React.lazy(() => import('./components/DeliveryDashboard').then(m => ({ default: m.DeliveryDashboard })));
+const ClientPriceScanner = React.lazy(() => import('./components/public-price-checker').then(m => ({ default: m.ClientPriceScanner })));
+const KioskPriceTerminal = React.lazy(() => import('./components/public-price-checker').then(m => ({ default: m.KioskPriceTerminal })));
 
 export default function App() {
   const [isCustomerDisplay, setIsCustomerDisplay] = useState(() => {
@@ -143,9 +145,11 @@ export default function App() {
   const purchaseOrders = useTransactionStore(s => appMode === 'supplier' ? s.purchaseOrders : EMPTY_ARRAY.current);
   const onlineOrders = useTransactionStore(s => appMode === 'delivery' ? s.onlineOrders : EMPTY_ARRAY.current);
 
-  const products = useCoreStore(s => appMode === 'supplier' ? s.products : EMPTY_ARRAY.current);
-  const categories = useCoreStore(s => appMode === 'supplier' ? s.categories : EMPTY_ARRAY.current);
-  const brands = useCoreStore(s => appMode === 'supplier' ? s.brands : EMPTY_ARRAY.current);
+  const isPublicPriceMode = appMode === 'client_scan' || appMode === 'kiosk';
+  const products = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.products : EMPTY_ARRAY.current);
+  const categories = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.categories : EMPTY_ARRAY.current);
+  const brands = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.brands : EMPTY_ARRAY.current);
+  const promotions = useCoreStore(s => isPublicPriceMode ? s.promotions : EMPTY_ARRAY.current);
 
   const purchases = useFinanceStore(s => appMode === 'supplier' ? s.purchases : EMPTY_ARRAY.current);
   const supplierPayments = useFinanceStore(s => appMode === 'supplier' ? s.supplierPayments : EMPTY_ARRAY.current);
@@ -274,6 +278,7 @@ export default function App() {
     isExpirationModalOpen, setIsExpirationModalOpen,
     isStockAdjustmentModalOpen, setIsStockAdjustmentModalOpen,
     isPriceCheckerModalOpen, setIsPriceCheckerModalOpen,
+    isStorePosterModalOpen, setIsStorePosterModalOpen,
     isPOSCustomerModalOpen, setIsPOSCustomerModalOpen,
     isProductModalOpen, setIsProductModalOpen,
     editingProduct, setEditingProduct,
@@ -305,6 +310,65 @@ export default function App() {
     return (
       <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[#05070a]"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>}>
         <CustomerDisplayWindow />
+      </Suspense>
+    );
+  }
+
+  // ─── Option 1 : Scanner Client Smartphone via QR Code Magasin ──────────────
+  if (appMode === 'client_scan') {
+    if (loading) {
+      return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 gap-4">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-emerald-400 font-semibold tracking-wider uppercase">Chargement du catalogue...</p>
+        </div>
+      );
+    }
+    return (
+      <Suspense fallback={
+        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-slate-100">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500" />
+        </div>
+      }>
+        <ClientPriceScanner
+          products={products}
+          settings={settings}
+          categories={categories}
+          brands={brands}
+          promotions={promotions}
+        />
+      </Suspense>
+    );
+  }
+
+  // ─── Option 3 : Borne Tablette Fixe en Rayon / Mode Kiosque 24/7 ────────────
+  if (appMode === 'kiosk') {
+    if (loading) {
+      return (
+        <div className="h-screen w-full flex flex-col items-center justify-center bg-[#07090e] text-slate-100 gap-4">
+          <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Initialisation de la borne...</p>
+        </div>
+      );
+    }
+    return (
+      <Suspense fallback={
+        <div className="h-screen w-full flex items-center justify-center bg-[#07090e] text-slate-100">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500" />
+        </div>
+      }>
+        <KioskPriceTerminal
+          products={products}
+          settings={settings}
+          categories={categories}
+          brands={brands}
+          promotions={promotions}
+          onExit={() => {
+            window.location.search = '';
+            window.location.hash = 'checkout';
+            window.location.reload();
+          }}
+        />
       </Suspense>
     );
   }
@@ -451,6 +515,7 @@ export default function App() {
         handleInstallApp={handleInstallApp}
         deferredPrompt={deferredPrompt}
         setIsPriceCheckerModalOpen={setIsPriceCheckerModalOpen}
+        setIsStorePosterModalOpen={setIsStorePosterModalOpen}
       >
         <TabRenderer
           activeTab={activeTab}
@@ -506,6 +571,7 @@ export default function App() {
         newBrandDesc={newBrandDesc} setNewBrandDesc={setNewBrandDesc}
         handleSaveBrand={handleSaveBrand}
         isPriceCheckerModalOpen={isPriceCheckerModalOpen} setIsPriceCheckerModalOpen={setIsPriceCheckerModalOpen}
+        isStorePosterModalOpen={isStorePosterModalOpen} setIsStorePosterModalOpen={setIsStorePosterModalOpen}
         isPOSCustomerModalOpen={isPOSCustomerModalOpen} setIsPOSCustomerModalOpen={setIsPOSCustomerModalOpen}
         handlePOSCustomerCreated={(c: Customer) => { setSelectedCustomer(c); setIsPOSCustomerModalOpen(false); }}
         isProductModalOpen={isProductModalOpen} setIsProductModalOpen={setIsProductModalOpen}

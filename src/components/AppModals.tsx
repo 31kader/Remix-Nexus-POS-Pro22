@@ -10,6 +10,7 @@ const EditTransactionModal = lazy(() => import('./EditTransactionModal').then(m 
 const CategoryModal = lazy(() => import('./CategoryModal').then(m => ({ default: m.CategoryModal })));
 const BrandModal = lazy(() => import('./BrandModal').then(m => ({ default: m.BrandModal })));
 const PriceCheckerModal = lazy(() => import('./PriceCheckerModal').then(m => ({ default: m.PriceCheckerModal })));
+const PrintStorePosterModal = lazy(() => import('./public-price-checker').then(m => ({ default: m.PrintStorePosterModal })));
 const POSCustomerModal = lazy(() => import('./POSCustomerModal').then(m => ({ default: m.POSCustomerModal })));
 const ProductFormModal = lazy(() => import('./ProductFormModal').then(m => ({ default: m.ProductFormModal })));
 const AddStaffModal = lazy(() => import('./AddStaffModal').then(m => ({ default: m.AddStaffModal })));
@@ -68,6 +69,8 @@ interface AppModalsProps {
   brands: Brand[];
   isPriceCheckerModalOpen: boolean;
   setIsPriceCheckerModalOpen: (open: boolean) => void;
+  isStorePosterModalOpen?: boolean;
+  setIsStorePosterModalOpen?: (open: boolean) => void;
   isPOSCustomerModalOpen: boolean;
   setIsPOSCustomerModalOpen: (open: boolean) => void;
   handlePOSCustomerCreated: (customer: Customer) => void;
@@ -205,6 +208,16 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             categories={p.categories}
             brands={p.brands}
             />
+        </Suspense>
+      )}
+
+      {p.isStorePosterModalOpen && (
+        <Suspense fallback={null}>
+          <PrintStorePosterModal
+            isOpen={p.isStorePosterModalOpen}
+            onClose={() => p.setIsStorePosterModalOpen?.(false)}
+            settings={p.settings}
+          />
         </Suspense>
       )}
 
