@@ -240,7 +240,7 @@ export function Settings({ settings }: SettingsProps) {
                 Paramètres Généraux & Configuration POS
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                <CheckCircle2 size={11} /> v1.2.19
+                <CheckCircle2 size={11} /> v1.2.20
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
