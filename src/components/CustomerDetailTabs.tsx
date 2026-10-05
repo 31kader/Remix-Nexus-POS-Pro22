@@ -5,7 +5,7 @@ import {
   MapPin, Briefcase, Calendar, ShieldCheck, FileText, Smartphone, Plus,
   UserCheck, History, CreditCard, Tag, ArrowDownRight, ArrowUpRight,
   Search, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, TrendingUp, CheckCircle2,
-  Store
+  Store, Compass, Navigation, Copy, ExternalLink
 } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -18,6 +18,12 @@ import { usePeopleStore } from '../store/usePeopleStore';
 import { localDb } from '../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { convertKeysToCamel } from '../lib/db-converters';
+import { 
+  hasCustomerGps, 
+  getCustomerGpsCoordinates, 
+  getCustomerGoogleMapsUrl, 
+  getCustomerWazeUrl 
+} from '../lib/delivery-itinerary';
 
 interface ParsedNoteInfo {
   isFinancial: boolean;
@@ -557,10 +563,89 @@ export function CustomerDetailTabs({
                         </td>
                       </tr>
                       <tr className="hover:bg-white/[0.02] transition-colors">
-                        <td className="py-2.5 px-3.5 text-slate-400 font-bold uppercase text-[11px]">Adresse / Ville</td>
-                        <td className="py-2.5 px-3.5 font-medium text-slate-300">
-                          {[selectedCustomer.address, selectedCustomer.city].filter(Boolean).join(', ') || (
-                            <span className="text-slate-500 ">Non renseignée</span>
+                        <td className="py-2.5 px-3.5 text-slate-400 font-bold uppercase text-[11px] align-top">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin size={13} className="text-rose-400" />
+                            <span>Adresse & GPS</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          <div className="flex flex-col gap-2">
+                            <div className="text-slate-200 font-medium">
+                              {[selectedCustomer.address, selectedCustomer.city].filter(Boolean).join(', ') || (
+                                <span className="text-slate-500 italic">Non renseignée</span>
+                              )}
+                            </div>
+
+                            {hasCustomerGps(selectedCustomer) && (() => {
+                              const gps = getCustomerGpsCoordinates(selectedCustomer);
+                              if (!gps) return null;
+                              return (
+                                <div className="p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">
+                                      🎯
+                                    </div>
+                                    <div>
+                                      <span className="text-[10px] font-mono font-bold text-emerald-400 block tracking-tight">
+                                        GPS: {gps.latitude.toFixed(6)}, {gps.longitude.toFixed(6)}
+                                      </span>
+                                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Adresse Principale Enregistrée
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <a
+                                      href={getCustomerGoogleMapsUrl(selectedCustomer)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                                      title="Ouvrir itinéraire Google Maps"
+                                    >
+                                      <Compass size={12} /> Maps
+                                    </a>
+                                    <a
+                                      href={getCustomerWazeUrl(selectedCustomer)}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="px-2.5 py-1 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 text-cyan-300 border border-cyan-500/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                                      title="Ouvrir navigation Waze"
+                                    >
+                                      <Navigation size={12} /> Waze
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(`${gps.latitude},${gps.longitude}`);
+                                        toast.success("Coordonnées GPS copiées !");
+                                      }}
+                                      className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+                                      title="Copier les coordonnées GPS"
+                                    >
+                                      <Copy size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-2.5 px-3.5 text-slate-400 font-bold uppercase text-[11px]">Canal d'adhésion</td>
+                        <td className="py-2.5 px-3.5">
+                          {selectedCustomer.isAppUser ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[10px] font-black uppercase tracking-wider">
+                              <Smartphone size={12} className="text-indigo-400" />
+                              Compte Créé sur l'Application Mobile
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-bold uppercase tracking-wider">
+                              <Store size={12} />
+                              Client Enregistré en Caisse (POS)
+                            </span>
                           )}
                         </td>
                       </tr>

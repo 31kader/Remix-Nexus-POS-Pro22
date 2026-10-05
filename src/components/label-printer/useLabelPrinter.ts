@@ -6,7 +6,8 @@ export const PRESETS = [
   { id: 'preset-40-30', name: 'Thermique Standard (40 × 30 mm)', width: 40, height: 30, orientation: 'landscape', rotation: '0' },
   { id: 'preset-50-30', name: 'Thermique Moyen (50 × 30 mm)', width: 50, height: 30, orientation: 'landscape', rotation: '0' },
   { id: 'preset-60-40', name: 'Gondole Supermarché (60 × 40 mm)', width: 60, height: 40, orientation: 'landscape', rotation: '0' },
-  { id: 'preset-40-20', name: 'Mini Prix / Cosmétique (40 × 20 mm)', width: 40, height: 20, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-40-20', name: 'IDIPOS / Mini Prix (40 × 20 mm - Horizontal)', width: 40, height: 20, orientation: 'landscape', rotation: '0' },
+  { id: 'preset-40-20-vert', name: 'IDIPOS / Mini Prix (40 × 20 mm - Vertical)', width: 40, height: 20, orientation: 'portrait', rotation: '0' },
   { id: 'preset-70-40', name: 'Grand Rayon / Promo (70 × 40 mm)', width: 70, height: 40, orientation: 'landscape', rotation: '0' },
   { id: 'preset-80-50', name: 'Carton / Colisage (80 × 50 mm)', width: 80, height: 50, orientation: 'landscape', rotation: '0' },
   { id: 'preset-idipos-60-40', name: 'Idipos / Xprinter (60 × 40 mm)', width: 60, height: 40, orientation: 'landscape', rotation: '0' },
@@ -70,11 +71,26 @@ export function useLabelPrinter(products: Product[], initialSelectedProductIds: 
     if (selected && presetId !== 'preset-custom') {
       setCustomWidth(selected.width);
       setCustomHeight(selected.height);
-      setCustomPadding(2);
-      setPaddingTop(2);
-      setPaddingBottom(2);
-      setPaddingLeft(2);
-      setPaddingRight(2);
+      const isMini = selected.height <= 25 || selected.width <= 25;
+      const pad = isMini ? 1 : 2;
+      setCustomPadding(pad);
+      setPaddingTop(pad);
+      setPaddingBottom(pad);
+      setPaddingLeft(pad);
+      setPaddingRight(pad);
+      if (isMini) {
+        setBarcodeHeight(13);
+        setBarcodeWidth(1.0);
+        setNameFontSize(8);
+        setPriceFontSize(12);
+        setCustomGap(1);
+      } else {
+        setBarcodeHeight(26);
+        setBarcodeWidth(1.2);
+        setNameFontSize(11);
+        setPriceFontSize(16);
+        setCustomGap(3);
+      }
       if ('orientation' in selected && selected.orientation) {
         setCustomOrientation(selected.orientation as any);
       }

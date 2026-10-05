@@ -46,6 +46,11 @@ export interface OnlineOrder {
     changedBy: string;
     timestamp: string;
   }[];
+  latitude?: number;
+  longitude?: number;
+  mapsUrl?: string;
+  gpsAccuracy?: number;
+  notes?: string;
 }
 
 export interface Transaction {

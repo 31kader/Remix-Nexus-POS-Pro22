@@ -17,6 +17,10 @@ export interface Customer {
   joinDate?: string;
   address?: string;
   city?: string;
+  latitude?: number;
+  longitude?: number;
+  mapsUrl?: string;
+  maps_url?: string;
   creditLimit?: number;
   isWholesale?: boolean;
   birthday?: string;

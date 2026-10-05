@@ -25,10 +25,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
 
   const tpl = (settings.labelTemplate as string) || 'standard';
   
-  // Mode Imprimante de Ticket de Caisse (activé par défaut pour éviter le déroulement de 20cm et la rotation 90° Windows)
-  const isReceiptPrinterMode = settings.labelPrinterType !== 'dedicated_label_printer';
-
-  // Base/unrotated width and height
+  // Détection des dimensions de l'étiquette
   const defaultWidthNum = tpl === 'custom' ? 70 : (tpl === 'shelf-large' ? 72 : tpl === 'shelf-standard' ? 50 : 60);
   const defaultHeightNum = tpl === 'custom' ? 40 : (tpl === 'shelf-standard' ? 30 : 40);
 
@@ -43,22 +40,38 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
     heightVal = uWidthNum;
   }
 
+  // Détection STRICTE du mode imprimante :
+  // Une étiquette avec dimensions définies (comme 40x20, 50x30, 60x40) envoyée à une étiqueteuse IDIPOS / Xprinter / Zebra
+  // DOIT TOUJOURS avoir sa taille exacte `@page { size: width height; }` et JAMAIS `80mm auto` !
+  // `80mm auto` fait dérouler 7 à 9 étiquettes dans le vide sur les rouleaux d'étiquettes car la hauteur est non bornée.
+  const isExplicitReceipt = settings.labelPrinterType === 'receipt_printer';
+  const isLabelDimensions = widthVal <= 65 && heightVal <= 45;
+  const isReceiptPrinterMode = isExplicitReceipt && !isLabelDimensions;
+
   // Sur une imprimante thermique de ticket de caisse 80mm, la zone chauffante réelle est de 72mm maximum.
-  // Si on dépasse 72mm ou si @page a width > height, le pilote Windows bascule en PAYSAGE (20cm horizontal).
   if (isReceiptPrinterMode && widthVal > 72) {
     widthVal = 72;
   }
 
   const width = `${widthVal}mm`;
   const height = `${heightVal}mm`;
+  // Marge de sécurité anti-arrondi : un bloc de hauteur EXACTEMENT égale à la page déborde de quelques
+  // fractions de pixel => Chromium ajoute une page blanche => l'imprimante éjecte des étiquettes vides.
+  const safeHeight = isReceiptPrinterMode ? height : `${Math.max(heightVal - 0.4, 1).toFixed(2)}mm`;
   // Default to '0' (no rotation) unless explicitly configured by user
   const rot = (settings.labelRotation !== undefined && settings.labelRotation !== null && settings.labelRotation !== '') ? settings.labelRotation : '0';
+
+  // Format compact mini-étiquette (ex: 40x20 mm, IDIPOS)
+  const isMiniLabel = heightVal <= 25 || widthVal <= 25;
 
   // Custom template configs
   const showBarcode = settings.customShowBarcode !== false;
   const showQr = settings.customShowQr === true;
-  const bHeight = settings.customBarcodeHeight || 30;
-  const bWidthVal = settings.customBarcodeWidth || 1.2;
+  let bHeight = settings.customBarcodeHeight || (isMiniLabel ? 13 : 30);
+  if (isMiniLabel && bHeight > 16) {
+    bHeight = 13; // Verrou anti-débordement sur étiquette 20mm
+  }
+  const bWidthVal = settings.customBarcodeWidth || (isMiniLabel ? 1.0 : 1.2);
 
   // Pre-generate barcodes and QR codes offline
   const offlineAssets = await Promise.all(
@@ -69,22 +82,22 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
 
       let finalBHeight = bHeight;
       let finalBWidth = bWidthVal;
-      let showBarcodeText = true;
+      let showBarcodeText = !isMiniLabel;
 
       if (tpl === 'barcode-only') {
-        finalBHeight = 40;
-        finalBWidth = 1.5;
+        finalBHeight = isMiniLabel ? 16 : 40;
+        finalBWidth = isMiniLabel ? 1.0 : 1.5;
         showBarcodeText = true;
       } else if (tpl === 'standard') {
-        finalBHeight = 30;
-        finalBWidth = 1.2;
-        showBarcodeText = true;
+        finalBHeight = isMiniLabel ? 12 : 30;
+        finalBWidth = isMiniLabel ? 1.0 : 1.2;
+        showBarcodeText = !isMiniLabel;
       } else if (tpl === 'custom') {
-        finalBHeight = bHeight;
-        finalBWidth = bWidthVal;
+        finalBHeight = isMiniLabel ? Math.min(bHeight, 14) : bHeight;
+        finalBWidth = isMiniLabel ? Math.min(bWidthVal, 1.0) : bWidthVal;
         const struct = settings.customLayoutStructure || 'classic';
-        // In compact layouts, hide barcode text to prevent overlapping
-        if (struct === 'split' || struct === 'price-heavy') {
+        // En format 20mm ou compact, cacher le texte sous les barres pour éviter tout chevauchement
+        if (struct === 'split' || struct === 'price-heavy' || isMiniLabel) {
           showBarcodeText = false;
         } else {
           showBarcodeText = true;
@@ -100,7 +113,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             width: finalBWidth,
             height: finalBHeight,
             displayValue: showBarcodeText,
-            fontSize: 10,
+            fontSize: isMiniLabel ? 8 : 10,
             margin: 0
           });
           barcodeSvg = tempSvg.outerHTML;
@@ -196,16 +209,23 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
       const customText = settings.customText || '';
       const borderStyle = settings.customBorder ? '1px solid #000' : 'none';
       
-      const nameSize = settings.customNameSize || 11;
-      const priceSize = settings.customPriceSize || 16;
-      const textSize = settings.customTextSize || 9;
-      const paddingVal = settings.customPadding !== undefined ? settings.customPadding : 2;
+      let nameSize = settings.customNameSize || (isMiniLabel ? 8 : 11);
+      let priceSize = settings.customPriceSize || (isMiniLabel ? 12 : 16);
+      let textSize = settings.customTextSize || (isMiniLabel ? 7 : 9);
+      let paddingVal = settings.customPadding !== undefined ? settings.customPadding : (isMiniLabel ? 1 : 2);
+      
+      if (isMiniLabel) {
+        if (nameSize > 9) nameSize = 8;
+        if (priceSize > 13) priceSize = 12;
+        if (textSize > 8) textSize = 7;
+        if (paddingVal > 1) paddingVal = 1;
+      }
       
       // Directional margins / alignments (haut, bas, gauche, droite)
-      const pTop = settings.customPaddingTop !== undefined ? settings.customPaddingTop : paddingVal;
-      const pBottom = settings.customPaddingBottom !== undefined ? settings.customPaddingBottom : paddingVal;
-      const pLeft = settings.customPaddingLeft !== undefined ? settings.customPaddingLeft : paddingVal;
-      const pRight = settings.customPaddingRight !== undefined ? settings.customPaddingRight : paddingVal;
+      const pTop = settings.customPaddingTop !== undefined ? (isMiniLabel ? Math.min(settings.customPaddingTop, 1) : settings.customPaddingTop) : paddingVal;
+      const pBottom = settings.customPaddingBottom !== undefined ? (isMiniLabel ? Math.min(settings.customPaddingBottom, 1) : settings.customPaddingBottom) : paddingVal;
+      const pLeft = settings.customPaddingLeft !== undefined ? (isMiniLabel ? Math.min(settings.customPaddingLeft, 1) : settings.customPaddingLeft) : paddingVal;
+      const pRight = settings.customPaddingRight !== undefined ? (isMiniLabel ? Math.min(settings.customPaddingRight, 1) : settings.customPaddingRight) : paddingVal;
 
       const struct = settings.customLayoutStructure || 'classic';
       const align = settings.customAlignment || 'center';
@@ -214,14 +234,15 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
       const isBold = settings.customTextBold ? 'bold' : 'normal';
       const isItalic = settings.customTextItalic ? 'italic' : 'normal';
 
-      const customGap = settings.customGap !== undefined ? settings.customGap : 4;
+      const customGap = settings.customGap !== undefined ? (isMiniLabel ? Math.min(settings.customGap, 1) : settings.customGap) : (isMiniLabel ? 1 : 4);
       const nameLineClamp = settings.nameLineClamp !== undefined ? settings.nameLineClamp : 1;
       const customLetterSpacing = settings.customLetterSpacing !== undefined ? settings.customLetterSpacing : 0;
 
-      const imageHtml = showImage && (p.imageUrl || p.image) ? `<div style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : '';
+      const imgSize = isMiniLabel ? 20 : 32;
+      const imageHtml = showImage && (p.imageUrl || p.image) ? `<div style="width: ${imgSize}px; height: ${imgSize}px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 3px; border: 1px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : '';
 
       const crossedPriceHtml = (p.originalPrice && Number(p.originalPrice) > Number(p.price))
-        ? `<span style="font-size: ${Math.max(8, Math.round(priceSize * 0.65))}px; text-decoration: line-through; color: #555; font-weight: bold; margin-right: 4px;">${formatPrice(p.originalPrice)}</span>`
+        ? `<span style="font-size: ${Math.max(7, Math.round(priceSize * 0.65))}px; text-decoration: line-through; color: #555; font-weight: bold; margin-right: 3px;">${formatPrice(p.originalPrice)}</span>`
         : '';
 
       if (struct === 'split') {
@@ -491,18 +512,34 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
         }
       }
 
+      const stdNameSize = isMiniLabel ? '8px' : '11px';
+      const stdPriceSize = isMiniLabel ? '12px' : '16px';
+      const stdImgSize = isMiniLabel ? '18px' : '28px';
+
       contentHtml = `
-        <div class="label-standard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
-          <div class="name" style="font-weight: bold; font-size: 11px; margin-bottom: 2px; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 2px 0;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-              ${(p.imageUrl || p.image) ? `<div style="width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 4px; border: 1.5px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : ''}
-              <div class="price" style="font-size: 16px; font-weight: 900; margin: 0;">${formatPrice(p.price)} ${settings.currency}</div>
+        <div class="label-standard" style="
+          width: 100%; 
+          height: 100%; 
+          box-sizing: border-box; 
+          padding: ${isMiniLabel ? '1px' : '2px'}; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          justify-content: space-between; 
+          overflow: hidden;
+        ">
+          <div style="width: 100%; text-align: center; overflow: hidden;">
+            <div class="name" style="font-weight: bold; font-size: ${stdNameSize}; line-height: 1.1; margin: 0; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 4px; margin: 1px 0;">
+              ${(p.imageUrl || p.image) ? `<div style="width: ${stdImgSize}; height: ${stdImgSize}; display: inline-flex; align-items: center; justify-content: center; background: #fff; border-radius: 2px; border: 1px solid #ddd; overflow: hidden;"><img src="${p.imageUrl || p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain;" referrerpolicy="no-referrer" /></div>` : ''}
+              <div class="price" style="font-size: ${stdPriceSize}; font-weight: 900; line-height: 1.1; margin: 0;">${formatPrice(p.price)} ${settings.currency}</div>
             </div>
-            ${unitPriceText ? `<div style="font-size: 7.5px; font-weight: 800; color: #444; margin-top: 1px;">${unitPriceText}</div>` : ''}
+            ${(!isMiniLabel && unitPriceText) ? `<div style="font-size: 7.5px; font-weight: 800; color: #444; margin-top: 1px;">${unitPriceText}</div>` : ''}
           </div>
-          ${barcodeHtml}
-          <div class="sku" style="font-size: 8px; color: #666; margin-top: 2px;">${p.sku || p.id}</div>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; overflow: hidden;">
+            ${barcodeHtml}
+            <div class="sku" style="font-size: ${isMiniLabel ? '7px' : '8px'}; color: #666; line-height: 1; margin: 0;">${p.sku || p.id}</div>
+          </div>
         </div>
       `;
     }
@@ -516,14 +553,12 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
     `;
   });
 
-  // Si on imprime sur l'imprimante de ticket de caisse (mode par défaut),
-  // @page NE DOIT JAMAIS avoir width > height sinon Windows/Chromium bascule en PAYSAGE (20cm horizontal).
-  // On force donc `@page { size: 80mm auto; margin: 0mm !important; }` avec `height: auto` sur body.
+  // Si on imprime sur l'imprimante de ticket de caisse 80mm en mode continu, on passe 80mm auto.
+  // Pour TOUTE étiquette dédiée (IDIPOS 40x20mm, etc.), on passe strictement sa largeur et hauteur exactes.
   const pageSizeCss = isReceiptPrinterMode
     ? '80mm auto'
     : `${width} ${height}`;
   const bodyWidthCss = isReceiptPrinterMode ? '72mm' : width;
-  const bodyHeightCss = isReceiptPrinterMode ? 'auto' : height;
 
   doc.open();
   doc.write(`
@@ -544,9 +579,12 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             }
             html, body {
               width: ${bodyWidthCss} !important;
-              height: ${bodyHeightCss} !important;
+              height: auto !important;
               margin: 0mm !important;
               padding: 0mm !important;
+              background: #fff !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
           }
           * { 
@@ -560,8 +598,7 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             background: white !important;
             font-family: Arial, sans-serif;
             width: ${bodyWidthCss} !important;
-            height: ${bodyHeightCss} !important;
-            ${isReceiptPrinterMode ? '' : `max-height: ${height} !important; overflow: hidden !important;`}
+            height: auto !important;
             font-size: 0 !important;
             line-height: 0 !important;
             -webkit-print-color-adjust: exact !important;
@@ -569,24 +606,26 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
           }
           svg {
             max-width: 100% !important;
-            height: auto !important;
+            max-height: 100% !important;
             display: block;
             margin: 0 auto;
           }
           .label-container {
             width: ${width} !important; 
-            height: ${height} !important;
-            max-height: ${height} !important;
-            padding: 0;
+            height: ${safeHeight} !important;
+            max-width: ${width} !important;
+            max-height: ${safeHeight} !important;
+            min-height: ${safeHeight} !important;
+            padding: 0 !important;
             margin: ${isReceiptPrinterMode ? '0 auto' : '0'} !important;
-            box-sizing: border-box;
-            background: white;
+            box-sizing: border-box !important;
+            background: white !important;
             position: relative !important;
             overflow: hidden !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            page-break-after: always !important;
-            break-after: page !important;
+            page-break-after: auto !important;
+            break-after: auto !important;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -594,9 +633,12 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             line-height: normal !important;
             ${isReceiptPrinterMode ? 'border-bottom: 1px dashed #ccc;' : ''}
           }
+          /* Saut de page AVANT chaque étiquette sauf la 1ère : jamais de page blanche finale */
+          .label-container + .label-container {
+            page-break-before: always !important;
+            break-before: page !important;
+          }
           .label-container:last-child {
-            page-break-after: auto !important;
-            break-after: auto !important;
             border-bottom: none !important;
           }
           .label-wrapper {
@@ -611,8 +653,8 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             background: white;
           }
           .label-wrapper.rot-90 {
-            width: 100% !important;
-            height: 100% !important;
+            width: ${height} !important;
+            height: ${width} !important;
             transform: rotate(90deg);
             transform-origin: center center;
           }
@@ -623,8 +665,8 @@ export const printLabels = async (products: Product[], rawSettings: CompanySetti
             transform-origin: center center;
           }
           .label-wrapper.rot-270 {
-            width: 100% !important;
-            height: 100% !important;
+            width: ${height} !important;
+            height: ${width} !important;
             transform: rotate(270deg);
             transform-origin: center center;
           }

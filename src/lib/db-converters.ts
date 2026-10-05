@@ -131,7 +131,8 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 
     'total_spent', 'last_visit', 'notes', 'is_app_user', 'join_date', 
     'favorite_items', 'alerts', 'cashier_notes', 'updated_at',
-    'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash'
+    'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash',
+    'address', 'latitude', 'longitude', 'maps_url'
   ],
   transactions: [
     'id', 'total', 'payment_method', 'delivery_method', 'timestamp', 'created_at', 'updated_at', 'user_id', 
@@ -205,7 +206,8 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'external_order_id', 'customer_id', 'customer_name', 'customer_phone', 'customer_email',
     'items', 'subtotal', 'total', 'status', 'payment_status', 'payment_method', 'source', 'delivery_method', 
     'pickup_time', 'shipping_address', 'delivery_notes', 'notes', 'loyalty_points', 'synced_to_pos', 'assigned_employee_id', 
-    'assigned_employee_name', 'assigned_picker_id', 'assigned_picker_name', 'status_history', 'timestamp', 'updated_at', 'created_at'
+    'assigned_employee_name', 'assigned_picker_id', 'assigned_picker_name', 'status_history', 'timestamp', 'updated_at', 'created_at',
+    'latitude', 'longitude', 'maps_url', 'gps_accuracy'
   ],
   purchases: [
     'id', 'supplier_id', 'supplier_name', 'items', 'total_amount', 'status', 'invoice_number', 'date', 'payment_status', 'paid_amount', 'global_discount', 'global_tax', 'notes', 'updated_at', 'documents'

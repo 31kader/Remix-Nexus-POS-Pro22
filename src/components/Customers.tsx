@@ -4,7 +4,7 @@ import {
   Trash2, User as UserIcon, Users, CreditCard as CardIcon, TrendingUp,
   ShoppingCart, Printer, Download, Upload, Filter, AlertTriangle, ArrowUpDown, X,
   LayoutGrid, Table as TableIcon, Eye, Edit, ChevronLeft, ChevronRight,
-  Maximize2, Minimize2, ArrowLeft, History, UserCheck
+  Maximize2, Minimize2, ArrowLeft, History, UserCheck, MapPin, Compass
 } from 'lucide-react';
 import { List } from 'react-window';
 import { fr } from 'date-fns/locale';
@@ -130,7 +130,14 @@ export const Customers = memo(function Customers(props: CustomersProps) {
                 <div className="flex items-center gap-2">
                   <h4 className="font-black text-white truncate text-sm uppercase tracking-wider">{customer.name || 'Client sans nom'}</h4>
                   {customer.isAppUser && (
-                    <Smartphone size={14} className="text-indigo-400 flex-shrink-0" />
+                    <span title="Client Application Mobile">
+                      <Smartphone size={14} className="text-indigo-400 flex-shrink-0" />
+                    </span>
+                  )}
+                  {customer.latitude && (
+                    <span title="Position GPS enregistrée">
+                      <MapPin size={13} className="text-emerald-400 flex-shrink-0" />
+                    </span>
                   )}
                 </div>
                 <p className="text-[10px] text-white/40 font-bold uppercase tracking-tighter truncate">{customer.phone || 'Pas de téléphone'}</p>
@@ -587,6 +594,31 @@ export const Customers = memo(function Customers(props: CustomersProps) {
                           )}
                           {cust.email && (
                             <p className="text-[10px] text-slate-400 truncate max-w-[160px] mt-0.5">{cust.email}</p>
+                          )}
+                          {(cust.latitude || cust.address) && (
+                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                              <span className={cn(
+                                "text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1",
+                                cust.latitude 
+                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" 
+                                  : "bg-slate-800 text-slate-300 border border-slate-700"
+                              )}>
+                                <MapPin size={10} className={cust.latitude ? "text-emerald-400" : "text-slate-400"} />
+                                {cust.latitude ? `GPS: ${Number(cust.latitude).toFixed(4)}` : (cust.city || 'Adresse')}
+                              </span>
+                              {cust.latitude && cust.longitude && (
+                                <a
+                                  href={`https://www.google.com/maps/dir/?api=1&destination=${cust.latitude},${cust.longitude}&travelmode=driving`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-0.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+                                  title="Guidage Google Maps"
+                                >
+                                  <Compass size={12} />
+                                </a>
+                              )}
+                            </div>
                           )}
                         </td>
 

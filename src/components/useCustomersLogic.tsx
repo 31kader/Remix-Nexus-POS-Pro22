@@ -72,6 +72,9 @@ export function useCustomersLogic(props: CustomersProps) {
     password: '',
     address: '',
     city: '',
+    latitude: '' as string | number,
+    longitude: '' as string | number,
+    mapsUrl: '',
     creditLimit: 0,
     isWholesale: false
   });
@@ -93,6 +96,9 @@ export function useCustomersLogic(props: CustomersProps) {
         password: '',
         address: editingCustomer.address || '',
         city: editingCustomer.city || '',
+        latitude: editingCustomer.latitude ?? '',
+        longitude: editingCustomer.longitude ?? '',
+        mapsUrl: editingCustomer.mapsUrl || (editingCustomer as any).maps_url || '',
         creditLimit: editingCustomer.creditLimit || 0,
         isWholesale: editingCustomer.isWholesale || false
       });
@@ -107,6 +113,9 @@ export function useCustomersLogic(props: CustomersProps) {
         password: '',
         address: '',
         city: '',
+        latitude: '',
+        longitude: '',
+        mapsUrl: '',
         creditLimit: 0,
         isWholesale: false
       });
@@ -338,9 +347,15 @@ export function useCustomersLogic(props: CustomersProps) {
     const nowIso = new Date().toISOString();
     const custId = editingCustomer?.id || generateLocalId();
 
+    const numLat = formData.latitude !== '' && !isNaN(Number(formData.latitude)) ? Number(formData.latitude) : undefined;
+    const numLng = formData.longitude !== '' && !isNaN(Number(formData.longitude)) ? Number(formData.longitude) : undefined;
+
     const customerObj: Customer = {
       ...(editingCustomer || {}),
       ...restFormData,
+      latitude: numLat,
+      longitude: numLng,
+      mapsUrl: formData.mapsUrl || (numLat && numLng ? `https://maps.google.com/?q=${numLat},${numLng}` : undefined),
       id: custId,
       name: cleanName,
       email: cleanEmail,

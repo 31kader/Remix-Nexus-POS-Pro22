@@ -14,8 +14,14 @@ interface LabelSimulatorProps {
 
 export function LabelSimulator({ state, previewProduct, settings }: LabelSimulatorProps) {
   const simulatorZoomFactor = 4;
-  const simWidth = state.customWidth * simulatorZoomFactor;
-  const simHeight = state.customHeight * simulatorZoomFactor;
+  const isPortrait = state.customOrientation === 'portrait';
+  const effectiveWidth = isPortrait ? state.customHeight : state.customWidth;
+  const effectiveHeight = isPortrait ? state.customWidth : state.customHeight;
+  const simWidth = effectiveWidth * simulatorZoomFactor;
+  const simHeight = effectiveHeight * simulatorZoomFactor;
+  const rotDegree = state.customRotation === '90' ? 90
+    : state.customRotation === '180' ? 180
+    : state.customRotation === '270' ? 270 : 0;
 
   const contentAlignValues = {
     'left': 'flex-start',
@@ -46,9 +52,14 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
   return (
     <div className="space-y-5 flex flex-col h-[580px] bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md">
       <div>
-        <h3 className="font-bold text-white text-sm uppercase mb-1 flex items-center gap-2">
-          <Maximize2 size={15} className="text-indigo-400" /> 3. Aperçu Physique Temps Réel
-        </h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-white text-sm uppercase flex items-center gap-2">
+            <Maximize2 size={15} className="text-indigo-400" /> 3. Aperçu Physique Temps Réel
+          </h3>
+          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            {isPortrait ? '↕️ Vertical' : '↔️ Horizontal'} • {effectiveWidth}×{effectiveHeight}mm{rotDegree !== 0 ? ` • ${rotDegree}°` : ''}
+          </span>
+        </div>
         <p className="text-xs text-slate-400">Rendu exact de l'étiquette finale (Simulateur Thermique).</p>
       </div>
 
@@ -77,7 +88,9 @@ export function LabelSimulator({ state, previewProduct, settings }: LabelSimulat
             userSelect: 'none',
             boxSizing: 'border-box',
             transition: 'all 0.15s ease-in-out',
-            gap: `${state.customGap}px`
+            gap: `${state.customGap}px`,
+            transform: rotDegree !== 0 ? `rotate(${rotDegree}deg)` : undefined,
+            transformOrigin: 'center center'
           }}
         >
           {state.layoutStructure === 'split' ? (

@@ -224,13 +224,25 @@ return () => window.removeEventListener('resize', checkMobile);
 
 
   const handlePrintLabel = (product: Product) => {
-    printLabels([product], settings);
+    const savedPrinterType = (() => {
+      try {
+        const val = localStorage.getItem('nexus_label_printer_type');
+        if (val === 'dedicated_label_printer' || val === 'receipt_printer') return val;
+      } catch (_) {}
+      return 'dedicated_label_printer';
+    })();
+    printLabels([product], { ...settings, labelPrinterType: savedPrinterType } as any);
   };
 
-
-
   const printQuickLabel = (product: Product) => {
-    printLabels([product], settings);
+    const savedPrinterType = (() => {
+      try {
+        const val = localStorage.getItem('nexus_label_printer_type');
+        if (val === 'dedicated_label_printer' || val === 'receipt_printer') return val;
+      } catch (_) {}
+      return 'dedicated_label_printer';
+    })();
+    printLabels([product], { ...settings, labelPrinterType: savedPrinterType } as any);
   };
 
   const handleExportExcel = async () => {

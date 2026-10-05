@@ -152,7 +152,28 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
 
   // High-value Pro Additions: Thermal Roll vs A4 Sticker Sheet + Start Offset + Quick Mentions
   const [printMedium, setPrintMedium] = useState<'thermal' | 'a4_sheet'>('thermal');
-  const [labelPrinterType, setLabelPrinterType] = useState<'receipt_printer' | 'dedicated_label_printer'>('receipt_printer');
+  const [labelPrinterType, setLabelPrinterType] = useState<'receipt_printer' | 'dedicated_label_printer'>(() => {
+    try {
+      const saved = localStorage.getItem('nexus_label_printer_type');
+      if (saved === 'dedicated_label_printer' || saved === 'receipt_printer') return saved;
+    } catch (_) {}
+    return 'dedicated_label_printer';
+  });
+
+  const handleSetLabelPrinterType = (type: 'receipt_printer' | 'dedicated_label_printer') => {
+    setLabelPrinterType(type);
+    try {
+      localStorage.setItem('nexus_label_printer_type', type);
+    } catch (_) {}
+  };
+
+  const handlePresetChangeWithAutoSwitch = (presetId: string) => {
+    handlePresetChange(presetId);
+    if (presetId.startsWith('preset-idipos') || presetId === 'preset-40-20' || presetId === 'preset-40-20-vert') {
+      handleSetLabelPrinterType('dedicated_label_printer');
+    }
+  };
+
   const [selectedA4Sheet, setSelectedA4Sheet] = useState('a4-40');
   const [startOffset, setStartOffset] = useState(1); // 1-indexed cell offset to reuse partially used A4 sticker sheets
   const [packDate, setPackDate] = useState('');
@@ -497,27 +518,27 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
               <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
                 <button
                   type="button"
-                  onClick={() => setLabelPrinterType('receipt_printer')}
+                  onClick={() => handleSetLabelPrinterType('receipt_printer')}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
                     labelPrinterType === 'receipt_printer'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-zinc-400'
                   }`}
-                  title="Empêche le pilote d'imprimante de ticket de caisse 80mm de tourner en Paysage (20cm)"
+                  title="Pour imprimer sur papier ticket 80mm de la caisse"
                 >
-                  🧾 Imprimante Ticket Caisse (80mm Anti-20cm)
+                  🧾 Imprimante Ticket Caisse (80mm)
                 </button>
                 <button
                   type="button"
-                  onClick={() => setLabelPrinterType('dedicated_label_printer')}
+                  onClick={() => handleSetLabelPrinterType('dedicated_label_printer')}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
                     labelPrinterType === 'dedicated_label_printer'
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-zinc-400'
                   }`}
-                  title="Pour imprimante d'étiquettes autocollantes dédiée (Zebra / Xprinter XP-365B)"
+                  title="Pour rouleau d'étiquettes autocollantes (IDIPOS / Xprinter / Zebra)"
                 >
-                  🏷️ Étiqueteuse Dédiée
+                  🏷️ Étiqueteuse Dédiée (IDIPOS / Xprinter)
                 </button>
               </div>
             )}
@@ -646,7 +667,7 @@ export function LabelPrinter({ products, settings, initialSelectedProductIds = [
 
         <SettingsPanel
           state={stateContext}
-          handlePresetChange={handlePresetChange}
+          handlePresetChange={handlePresetChangeWithAutoSwitch}
           handlePaddingBaseChange={handlePaddingBaseChange}
         />
 

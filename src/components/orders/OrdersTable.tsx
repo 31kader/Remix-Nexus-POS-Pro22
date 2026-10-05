@@ -133,14 +133,21 @@ export function OrdersTable({
                 </td>
                 <td className="p-4">
                   <div className="flex flex-col gap-1">
-                    <span className={cn(
-                      "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest w-fit shadow-lg",
-                      o?.deliveryMethod === 'delivery' 
-                        ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/20" 
-                        : "bg-amber-500/20 text-amber-300 border border-amber-500/20"
-                    )}>
-                      {o?.deliveryMethod === 'delivery' ? 'Livraison' : 'Retrait'}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest w-fit shadow-lg",
+                        o?.deliveryMethod === 'delivery' 
+                          ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/20" 
+                          : "bg-amber-500/20 text-amber-300 border border-amber-500/20"
+                      )}>
+                        {o?.deliveryMethod === 'delivery' ? 'Livraison' : 'Retrait'}
+                      </span>
+                      {o?.deliveryMethod === 'delivery' && (o.latitude || o.mapsUrl) && (
+                        <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded text-[8px] font-black uppercase tracking-wider" title="Position GPS disponible">
+                          GPS
+                        </span>
+                      )}
+                    </div>
                     {o?.deliveryMethod === 'pickup' && o?.pickupTime && (
                       <span className="text-[9px] font-black text-white/40 uppercase">Heure: {o.pickupTime}</span>
                     )}

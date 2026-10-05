@@ -3,7 +3,9 @@ import { Modal, Button, SafeImage } from '../ui';
 import { OnlineOrder, CompanySettings, Product } from '../../types';
 import { formatSafe } from '../../lib/utils';
 import { cn } from '../../lib/utils';
-import { Phone, MessageCircle, Truck, ShoppingBag, MapPin, Navigation, Package, Printer, Edit, X } from 'lucide-react';
+import { Phone, MessageCircle, Truck, ShoppingBag, MapPin, Navigation, Package, Printer, Edit, X, Copy, Check, Share2, Compass } from 'lucide-react';
+import { getGoogleMapsDirectionsUrl, getWazeDirectionsUrl, getDeliveryDispatchText, getWhatsAppDispatchUrl, hasGpsCoordinates } from '../../lib/delivery-itinerary';
+import { toast } from 'sonner';
 
 interface EditOrderItemsProps {
   order: OnlineOrder;
@@ -101,6 +103,7 @@ export function OrderDetailModal({
   t
 }: OrderDetailModalProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [copiedDispatch, setCopiedDispatch] = useState(false);
 
   if (!selectedOrder) return null;
 
@@ -111,6 +114,23 @@ export function OrderDetailModal({
         : []);
 
   const displayId = selectedOrder.externalOrderId || String(selectedOrder.id || '').slice(0, 8);
+  const currency = settings?.currency || 'DA';
+  const hasGps = hasGpsCoordinates(selectedOrder);
+  const gmapsUrl = getGoogleMapsDirectionsUrl(selectedOrder);
+  const wazeUrl = getWazeDirectionsUrl(selectedOrder);
+  const whatsappCourierUrl = getWhatsAppDispatchUrl(selectedOrder, undefined, currency, settings?.name);
+
+  const handleCopyDispatch = async () => {
+    try {
+      const text = getDeliveryDispatchText(selectedOrder, currency, settings?.name);
+      await navigator.clipboard.writeText(text);
+      setCopiedDispatch(true);
+      toast.success("Fiche de livraison copiée dans le presse-papier !");
+      setTimeout(() => setCopiedDispatch(false), 2500);
+    } catch (_) {
+      toast.error("Impossible de copier la fiche.");
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Détails Commandes #${displayId}`}>
@@ -166,25 +186,80 @@ export function OrderDetailModal({
             </div>
 
             {selectedOrder.deliveryMethod === 'delivery' && (
-              <div className="bg-white/5 border border-white/5 rounded-xl p-6  text-left">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <MapPin size={12} className="text-indigo-400" /> Adresse de livraison
-                </p>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-white/90">{selectedOrder.shippingAddress || 'N/A'}</p>
-                    {selectedOrder.deliveryNotes && (
-                      <p className="text-xs text-amber-400/80 mt-1 ">Note: {selectedOrder.deliveryNotes}</p>
-                    )}
-                  </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-left space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="text-[10px] font-black text-white/50 uppercase tracking-widest flex items-center gap-1.5">
+                    <MapPin size={13} className="text-indigo-400" /> Adresse & Navigation Livreur
+                  </p>
+                  {hasGps ? (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                      <Compass size={11} className="text-emerald-400 animate-spin-slow" />
+                      GPS Précis ({selectedOrder.latitude?.toFixed(4)}, {selectedOrder.longitude?.toFixed(4)})
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                      📍 Adresse Déclarée
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-white leading-relaxed">
+                    {selectedOrder.shippingAddress || 'Aucune adresse renseignée'}
+                  </p>
+                  {selectedOrder.deliveryNotes && (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2">
+                      <span className="font-black shrink-0 uppercase text-[10px] tracking-wider bg-amber-500/20 px-1.5 py-0.5 rounded">Consignes</span>
+                      <span>{selectedOrder.deliveryNotes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Boutons d'Action Rapides : Google Maps / Waze / WhatsApp Livreur / Copie */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+                  {/* Google Maps (Guidage Direct) */}
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrder.shippingAddress || '')}`}
+                    href={gmapsUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 text-indigo-400 text-xs px-3 py-2 rounded-xl transition-all font-bold shrink-0 shadow-lg shadow-indigo-500/5"
+                    className="flex-1 min-w-[130px] flex items-center justify-center gap-1.5 bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 text-blue-300 text-xs px-3 py-2.5 rounded-xl transition-all font-bold shadow-sm"
+                    title="Ouvrir le guidage routier Google Maps en mode conduite"
                   >
-                     <Navigation size={12} /> Itinéraire
+                    <Navigation size={13} className="text-blue-400" /> Google Maps
                   </a>
+
+                  {/* Waze (Navigation Trafic en Direct) */}
+                  <a
+                    href={wazeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 bg-cyan-500/15 border border-cyan-500/30 hover:bg-cyan-500/25 text-cyan-300 text-xs px-3 py-2.5 rounded-xl transition-all font-bold shadow-sm"
+                    title="Lancer la navigation Waze pour éviter les embouteillages"
+                  >
+                    <Compass size={13} className="text-cyan-400" /> Waze
+                  </a>
+
+                  {/* Envoyer au Livreur (WhatsApp) */}
+                  <a
+                    href={whatsappCourierUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 min-w-[150px] flex items-center justify-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-300 text-xs px-3 py-2.5 rounded-xl transition-all font-bold shadow-sm"
+                    title="Transmettre la fiche complète au coursier / livreur via WhatsApp"
+                  >
+                    <Share2 size={13} className="text-emerald-400" /> Fiche Livreur
+                  </a>
+
+                  {/* Copier la Fiche */}
+                  <button
+                    type="button"
+                    onClick={handleCopyDispatch}
+                    className="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Copier les détails de la livraison dans le presse-papier"
+                  >
+                    {copiedDispatch ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                    {copiedDispatch ? 'Copié !' : 'Copier'}
+                  </button>
                 </div>
               </div>
             )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, AlignLeft, AlignCenter, AlignRight, Bold, Italic, QrCode, Type, Sliders } from 'lucide-react';
+import { Settings, AlignLeft, AlignCenter, AlignRight, Bold, Italic, QrCode, Type, Sliders, RotateCw } from 'lucide-react';
 import { LabelPrinterState } from './types';
 import { PRESETS } from './useLabelPrinter';
 
@@ -33,9 +33,75 @@ export function SettingsPanel({ state, handlePresetChange, handlePaddingBaseChan
       </div>
 
       <div className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 space-y-3">
-        <div className="flex justify-between">
-          <span className="text-[11px] font-bold text-indigo-400 uppercase">Dimensions Étiquette</span>
-          <span className="text-[10px] font-mono text-slate-400">{state.customWidth}mm × {state.customHeight}mm</span>
+        <div className="flex justify-between items-center">
+          <span className="text-[11px] font-bold text-indigo-400 uppercase">Dimensions & Orientation</span>
+          <span className="text-[10px] font-mono text-slate-400">
+            {state.customOrientation === 'portrait' 
+              ? `${state.customHeight}mm × ${state.customWidth}mm [Vertical]` 
+              : `${state.customWidth}mm × ${state.customHeight}mm [Horizontal]`
+            }
+          </span>
+        </div>
+
+        {/* 📐 Paramètre Orientation (Vertical / Horizontal) + Rotation */}
+        <div className="grid grid-cols-2 gap-2.5 p-2 bg-slate-900/80 rounded-xl border border-slate-800">
+          {/* Orientation */}
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">
+              Orientation
+            </span>
+            <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => state.setCustomOrientation('landscape')}
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
+                  state.customOrientation === 'landscape'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Format Horizontal / Paysage"
+              >
+                ↔️ Horizontal
+              </button>
+              <button
+                type="button"
+                onClick={() => state.setCustomOrientation('portrait')}
+                className={`flex-1 py-1.5 px-2 rounded-md text-[10px] font-bold transition-all flex items-center justify-center gap-1 ${
+                  state.customOrientation === 'portrait'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Format Vertical / Portrait"
+              >
+                ↕️ Vertical
+              </button>
+            </div>
+          </div>
+
+          {/* Rotation */}
+          <div className="space-y-1">
+            <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block flex items-center gap-1">
+              <RotateCw size={11} className="text-indigo-400" />
+              Rotation
+            </span>
+            <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+              {(['0', '90', '180', '270'] as const).map((deg) => (
+                <button
+                  key={deg}
+                  type="button"
+                  onClick={() => state.setCustomRotation(deg)}
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${
+                    state.customRotation === deg
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title={`Pivoter le contenu de ${deg}°`}
+                >
+                  {deg}°
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
         
         <div className="space-y-2">

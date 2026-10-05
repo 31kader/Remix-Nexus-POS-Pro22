@@ -673,7 +673,16 @@ export async function processSyncQueue(): Promise<void> {
       const PRODUCT_BATCH_SIZE = 15;
       for (let i = 0; i < fullProducts.length; i += PRODUCT_BATCH_SIZE) {
         const chunk = fullProducts.slice(i, i + PRODUCT_BATCH_SIZE);
-        const payloads = chunk.map(c => c.payload);
+        // Harmonisation stricte des clés pour PostgREST (évite le rejet HTTP 400 'All object keys must match')
+        const allKeys = new Set<string>();
+        chunk.forEach(c => Object.keys(c.payload).forEach(k => allKeys.add(k)));
+        const payloads = chunk.map(c => {
+          const harmonized: any = {};
+          allKeys.forEach(k => {
+            harmonized[k] = c.payload[k] !== undefined ? c.payload[k] : null;
+          });
+          return harmonized;
+        });
         try {
           const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
           if (!error) {
@@ -832,11 +841,19 @@ export async function processSyncQueue(): Promise<void> {
       for (const [table, records] of itemsByTable.entries()) {
         for (let i = 0; i < records.length; i += 50) {
           const chunk = records.slice(i, i + 50);
-          const payloads = chunk.map(r => r.payload);
+          const allKeys = new Set<string>();
+          chunk.forEach((r: any) => Object.keys(r.payload).forEach(k => allKeys.add(k)));
+          const payloads = chunk.map((r: any) => {
+            const harmonized: any = {};
+            allKeys.forEach(k => {
+              harmonized[k] = r.payload[k] !== undefined ? r.payload[k] : null;
+            });
+            return harmonized;
+          });
           try {
             const res = await supabase.from(table).upsert(payloads, { onConflict: 'id' });
             if (!res?.error) {
-              chunk.forEach(r => completedKeys.add(r.originalKey));
+              chunk.forEach((r: any) => completedKeys.add(r.originalKey));
             } else {
               // Fallback un par un si le lot échoue
               for (const single of chunk) {

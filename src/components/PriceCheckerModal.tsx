@@ -203,9 +203,17 @@ export function PriceCheckerModal({ isOpen, onClose, products, settings, categor
       }
     });
 
+    const savedPrinterType = (() => {
+      try {
+        const val = localStorage.getItem('nexus_label_printer_type');
+        if (val === 'dedicated_label_printer' || val === 'receipt_printer') return val;
+      } catch (_) {}
+      return 'dedicated_label_printer';
+    })();
+
     printLabels(expandedProducts, {
       ...settings,
-      labelPrinterType: 'receipt_printer'
+      labelPrinterType: savedPrinterType
     } as any);
     toast.success(`Impression directe lancée (${expandedProducts.length} étiquette(s)) !`);
     focusScannerInput();
