@@ -5,8 +5,8 @@ import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel,
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
-import { setLocalState, saveStateToStorage } from '../../lib/local-db';
-import { getDeletedRecordIds } from '../../services/LocalDatabase';
+import { setLocalState, saveStateToStorage, replaceTableState, removeLocalState } from '../../lib/local-db';
+import { getDeletedRecordIds, markRecordDeleted } from '../../services/LocalDatabase';
 import { getTerminalId } from '../../services/terminalService';
 import { withNetworkTimeout } from '../../services/networkErrorHandler';
 
@@ -132,6 +132,9 @@ export function useFastChangingData({
             });
           setOnlineOrders(onlineData);
           idbSet('nexus_online_orders_cache', onlineData).catch(err => console.warn('[IDB Error]', err));
+          
+          // 🛡️ Réconciliation stricte : purger de la base locale interne toute commande absente de Supabase
+          replaceTableState('online_orders', onlineData);
         }
         
         const shiftsDataRaw = (shiftsRes as any)?.data;
@@ -176,7 +179,10 @@ export function useFastChangingData({
         if (!isSubscribed) return;
         if (snapshot.exists()) {
           const val = snapshot.val();
-          const docs = Object.keys(val).map(id => ({ id, ...val[id] }));
+          const deletedOrderIds = path === 'onlineOrders' ? getDeletedRecordIds('online_orders') : new Set<string>();
+          const docs = Object.keys(val)
+            .filter(id => !deletedOrderIds.has(String(id)))
+            .map(id => ({ id, ...val[id] }));
           setter(docs);
           if (extraAction) extraAction(docs);
 
@@ -248,6 +254,9 @@ export function useFastChangingData({
             if (payload.eventType === 'DELETE') {
               const deletedId = payload.old?.id;
               if (deletedId) {
+                markRecordDeleted('online_orders', String(deletedId));
+                removeLocalState(`online_orders/${deletedId}`);
+                saveStateToStorage('online_orders');
                 setOnlineOrders(prev => {
                   const safe = Array.isArray(prev) ? prev : [];
                   const updated = safe.filter(o => String(o.id) !== String(deletedId));
@@ -256,11 +265,17 @@ export function useFastChangingData({
                 });
               }
             } else if (payload.new && payload.new.id) {
+              const deletedOrderIds = getDeletedRecordIds('online_orders');
+              if (deletedOrderIds.has(String(payload.new.id))) {
+                return;
+              }
               const rawOrder = payload.new;
               if (rawOrder.items && typeof rawOrder.items === 'string') {
                 try { rawOrder.items = JSON.parse(rawOrder.items); } catch(e) {}
               }
               const camelOrder = convertKeysToCamel(rawOrder) as OnlineOrder;
+              setLocalState(`online_orders/${camelOrder.id}`, camelOrder);
+              saveStateToStorage('online_orders');
               setOnlineOrders(prev => {
                 const safe = Array.isArray(prev) ? prev : [];
                 const idx = safe.findIndex(o => String(o.id) === String(camelOrder.id));

@@ -2,7 +2,8 @@ import { DEFAULT_PERMISSIONS } from '../constants';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabase';
 import { enqueueStockAdjustment, enqueueSync } from '../services/SyncService';
-import { localDb, getDeletedRecordIds } from '../services/LocalDatabase';
+import { localDb, getDeletedRecordIds, markRecordDeleted } from '../services/LocalDatabase';
+import { replaceTableState } from '../lib/local-db';
 import { OnlineOrder, Employee, Customer, CartItem, CompanySettings, Product } from '../types';
 import { isLocked, generateUniqueId, escapeHtml } from '../lib/utils';
 import { convertKeysToCamel } from '../lib/db-converters';
@@ -43,11 +44,14 @@ export function useOrdersLogic(props: OrdersProps) {
     ? storeOnlineOrders
     : (Array.isArray(props.orders) && props.orders.length > 0 ? props.orders : []);
 
-  // 🛡️ Déduplication stricte par externalOrderId (ou id) : conserver la plus récente
+  // 🛡️ Déduplication stricte par externalOrderId (ou id) & Exclusion des commandes supprimées
   const rawOrders = useMemo(() => {
+    const deletedOrderIds = getDeletedRecordIds('online_orders');
     const map = new Map<string, OnlineOrder>();
     for (const order of sourceOrders) {
-      if (!order) continue;
+      if (!order || !order.id) continue;
+      if (deletedOrderIds.has(String(order.id))) continue;
+      if (order.externalOrderId && deletedOrderIds.has(String(order.externalOrderId))) continue;
       const key = order.externalOrderId ? `ext_${order.externalOrderId}` : `id_${order.id}`;
       if (!map.has(key)) {
         map.set(key, order);
@@ -163,12 +167,22 @@ export function useOrdersLogic(props: OrdersProps) {
       if (error) throw error;
 
       if (data && Array.isArray(data)) {
-        const parsed = data.map((item: any) => convertKeysToCamel(item) as OnlineOrder);
+        const deletedOrderIds = getDeletedRecordIds('online_orders');
+        const parsed = data
+          .filter((item: any) => item && item.id && !deletedOrderIds.has(String(item.id)))
+          .map((item: any) => {
+            if (item.items && typeof item.items === 'string') {
+              try { item.items = JSON.parse(item.items); } catch(e) {}
+            }
+            return convertKeysToCamel(item) as OnlineOrder;
+          });
+
         useTransactionStore.getState().setOnlineOrders(parsed);
         await idbSet('nexus_online_orders_cache', parsed);
-        parsed.forEach(o => {
-          if (o && o.id) localDb.update(`onlineOrders/${o.id}`, o);
-        });
+        
+        // 🛡️ Purge et synchronisation immédiate de la base locale interne
+        replaceTableState('online_orders', parsed);
+
         if (showNotification) {
           toast.success(`${parsed.length} commandes synchronisées depuis Supabase.`, { icon: '✅' });
         }
@@ -318,7 +332,11 @@ export function useOrdersLogic(props: OrdersProps) {
 
     await idbSet('nexus_online_orders_cache', updatedList).catch(() => {});
     for (const id of idsToDelete) {
+      markRecordDeleted('online_orders', String(id));
       await localDb.delete(`onlineOrders/${id}`);
+    }
+    if (extIds.length > 0) {
+      extIds.forEach(eid => markRecordDeleted('online_orders', String(eid)));
     }
 
     // 2. SYNCHRONISATION SUPABASE EN ARRIÈRE-PLAN
@@ -456,6 +474,11 @@ export function useOrdersLogic(props: OrdersProps) {
     });
 
     setOrderToDelete(null);
+
+    markRecordDeleted('online_orders', String(targetId));
+    if (extId) {
+      markRecordDeleted('online_orders', String(extId));
+    }
 
     await idbSet('nexus_online_orders_cache', updatedList).catch(() => {});
     await localDb.delete(`onlineOrders/${targetId}`);

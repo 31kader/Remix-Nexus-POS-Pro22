@@ -208,6 +208,27 @@ export function removeLocalState(path: string) {
   }
 }
 
+/**
+ * 🛡️ Remplace intégralement l'état d'une table dans dbState avec persistance IndexedDB.
+ * Permet de purger les enregistrements orphelins/supprimés lors de la synchronisation avec Supabase.
+ */
+export function replaceTableState(path: string, items: any[] | Record<string, any>) {
+  const normTable = normalizePath(path).split('/')[0];
+  if (!normTable) return;
+  const newMap: Record<string, any> = {};
+  if (Array.isArray(items)) {
+    for (const item of items) {
+      if (item && item.id !== undefined && item.id !== null) {
+        newMap[String(item.id)] = item;
+      }
+    }
+  } else if (items && typeof items === 'object') {
+    Object.assign(newMap, items);
+  }
+  dbState[normTable] = newMap;
+  saveStateToStorage(normTable);
+}
+
 export function addObserver(path: string, callback: ObserverCallback) {
   const normPath = normalizePath(path);
   if (!observers[normPath]) observers[normPath] = [];

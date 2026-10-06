@@ -12,6 +12,7 @@ import {
   triggerObservers,
   saveStateToStorage,
   saveStateToStorageImmediate,
+  replaceTableState,
 } from '../lib/local-db';
 import {
   enqueueSync,
@@ -324,6 +325,11 @@ export const localDb = {
     addObserver(path, callback);
     localDb.get(path).then(callback);
     return () => removeObserver(path, callback);
+  },
+
+  replaceTable: (table: string, items: any[] | Record<string, any>) => {
+    replaceTableState(table, items);
+    triggerObservers(table);
   }
 };
 
