@@ -352,7 +352,9 @@ export function useOrdersLogic(props: OrdersProps) {
           await supabase.from('online_orders').delete().in('id', strIds);
         }
         if (extIds.length > 0) {
-          await supabase.from('online_orders').delete().in('external_order_id', extIds).catch(() => {});
+          try {
+            await supabase.from('online_orders').delete().in('external_order_id', extIds);
+          } catch (_) {}
         }
         toast.success(`${count} commande(s) supprimée(s) avec succès.`);
       } catch (err) {
@@ -493,7 +495,9 @@ export function useOrdersLogic(props: OrdersProps) {
           .eq('id', dbId);
 
         if (extId) {
-          await supabase.from('online_orders').delete().eq('external_order_id', extId).catch(() => {});
+          try {
+            await supabase.from('online_orders').delete().eq('external_order_id', extId);
+          } catch (_) {}
         }
 
         if (error) {

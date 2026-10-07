@@ -315,7 +315,7 @@ export const localDb = {
       const targetTable = normalizeSyncTable(table);
       enqueueSync(targetTable, id || '', 'DELETE', null);
       if (id && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-        supabase.from(targetTable).delete().eq('id', id).then(() => {}).catch(() => {});
+        Promise.resolve(supabase.from(targetTable).delete().eq('id', id)).catch(() => {});
       }
     }
   },

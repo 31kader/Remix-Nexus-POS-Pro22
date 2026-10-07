@@ -193,7 +193,9 @@ export function useOrderActions({
             }));
 
             if (isSupabaseConfigured) {
-              supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId).catch(() => {});
+              try {
+                await supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId);
+              } catch (_) {}
             }
           }
         }
@@ -273,7 +275,9 @@ export function useOrderActions({
 
       // Direct Supabase si connecté
       if (isSupabaseConfigured) {
-        supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId).catch(() => {});
+        try {
+          await supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId);
+        } catch (_) {}
       }
     }
 
@@ -338,11 +342,13 @@ export function useOrderActions({
         });
 
         if (isSupabaseConfigured) {
-          supabase.from('customers').update({
-            loyalty_points: newPoints,
-            total_spent: newSpent,
-            purchase_count: newPurchases
-          }).eq('id', order.customerId).catch(() => {});
+          try {
+            await supabase.from('customers').update({
+              loyalty_points: newPoints,
+              total_spent: newSpent,
+              purchase_count: newPurchases
+            }).eq('id', order.customerId);
+          } catch (_) {}
         }
         enqueueCustomerBalanceAdjustment(order.customerId, 0, Number(order.total || 0), pointsEarned);
       }
@@ -356,7 +362,9 @@ export function useOrderActions({
     );
 
     if (isSupabaseConfigured) {
-      supabase.from('online_orders').update({ synced_to_pos: true }).eq('id', toSupabaseId(order.id)).catch(() => {});
+      try {
+        await supabase.from('online_orders').update({ synced_to_pos: true }).eq('id', toSupabaseId(order.id));
+      } catch (_) {}
     }
     enqueueSync('online_orders', String(order.id), 'UPSERT', { id: toSupabaseId(order.id), synced_to_pos: true });
 

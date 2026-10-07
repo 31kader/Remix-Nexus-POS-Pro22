@@ -337,7 +337,9 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       await idbSet('nexus_products_cache', validProducts).catch(() => {});
 
       if (supabase && isSupabaseConfigured) {
-        await supabase.from('products').delete().in('id', ghostIds).catch(() => {});
+        try {
+          await supabase.from('products').delete().in('id', ghostIds);
+        } catch (_) {}
       }
 
       toast.success(`${ghostIds.length} article(s) sans nom supprimé(s) avec succès !`, { id: 'purge-toast' });
