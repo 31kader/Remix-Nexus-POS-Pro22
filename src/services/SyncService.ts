@@ -333,7 +333,7 @@ export function clearSyncQueue(): void {
   notifySyncStatus(false, 0);
 }
 
-function sanitizePayloadForSupabase(table: string, payload: any): any {
+export function sanitizePayloadForSupabase(table: string, payload: any): any {
   if (!payload || typeof payload !== 'object') return payload;
   const normTable = TABLE_NAME_MAPPINGS[table] || table;
   const recordId = payload.id || '';
