@@ -10,7 +10,7 @@ interface IOSInstallModalProps {
   onAndroidInstall?: () => void;
 }
 
-const GITHUB_APK_DIRECT_URL = 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.25/NexusPOSPro-1.2.25.apk';
+const GITHUB_APK_DIRECT_URL = 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.26/NexusPOSPro-1.2.26.apk';
 
 export const IOSInstallModal: React.FC<IOSInstallModalProps> = ({
   isOpen,
@@ -164,10 +164,10 @@ export const IOSInstallModal: React.FC<IOSInstallModalProps> = ({
                     <Globe size={12} /> Méthode 1 (Recommandée) — Téléchargement Direct .APK
                   </div>
                   <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                    Télécharger et installer `NexusPOSPro-1.2.25.apk` (Même en 4G/5G)
+                    Télécharger et installer `NexusPOSPro-1.2.26.apk` (Même en 4G/5G)
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed">
-                    Scannez ce QR Code avec l'appareil photo de votre téléphone Android. Il télécharge directement l'application native <strong>NexusPOSPro-1.2.25.apk</strong> depuis le serveur Cloud (aucun réglage Wi-Fi requis).
+                    Scannez ce QR Code avec l'appareil photo de votre téléphone Android. Il télécharge directement l'application native <strong>NexusPOSPro-1.2.26.apk</strong> depuis le serveur Cloud (aucun réglage Wi-Fi requis).
                   </p>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <a

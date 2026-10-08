@@ -2,7 +2,7 @@ import { CompanySettings } from '../types';
 
 export const APP_CONFIG = {
   name: 'Nexus POS Pro',
-  version: '1.2.25',
+  version: '1.2.26',
   description: 'Système de point de vente intelligent et de gestion de stock omnicanale',
   developer: 'Nexus System Co.',
   contactEmail: 'contact@nexuspos.pro',
