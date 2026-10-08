@@ -29,8 +29,8 @@ export function useCartSync(autoSyncOrders: boolean) {
     syncInProgress.current.add(order.id);
 
     try {
-      // 🛡️ SÉCURITÉ STOCK (Phase 3) : Vérification préventive des ruptures de stock physiques
-      const allowNegative = settings.allowNegativeStock === true;
+      // 🛡️ SÉCURITÉ STOCK (Phase 3) : Vérification préventive des ruptures de stock physiques (Option 1 : stock négatif permis par défaut)
+      const allowNegative = settings.allowNegativeStock !== false;
       const safeItems = Array.isArray(order.items) ? order.items : [];
       const stockIssues: string[] = [];
 
@@ -113,35 +113,71 @@ export function useCartSync(autoSyncOrders: boolean) {
       enqueueSyncBatch([{ action: 'UPSERT', table: 'transactions', recordId: transactionId, payload: transaction }]);
 
       // 2. Déduction des stocks
+      const currentProducts = useCoreStore.getState().products || [];
+      const productMap = new Map(currentProducts.map(p => [p.id, p]));
+
       for (const item of transactionItems) {
         if (!item.id || item.id === 'undefined') continue;
-        const currentProduct = products.find(p => p.id === item.id);
+        const currentProduct = productMap.get(item.id) || products.find(p => p.id === item.id);
         if (currentProduct && currentProduct.id) {
           if (currentProduct.isBundle && currentProduct.bundleItems) {
             for (const bundleItem of currentProduct.bundleItems) {
-              const componentProduct = products.find((p: Product) => p.id === bundleItem.productId);
+              const componentProduct = productMap.get(bundleItem.productId) || products.find((p: Product) => p.id === bundleItem.productId);
               if (componentProduct && componentProduct.id) {
-                enqueueStockAdjustment(componentProduct.id, -(bundleItem.quantity * item.quantity));
-                await localDb.update(`products/${componentProduct.id}`, { updatedAt: new Date().toISOString() });
+                const bundleDelta = -(bundleItem.quantity * item.quantity);
+                const newCompStock = (componentProduct.stock || 0) + bundleDelta;
+                productMap.set(componentProduct.id, { ...componentProduct, stock: newCompStock, updatedAt: new Date().toISOString() });
+                enqueueStockAdjustment(componentProduct.id, bundleDelta);
+                await localDb.update(`products/${componentProduct.id}`, { stock: newCompStock, updatedAt: new Date().toISOString() });
+                window.dispatchEvent(new CustomEvent('product-cache-update', {
+                  detail: { ...componentProduct, stock: newCompStock }
+                }));
+                if (isSupabaseConfigured) {
+                  try {
+                    await supabase.from('products').update({ stock: newCompStock, updated_at: new Date().toISOString() }).eq('id', componentProduct.id);
+                  } catch (_) {}
+                }
               }
             }
           } else {
             let change = -item.quantity;
             if ((currentProduct.stock || 0) < item.quantity && currentProduct.autoUnpack && currentProduct.parentId && currentProduct.unitsPerParent) {
-              const parentProduct = products.find((p: Product) => p.id === currentProduct.parentId);
+              const parentProduct = productMap.get(currentProduct.parentId) || products.find((p: Product) => p.id === currentProduct.parentId);
               if (parentProduct && parentProduct.id) {
                 const shortfall = item.quantity - (currentProduct.stock || 0);
                 const parentsNeeded = Math.ceil(shortfall / currentProduct.unitsPerParent);
+                const newParentStock = (parentProduct.stock || 0) - parentsNeeded;
+                productMap.set(parentProduct.id, { ...parentProduct, stock: newParentStock, updatedAt: new Date().toISOString() });
                 enqueueStockAdjustment(parentProduct.id, -parentsNeeded);
-                await localDb.update(`products/${parentProduct.id}`, { updatedAt: new Date().toISOString() });
+                await localDb.update(`products/${parentProduct.id}`, { stock: newParentStock, updatedAt: new Date().toISOString() });
+                window.dispatchEvent(new CustomEvent('product-cache-update', {
+                  detail: { ...parentProduct, stock: newParentStock }
+                }));
+                if (isSupabaseConfigured) {
+                  try {
+                    await supabase.from('products').update({ stock: newParentStock, updated_at: new Date().toISOString() }).eq('id', parentProduct.id);
+                  } catch (_) {}
+                }
                 change += (parentsNeeded * currentProduct.unitsPerParent);
               }
             }
+            const newStock = (currentProduct.stock || 0) + change;
+            productMap.set(currentProduct.id, { ...currentProduct, stock: newStock, updatedAt: new Date().toISOString() });
             enqueueStockAdjustment(currentProduct.id, change);
-            await localDb.update(`products/${currentProduct.id}`, { updatedAt: new Date().toISOString() });
+            await localDb.update(`products/${currentProduct.id}`, { stock: newStock, updatedAt: new Date().toISOString() });
+            window.dispatchEvent(new CustomEvent('product-cache-update', {
+              detail: { ...currentProduct, stock: newStock }
+            }));
+            if (isSupabaseConfigured) {
+              try {
+                await supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', currentProduct.id);
+              } catch (_) {}
+            }
           }
         }
       }
+      useCoreStore.getState().setProducts(Array.from(productMap.values()));
+      idbSet('nexus_products_cache', Array.from(productMap.values())).catch(() => {});
 
       // 3. Marquage syncedToPos en local, en mémoire Zustand, et dans le cache IDB
       await localDb.update(`onlineOrders/${order.id}`, {

@@ -200,6 +200,7 @@ export function useOrderActions({
           }
         }
         useCoreStore.getState().setProducts(Array.from(productMap.values()));
+        idbSet('nexus_products_cache', Array.from(productMap.values())).catch(() => {});
       }
 
       // 5. Mettre à jour l'état Zustand des transactions en mémoire
@@ -283,6 +284,7 @@ export function useOrderActions({
 
     // Mise à jour synchrone du store React pour affichage instantané dans le POS et le catalogue
     useCoreStore.getState().setProducts(Array.from(productMap.values()));
+    idbSet('nexus_products_cache', Array.from(productMap.values())).catch(() => {});
 
     // 2. Création de la transaction de caisse associée
     const tid = generateUniqueId();

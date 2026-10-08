@@ -96,7 +96,7 @@ export const SearchOverlay = memo(function SearchOverlay({
                           "text-xs px-3 py-1 rounded-lg font-black uppercase tracking-tight border",
                           (p.stock || 0) <= (p.minStock || 5) ? "bg-rose-500/20 text-rose-300 border-rose-500/40" : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
                         )}>
-                          Stock: {p.stock || 0}
+                          Stock: {p.stock ?? 0}
                         </span>
                       </div>
                     </div>

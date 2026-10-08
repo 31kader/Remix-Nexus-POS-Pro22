@@ -197,7 +197,7 @@ export function useCheckoutLogic(props: CheckoutProps) {
   // 🛡️ MODIFIÉ & SÉCURISÉ : Plus aucun risque de findIndex sur undefined au clic/scan produit
   const addToCart = useCallback((product: Product, quantity: number = 1, isDistinctScan: boolean = false) => {
     if (!product) return;
-    if (!settings.allowNegativeStock && (product.stock || 0) <= 0 && quantity > 0) {
+    if (settings.allowNegativeStock === false && (product.stock || 0) <= 0 && quantity > 0) {
       toast.error(`Rupture de stock pour ${product.name}. Stock actuel: ${product.stock}`);
       return;
     }
@@ -219,7 +219,7 @@ export function useCheckoutLogic(props: CheckoutProps) {
           const updated = [...safePrev];
           const newQty = (existing?.quantity || 0) + quantity;
           
-          if (!settings.allowNegativeStock && newQty > (product.stock || 0) && quantity > 0) {
+          if (settings.allowNegativeStock === false && newQty > (product.stock || 0) && quantity > 0) {
              toast.error(`Stock insuffisant pour ${product.name}. Stock: ${product.stock}`);
              return safePrev;
           }
@@ -229,9 +229,10 @@ export function useCheckoutLogic(props: CheckoutProps) {
         }
       }
       
-      const availableStock = Math.max(0, product.stock ?? 0);
-      const initQty = settings.allowNegativeStock ? quantity : (quantity > 0 ? Math.min(quantity, availableStock) : quantity);
-      if (initQty <= 0 && quantity > 0 && !settings.allowNegativeStock) {
+      const availableStock = product.stock ?? 0;
+      const allowNegative = settings.allowNegativeStock !== false;
+      const initQty = allowNegative ? quantity : (quantity > 0 ? Math.min(quantity, Math.max(0, availableStock)) : quantity);
+      if (initQty <= 0 && quantity > 0 && !allowNegative) {
         toast.error(`Stock épuisé pour ${product.name}`);
         return safePrev;
       }
@@ -299,10 +300,10 @@ export function useCheckoutLogic(props: CheckoutProps) {
           const safeProducts = Array.isArray(products) ? products : [];
           const prod = safeProducts.find(p => p && p.id === item.id);
           const resolved = isNaN(quantity) ? 0 : quantity;
-          const maxStock = Math.max(0, prod?.stock ?? 0);
+          const maxStock = prod?.stock ?? 0;
           return { 
             ...item,
-            quantity: settings.allowNegativeStock ? resolved : (resolved > 0 ? Math.min(resolved, maxStock) : resolved) 
+            quantity: settings.allowNegativeStock !== false ? resolved : (resolved > 0 ? Math.min(resolved, Math.max(0, maxStock)) : resolved) 
           };
         }
         return item;
