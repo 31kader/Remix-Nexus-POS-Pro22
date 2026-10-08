@@ -746,7 +746,7 @@ export async function processSyncQueue(): Promise<void> {
             const { error: updErr } = await supabase
               .from('products')
               .update({
-                stock: Math.max(0, Number(absoluteQty)),
+                stock: Number(absoluteQty),
                 updated_at: new Date().toISOString()
               })
               .eq('id', prodId);
@@ -763,7 +763,7 @@ export async function processSyncQueue(): Promise<void> {
 
             if (!fetchErr && currentProd) {
               const currentStock = Number(currentProd.stock) || 0;
-              const updatedStock = Math.max(0, currentStock + delta);
+              const updatedStock = currentStock + delta;
               const { error: updErr } = await supabase
                 .from('products')
                 .update({

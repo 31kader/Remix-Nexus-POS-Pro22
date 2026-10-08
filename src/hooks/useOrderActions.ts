@@ -256,7 +256,7 @@ export function useOrderActions({
 
       const effectiveProdId = prod ? prod.id : prodId;
       const oldStock = prod ? (Number(prod.stock) || 0) : 0;
-      const newStock = Math.max(0, oldStock - qty);
+      const newStock = oldStock - qty;
 
       if (prod) {
         productMap.set(effectiveProdId, { ...prod, stock: newStock, updatedAt: new Date().toISOString() });
