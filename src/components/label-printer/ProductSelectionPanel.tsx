@@ -105,7 +105,7 @@ export function ProductSelectionPanel({
                     <div className="font-black text-slate-900 dark:text-white text-xs truncate">{p.name}</div>
                     <div className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-2">
                       <span className="font-mono">{p.barcode || p.sku || 'Sans code'}</span>
-                      <span>• Stock: {p.stock || 0}</span>
+                      <span>• Stock: {p.stock ?? 0}</span>
                       <span className="text-indigo-600 dark:text-indigo-400 font-black">
                         {Number(p.price || 0).toFixed(2)} {currency}
                       </span>

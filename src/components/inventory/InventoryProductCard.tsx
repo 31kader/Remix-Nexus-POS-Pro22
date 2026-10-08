@@ -98,7 +98,7 @@ export const InventoryProductCard = React.memo(({
           {isOutOfStock ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-[10px] font-bold tracking-wide">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-              Rupture
+              {Number(product.stock) < 0 ? `Stock: ${product.stock} ${product.unit || 'pcs'}` : 'Rupture'}
             </span>
           ) : isLowStock ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold tracking-wide">
