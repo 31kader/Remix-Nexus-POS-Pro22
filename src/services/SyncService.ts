@@ -581,9 +581,23 @@ export async function processSyncQueue(): Promise<void> {
       const batchSkus = new Set<string>();
       const batchBarcodes = new Set<string>();
 
+      // 🛡️ ANTI DOUBLE-COMPTAGE : si un delta de stock (RPC relatif) est en file pour un produit,
+      // on retire `stock` de l'upsert (absolu) pour ne pas appliquer le mouvement deux fois.
+      const stockDeltaIds = new Set<string>();
+      queue.forEach(q => {
+        if ((q.table === 'stock_adjustments' || q.table === 'stockAdjustments') && q.action !== 'DELETE') {
+          const d = Number(q.payload?.adjustment ?? q.payload?.delta) || 0;
+          const pid = q.payload?.productId || q.payload?.id || q.recordId;
+          if (pid && d !== 0) stockDeltaIds.add(String(pid));
+        }
+      });
+
       for (const item of productItems) {
         const payload = sanitizePayloadForSupabase('products', item.payload);
         if (!payload.id && item.recordId) payload.id = item.recordId;
+        if (payload.id && stockDeltaIds.has(String(payload.id))) {
+          delete payload.stock;
+        }
 
         if (!payload.category_id || !validCategories.has(payload.category_id)) {
           payload.category_id = 'uncategorized';
@@ -671,8 +685,15 @@ export async function processSyncQueue(): Promise<void> {
 
       // Lots de 15 produits (au lieu de 50) pour garantir que la trame HTTP/2 ne sature jamais, même avec des images base64 ou connexion 4G/ADSL
       const PRODUCT_BATCH_SIZE = 15;
-      for (let i = 0; i < fullProducts.length; i += PRODUCT_BATCH_SIZE) {
-        const chunk = fullProducts.slice(i, i + PRODUCT_BATCH_SIZE);
+      // Les produits sans clé `stock` (delta en file) sont envoyés séparément : l'harmonisation des clés
+      // ci-dessous mettrait sinon `stock` à null pour eux.
+      const chunks: any[][] = [];
+      const withStockList = fullProducts.filter(e => 'stock' in e.payload);
+      const withoutStockList = fullProducts.filter(e => !('stock' in e.payload));
+      for (const list of [withStockList, withoutStockList]) {
+        for (let i = 0; i < list.length; i += PRODUCT_BATCH_SIZE) chunks.push(list.slice(i, i + PRODUCT_BATCH_SIZE));
+      }
+      for (const chunk of chunks) {
         // Harmonisation stricte des clés pour PostgREST (évite le rejet HTTP 400 'All object keys must match')
         const allKeys = new Set<string>();
         chunk.forEach(c => Object.keys(c.payload).forEach(k => allKeys.add(k)));

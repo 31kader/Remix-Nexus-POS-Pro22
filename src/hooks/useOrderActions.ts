@@ -3,6 +3,7 @@ import { OnlineOrder, Customer, Employee, CompanySettings, Transaction } from '.
 import { generateUniqueId } from '../lib/utils';
 import { localDb } from '../services/LocalDatabase';
 import { enqueueSync, enqueueStockAdjustment, enqueueCustomerBalanceAdjustment, sanitizePayloadForSupabase } from '../services/SyncService';
+import { destockOrder, restockOrder, toSupabaseOrderId } from '../services/orderStockService';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { usePeopleStore } from '../store/usePeopleStore';
@@ -97,293 +98,27 @@ export function useOrderActions({
     toast.success('Paiement mis à jour en local.');
   };
 
-  // 🛡️ SYNCHRONISATION / ROLLBACK : Si une commande confirmée/livrée est annulée, annuler sa transaction de caisse et réintégrer le stock
+  // 🛡️ SYNCHRONISATION / ROLLBACK : Si une commande est annulée, annuler sa transaction de caisse et réintégrer le stock
   const rollbackCancelledOrderTransactions = async (order: OnlineOrder) => {
-    try {
-      const orderIdStr = String(order.id);
-      const extIdStr = order.externalOrderId ? String(order.externalOrderId) : '';
-      const allTx = useTransactionStore.getState().transactions || [];
-
-      // Trouver toutes les transactions de vente associées à cette commande
-      const matchingTxs = allTx.filter((t: Transaction) => {
-        const matchesOnlineId = t.onlineOrderId && String(t.onlineOrderId) === orderIdStr;
-        const matchesNotesExt = extIdStr && t.notes && t.notes.includes(extIdStr);
-        const matchesNotesId = t.notes && t.notes.includes(orderIdStr);
-        return matchesOnlineId || matchesNotesExt || matchesNotesId;
-      });
-
-      console.log(`[Order Rollback] ${matchingTxs.length} transaction(s) trouvée(s) pour la commande #${orderIdStr}. Annulation en cours...`);
-
-      const matchingIds = new Set(matchingTxs.map(t => t.id));
-
-      for (const t of matchingTxs) {
-        // 1. Marquer la transaction comme annulée en local
-        await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
-        
-        // 2. Synchroniser vers Supabase
-        if (isSupabaseConfigured) {
-          try {
-            await supabase.from('transactions').update({ status: 'cancelled' }).eq('id', t.id);
-          } catch (err) {
-            console.warn('[Order Rollback] Échec update direct Supabase transaction, mise en file d\'attente:', err);
-          }
-        }
-        enqueueSync('transactions', t.id, 'UPSERT', { id: t.id, status: 'cancelled' });
-
-        // 4. Annuler les points de fidélité accordés le cas échéant
-        if (t.pointsEarned && t.customerId) {
-          const cust = (customers || []).find(c => String(c.id) === String(t.customerId));
-          if (cust) {
-            const newPoints = Math.max(0, (cust.loyaltyPoints || 0) - t.pointsEarned);
-            const newSpent = Math.max(0, (cust.totalSpent || 0) - Number(t.total || 0));
-            const newPurchases = Math.max(0, (cust.purchaseCount || 1) - 1);
-
-            usePeopleStore.getState().setCustomers(prev =>
-              (Array.isArray(prev) ? prev : []).map(c => String(c.id) === String(t.customerId) ? {
-                ...c,
-                loyaltyPoints: newPoints,
-                totalSpent: newSpent,
-                purchaseCount: newPurchases
-              } : c)
-            );
-
-            await localDb.update(`customers/${t.customerId}`, { loyaltyPoints: newPoints, totalSpent: newSpent, purchaseCount: newPurchases });
-            if (isSupabaseConfigured) {
-              await supabase.from('customers').update({ loyalty_points: newPoints, total_spent: newSpent, purchase_count: newPurchases }).eq('id', t.customerId);
-            }
-            enqueueCustomerBalanceAdjustment(t.customerId, 0, -Number(t.total || 0), -t.pointsEarned);
-          }
-        }
-      }
-
-      // 3. Réintégration physique des stocks dans useCoreStore, localDb et Supabase
-      const items = Array.isArray(order.items) && order.items.length > 0 
-        ? order.items 
-        : (matchingTxs.length > 0 && Array.isArray(matchingTxs[0].items) ? matchingTxs[0].items : []);
-
-      if (items.length > 0) {
-        const currentProducts = useCoreStore.getState().products || [];
-        const productMap = new Map(currentProducts.map(p => [p.id, p]));
-
-        for (const item of items) {
-          const prodId = (item as any).productId || (item as any).id;
-          const qty = Number(item.quantity || 1);
-          if (prodId && qty > 0) {
-            let prod = productMap.get(prodId);
-            if (!prod && (item as any).barcode) {
-              prod = currentProducts.find(p => p.barcode === (item as any).barcode);
-            }
-            if (!prod && item.name) {
-              prod = currentProducts.find(p => p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
-            }
-
-            const effectiveProdId = prod ? prod.id : prodId;
-            const oldStock = prod ? (Number(prod.stock) || 0) : 0;
-            const newStock = oldStock + qty;
-
-            if (prod) {
-              productMap.set(effectiveProdId, { ...prod, stock: newStock, updatedAt: new Date().toISOString() });
-            }
-
-            enqueueStockAdjustment(effectiveProdId, qty);
-            await localDb.update(`products/${effectiveProdId}`, { stock: newStock, updatedAt: new Date().toISOString() });
-
-            window.dispatchEvent(new CustomEvent('product-cache-update', {
-              detail: prod ? { ...prod, stock: newStock } : { id: effectiveProdId, stock: newStock }
-            }));
-
-            if (isSupabaseConfigured) {
-              try {
-                await supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId);
-              } catch (_) {}
-            }
-          }
-        }
-        useCoreStore.getState().setProducts(Array.from(productMap.values()));
-        idbSet('nexus_products_cache', Array.from(productMap.values())).catch(() => {});
-      }
-
-      // 5. Mettre à jour l'état Zustand des transactions en mémoire
-      if (matchingIds.size > 0) {
-        useTransactionStore.getState().setTransactions(prev => 
-          (Array.isArray(prev) ? prev : []).map(tx => matchingIds.has(tx.id) ? { ...tx, status: 'cancelled' } : tx)
-        );
-      }
-
-      // 6. Réinitialiser syncedToPos sur la commande
-      order.syncedToPos = false;
-      await localDb.update(`onlineOrders/${order.id}`, { syncedToPos: false });
-      useTransactionStore.getState().setOnlineOrders(prev =>
-        (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(order.id) ? { ...o, syncedToPos: false } : o)
-      );
-      if (isSupabaseConfigured) {
-        await supabase.from('online_orders').update({ synced_to_pos: false }).eq('id', toSupabaseId(order.id));
-      }
-      enqueueSync('online_orders', String(order.id), 'UPSERT', { id: toSupabaseId(order.id), synced_to_pos: false });
-
-      toast.info(`Commande #${orderIdStr} annulée : stock réintégré et transaction annulée.`);
-    } catch (rollbackError) {
-      console.error('[Order Rollback Error]', rollbackError);
-    }
+    return await restockOrder(order, { customers });
   };
 
   // 📦 OPTION 1 : Déstockage immédiat dès la Confirmation (ou statut actif >= confirmed)
   const decrementStockForOrder = async (order: OnlineOrder) => {
-    // Si déjà déstocké / synchronisé au POS, ne rien faire pour éviter un double déstockage
-    if (order.syncedToPos) {
-      console.log(`[decrementStockForOrder] Commande #${order.id} déjà déstockée / synchronisée.`);
-      return;
-    }
-
-    const items = Array.isArray(order.items) ? order.items : [];
-    if (items.length === 0) return;
-
-    const currentProducts = useCoreStore.getState().products || [];
-    const productMap = new Map(currentProducts.map(p => [p.id, p]));
-
-    // 1. Décrémentation physique du stock dans useCoreStore, localDb et Supabase
-    for (const item of items) {
-      const prodId = (item as any).productId || (item as any).id;
-      const qty = Number(item.quantity || 1);
-      if (!prodId || isNaN(qty) || qty <= 0) continue;
-
-      let prod = productMap.get(prodId);
-      if (!prod && (item as any).barcode) {
-        prod = currentProducts.find(p => p.barcode === (item as any).barcode);
-      }
-      if (!prod && item.name) {
-        prod = currentProducts.find(p => p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
-      }
-
-      const effectiveProdId = prod ? prod.id : prodId;
-      const oldStock = prod ? (Number(prod.stock) || 0) : 0;
-      const newStock = oldStock - qty;
-
-      if (prod) {
-        productMap.set(effectiveProdId, { ...prod, stock: newStock, updatedAt: new Date().toISOString() });
-      }
-
-      // Sauvegarde dans la base locale IndexedDB
-      await localDb.update(`products/${effectiveProdId}`, { stock: newStock, updatedAt: new Date().toISOString() });
-
-      // Signal aux vues/modals
-      window.dispatchEvent(new CustomEvent('product-cache-update', {
-        detail: prod ? { ...prod, stock: newStock } : { id: effectiveProdId, stock: newStock }
-      }));
-
-      // File de synchronisation hors-ligne
-      enqueueStockAdjustment(effectiveProdId, -qty);
-
-      // Direct Supabase si connecté
-      if (isSupabaseConfigured) {
-        try {
-          await supabase.from('products').update({ stock: newStock, updated_at: new Date().toISOString() }).eq('id', effectiveProdId);
-        } catch (_) {}
-      }
-    }
-
-    // Mise à jour synchrone du store React pour affichage instantané dans le POS et le catalogue
-    useCoreStore.getState().setProducts(Array.from(productMap.values()));
-    idbSet('nexus_products_cache', Array.from(productMap.values())).catch(() => {});
-
-    // 2. Création de la transaction de caisse associée
-    const tid = generateUniqueId();
-    const loyaltyRatio = settings?.loyaltyPointsPerCurrencyUnit || 1;
-    const pointsEarned = order.customerId ? Math.floor(Number(order.total || 0) * loyaltyRatio) : 0;
-
-    const transaction: Transaction = {
-      id: tid,
-      userId: user?.id || user?.uid || 'online_system',
-      items: items as any,
-      total: order.total || 0,
-      timestamp: new Date().toISOString(),
-      paymentMethod: (order.paymentMethod as any) || 'cash',
-      status: 'completed',
-      employeeName: 'Commande en Ligne',
-      customerName: order.customerName || 'Client en Ligne',
-      customerId: order.customerId,
-      onlineOrderId: String(order.id),
-      pointsEarned: pointsEarned,
-      notes: `Commande en Ligne #${order.externalOrderId || String(order.id || "").slice(0, 8)} (Confirmée)`
-    };
-
-    await localDb.insert(`transactions/${tid}`, transaction);
-    useTransactionStore.getState().setTransactions(prev => [transaction, ...(Array.isArray(prev) ? prev : [])]);
-
-    if (isSupabaseConfigured) {
-      try {
-        await supabase.from('transactions').insert(sanitizePayloadForSupabase('transactions', transaction));
-      } catch (_) {
-        enqueueSync('transactions', tid, 'UPSERT', transaction);
-      }
-    } else {
-      enqueueSync('transactions', tid, 'UPSERT', transaction);
-    }
-
-    // 3. Attribution des points de fidélité au client
-    if (order.customerId && pointsEarned > 0) {
-      const cust = (customers || []).find(c => String(c.id) === String(order.customerId));
-      if (cust) {
-        const newPoints = (cust.loyaltyPoints || 0) + pointsEarned;
-        const newSpent = Number(((cust.totalSpent || 0) + Number(order.total || 0)).toFixed(2));
-        const newPurchases = (cust.purchaseCount || 0) + 1;
-
-        usePeopleStore.getState().setCustomers(prev =>
-          (Array.isArray(prev) ? prev : []).map(c => String(c.id) === String(order.customerId) ? {
-            ...c,
-            loyaltyPoints: newPoints,
-            totalSpent: newSpent,
-            purchaseCount: newPurchases
-          } : c)
-        );
-
-        await localDb.update(`customers/${order.customerId}`, {
-          loyaltyPoints: newPoints,
-          totalSpent: newSpent,
-          purchaseCount: newPurchases
-        });
-
-        if (isSupabaseConfigured) {
-          try {
-            await supabase.from('customers').update({
-              loyalty_points: newPoints,
-              total_spent: newSpent,
-              purchase_count: newPurchases
-            }).eq('id', order.customerId);
-          } catch (_) {}
-        }
-        enqueueCustomerBalanceAdjustment(order.customerId, 0, Number(order.total || 0), pointsEarned);
-      }
-    }
-
-    // 4. Verrouiller la commande comme déstockée (syncedToPos: true)
-    order.syncedToPos = true;
-    await localDb.update(`onlineOrders/${order.id}`, { syncedToPos: true });
-    useTransactionStore.getState().setOnlineOrders(prev =>
-      (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(order.id) ? { ...o, syncedToPos: true } : o)
-    );
-
-    if (isSupabaseConfigured) {
-      try {
-        await supabase.from('online_orders').update({ synced_to_pos: true }).eq('id', toSupabaseId(order.id));
-      } catch (_) {}
-    }
-    enqueueSync('online_orders', String(order.id), 'UPSERT', { id: toSupabaseId(order.id), synced_to_pos: true });
-
-    toast.info(`Stock déstocké pour la commande #${order.externalOrderId || order.id} 📦`);
+    return await destockOrder(order, { user, settings, customers });
   };
 
   const updateOrderStatus = async (order: OnlineOrder, newStatus: OnlineOrder['status']) => {
     const orderId = order.id;
     const dbId = toSupabaseId(orderId);
 
-    // Si la commande est annulée, déclencher le rollback de sa recette et du stock
+    // Si la commande est annulée, déclencher le rollback de sa recette et du stock (garde stricte et idempotente dans restockOrder)
     if (newStatus === 'cancelled') {
       await rollbackCancelledOrderTransactions(order);
     }
 
     // 📦 OPTION 1 : Dès confirmation (ou tout statut actif >= confirmed), déstocker immédiatement
-    const activeDestockStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
+    const activeDestockStatuses = ['confirmed', 'paid', 'processing', 'shipped', 'delivered'];
     if (activeDestockStatuses.includes(newStatus) && !order.syncedToPos) {
       await decrementStockForOrder(order);
     }
@@ -475,7 +210,7 @@ export function useOrderActions({
     }
 
     // 📦 OPTION 1 : Si les commandes passent en confirmé/actif en lot, décrémenter le stock immédiatement
-    const activeDestockStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
+    const activeDestockStatuses = ['confirmed', 'paid', 'processing', 'shipped', 'delivered'];
     if (activeDestockStatuses.includes(newStatus)) {
       for (const o of targetOrders) {
         if (!o.syncedToPos) {
@@ -638,6 +373,8 @@ export function useOrderActions({
     updateOrderStatus,
     bulkUpdateOrderStatus,
     assignOrderToEmployee,
-    assignPickerToOrder
+    assignPickerToOrder,
+    rollbackCancelledOrderTransactions,
+    decrementStockForOrder
   };
 }

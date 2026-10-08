@@ -270,6 +270,28 @@ export const localDb = {
     }
   },
 
+  updateLocalOnly: async (pathOrRef: any, value: any): Promise<void> => {
+    let path = typeof pathOrRef === 'string' ? pathOrRef : (pathOrRef.path || pathOrRef);
+    let val = value;
+    if (typeof path === 'string' && !path.includes('/') && val && typeof val === 'object' && val.id) {
+      path = `${path}/${val.id}`;
+    }
+
+    updateLocalState(path, val);
+    const parts = path.split('/');
+    const table = parts[0];
+    const id = parts.slice(1).join('/');
+
+    if (CRITICAL_IMMEDIATE_TABLES.has(table)) {
+      await saveStateToStorageImmediate(table);
+    } else {
+      saveStateToStorage(table);
+    }
+    triggerObservers(table);
+    if (id) triggerObservers(path);
+    crossTabBc?.postMessage({ type: 'table-updated', detail: { table, path } });
+  },
+
   push: (pathOrRef: any, value?: any) => {
     const id = generateLocalId();
     const parentPath = typeof pathOrRef === 'string' ? pathOrRef : (pathOrRef.path || pathOrRef);

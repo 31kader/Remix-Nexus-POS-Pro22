@@ -259,7 +259,7 @@ export function useCheckoutProcess({
                 enqueueStockAdjustment(comp.id, -compDelta);
                 updateTempProductStock(comp.id, newCompStock);
 
-                localDb.update(`products/${comp.id}`, {
+                localDb.updateLocalOnly(`products/${comp.id}`, {
                   stock: newCompStock,
                   updatedAt: new Date().toISOString()
                 });
@@ -276,7 +276,7 @@ export function useCheckoutProcess({
               enqueueStockAdjustment(itemId, -delta);
               updateTempProductStock(itemId, newStock, product.batches);
 
-              localDb.update(`products/${itemId}`, {
+              localDb.updateLocalOnly(`products/${itemId}`, {
                 stock: newStock,
                 updatedAt: new Date().toISOString()
               });
@@ -303,7 +303,7 @@ export function useCheckoutProcess({
                 enqueueStockAdjustment(comp.id, -qtyDeducted);
                 updateTempProductStock(comp.id, newCompStock);
                 
-                localDb.update(`products/${comp.id}`, {
+                localDb.updateLocalOnly(`products/${comp.id}`, {
                   stock: newCompStock,
                   updatedAt: new Date().toISOString()
                 });
@@ -342,7 +342,7 @@ export function useCheckoutProcess({
                   enqueueStockAdjustment(parent.id, -parentsNeeded);
                   updateTempProductStock(parent.id, newParentStock);
                   
-                  localDb.update(`products/${parent.id}`, {
+                  localDb.updateLocalOnly(`products/${parent.id}`, {
                     stock: newParentStock,
                     updatedAt: new Date().toISOString()
                   });
@@ -356,7 +356,7 @@ export function useCheckoutProcess({
                   enqueueStockAdjustment(item.id, adjustedQty);
                   updateTempProductStock(item.id, finalStock, product.useMultiExpiry ? updatedBatches : product.batches);
                   
-                  localDb.update(`products/${item.id}`, {
+                  localDb.updateLocalOnly(`products/${item.id}`, {
                     stock: finalStock,
                     updatedAt: new Date().toISOString(),
                     batches: product.useMultiExpiry ? updatedBatches : product.batches
@@ -370,7 +370,7 @@ export function useCheckoutProcess({
                 enqueueStockAdjustment(item.id, -item.quantity);
                 updateTempProductStock(item.id, newStock, product.useMultiExpiry ? updatedBatches : product.batches);
                 
-                localDb.update(`products/${item.id}`, {
+                localDb.updateLocalOnly(`products/${item.id}`, {
                   stock: newStock,
                   updatedAt: new Date().toISOString(),
                   batches: product.useMultiExpiry ? updatedBatches : product.batches

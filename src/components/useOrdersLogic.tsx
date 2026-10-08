@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useTranslation } from '../translations';
 import { useOrderActions } from '../hooks/useOrderActions';
 import { useTransactionStore } from '../store/useTransactionStore';
+import { restockOrder } from '../services/orderStockService';
 import { set as idbSet } from 'idb-keyval';
 
 function toSupabaseId(id: any): number | string {
@@ -325,6 +326,17 @@ export function useOrdersLogic(props: OrdersProps) {
     const targetOrders = currentOrders.filter(o => selectedOrderIds.has(String(o.id)));
     const extIds = targetOrders.map(o => o.externalOrderId).filter(Boolean) as string[];
 
+    // 🛡️ Réintégration préalable du stock pour les commandes en cours déstockées
+    for (const o of targetOrders) {
+      if (o.syncedToPos && o.status !== 'cancelled' && o.status !== 'delivered') {
+        try {
+          await restockOrder(o, { customers: props.customers });
+        } catch (rErr) {
+          console.warn('[handleBulkDelete] Erreur restockOrder:', rErr);
+        }
+      }
+    }
+
     const updatedList = (Array.isArray(currentOrders) ? currentOrders : [])
       .filter(o => !selectedOrderIds.has(String(o.id)));
     useTransactionStore.getState().setOnlineOrders(updatedList);
@@ -462,6 +474,25 @@ export function useOrdersLogic(props: OrdersProps) {
     const currentOrders = useTransactionStore.getState().onlineOrders || [];
     const targetOrder = currentOrders.find(o => String(o.id) === String(targetId));
     const extId = targetOrder?.externalOrderId;
+
+    // 🛡️ Réintégration préalable du stock et annulation de transaction si déstockée
+    if (targetOrder && targetOrder.syncedToPos && targetOrder.status !== 'cancelled') {
+      let proceedRestock = true;
+      if (targetOrder.status === 'delivered') {
+        proceedRestock = window.confirm(
+          `Cette commande #${targetOrder.externalOrderId || targetId} a été marquée livrée et intégrée en caisse.\n\n` +
+          `Voulez-vous réintégrer son stock et annuler sa vente ?\n` +
+          `(OK = Réintégrer le stock et annuler la vente, Annuler = Supprimer sans modifier le stock)`
+        );
+      }
+      if (proceedRestock) {
+        try {
+          await restockOrder(targetOrder, { customers: props.customers });
+        } catch (rErr) {
+          console.warn('[confirmDeleteOrder] Erreur restockOrder:', rErr);
+        }
+      }
+    }
 
     // 1. SUPPRESSION OPTIMISTE IMMÉDIATE (Store + LocalDatabase + IDB)
     // Ne bloque JAMAIS l'utilisateur même en cas de coupure Internet ou de socket reset !
