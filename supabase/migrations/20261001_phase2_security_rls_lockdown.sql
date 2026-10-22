@@ -34,13 +34,13 @@ SET search_path = public, pg_temp
 AS $$
   SELECT ((select auth.role()) = 'service_role') OR (
     (select auth.role()) = 'authenticated' AND (
-      COALESCE(
-        (SELECT role = 'admin' 
-         FROM public.users 
-         WHERE uid = (select auth.uid())::text OR email = ((select auth.jwt()) ->> 'email') 
-         LIMIT 1),
-        FALSE
-      ) OR (((select auth.jwt()) ->> 'email') = 'kader_bouz@hotmail.com')
+      EXISTS (
+        SELECT 1 FROM public.users 
+        WHERE (users.id = (select auth.uid())::text OR users.uid = (select auth.uid())::text OR users.email = ((select auth.jwt()) ->> 'email'))
+          AND users.role = 'admin'
+      ) OR (
+        ((select auth.jwt()) -> 'app_metadata' ->> 'role') = 'admin'
+      )
     )
   );
 $$;

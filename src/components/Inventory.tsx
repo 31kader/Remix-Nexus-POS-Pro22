@@ -90,6 +90,32 @@ return () => window.removeEventListener('resize', checkMobile);
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'discontinued'>('all');
 
+  const preExpandedCategories = React.useMemo(() => {
+    if (!selectedCategories || selectedCategories.length === 0) return [];
+    const childMap = new Map<string, string[]>();
+    for (let i = 0; i < categories.length; i++) {
+      const c = categories[i];
+      if (c.parentId) {
+        const list = childMap.get(c.parentId) || [];
+        list.push(c.id);
+        childMap.set(c.parentId, list);
+      }
+    }
+    const all = new Set<string>();
+    const collect = (cid: string) => {
+      if (all.has(cid)) return;
+      all.add(cid);
+      const children = childMap.get(cid);
+      if (children) {
+        for (let i = 0; i < children.length; i++) collect(children[i]);
+      }
+    };
+    for (let i = 0; i < selectedCategories.length; i++) {
+      collect(selectedCategories[i]);
+    }
+    return Array.from(all);
+  }, [selectedCategories, categories]);
+
   const {
     sortedProducts,
     paginatedProducts,
@@ -105,7 +131,7 @@ return () => window.removeEventListener('resize', checkMobile);
     products,
     categories,
     searchQuery: deferredSearch,
-    selectedCategories,
+    selectedCategories: preExpandedCategories,
     stockLevelFilter: stockLevelFilter as any,
     brandFilter: selectedBrand,
     dateRange,
@@ -193,12 +219,12 @@ return () => window.removeEventListener('resize', checkMobile);
   });
   useEffect(() => {
     setSelectedProductIds([]);
-  }, [inventoryTab, currentPage, search, selectedCategories]);
+  }, [inventoryTab, currentPage, deferredSearch, selectedCategories]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategories, selectedSupplier, selectedBrand, statusFilter, stockLevelFilter, dateRange]);
+  }, [deferredSearch, selectedCategories, selectedSupplier, selectedBrand, statusFilter, stockLevelFilter, dateRange]);
   const {
     handleDelete,
     confirmDelete,

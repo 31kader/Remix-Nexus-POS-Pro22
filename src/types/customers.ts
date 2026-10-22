@@ -12,7 +12,6 @@ export interface Customer {
   isAppUser?: boolean;
   password?: string;
   passwordHash?: string;
-  password_hash?: string;
   updatedAt?: string;
   joinDate?: string;
   address?: string;
@@ -20,7 +19,6 @@ export interface Customer {
   latitude?: number;
   longitude?: number;
   mapsUrl?: string;
-  maps_url?: string;
   creditLimit?: number;
   isWholesale?: boolean;
   birthday?: string;
@@ -28,4 +26,11 @@ export interface Customer {
   favoriteItems?: string[];
   alerts?: string[];
   cashierNotes?: { note: string; timestamp: string; author: string }[];
+  loyalty_points?: number;
+  total_spent?: number;
+  last_visit?: string;
+  join_date?: string;
+  deltaBalance?: number;
+  deltaSpent?: number;
+  deltaPoints?: number;
 }

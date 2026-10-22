@@ -24,8 +24,13 @@ export function SupplierDamagedTab({
   setIsDamageModalOpen,
   handleUpdateClaimStatus
 }: SupplierDamagedTabProps) {
-  const supName = (viewingDetailsSupplier.name || '').toLowerCase().trim();
-  const supId = viewingDetailsSupplier.id;
+  if (!viewingDetailsSupplier) {
+    return null;
+  }
+
+  // 🛡️ BUG-09 : Sécurisation contre TypeError sur viewingDetailsSupplier
+  const supName = (viewingDetailsSupplier?.name || '').toLowerCase().trim();
+  const supId = viewingDetailsSupplier?.id || '';
 
   const supplierDamaged = (damagedItems || []).filter(d => {
     if (!d) return false;

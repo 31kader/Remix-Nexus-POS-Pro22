@@ -11,13 +11,17 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
   const allProducts: any[] = [];
   let from = 0;
   let hasMore = true;
+  let hadFetchError = false;
 
-  // Colonnes essentielles optimisées pour la caisse et la gestion (allégées pour 11 700 articles)
+  // Colonnes complètes pour préserver packs, remises, multi-lots, déconditionnement, galerie et historique
   const CORE_COLUMNS = [
-    'id', 'name', 'barcode', 'sku', 'reference', 'image_url',
+    'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 'video_url',
     'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 'stock', 'min_stock', 
-    'category_id', 'brand_id', 'supplier', 'unit', 'status', 'is_bundle', 'show_in_pos', 
-    'expiration_date', 'batch_number', 'updated_at', 'is_quick_select'
+    'category_id', 'brand_id', 'supplier', 'unit', 'status', 'description',
+    'is_bundle', 'bundle_items', 'quantity_discounts', 'tags', 'show_in_pos', 
+    'expiration_date', 'batch_number', 'location', 'damaged_stock',
+    'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id',
+    'created_at', 'updated_at', 'is_quick_select', 'price_history'
   ];
   let activeCols = [...CORE_COLUMNS];
 
@@ -56,6 +60,7 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
         // Si c'est une erreur réseau ou de timeout, ne pas réessayer inutilement
         if (isNetworkOrTimeoutError(batchResult.error)) {
           notifyNetworkIssue(batchResult.error, 'Produits');
+          hadFetchError = true;
           hasMore = false;
           break;
         }
@@ -105,9 +110,16 @@ export async function fetchProductsFromSupabase(limit?: number, isLightweight: b
         }
       } else {
         console.warn('[Supabase Products Fetch Batch Failed]', batchResult?.error);
+        hadFetchError = true;
         hasMore = false;
         break;
       }
+    }
+
+    // 🛡️ SÉCURITÉ ABSOLUE : Si une erreur est survenue pendant la pagination, ne JAMAIS retourner un tableau partiel !
+    if (hadFetchError) {
+      console.warn(`[Supabase Fetch Products] Récupération interrompue par erreur (${allProducts.length} reçus), abandon pour préserver le cache local.`);
+      return null;
     }
 
     const finalCamelProducts = allProducts
@@ -155,9 +167,14 @@ export async function fetchTableFromSupabase<T>(
       'vouchers': 'vouchers',
       'employees': 'employees',
       'attendance': 'attendance',
+      'patterns': 'invoice_patterns',
       'invoice_patterns': 'invoice_patterns',
       'goodsReceiptNotes': 'goods_receipt_notes',
-      'goods_receipt_notes': 'goods_receipt_notes'
+      'goods_receipt_notes': 'goods_receipt_notes',
+      'shortageItems': 'shortage_items',
+      'shortage_items': 'shortage_items',
+      'customReplenishmentLists': 'custom_replenishment_lists',
+      'custom_replenishment_lists': 'custom_replenishment_lists'
     };
     
     const mappedTable = collectionName === 'shifts' ? 'cash_shifts' : 
@@ -167,6 +184,9 @@ export async function fetchTableFromSupabase<T>(
                         collectionName === 'supplierPayments' || collectionName === 'supplier_payments' ? 'supplier_payments' :
                         collectionName === 'damagedItems' || collectionName === 'damaged_items' ? 'damaged_items' :
                         collectionName === 'goodsReceiptNotes' || collectionName === 'goods_receipt_notes' ? 'goods_receipt_notes' :
+                        collectionName === 'shortageItems' || collectionName === 'shortage_items' ? 'shortage_items' :
+                        collectionName === 'customReplenishmentLists' || collectionName === 'custom_replenishment_lists' ? 'custom_replenishment_lists' :
+                        collectionName === 'patterns' || collectionName === 'invoice_patterns' ? 'invoice_patterns' :
                         collectionName === 'auditLogs' || collectionName === 'audit_logs' ? 'audit_logs' : collectionName;
                         
     const key = TABLE_TO_KEY[collectionName] || collectionName;
@@ -178,10 +198,16 @@ export async function fetchTableFromSupabase<T>(
     const allRecords: any[] = [];
     let from = 0;
     let hasMore = true;
+    let hadFetchError = false;
 
     // Pour customers, suppliers, transactions, etc. sans limit : plafond de sécurité à 2000 pour éviter OOM
     const smallStaticTables = ['categories', 'brands', 'settings', 'promotions', 'users', 'employees', 'vouchers', 'invoice_patterns'];
-    const largeVolumeTables = ['customers', 'suppliers', 'transactions', 'returns', 'expenses', 'audit_logs', 'auditLogs', 'stock_adjustments', 'stockAdjustments'];
+    const largeVolumeTables = [
+      'customers', 'suppliers', 'transactions', 'returns', 'expenses',
+      'audit_logs', 'auditLogs', 'stock_adjustments', 'stockAdjustments',
+      'purchases', 'purchase_orders', 'purchaseOrders', 'online_orders', 'onlineOrders',
+      'goods_receipt_notes', 'goodsReceiptNotes', 'cash_shifts', 'shifts', 'attendance'
+    ];
     const maxTarget = limit !== undefined 
       ? limit 
       : (largeVolumeTables.includes(collectionName) ? 2000 : 500);
@@ -196,7 +222,7 @@ export async function fetchTableFromSupabase<T>(
 
       while (attempts < 5) {
         attempts++;
-        const cols = '*';
+        const cols = activeCols.length > 0 ? activeCols.join(',') : '*';
 
         // Use dynamic sort column based on what columns actually exist in activeCols list
         let sortCol: string | null = null;
@@ -220,6 +246,9 @@ export async function fetchTableFromSupabase<T>(
 
         if (sortCol) {
           query = query.order(sortCol, { ascending: false });
+          if (sortCol !== 'id' && (activeCols.includes('id') || activeCols.length === 0)) {
+            query = query.order('id', { ascending: true });
+          }
         }
 
         if (startDate) {
@@ -247,6 +276,7 @@ export async function fetchTableFromSupabase<T>(
         // Si c'est une erreur réseau ou de timeout, ne pas boucler inutilement
         if (isNetworkOrTimeoutError(batchResult.error)) {
           notifyNetworkIssue(batchResult.error, collectionName);
+          hadFetchError = true;
           hasMore = false;
           break;
         }
@@ -299,9 +329,16 @@ export async function fetchTableFromSupabase<T>(
         if (batchResult?.error) {
           console.warn(`[Supabase Batch Fetch Error on ${collectionName}]`, batchResult.error);
         }
+        hadFetchError = true;
         hasMore = false;
         break;
       }
+    }
+
+    // 🛡️ SÉCURITÉ ABSOLUE : Si une erreur est survenue pendant la récupération, retourner null (et non []) pour préserver le cache local
+    if (hadFetchError) {
+      console.warn(`[Supabase Fetch Table] Récupération interrompue par erreur sur ${collectionName}, abandon pour préserver le cache local.`);
+      return null;
     }
       
     if (allRecords.length > 0) {

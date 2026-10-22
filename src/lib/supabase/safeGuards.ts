@@ -52,11 +52,21 @@ export function isIgnorableSupabaseError(error: unknown): boolean {
   // PostgREST error codes
   if (e.code && IGNORABLE_CODES.has(e.code)) return true;
   
-  // HTTP status 404 (Not Found)
-  if (e.status === 404) return true;
-  if (msg.includes('404')) return true;
-  if (msg.includes('not found')) return true;
-  
+  // Network errors & offline mode (non-fatal for optional queries/mutations)
+  if (
+    e.code === 'OFFLINE_ERR' || 
+    msg.includes('offline') || 
+    msg.includes('failed to fetch') || 
+    msg.includes('network') ||
+    msg.includes('timeout') ||
+    msg.includes('err_timed_out') ||
+    msg.includes('aborterror') ||
+    e.status === 0 ||
+    e.status === 504
+  ) {
+    return true;
+  }
+
   // Optional auth-related bypasses for non-critical features e.g. Row Level Security issues
   if (msg.includes('jwt') || msg.includes('permission denied')) {
     return true;
@@ -64,3 +74,4 @@ export function isIgnorableSupabaseError(error: unknown): boolean {
   
   return false;
 }
+

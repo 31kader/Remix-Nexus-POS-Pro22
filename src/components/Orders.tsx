@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCw, Search, Calendar, Filter, Truck, ShoppingBag, X, Plus } from 'lucide-react';
 import { Card, Button } from './ui';
-import { useOrdersLogic, OrdersProps } from './useOrdersLogic';
+import { useOrdersLogic, OrdersProps } from '../hooks/useOrdersLogic';
 import { OrderDetailModal } from './orders/OrderDetailModal';
 import { OrdersTable } from './orders/OrdersTable';
 import { cn } from '../lib/utils';
@@ -72,68 +72,68 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
     { key: 'delivered', label: 'Livrées', count: statusCounts.delivered, color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
     { key: 'cancelled', label: 'Annulées', count: statusCounts.cancelled, color: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
   ];
-  
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header Titre & Actions Principales */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-black text-white flex items-center gap-3">
+          <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2.5">
             Commandes en Ligne 
             <span className={cn(
-              "text-xs px-3 py-1 rounded-full border transition-all",
+              "text-[11px] px-2.5 py-0.5 rounded-full border transition-all",
               statusCounts.pending > 0 
-                ? "bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse" 
-                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                ? "bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse font-bold" 
+                : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-medium"
             )}>
               {statusCounts.pending} en attente
             </span>
           </h3>
-          <p className="text-white/40 text-sm mt-1">
-            {Array.isArray(filteredOrders) ? filteredOrders.length : 0} commandes affichées sur {Array.isArray(orders) ? orders.length : 0} au total (Synchro Supabase Directe)
+          <p className="text-white/40 text-xs sm:text-sm mt-0.5">
+            {Array.isArray(filteredOrders) ? filteredOrders.length : 0} affichées sur {Array.isArray(orders) ? orders.length : 0} au total (Synchro Directe)
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Button
             onClick={() => refreshFromSupabase(true)}
             disabled={isRefreshing}
-            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2.5 rounded-xl border border-slate-700 transition-all"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl border border-slate-700 transition-all cursor-pointer active:scale-95"
             title="Synchroniser immédiatement avec Supabase"
           >
             <RefreshCw size={14} className={isRefreshing ? "animate-spin text-indigo-400" : "text-slate-400"} />
-            {isRefreshing ? "Synchronisation..." : "Actualiser Supabase"}
+            <span className="hidden sm:inline">{isRefreshing ? "Synchronisation..." : "Actualiser Supabase"}</span>
+            <span className="sm:hidden">{isRefreshing ? "Synchro..." : "Actualiser"}</span>
           </Button>
 
           <Button
             onClick={createTestOrder}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-500/20"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg shadow-indigo-500/20 cursor-pointer active:scale-95 shrink-0"
           >
-            <Plus size={16} /> + Nouvelle Commande
+            <Plus size={15} /> <span>+ Commande</span>
           </Button>
 
-          <div className="flex items-center gap-4 bg-white/5  p-3 rounded-xl border border-white/10 shadow-sm">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${autoSync ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/20'}`} />
-              <span className="text-xs font-black uppercase tracking-widest text-white/60">Synchro Auto</span>
-            </div>
+          <div className="flex items-center gap-2 bg-zinc-800/80 px-2.5 py-2 rounded-xl border border-zinc-700 shadow-xs shrink-0">
+            <div className={`w-2 h-2 rounded-full shrink-0 ${autoSync ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/20'}`} />
+            <span className="hidden md:inline text-[10px] font-bold uppercase tracking-wider text-white/70">Auto-Sync</span>
             <button 
               type="button"
               onClick={() => (typeof setAutoSync === 'function' ? setAutoSync(!autoSync) : null)}
               className={cn(
-                "relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none",
-                autoSync ? "bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.3)]" : "bg-white/10"
+                "relative inline-flex h-4 w-8 items-center rounded-full transition-colors focus:outline-none cursor-pointer",
+                autoSync ? "bg-indigo-500" : "bg-white/10"
               )}
+              title={autoSync ? "Désactiver la synchro automatique" : "Activer la synchro automatique"}
             >
               <span className={cn(
-                "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm",
-                autoSync ? "translate-x-6" : "translate-x-0.5"
+                "inline-block h-3 w-3 transform rounded-full bg-white transition-transform shadow-xs",
+                autoSync ? "translate-x-4" : "translate-x-0.5"
               )} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Status Filter Tabs (Mode Dashboard Moderne) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
+      {/* Bandeau d'onglets de statut avec défilement tactile fluide */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scroll-smooth custom-scrollbar">
         {statusTabItems.map(tab => {
           const isActive = (statusFilter || 'all').toLowerCase() === tab.key.toLowerCase();
           return (
@@ -142,15 +142,15 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
               type="button"
               onClick={() => (typeof setStatusFilter === 'function' ? setStatusFilter(tab.key) : null)}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all border shrink-0 cursor-pointer",
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shrink-0 cursor-pointer active:scale-95",
                 isActive 
-                  ? "bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/25 scale-[1.02]" 
-                  : "bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-800/80"
+                  ? "bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/25" 
+                  : "bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border-zinc-800"
               )}
             >
               <span>{tab.label}</span>
               <span className={cn(
-                "px-2 py-0.5 rounded-lg text-[10px] font-mono font-black border transition-all",
+                "px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold border transition-all",
                 isActive 
                   ? "bg-white/20 text-white border-white/30" 
                   : tab.color
@@ -162,16 +162,16 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
         })}
       </div>
 
-      {/* Advanced Filter Bar */}
-      <Card className="p-4 bg-slate-900/60 border border-slate-800/80  space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+      {/* Barre de Filtres Responsive */}
+      <Card className="p-3 bg-zinc-900/80 border border-zinc-800 shadow-sm space-y-2.5">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+          {/* Recherche (Pleine largeur sur mobile) */}
+          <div className="relative col-span-2 sm:flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={15} />
             <input 
               type="text"
-              placeholder="Rechercher par client, tél, ou N° de commande..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-xs outline-none focus:ring-2 focus:ring-indigo-500/40"
+              placeholder="Rechercher par client, tél, N°..."
+              className="w-full pl-9 pr-8 py-2 bg-zinc-950/80 border border-zinc-800 rounded-xl text-white text-xs outline-none focus:ring-2 focus:ring-indigo-500/40"
               value={searchFilter || ''}
               onChange={e => (typeof setSearchFilter === 'function' ? setSearchFilter(e.target.value) : null)}
             />
@@ -179,62 +179,62 @@ export const Orders = React.memo(function Orders(props: OrdersProps) {
               <button 
                 type="button"
                 onClick={() => (typeof setSearchFilter === 'function' ? setSearchFilter('') : null)} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-0.5 cursor-pointer"
               >
                 <X size={14} />
               </button>
             )}
           </div>
 
-          {/* Delivery Type */}
+          {/* Filtre Type (Livraison / Retrait) */}
           <select 
             value={deliveryFilter || 'all'}
             onChange={(e) => (typeof setDeliveryFilter === 'function' ? setDeliveryFilter(e.target.value) : null)}
-            className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-bold transition-all"
+            className="bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-xl px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer w-full sm:w-auto"
           >
             <option value="all">Tous les types</option>
             <option value="delivery">Livraison</option>
             <option value="pickup">Retrait Magasin</option>
           </select>
 
-          {/* Payment Status */}
+          {/* Filtre Paiement */}
           <select 
             value={paymentFilter || 'all'}
             onChange={(e) => (typeof setPaymentFilter === 'function' ? setPaymentFilter(e.target.value) : null)}
-            className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-bold transition-all"
+            className="bg-zinc-950 border border-zinc-800 text-zinc-200 rounded-xl px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-indigo-500 font-medium cursor-pointer w-full sm:w-auto"
           >
-            <option value="all">Tous les paiements</option>
+            <option value="all">Tous paiements</option>
             <option value="paid">Payé</option>
             <option value="unpaid">Non Payé</option>
           </select>
 
-          {/* Date Filter Buttons */}
-          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+          {/* Filtres Temporels */}
+          <div className="col-span-2 sm:col-span-auto flex items-center justify-between sm:justify-start gap-1 bg-zinc-950/80 p-1 rounded-xl border border-zinc-800">
             <button
               type="button"
               onClick={() => (typeof setDateFilter === 'function' ? setDateFilter('all') : null)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${dateFilter === 'all' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-white'}`}
             >
               Tout
             </button>
             <button
               type="button"
               onClick={() => (typeof setDateFilter === 'function' ? setDateFilter('today') : null)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === 'today' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${dateFilter === 'today' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-white'}`}
             >
               Aujourd'hui
             </button>
             <button
               type="button"
               onClick={() => (typeof setDateFilter === 'function' ? setDateFilter('last7days') : null)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last7days' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${dateFilter === 'last7days' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-white'}`}
             >
               7J
             </button>
             <button
               type="button"
               onClick={() => (typeof setDateFilter === 'function' ? setDateFilter('last30days') : null)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last30days' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              className={`flex-1 sm:flex-initial px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${dateFilter === 'last30days' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-white'}`}
             >
               30J
             </button>

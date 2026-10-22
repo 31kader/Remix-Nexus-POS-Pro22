@@ -1,15 +1,17 @@
 import React from 'react';
 import { create } from 'zustand';
 import { UserProfile } from '../types';
+import { User } from '../services/AuthService';
+import { setSentryUser } from '../lib/sentry';
 
 interface AuthState {
-  user: UserProfile | any | null;
+  user: User | UserProfile | null;
   profile: UserProfile | null;
   authError: React.ReactNode;
   isLoggingIn: boolean;
   isUnauthorized: boolean;
   
-  setUser: (user: UserProfile | any | null) => void;
+  setUser: (user: User | UserProfile | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setAuthError: (error: React.ReactNode) => void;
   setIsLoggingIn: (isLoggingIn: boolean) => void;
@@ -23,7 +25,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoggingIn: false,
   isUnauthorized: false,
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    setSentryUser(user ? { uid: user.uid, role: (user as any).role } : null);
+  },
   setProfile: (profile) => set({ profile }),
   setAuthError: (authError) => set({ authError }),
   setIsLoggingIn: (isLoggingIn) => set({ isLoggingIn }),

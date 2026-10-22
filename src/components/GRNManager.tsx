@@ -2,7 +2,7 @@ import React from 'react';
 import { CloudUpload } from 'lucide-react';
 import { BarcodeScanner } from './BarcodeScanner';
 import { Product } from '../types';
-import { useGRNLogic } from './useGRNLogic';
+import { useGRNLogic } from '../hooks/useGRNLogic';
 import { GRNHistoryTable } from './GRNHistoryTable';
 import { GRNCreateForm } from './grn-manager/GRNCreateForm';
 

@@ -72,7 +72,7 @@ export function useOrderActions({
           (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, paymentStatus: newPaymentStatus } : o)
         );
 
-        await localDb.update(`onlineOrders/${orderId}`, { paymentStatus: newPaymentStatus });
+        await localDb.updateLocalOnly(`onlineOrders/${orderId}`, { paymentStatus: newPaymentStatus });
         const currentList = useTransactionStore.getState().onlineOrders;
         idbSet('nexus_online_orders_cache', currentList).catch(() => {});
 
@@ -119,26 +119,41 @@ export function useOrderActions({
 
     // 📦 OPTION 1 : Dès confirmation (ou tout statut actif >= confirmed), déstocker immédiatement
     const activeDestockStatuses = ['confirmed', 'paid', 'processing', 'shipped', 'delivered'];
+    let didDestock = false;
     if (activeDestockStatuses.includes(newStatus) && !order.syncedToPos) {
-      await decrementStockForOrder(order);
+      const res = await decrementStockForOrder(order);
+      if (res && res.success) {
+        didDestock = true;
+      }
     }
+
+    const isSyncedToPos = Boolean(order.syncedToPos || didDestock);
+    const orderUpdates: Partial<OnlineOrder> = {
+      status: newStatus,
+      ...(isSyncedToPos ? { syncedToPos: true } : {})
+    };
 
     // 1. SUPABASE-FIRST: Update Supabase directly with only valid columns
     if (isSupabaseConfigured) {
       try {
         console.log('[updateOrderStatus] Supabase update:', { status: newStatus, id: dbId, originalId: orderId, typeOfId: typeof orderId });
 
+        const supaPayload: Record<string, any> = {
+          status: newStatus,
+          ...(isSyncedToPos ? { synced_to_pos: true } : {})
+        };
+
         // Step 1: Update without .select() to avoid RLS issues on SELECT after UPDATE
         const { error, status } = await supabase
           .from('online_orders')
-          .update({ status: newStatus })
+          .update(supaPayload)
           .eq('id', dbId);
 
         // Also update any row sharing the same external_order_id to prevent phantom duplicates
         if (order.externalOrderId) {
           await supabase
             .from('online_orders')
-            .update({ status: newStatus })
+            .update(supaPayload)
             .eq('external_order_id', order.externalOrderId);
         }
 
@@ -150,16 +165,16 @@ export function useOrderActions({
           return;
         }
 
-        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB
+        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB (updateLocalOnly évite un doublon d'upsert dans SyncService)
         useTransactionStore.getState().setOnlineOrders(prev => 
           (Array.isArray(prev) ? prev : []).map(o => {
             const matchesId = String(o.id) === String(orderId);
             const matchesExt = order.externalOrderId && o.externalOrderId === order.externalOrderId;
-            return (matchesId || matchesExt) ? { ...o, status: newStatus } : o;
+            return (matchesId || matchesExt) ? { ...o, ...orderUpdates } : o;
           })
         );
 
-        await localDb.update(`onlineOrders/${orderId}`, { status: newStatus });
+        await localDb.updateLocalOnly(`onlineOrders/${orderId}`, orderUpdates);
         const currentList = useTransactionStore.getState().onlineOrders;
         idbSet('nexus_online_orders_cache', currentList).catch(() => {});
 
@@ -171,13 +186,13 @@ export function useOrderActions({
           (Array.isArray(prev) ? prev : []).map(o => {
             const matchesId = String(o.id) === String(orderId);
             const matchesExt = order.externalOrderId && o.externalOrderId === order.externalOrderId;
-            return (matchesId || matchesExt) ? { ...o, status: newStatus } : o;
+            return (matchesId || matchesExt) ? { ...o, ...orderUpdates } : o;
           })
         );
-        await localDb.update(`onlineOrders/${orderId}`, { status: newStatus });
+        await localDb.update(`onlineOrders/${orderId}`, orderUpdates);
         enqueueSync('online_orders', String(dbId), 'UPSERT', {
           id: dbId,
-          status: newStatus,
+          ...orderUpdates,
           ...(order.externalOrderId ? { external_order_id: order.externalOrderId } : {})
         });
 

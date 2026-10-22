@@ -52,12 +52,21 @@ export function useAppInitialization() {
       const hash = window.location.hash.toLowerCase();
       if (hash.includes('client_scan') || hash === '#scan' || hash.includes('client-scan')) return 'client_scan';
       if (hash.includes('kiosk') || hash.includes('borne') || hash.includes('price_checker')) return 'kiosk';
-      if (hash.includes('customer') || hash.includes('client')) return 'customer';
-      if (hash.includes('supplier') || hash.includes('fournisseur')) return 'supplier';
+      if (hash.startsWith('#portal-customer') || hash.startsWith('#customer-portal')) return 'customer';
+      if (hash.startsWith('#portal-supplier') || hash.startsWith('#supplier-portal')) return 'supplier';
     }
     return 'pos';
   });
-  const [syncInfo, setSyncInfo] = useState<any>(null);
+  const [syncInfo, setSyncInfo] = useState<{
+    active: boolean;
+    progress: number;
+    currentTable: string;
+    pendingCount?: number;
+  }>({
+    active: false,
+    progress: 100,
+    currentTable: ''
+  });
   const [bgSyncActive, setBgSyncActive] = useState<boolean>(false);
   const [bgPendingChanges, setBgPendingChanges] = useState<number>(0);
   const [syncState, setSyncState] = useState<AppSyncState>({
@@ -81,9 +90,15 @@ export function useAppInitialization() {
     window.addEventListener('offline', handleOffline);
 
     const unsubscribeBgSync = onBackgroundSyncStatus((bgStatus) => {
-      setSyncState(bgStatus);
-      setBgSyncActive(bgStatus.isSyncing);
-      setBgPendingChanges(bgStatus.pendingCount);
+      setSyncState(prev => (prev.isSyncing === bgStatus.isSyncing && prev.pendingCount === bgStatus.pendingCount) ? prev : bgStatus);
+      setBgSyncActive(prev => prev === bgStatus.isSyncing ? prev : bgStatus.isSyncing);
+      setBgPendingChanges(prev => prev === bgStatus.pendingCount ? prev : bgStatus.pendingCount);
+      setSyncInfo({
+        active: bgStatus.isSyncing,
+        progress: bgStatus.progress ?? (bgStatus.isSyncing ? 0 : 100),
+        currentTable: bgStatus.currentTable || '',
+        pendingCount: bgStatus.pendingCount
+      });
     });
 
     return () => {

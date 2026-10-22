@@ -473,7 +473,88 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
       {/* Panoramic Table */}
       <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/60">
         {paginatedNotes.length > 0 ? (
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <>
+            {/* Vue Cartes Tactiles Mobiles (< lg) */}
+            <div className="block lg:hidden space-y-3 p-3">
+              {paginatedNotes.map((noteItem, idx) => {
+                const isVersement = noteItem.type === 'versement';
+                const isRetrait = noteItem.type === 'retrait';
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl border border-slate-800 bg-slate-900/90 shadow-sm space-y-2.5 transition-all"
+                  >
+                    {/* Header : Date & Type */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider border",
+                        noteItem.badgeClass
+                      )}>
+                        {noteItem.typeLabel}
+                      </span>
+                      <span className="text-slate-400 font-mono text-[11px]">
+                        {formatSafe(noteItem.timestamp, 'dd/MM/yyyy HH:mm', { locale: fr })}
+                      </span>
+                    </div>
+
+                    {/* Client & Montant */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-black text-white uppercase text-sm truncate block">
+                          {noteItem.customerName}
+                        </span>
+                        {noteItem.customerPhone && (
+                          <span className="text-xs text-slate-400 font-mono">
+                            {noteItem.customerPhone}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Montant si applicable */}
+                      {noteItem.amount !== undefined && noteItem.amount !== null && (
+                        <div className="text-right">
+                          <span className="text-[10px] text-slate-400 uppercase font-bold block">Montant</span>
+                          <span className={cn(
+                            "font-mono font-black text-sm",
+                            isVersement ? "text-emerald-400" : isRetrait ? "text-rose-400" : "text-white"
+                          )}>
+                            {isVersement ? '+' : isRetrait ? '-' : ''}{Number(noteItem.amount).toFixed(2)} {settings.currency || 'DA'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Moyen de paiement & Note */}
+                    <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1.5 text-xs">
+                      {noteItem.method && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                          <span className="font-bold text-slate-500 uppercase">Moyen :</span>
+                          <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 font-mono uppercase font-bold text-[10px]">
+                            {noteItem.method}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-slate-300 font-medium leading-relaxed">
+                        {noteItem.description}
+                      </p>
+                    </div>
+
+                    {/* Footer: Auteur */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-800/60 font-mono">
+                      <span>Enregistré par</span>
+                      <span className="bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800 text-slate-300 font-bold">
+                        {noteItem.author}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Panoramic Table (Desktop >= lg) */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-300 font-black text-xs uppercase tracking-wider sticky top-0 z-10">
                 <th className="py-3 px-3.5">Date & Heure</th>
@@ -557,7 +638,9 @@ export const CustomerGlobalGeneralView: React.FC<CustomerGlobalGeneralViewProps>
               })}
             </tbody>
           </table>
-        ) : (
+        </div>
+      </>
+    ) : (
           <div className="text-center py-16 text-slate-400">
             <UserCheck size={36} className="mx-auto mb-2 opacity-50" />
             <p className="font-bold text-sm text-slate-300">Aucun enregistrement trouvé</p>

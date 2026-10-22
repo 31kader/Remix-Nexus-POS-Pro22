@@ -6,7 +6,6 @@ import { AppHeader } from './AppHeader';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { usePeopleStore } from '../store/usePeopleStore';
-import { useProductStats } from '../hooks/useAppPermissionsAndStats';
 
 export type SidebarMode = 'open' | 'collapsed' | 'closed';
 
@@ -21,6 +20,8 @@ interface MainAppContentProps {
   isDataLoading: boolean;
   [key: string]: any;
 }
+
+const EMPTY_LIST: any[] = [];
 
 export const MainAppContent: React.FC<MainAppContentProps> = ({
   activeTab,
@@ -38,7 +39,8 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
   const profile = useAuthStore(s => s.profile);
   const settings = useCoreStore(s => s.settings);
   const employees = usePeopleStore(s => s.employees);
-  const { expiringProducts, lowStockProducts } = useProductStats();
+  const expiringProducts = props.expiringProducts ?? EMPTY_LIST;
+  const lowStockProducts = props.lowStockProducts ?? EMPTY_LIST;
 
   // Mode 3-états du Menu Latéral : 'open' (260px) -> 'collapsed' (76px icônes) -> 'closed' (0px fermé complet)
   const [sidebarMode, setSidebarModeState] = useState<SidebarMode>(() => {
@@ -77,6 +79,16 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
     setIsSidebarOpen(sidebarMode === 'open');
   }, [sidebarMode, setIsSidebarOpen]);
 
+  // Écouteur global : fermeture/repli automatique du menu latéral (ex: ouverture de la barre de favoris)
+  useEffect(() => {
+    const handleCollapseSidebar = () => {
+      setSidebarMode('collapsed');
+      setIsMobileOverlayOpen(false);
+    };
+    window.addEventListener('nexus-collapse-sidebar', handleCollapseSidebar);
+    return () => window.removeEventListener('nexus-collapse-sidebar', handleCollapseSidebar);
+  }, [setSidebarMode, setIsMobileOverlayOpen]);
+
   return (
     <div className="flex h-[100dvh] text-slate-900 dark:text-slate-100 overflow-hidden font-sans bg-slate-50 dark:bg-zinc-950">
       <Sidebar 
@@ -93,9 +105,10 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
         isMobileOverlayOpen={isMobileOverlayOpen}
         setIsMobileOverlayOpen={setIsMobileOverlayOpen}
         permissions={props.permissions}
+        canAccess={props.canAccess}
         settings={settings}
         isCameraAgent={profile?.role === 'camera_agent'}
-        isAdmin={profile?.role === 'admin'}
+        isAdmin={props.isAdmin ?? (profile?.role === 'admin')}
         isManager={profile?.role === 'manager'}
         handleLogout={() => props.handleLogout(user)}
         handleInstallApp={props.handleInstallApp}
@@ -154,7 +167,7 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
             setActiveTab={setActiveTab}
             onOpenMenu={() => setIsMobileOverlayOpen(true)}
             canAccess={props.canAccess}
-            isAdmin={profile?.role === 'admin'}
+            isAdmin={props.isAdmin ?? (profile?.role === 'admin')}
             isOwner={props.isOwner}
             isManager={profile?.role === 'manager'}
           />

@@ -4,6 +4,7 @@ import { Button } from './ui';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
+import { captureSentryException } from '../lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -35,6 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
     this.setState({ errorInfo });
+    captureSentryException(error, { componentStack: errorInfo?.componentStack });
     try {
       getIDB<any[]>('nexus_system_crashes').then((existing = []) => {
         const updated = [
@@ -137,7 +139,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <p className="text-[8px] font-black text-white/5 uppercase tracking-normal">Nexus POS Pro v1.2.28 Safety Layer</p>
+            <p className="text-[8px] font-black text-white/5 uppercase tracking-normal">Nexus POS Pro v1.2.54 Safety Layer</p>
           </div>
         </div>
       );

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { localDb } from '../../services/LocalDatabase';
 import { formatSafe } from '../../lib/utils';
-import { CashShift, Transaction, Expense, UserProfile as User, CompanySettings } from '../../types';
+import { CashShift, Transaction, Expense, UserProfile as User, CompanySettings, isTopUpTransaction } from '../../types';
 import { getTerminalId, getTerminalName } from '../../services/terminalService';
 import { escapeHtml } from '../../services/receiptPrintService';
 import { toast } from 'sonner';
@@ -32,9 +32,6 @@ export function useCashManagementLogic({
 
   const currentShiftStats = useMemo(() => {
     if (!activeShift) return null;
-    const shiftTransactions = (transactions || []).filter(t => 
-      t && t.timestamp && new Date(t.timestamp) >= new Date(activeShift.openedAt) && t.status !== 'returned' && t.status !== 'cancelled'
-    );
     const openedAtDate = new Date(activeShift.openedAt);
     const openedTimestamp = !isNaN(openedAtDate.getTime()) ? openedAtDate.getTime() : 0;
     const openedDayUtc = !isNaN(openedAtDate.getTime()) ? openedAtDate.toISOString().slice(0, 10) : '';
@@ -42,32 +39,114 @@ export function useCashManagementLogic({
       ? `${openedAtDate.getFullYear()}-${String(openedAtDate.getMonth() + 1).padStart(2, '0')}-${String(openedAtDate.getDate()).padStart(2, '0')}`
       : '';
 
+    // Toutes les transactions non annulées réalisées pendant le shift (y compris celles retournées ensuite,
+    // car leur remboursement en espèces génère une dépense 'Remboursement / Retour' déduite dans shiftExpenses)
+    // 🛡️ BUG-05 : Filtrage par terminalId pour éviter les interférences multi-caisses
+    const shiftTransactions = (transactions || []).filter(t => {
+      if (!t || !t.timestamp) return false;
+      if (new Date(t.timestamp).getTime() < openedTimestamp) return false;
+      if (t.status === 'cancelled') return false;
+      if (activeShift.terminalId && t.terminalId && t.terminalId !== activeShift.terminalId) return false;
+      return true;
+    });
+
     const shiftExpenses = (expenses || []).filter(e => {
       if (!e || !e.date) return false;
       // Seules les dépenses en espèces impactent le tiroir-caisse attendu
       const isCash = !e.paymentMethod || e.paymentMethod === 'cash';
       if (!isCash) return false;
 
-      // Si e.date contient une heure (format ISO complet)
-      if (typeof e.date === 'string' && e.date.includes('T')) {
-        const expTime = new Date(e.date).getTime();
+      const rawTs = (e as any).createdAt || (e as any).timestamp || e.date;
+      if (typeof rawTs === 'string' && rawTs.includes('T')) {
+        const expTime = new Date(rawTs).getTime();
         return !isNaN(expTime) && expTime >= openedTimestamp;
       }
 
-      // Si e.date est un format jour YYYY-MM-DD
+      // Si e.date est un format jour YYYY-MM-DD sans horodatage précis
       const expDateStr = String(e.date).trim().slice(0, 10);
-      return expDateStr >= openedDayLocal || expDateStr >= openedDayUtc;
+      const isCurrentDay = expDateStr === openedDayLocal || expDateStr === openedDayUtc;
+      const isFutureDay = expDateStr > openedDayLocal && expDateStr > openedDayUtc;
+      if (!isCurrentDay && !isFutureDay) return false;
+
+      // Si la dépense date d'aujourd'hui sans heure et qu'un shift antérieur a déjà été clôturé ce jour-là,
+      // on ne l'attribue pas au shift suivant pour éviter la double soustraction
+      if (isCurrentDay) {
+        const hasEarlierClosedShiftSameDay = (shifts || []).some(s =>
+          s && s.id !== activeShift.id && s.closedAt &&
+          new Date(s.closedAt).getTime() <= openedTimestamp &&
+          (new Date(s.openedAt).toISOString().slice(0, 10) === openedDayUtc ||
+           `${new Date(s.openedAt).getFullYear()}-${String(new Date(s.openedAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(s.openedAt).getDate()).padStart(2, '0')}` === openedDayLocal)
+        );
+        if (hasEarlierClosedShiftSameDay) return false;
+      }
+      return true;
     });
 
-    const totalSales = shiftTransactions.reduce((sum, t) => sum + (Number(t.total) || 0), 0);
-    const totalCashSales = shiftTransactions.filter(t => t.paymentMethod === 'cash').reduce((sum, t) => sum + (Number(t.total) || 0), 0);
-    const totalCardSales = shiftTransactions.filter(t => t.paymentMethod === 'card').reduce((sum, t) => sum + (Number(t.total) || 0), 0);
+    const getCollectedForTx = (t: Transaction) => {
+      const total = Number(t.total) || 0;
+      const balanceUsed = Number(t.balanceUsed) || 0;
+      let collected = Math.max(0, total - balanceUsed);
+      // 🛡️ P1-BIZ-9 : Prise en compte de la monnaie conservée en solde (amountReceived - amountReturned)
+      if (t.amountReceived !== undefined && t.amountReturned !== undefined) {
+        const netCashReceived = Math.max(0, Number(t.amountReceived) - Number(t.amountReturned));
+        if (netCashReceived > collected) {
+          collected = netCashReceived;
+        }
+      }
+      return collected;
+    };
+
+    // 🛡️ BUG-05 : Prise en compte des espèces encaissées pour les ventes mixtes ou à crédit avec acompte
+    const getCashCollectedForTx = (t: Transaction) => {
+      if (t.paymentMethod === 'cash') {
+        return getCollectedForTx(t);
+      }
+      if (t.paymentMethod === 'debt' || (t.paymentMethod as string) === 'credit') {
+        if (t.amountReceived !== undefined && Number(t.amountReceived) > 0) {
+          return Math.max(0, Number(t.amountReceived) - Number(t.amountReturned || 0));
+        }
+        if ((t as any).cashReceived !== undefined && Number((t as any).cashReceived) > 0) {
+          return Number((t as any).cashReceived);
+        }
+        if ((t as any).paidAmount !== undefined && Number((t as any).paidAmount) > 0) {
+          return Number((t as any).paidAmount);
+        }
+      }
+      if ((t.paymentMethod as string) === 'mixed' || (t.paymentMethod as string) === 'split') {
+        if ((t as any).cashReceived !== undefined && Number((t as any).cashReceived) > 0) {
+          return Number((t as any).cashReceived);
+        }
+        if (t.amountReceived !== undefined && Number(t.amountReceived) > 0) {
+          return Math.max(0, Number(t.amountReceived) - Number(t.amountReturned || 0));
+        }
+      }
+      return 0;
+    };
+
+    const totalSales = shiftTransactions
+      .filter(t => t.status !== 'returned' && !isTopUpTransaction(t))
+      .reduce((sum, t) => sum + (Number(t.total) || 0), 0);
+
+    // Pour le tiroir-caisse : une vente espèces encaissée pendant ce shift puis remboursée en espèces pendant ce shift
+    // a d'abord mis le cash dans le tiroir (+getCollectedForTx) puis créé une dépense 'Remboursement / Retour' (-refundAmount).
+    // Si la vente a été retournée contre avoir/bon d'achat (sans dépense cash), on ne compte pas le montant retourné.
+    const hasCashRefundExpenseForTx = (txId: string) =>
+      shiftExpenses.some(e => e.category === 'Remboursement / Retour' && e.description && e.description.includes(String(txId).slice(0, 6)));
+
+    const totalCashSales = shiftTransactions
+      .filter(t => t.status !== 'returned' || hasCashRefundExpenseForTx(t.id))
+      .reduce((sum, t) => sum + getCashCollectedForTx(t), 0);
+
+    const totalCardSales = shiftTransactions
+      .filter(t => t.paymentMethod === 'card' && t.status !== 'returned' && !isTopUpTransaction(t))
+      .reduce((sum, t) => sum + getCollectedForTx(t), 0);
+
     const totalExpenses = shiftExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     const initialCashNum = Number(activeShift.initialCash) || 0;
     const expectedCash = initialCashNum + totalCashSales - totalExpenses;
 
     return { totalSales, totalCashSales, totalCardSales, totalExpenses, expectedCash };
-  }, [activeShift, transactions, expenses]);
+  }, [activeShift, shifts, transactions, expenses]);
 
   const printZReport = (shift: CashShift, settings: CompanySettings) => {
     const printWindow = window.open('', '_blank');

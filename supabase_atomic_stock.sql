@@ -9,10 +9,15 @@ CREATE OR REPLACE FUNCTION public.adjust_product_stock(p_id TEXT, delta NUMERIC)
 RETURNS NUMERIC
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_new_stock NUMERIC;
 BEGIN
+  IF (SELECT auth.role()) NOT IN ('authenticated', 'service_role') THEN
+    RAISE EXCEPTION 'Accès refusé : Authentification requise pour ajuster le stock.';
+  END IF;
+
   -- Met à jour le stock en ajoutant le delta de manière atomique (verrou row-level)
   UPDATE public.products
   SET 
@@ -25,7 +30,6 @@ BEGIN
 END;
 $$;
 
--- Accorder l'accès d'exécution aux rôles anon et authenticated
-GRANT EXECUTE ON FUNCTION public.adjust_product_stock(TEXT, NUMERIC) TO anon;
-GRANT EXECUTE ON FUNCTION public.adjust_product_stock(TEXT, NUMERIC) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.adjust_product_stock(TEXT, NUMERIC) TO service_role;
+-- Accorder l'accès d'exécution uniquement aux rôles authentifiés et service_role
+REVOKE EXECUTE ON FUNCTION public.adjust_product_stock(TEXT, NUMERIC) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.adjust_product_stock(TEXT, NUMERIC) TO authenticated, service_role;

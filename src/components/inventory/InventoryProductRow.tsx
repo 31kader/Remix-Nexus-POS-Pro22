@@ -67,13 +67,14 @@ export const InventoryProductRow = React.memo(({
               type="button"
               onClick={() => onToggleSelect(product.id || '')}
               className={cn(
-                "w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer",
+                "w-8 h-8 min-w-[32px] min-h-[32px] rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                 isSelected 
                   ? "bg-indigo-600 border-indigo-500 text-white shadow-sm" 
                   : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 text-transparent hover:text-slate-500"
               )}
+              aria-label="Sélectionner le produit"
             >
-              <Check size={12} strokeWidth={3} className={isSelected ? "opacity-100" : "opacity-0"} />
+              <Check size={16} strokeWidth={3} className={isSelected ? "opacity-100" : "opacity-0"} />
             </button>
 
             {isQuickSelectMode && (
@@ -81,13 +82,14 @@ export const InventoryProductRow = React.memo(({
                 type="button"
                 onClick={() => onToggleQuickSelect(product)}
                 className={cn(
-                  "w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer",
+                  "w-8 h-8 min-w-[32px] min-h-[32px] rounded-lg border flex items-center justify-center transition-all cursor-pointer",
                   product.isQuickSelect 
                     ? "bg-amber-50 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/40 text-amber-600 dark:text-amber-400" 
                     : "border-slate-200 dark:border-slate-800 text-slate-400 hover:text-amber-500"
                 )}
+                aria-label="Sélection rapide"
               >
-                <Star size={11} fill={product.isQuickSelect ? "currentColor" : "none"} />
+                <Star size={16} fill={product.isQuickSelect ? "currentColor" : "none"} />
               </button>
             )}
           </div>
@@ -100,14 +102,31 @@ export const InventoryProductRow = React.memo(({
             )}
           </div>
 
-          {/* Product Title, SKU, Category */}
+          {/* Product Title, SKU, Category, Prix & Marge sur Mobile */}
           <div className="min-w-0 flex-1">
             <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
               {product.name}
             </h4>
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
               {product.sku && <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded">{product.sku}</span>}
               {(product as any).category && <span className="text-slate-500 dark:text-slate-400">#{(product as any).category}</span>}
+            </div>
+
+            {/* Prix & Marge sur Smartphone (< md) */}
+            <div className="flex md:hidden items-center gap-2 mt-1.5 flex-wrap text-xs font-mono">
+              <span className="font-black text-emerald-600 dark:text-emerald-400">
+                {(product.price || 0).toFixed(2)} {settings.currency || 'DA'}
+              </span>
+              <span className={cn(
+                "text-[10px] font-bold px-1.5 py-0.2 rounded-md border",
+                margin > 0 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
+                  : margin < 0 
+                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" 
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+              )}>
+                Marge: {margin > 0 ? `+${margin.toFixed(0)}` : margin.toFixed(0)}
+              </span>
             </div>
           </div>
         </div>

@@ -3,12 +3,52 @@ import { Product, Category, Brand, CompanySettings, Promotion } from '../types';
 import { DEFAULT_SETTINGS } from '../hooks/data-fetching/initialStates';
 import { getSecureItem, setSecureItem } from '../lib/security';
 
+function sanitizeSettingsRoleDictionaries(settings: CompanySettings): CompanySettings {
+  if (!settings || typeof settings !== 'object') return settings;
+  let updated = settings;
+  if (settings.rolePermissions && typeof settings.rolePermissions === 'object') {
+    const normPerms: Record<string, any> = {};
+    for (const [roleKey, roleVal] of Object.entries(settings.rolePermissions)) {
+      const normRoleKey = roleKey === 'cameraAgent' ? 'camera_agent' : roleKey;
+      if (roleVal && typeof roleVal === 'object' && !Array.isArray(roleVal)) {
+        const inner: Record<string, any> = {};
+        for (const [k, v] of Object.entries(roleVal)) {
+          const camelK = k.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+          inner[camelK] = v;
+        }
+        normPerms[normRoleKey] = inner;
+      } else {
+        normPerms[normRoleKey] = roleVal;
+      }
+    }
+    updated = { ...updated, rolePermissions: normPerms as any };
+  }
+  if (settings.roleKPIs && typeof settings.roleKPIs === 'object') {
+    const normKPIs: Record<string, any> = {};
+    for (const [roleKey, roleVal] of Object.entries(settings.roleKPIs)) {
+      const normRoleKey = roleKey === 'cameraAgent' ? 'camera_agent' : roleKey;
+      if (roleVal && typeof roleVal === 'object' && !Array.isArray(roleVal)) {
+        const inner: Record<string, any> = {};
+        for (const [k, v] of Object.entries(roleVal)) {
+          const camelK = k.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
+          inner[camelK] = v;
+        }
+        normKPIs[normRoleKey] = inner;
+      } else {
+        normKPIs[normRoleKey] = roleVal;
+      }
+    }
+    updated = { ...updated, roleKPIs: normKPIs };
+  }
+  return updated;
+}
+
 const getInitialSettings = (): CompanySettings => {
   if (typeof localStorage !== 'undefined') {
     try {
       const saved = getSecureItem<CompanySettings>('nexus_company_settings');
       if (saved && typeof saved === 'object') {
-        return { ...DEFAULT_SETTINGS, ...saved };
+        return sanitizeSettingsRoleDictionaries({ ...DEFAULT_SETTINGS, ...saved });
       }
     } catch (_) {}
   }
@@ -43,7 +83,8 @@ export const useCoreStore = create<CoreState>((set) => ({
   isDataLoading: typeof localStorage !== "undefined" ? localStorage.getItem("nexus_has_cached_products") !== "true" : false,
 
   setSettings: (update) => set((state) => {
-    const newSettings = typeof update === 'function' ? update(state.settings) : update;
+    const rawSettings = typeof update === 'function' ? update(state.settings) : update;
+    const newSettings = sanitizeSettingsRoleDictionaries(rawSettings);
     if (typeof localStorage !== 'undefined' && newSettings) {
       try {
         setSecureItem('nexus_company_settings', newSettings);

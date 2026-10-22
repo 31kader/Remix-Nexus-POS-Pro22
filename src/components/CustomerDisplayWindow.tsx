@@ -40,14 +40,21 @@ export const CustomerDisplayWindow: React.FC = () => {
 
   // 🟢 Synchronisation Multi-Canaux Résiliente (Local Wi-Fi + Écran HDMI + Cloud)
   useEffect(() => {
+    let lastAppliedTimestamp = 0;
+    const safeApplyUpdate = (data: any, activateSource?: () => void) => {
+      if (!data || !Array.isArray(data.items)) return;
+      const ts = Number(data.updatedAt || data.timestamp || 0) || Date.now();
+      if (ts < lastAppliedTimestamp) return;
+      lastAppliedTimestamp = ts;
+      setDisplayState(data);
+      if (activateSource) activateSource();
+    };
+
     // 1. Chargement immédiat via API REST locale (Affiche l'état existant du panier dès l'ouverture)
     fetch('/api/customer-display')
       .then(res => res.json())
       .then(data => {
-        if (data && Array.isArray(data.items)) {
-          setDisplayState(data);
-          setIsLocalActive(true);
-        }
+        safeApplyUpdate(data, () => setIsLocalActive(true));
       })
       .catch(() => {});
 
@@ -59,10 +66,7 @@ export const CustomerDisplayWindow: React.FC = () => {
         if (event.data) {
           try {
             const parsed = JSON.parse(event.data);
-            if (parsed && Array.isArray(parsed.items)) {
-              setDisplayState(parsed);
-              setIsLocalActive(true);
-            }
+            safeApplyUpdate(parsed, () => setIsLocalActive(true));
           } catch (_) {}
         }
       };
@@ -76,10 +80,7 @@ export const CustomerDisplayWindow: React.FC = () => {
     const socket = getCustomerDisplaySocket();
     if (socket) {
       socket.on('customer-display:update', (data: any) => {
-        if (data && Array.isArray(data.items)) {
-          setDisplayState(data);
-          setIsLocalActive(true);
-        }
+        safeApplyUpdate(data, () => setIsLocalActive(true));
       });
       // Réclamer l'état actuel
       socket.emit('customer-display:request');
@@ -91,8 +92,7 @@ export const CustomerDisplayWindow: React.FC = () => {
       bc = new BroadcastChannel('nexus_customer_display');
       bc.onmessage = (event) => {
         if (event.data && !event.data.type && Array.isArray(event.data.items)) {
-          setDisplayState(event.data);
-          setIsBcActive(true);
+          safeApplyUpdate(event.data, () => setIsBcActive(true));
         }
       };
       // Réclamer immédiatement l'état du panier dès l'ouverture
@@ -104,15 +104,14 @@ export const CustomerDisplayWindow: React.FC = () => {
       if (e.key === 'nexus_customer_display_state' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setDisplayState(parsed);
-          setIsBcActive(true);
+          safeApplyUpdate(parsed, () => setIsBcActive(true));
         } catch (_) {}
       }
     };
     window.addEventListener('storage', handleStorage);
     try {
       const stored = localStorage.getItem('nexus_customer_display_state');
-      if (stored) setDisplayState(JSON.parse(stored));
+      if (stored) safeApplyUpdate(JSON.parse(stored));
     } catch (_) {}
 
     // 6. Écoute Supabase Realtime Broadcast (fallback Cloud optionnel)
@@ -122,8 +121,7 @@ export const CustomerDisplayWindow: React.FC = () => {
         channel = supabase.channel('nexus-pos-realtime')
           .on('broadcast', { event: 'customer-display-update' }, (msg: any) => {
             if (msg?.payload && Array.isArray(msg.payload.items)) {
-              setDisplayState(msg.payload);
-              setIsRealtimeActive(true);
+              safeApplyUpdate(msg.payload, () => setIsRealtimeActive(true));
             }
           });
         if (!realtimeCircuitBreaker.isOpen()) {
@@ -169,11 +167,17 @@ export const CustomerDisplayWindow: React.FC = () => {
             bc.close();
           } catch (_) {}
 
-          // 2. Relais HTTP serveur
+          // 2. Relais HTTP serveur (avec jeton LAN)
+          const lanToken = (() => {
+            try { return localStorage.getItem('nexus_lan_token') || 'nexus-pos-lan-v1'; } catch (_) { return 'nexus-pos-lan-v1'; }
+          })();
           fetch('/api/customer-display/barcode', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode: scannedBarcode })
+            headers: {
+              'Content-Type': 'application/json',
+              'x-nexus-lan-token': lanToken
+            },
+            body: JSON.stringify({ barcode: scannedBarcode, lanToken })
           }).catch(() => {});
         } else {
           buffer = '';

@@ -313,7 +313,7 @@ export function ClientPriceScanner({
       <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 shadow-md flex items-center justify-between">
         <div className="flex items-center gap-3">
           {(settings?.logoUrl || (settings as any)?.logo) ? (
-            <img 
+            <SafeImage 
               src={settings?.logoUrl || (settings as any)?.logo} 
               alt={storeName} 
               className="w-9 h-9 rounded-xl object-contain bg-white/5 p-1 border border-slate-700" 

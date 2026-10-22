@@ -179,7 +179,7 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-0 md:p-6 select-none">
+    <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-0 md:p-6 select-none pt-[max(env(safe-area-inset-top,0px),16px)]">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

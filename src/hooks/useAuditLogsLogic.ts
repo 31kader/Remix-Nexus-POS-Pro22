@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { enqueueStockAdjustment } from '../services/SyncService';
+import { enqueueStockAdjustment, enqueueCustomerBalanceAdjustment } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
+import { usePeopleStore } from '../store/usePeopleStore';
 import { AuditLog, Product, Transaction } from '../types';
 
 export type AuditPeriodFilter = 'all' | 'today' | 'yesterday' | '7d' | '30d' | 'month' | 'custom';
@@ -341,22 +342,34 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
     let foundTx: Transaction | null = null;
     const act = (log.action || '').toLowerCase();
     const mod = (log.module || '').toLowerCase();
-    if (act.includes('vente') || mod === 'pos' || mod === 'vente') {
-      const logTime = new Date(log.timestamp).getTime();
-      const candidates = transactions.filter(tx => {
-        const txTime = new Date(tx.timestamp || (tx as any).date).getTime();
-        const diffMinutes = Math.abs(txTime - logTime) / (60 * 1000);
-        return diffMinutes < 30;
-      });
+    const explicitTargetId = (log as any).targetId || (log as any).transactionId;
 
-      if (candidates.length > 0) {
+    if (explicitTargetId) {
+      foundTx = transactions.find(tx => tx.id === explicitTargetId) || null;
+    }
+
+    if (!foundTx && (act.includes('vente') || mod === 'pos' || mod === 'vente')) {
+      // 1. Chercher un ID explicite dans le texte (ex: ticket #ABCDEF ou tx_12345)
+      const ticketMatch = log.details?.match(/(?:#|ID:\s*|tx_|ticket\s*#?)([A-Za-z0-9_-]{6,})/i);
+      if (ticketMatch) {
+        const needle = ticketMatch[1].toUpperCase();
+        foundTx = transactions.find(tx => tx.id && (tx.id.toUpperCase() === needle || tx.id.toUpperCase().endsWith(needle))) || null;
+      }
+
+      // 2. Fallback sécurisé : fenêtre temporelle avec correspondance stricte de montant
+      if (!foundTx) {
+        const logTime = new Date(log.timestamp).getTime();
         const priceMatch = log.details.match(/\d+([.,]\d+)?/);
         if (priceMatch) {
           const expectedTotal = parseFloat(priceMatch[0].replace(',', '.'));
-          const exactPriceMatch = candidates.find(tx => Math.abs(tx.total - expectedTotal) < 0.1);
-          foundTx = exactPriceMatch || candidates[0];
-        } else {
-          foundTx = candidates[0];
+          const candidates = transactions.filter(tx => {
+            const txTime = new Date(tx.timestamp || (tx as any).date).getTime();
+            const diffMinutes = Math.abs(txTime - logTime) / (60 * 1000);
+            return diffMinutes < 30 && Math.abs(Number(tx.total) - expectedTotal) < 0.05;
+          });
+          if (candidates.length === 1) {
+            foundTx = candidates[0];
+          }
         }
       }
     }
@@ -385,12 +398,75 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
           });
 
           if (shouldRestoreStock && undoTransactionDetails.items) {
+            // 🛡️ Consolidation préalable par productId avec décomposition des bundles (GEMINI.md)
+            const consolidatedRestore = new Map<string, number>();
             for (const item of undoTransactionDetails.items) {
-              const matchedProd = products.find(p => p.id === item.id);
-              if (matchedProd) {
-                enqueueStockAdjustment(matchedProd.id, item.quantity || 1);
-                localDb.update(`products/${matchedProd.id}`, { updatedAt: new Date().toISOString() });
+              const prodId = (item as any).productId || item.id;
+              const matchedProd = products.find(p => p.id === prodId);
+              const qty = Number(item.quantity) || 1;
+              if (matchedProd?.isBundle && matchedProd.bundleItems && matchedProd.bundleItems.length > 0) {
+                for (const bi of matchedProd.bundleItems) {
+                  if (bi.productId) {
+                    consolidatedRestore.set(
+                      bi.productId,
+                      (consolidatedRestore.get(bi.productId) || 0) + (bi.quantity * qty)
+                    );
+                  }
+                }
+              } else if (prodId) {
+                consolidatedRestore.set(prodId, (consolidatedRestore.get(prodId) || 0) + qty);
               }
+            }
+            const nowIso = new Date().toISOString();
+            for (const [prodId, totalQty] of consolidatedRestore.entries()) {
+              const matchedProd = products.find(p => p.id === prodId);
+              if (matchedProd) {
+                const nextStock = (Number(matchedProd.stock) || 0) + totalQty;
+                enqueueStockAdjustment(matchedProd.id, totalQty);
+                await localDb.updateLocalOnly(`products/${matchedProd.id}`, {
+                  ...matchedProd,
+                  stock: nextStock,
+                  updatedAt: nowIso
+                });
+              }
+            }
+          }
+
+          // 🛡️ Rollback du solde client (dette) et des points de fidélité consommés/gagnés
+          if (undoTransactionDetails.customerId) {
+            const custId = undoTransactionDetails.customerId;
+            const currentCust = (usePeopleStore.getState().customers || []).find(c => c.id === custId);
+            if (currentCust) {
+              const txTotal = Number(undoTransactionDetails.total || 0);
+              const pointsEarned = Number(undoTransactionDetails.pointsEarned || 0);
+              const pointVal = 0.01;
+              const pointsSpent = undoTransactionDetails.pointsDiscount ? Math.floor(undoTransactionDetails.pointsDiscount / pointVal) : 0;
+              const balanceUsed = Number(undoTransactionDetails.balanceUsed || (undoTransactionDetails.paymentMethod === 'balance' ? txTotal : 0));
+              const received = Number(undoTransactionDetails.amountReceived || 0);
+              const returned = Number(undoTransactionDetails.amountReturned || 0);
+              const excess = ((undoTransactionDetails as any).keepExcessInBalance || (received > txTotal && returned === 0))
+                ? Math.max(0, received - txTotal - returned)
+                : 0;
+
+              const rollbackDeltaBalance = balanceUsed - excess;
+              const rollbackDeltaSpent = -txTotal;
+              const rollbackDeltaPoints = -(pointsEarned - pointsSpent);
+
+              const updatedCust = {
+                ...currentCust,
+                balance: (currentCust.balance || 0) + rollbackDeltaBalance,
+                totalSpent: Math.max(0, (currentCust.totalSpent || 0) + rollbackDeltaSpent),
+                loyaltyPoints: Math.max(0, (currentCust.loyaltyPoints || 0) + rollbackDeltaPoints),
+                deltaBalance: rollbackDeltaBalance,
+                deltaSpent: rollbackDeltaSpent,
+                deltaPoints: rollbackDeltaPoints
+              };
+
+              usePeopleStore.getState().setCustomers(prev =>
+                (prev || []).map(c => c.id === custId ? updatedCust : c)
+              );
+              await localDb.update(`customers/${custId}`, updatedCust);
+              enqueueCustomerBalanceAdjustment(custId, rollbackDeltaBalance, rollbackDeltaSpent, rollbackDeltaPoints);
             }
           }
         }
@@ -406,12 +482,75 @@ export function useAuditLogsLogic(logs: AuditLog[] = [], products: Product[] = [
           });
 
           if (shouldRestoreStock && undoTransactionDetails.items) {
+            // 🛡️ Consolidation préalable par productId avec décomposition des bundles (GEMINI.md)
+            const consolidatedDeduct = new Map<string, number>();
             for (const item of undoTransactionDetails.items) {
-              const matchedProd = products.find(p => p.id === item.id);
-              if (matchedProd) {
-                enqueueStockAdjustment(matchedProd.id, -(item.quantity || 1));
-                localDb.update(`products/${matchedProd.id}`, { updatedAt: new Date().toISOString() });
+              const prodId = (item as any).productId || item.id;
+              const matchedProd = products.find(p => p.id === prodId);
+              const qty = Number(item.quantity) || 1;
+              if (matchedProd?.isBundle && matchedProd.bundleItems && matchedProd.bundleItems.length > 0) {
+                for (const bi of matchedProd.bundleItems) {
+                  if (bi.productId) {
+                    consolidatedDeduct.set(
+                      bi.productId,
+                      (consolidatedDeduct.get(bi.productId) || 0) + (bi.quantity * qty)
+                    );
+                  }
+                }
+              } else if (prodId) {
+                consolidatedDeduct.set(prodId, (consolidatedDeduct.get(prodId) || 0) + qty);
               }
+            }
+            const nowIso = new Date().toISOString();
+            for (const [prodId, totalQty] of consolidatedDeduct.entries()) {
+              const matchedProd = products.find(p => p.id === prodId);
+              if (matchedProd) {
+                const nextStock = (Number(matchedProd.stock) || 0) - totalQty;
+                enqueueStockAdjustment(matchedProd.id, -totalQty);
+                await localDb.updateLocalOnly(`products/${matchedProd.id}`, {
+                  ...matchedProd,
+                  stock: nextStock,
+                  updatedAt: nowIso
+                });
+              }
+            }
+          }
+
+          // Rétablir le débit client et les points
+          if (undoTransactionDetails.customerId) {
+            const custId = undoTransactionDetails.customerId;
+            const currentCust = (usePeopleStore.getState().customers || []).find(c => c.id === custId);
+            if (currentCust) {
+              const txTotal = Number(undoTransactionDetails.total || 0);
+              const pointsEarned = Number(undoTransactionDetails.pointsEarned || 0);
+              const pointVal = 0.01;
+              const pointsSpent = undoTransactionDetails.pointsDiscount ? Math.floor(undoTransactionDetails.pointsDiscount / pointVal) : 0;
+              const balanceUsed = Number(undoTransactionDetails.balanceUsed || (undoTransactionDetails.paymentMethod === 'balance' ? txTotal : 0));
+              const received = Number(undoTransactionDetails.amountReceived || 0);
+              const returned = Number(undoTransactionDetails.amountReturned || 0);
+              const excess = ((undoTransactionDetails as any).keepExcessInBalance || (received > txTotal && returned === 0))
+                ? Math.max(0, received - txTotal - returned)
+                : 0;
+
+              const applyDeltaBalance = -(balanceUsed - excess);
+              const applyDeltaSpent = txTotal;
+              const applyDeltaPoints = pointsEarned - pointsSpent;
+
+              const updatedCust = {
+                ...currentCust,
+                balance: (currentCust.balance || 0) + applyDeltaBalance,
+                totalSpent: Math.max(0, (currentCust.totalSpent || 0) + applyDeltaSpent),
+                loyaltyPoints: Math.max(0, (currentCust.loyaltyPoints || 0) + applyDeltaPoints),
+                deltaBalance: applyDeltaBalance,
+                deltaSpent: applyDeltaSpent,
+                deltaPoints: applyDeltaPoints
+              };
+
+              usePeopleStore.getState().setCustomers(prev =>
+                (prev || []).map(c => c.id === custId ? updatedCust : c)
+              );
+              await localDb.update(`customers/${custId}`, updatedCust);
+              enqueueCustomerBalanceAdjustment(custId, applyDeltaBalance, applyDeltaSpent, applyDeltaPoints);
             }
           }
         }

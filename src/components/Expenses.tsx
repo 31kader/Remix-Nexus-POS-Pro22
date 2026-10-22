@@ -96,11 +96,18 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
       return;
     }
 
+    const nowIso = new Date().toISOString();
+    const todayStr = nowIso.slice(0, 10);
+    const resolvedDate = formData.date
+      ? (formData.date === todayStr ? nowIso : (formData.date.includes('T') ? formData.date : `${formData.date}T12:00:00.000Z`))
+      : nowIso;
+
     const expenseData = {
       description: trimmedDescription,
       amount: amountNum,
       category: formData.category,
-      date: formData.date,
+      date: resolvedDate,
+      createdAt: nowIso,
       userId: user.uid || user.id,
       paymentMethod: formData.paymentMethod
     };
@@ -498,9 +505,106 @@ export function Expenses({ expenses, user, settings }: ExpensesProps) {
         </div>
       </Card>
 
-      {/* Tableau des Dépenses */}
+      {/* Tableau des Dépenses & Cartes Mobiles */}
       <Card className="overflow-hidden bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800">
-        <div className="overflow-x-auto">
+        {/* Vue Cartes Tactiles Mobiles (< lg) */}
+        <div className="block lg:hidden space-y-3 p-3">
+          {displayedExpenses.map((expense) => {
+            const isRet = isReturnOrRefundExpense(expense);
+            return (
+              <div
+                key={expense.id}
+                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 shadow-xs space-y-3"
+              >
+                {/* Header: Date, Catégorie, Mode */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs text-slate-600 dark:text-slate-300 font-mono font-bold">
+                    {formatSafe(expense.date, 'dd/MM/yyyy')}
+                  </span>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {isRet ? (
+                      <span className="px-2 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 rounded-md text-[10px] font-black uppercase">
+                        ↩️ Retour Client
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-md text-[10px] font-black uppercase">
+                        💼 {expense.category || 'Charge'}
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                      {expense.paymentMethod === 'card' ? <CreditCard size={12} /> : 
+                       expense.paymentMethod === 'cash' ? <Banknote size={12} /> : <RefreshCw size={12} />}
+                      <span>
+                        {expense.paymentMethod === 'cash' ? 'Espèces' : expense.paymentMethod === 'card' ? 'Carte' : 'Virement'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Motif / Titre */}
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug">
+                    {expense.description}
+                  </h4>
+                  {expense.userId && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      Par : <span className="font-bold text-slate-700 dark:text-slate-300">{expense.userId}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Montant & Boutons d'Action */}
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 block">Montant</span>
+                    <p className="text-base font-black text-rose-600 dark:text-rose-400 font-mono tabular-nums">
+                      -{formatPrice(expense.amount)} {settings.currency || 'DA'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setEditingExpense(expense); setIsModalOpen(true); }}
+                      className="min-w-[38px] min-h-[38px] px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/50 transition-all flex items-center justify-center gap-1.5 text-xs font-bold"
+                      title="Modifier la dépense"
+                    >
+                      <FileText size={16} />
+                      <span>Modifier</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(expense.id)}
+                      className="min-w-[38px] min-h-[38px] p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800/50 transition-all flex items-center justify-center"
+                      title="Supprimer la dépense"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {filteredExpenses.length === 0 && (
+            <div className="p-8 text-center text-slate-400 uppercase">
+              <div className="flex flex-col items-center gap-2">
+                <TrendingDown size={36} strokeWidth={1.5} className="text-slate-300 dark:text-slate-700" />
+                <p className="text-xs font-black">
+                  {isolationMode === 'daily'
+                    ? 'Aucune dépense quotidienne trouvée pour ces filtres'
+                    : isolationMode === 'returns'
+                      ? 'Aucun retour client trouvé pour ces filtres'
+                      : 'Aucune écriture trouvée'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tableau Traditionnel Bureau (>= lg) */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">

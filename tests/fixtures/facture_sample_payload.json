@@ -1,0 +1,30 @@
+{
+  "supplierName": "SARL CEVITAL AGRO ALGERIE",
+  "invoiceNumber": "FA-2026-09874",
+  "date": "2026-09-18",
+  "previousBalance": 15000,
+  "total": 31000,
+  "items": [
+    {
+      "name": "HUILE ELIO 5L BIDON",
+      "barcode": "6130000000012",
+      "quantity": 20,
+      "price": 620,
+      "total": 12400
+    },
+    {
+      "name": "SUCRE BLANC CRISTAL 1KG",
+      "barcode": null,
+      "quantity": 50,
+      "price": 90,
+      "total": 4500
+    },
+    {
+      "name": "ARTICLE INCONNU NON REPERTORIE",
+      "barcode": null,
+      "quantity": 10,
+      "price": 1410,
+      "total": 14100
+    }
+  ]
+}

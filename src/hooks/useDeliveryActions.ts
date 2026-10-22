@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
-import { enqueueStockAdjustment } from '../services/SyncService';
+import { enqueueSync } from '../services/SyncService';
+import { destockOrder } from '../services/orderStockService';
+import { supabase, isSupabaseConfigured } from '../supabase';
+import { convertKeysToSnake } from '../lib/db-converters';
 import { Customer } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
+import { useTransactionStore } from '../store/useTransactionStore';
 
 interface UseDeliveryActionsParams {
   user: any;
@@ -75,82 +79,42 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
         }
       }
 
-      // Perform transaction logging only if marking as delivered and previously not
+      // Perform transaction logging and destocking only if marking as delivered and previously not
       if (newStatus === 'delivered' && order.status !== 'delivered') {
-        if (!order.syncedToPos) {
-          const txRef = localDb.push('transactions');
-          const allProducts = useCoreStore.getState().products || [];
-          const enrichedItems = (order.items || []).map((item: any) => {
-            const currentProduct = allProducts.find((p: any) => p.id === (item.productId || item.id) || (item.name && (p.name || '').toLowerCase() === item.name.toLowerCase()));
-            return {
-              ...item,
-              id: item.productId || item.id,
-              productId: item.productId || item.id,
-              costPrice: currentProduct?.costPrice || item.costPrice || 0,
-              price: item.price || 0,
-              quantity: item.quantity || 1,
-              name: item.name || currentProduct?.name || 'Produit',
-            };
-          });
-
-          const transaction: any = {
-            id: txRef.key,
-            items: enrichedItems,
-            total: order.total,
-            timestamp: order.timestamp || new Date().toISOString(),
-            paymentMethod: order.paymentMethod || 'cash',
-            deliveryMethod: order.deliveryMethod || 'delivery',
-            status: 'completed',
-            employeeName: profile?.displayName || user?.email || 'Livreur',
-            userId: user?.uid || 'system',
-            onlineOrderId: order.id,
-            customerId: finalCustomerId || null,
-            customerName: order.customerName || null,
-            pointsEarned: finalCustomerId ? Math.floor(order.total * (settings?.loyaltyPointsPerCurrencyUnit || 1)) : 0
-          };
-          await localDb.insert(txRef, transaction);
+        const freshOrders = useTransactionStore.getState().onlineOrders || [];
+        const currentOrder = freshOrders.find(o => String(o.id) === String(order.id)) || order;
+        if (!currentOrder.syncedToPos && !order.syncedToPos) {
+          const destockResult = await destockOrder(
+            { ...order, customerId: finalCustomerId || order.customerId },
+            { user, settings, customers }
+          );
+          if (destockResult && !destockResult.success && destockResult.reason === 'stock_shortage') {
+            setIsProcessing(null);
+            return;
+          }
           updates.syncedToPos = true;
-
-          // Décrémenter le stock des articles vendus pour éviter les stocks fantômes
-          for (const item of (order.items || [])) {
-            const prodId = item.productId || item.id;
-            const qty = Number(item.quantity || 1);
-            if (prodId && qty > 0) {
-              enqueueStockAdjustment(prodId, -qty);
-              const existingProd = allProducts.find((p: any) => p && p.id === prodId);
-              if (existingProd) {
-                const newStock = (Number(existingProd.stock) || 0) - qty;
-                await localDb.update(`products/${prodId}`, {
-                  stock: newStock,
-                  updatedAt: new Date().toISOString()
-                });
-              } else {
-                await localDb.update(`products/${prodId}`, { updatedAt: new Date().toISOString() });
-              }
-            }
-          }
-        }
-
-        // Update customer's loyalty points
-        if (finalCustomerId) {
-          try {
-            const customerSnap = await localDb.get(`customers/${finalCustomerId}`);
-            if (customerSnap.exists()) {
-              const customerData = customerSnap.val();
-              const pointsEarned = Math.floor(order.total * (settings?.loyaltyPointsPerCurrencyUnit || 1));
-              await localDb.update(`customers/${finalCustomerId}`, {
-                loyaltyPoints: (customerData.loyaltyPoints || 0) + pointsEarned,
-                totalSpent: (customerData.totalSpent || 0) + order.total,
-                lastVisit: new Date().toISOString()
-              });
-            }
-          } catch (e) {
-            console.error("Failed to update customer loyalty points:", e);
-          }
         }
       }
 
       await localDb.update(`onlineOrders/${order.id}`, updates);
+      useTransactionStore.getState().setOnlineOrders(prev =>
+        (prev || []).map(o => (o.id === order.id ? { ...o, ...updates } : o))
+      );
+      if (isSupabaseConfigured) {
+        if (typeof navigator === 'undefined' || navigator.onLine) {
+          try {
+            const snakeUpdates = convertKeysToSnake({ ...updates, updatedAt: new Date().toISOString() });
+            const { error: supaErr } = await supabase.from('online_orders').update(snakeUpdates).eq('id', order.id);
+            if (supaErr) {
+              enqueueSync('online_orders', order.id, 'UPSERT', { ...order, ...updates });
+            }
+          } catch (_) {
+            enqueueSync('online_orders', order.id, 'UPSERT', { ...order, ...updates });
+          }
+        } else {
+          enqueueSync('online_orders', order.id, 'UPSERT', { ...order, ...updates });
+        }
+      }
       
       // Play a small success sound
       try {

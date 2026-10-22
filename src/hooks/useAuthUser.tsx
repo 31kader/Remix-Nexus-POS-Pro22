@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, onAuthStateChanged, signInWithPopup, User, googleProvider } from '../services/AuthService';
 import { localDb } from '../services/LocalDatabase';
-import { UserProfile, Employee } from '../types';
+import { UserProfile, Employee, UserRole } from '../types';
 import bcrypt from 'bcryptjs';
 import { getSecureItem } from '../lib/security';
 
@@ -11,7 +11,16 @@ import { supabase, isSupabaseConfigured } from '../supabase';
 import { convertKeysToCamel } from '../lib/db-converters';
 
 export function useAuthUser(appMode: string, setLoading: (loading: boolean) => void) {
-  const { user, setUser, profile, setProfile, authError, setAuthError, isLoggingIn, setIsLoggingIn, isUnauthorized, setIsUnauthorized } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const setUser = useAuthStore(s => s.setUser);
+  const profile = useAuthStore(s => s.profile);
+  const setProfile = useAuthStore(s => s.setProfile);
+  const authError = useAuthStore(s => s.authError);
+  const setAuthError = useAuthStore(s => s.setAuthError);
+  const isLoggingIn = useAuthStore(s => s.isLoggingIn);
+  const setIsLoggingIn = useAuthStore(s => s.setIsLoggingIn);
+  const isUnauthorized = useAuthStore(s => s.isUnauthorized);
+  const setIsUnauthorized = useAuthStore(s => s.setIsUnauthorized);
 
   useEffect(() => {
     // initialize user from offline cache once
@@ -35,7 +44,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
             email: session.email,
             displayName: session.displayName,
             isOffline: !!sessionOffline
-          } as any);
+          });
           setProfile({
             uid: session.uid,
             displayName: session.displayName,
@@ -60,7 +69,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           email: session.email,
           displayName: session.displayName,
           isOffline: true
-        } as any);
+        });
         setProfile({
           uid: session.uid,
           displayName: session.displayName,
@@ -86,7 +95,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
                 email: session.email,
                 displayName: session.displayName,
                 isOffline: true
-              } as any);
+              });
               setProfile({
                 uid: session.uid,
                 displayName: session.displayName,
@@ -133,13 +142,19 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           // 🛡️ REPLI SUPABASE DISTANT : Si IndexedDB est encore vierge (nouveau terminal/téléphone), interroger Supabase
           if (!employeesData && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
             try {
-              const { data: remoteEmps } = await supabase.from('employees').select('*');
+              const { data: remoteEmps } = await supabase
+                .from('employees')
+                .select('id, name, role, phone, email, hire_date, status, is_clocked_in, permissions, updated_at');
               if (Array.isArray(remoteEmps) && remoteEmps.length > 0) {
                 employeesData = {};
                 for (const emp of remoteEmps) {
                   const camel = convertKeysToCamel(emp);
+                  delete camel.passwordHash;
+                  delete camel.password_hash;
+                  delete camel.password;
+                  delete camel.pin;
                   employeesData[camel.id] = camel;
-                  localDb.update(`employees/${camel.id}`, camel);
+                  localDb.updateLocalOnly(`employees/${camel.id}`, camel);
                 }
               }
             } catch (rErr) {
@@ -162,11 +177,17 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           // 🛡️ Deuxième vérification dans public.users si l'employé est déclaré dans users
           if (!employee && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
             try {
-              const { data: remoteUsers } = await supabase.from('users').select('*');
+              const { data: remoteUsers } = await supabase
+                .from('users')
+                .select('id, uid, email, display_name, name, phone, role, employee_id, status, join_date, updated_at');
               if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
                 for (const u of remoteUsers) {
                   const camel = convertKeysToCamel(u);
-                  localDb.update(`users/${camel.id || camel.uid}`, camel);
+                  delete camel.passwordHash;
+                  delete camel.password_hash;
+                  delete camel.password;
+                  delete camel.pin;
+                  localDb.updateLocalOnly(`users/${camel.id || camel.uid}`, camel);
                 }
                 const matchedUser = remoteUsers.find((u: any) => 
                   (u.email && u.email.toLowerCase() === matchEmail) || (u.uid === currentUser.uid)
@@ -259,7 +280,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
         if (isOwnerLocally) setIsUnauthorized(false);
  
         // Aggressive role override for owner
-        const currentRole = isOwnerLocally ? 'admin' : (employee?.role || (userData ? (userData as UserProfile).role : 'cashier'));
+        const currentRole: UserRole = isOwnerLocally ? 'admin' : (employee?.role || (userData ? (userData as UserProfile).role : (currentUser.role || 'cashier')));
         
         // Cache the successful online session to avoid loading spinners on start
         try {
@@ -289,12 +310,12 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           if (needsUpdate) {
             try {
               await localDb.update(`users/${currentUser.uid}`, {
-                role: currentRole as any,
+                role: currentRole,
                 employeeId: currentEmployeeId 
               });
-              const updatedProfile = { 
+              const updatedProfile: UserProfile = { 
                 ...existingProfile, 
-                role: currentRole as any, 
+                role: currentRole, 
                 employeeId: currentEmployeeId 
               };
               setProfile(updatedProfile);
@@ -304,9 +325,9 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
               } else {
                 console.error("Error updating user profile:", error);
               }
-              setProfile({                
+              setProfile({ 
                 ...existingProfile, 
-                role: currentRole as any, 
+                role: currentRole, 
                 employeeId: currentEmployeeId 
               });
             }
@@ -318,7 +339,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
          }
        } else {
          const isOwner = checkIsOwner(matchEmail, currentUser.uid);
-         let defaultRole = isOwner ? 'admin' : 'cashier';
+         let defaultRole: UserRole = isOwner ? 'admin' : 'cashier';
          if (appMode === 'customer') defaultRole = 'customer';
          if (appMode === 'supplier') defaultRole = 'supplier';
          
@@ -326,7 +347,7 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
            uid: currentUser.uid,
            displayName: currentUser.displayName || 'Utilisateur',
            email: currentUser.email || '',
-           role: (employee?.role || defaultRole) as any,
+           role: employee?.role || defaultRole,
            employeeId: employeeId || null
          };
          try {

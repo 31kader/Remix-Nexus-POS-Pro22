@@ -51,8 +51,8 @@ describe('Jalon M3 — Durcissement des En-têtes HTTP de Sécurité & CSP', () 
     expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:");
     expect(csp).toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
     expect(csp).toContain("font-src 'self' https://fonts.gstatic.com data:");
-    expect(csp).toContain("img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com");
-    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*");
+    expect(csp).toContain("img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org");
+    expect(csp).toContain("connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*");
     expect(csp).toContain("media-src 'self' blob: data:");
     expect(csp).toContain("worker-src 'self' blob:");
     expect(csp).toContain("frame-ancestors 'none'");

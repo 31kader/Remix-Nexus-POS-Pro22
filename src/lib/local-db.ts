@@ -84,10 +84,12 @@ export async function saveStateToStorage(table?: string) {
   saveStorageTimeout = setTimeout(async () => {
     try {
       if (dirtyTables.size > 0) {
-        for (const t of dirtyTables) {
+        // 🛡️ VULN-08 : Copier le Set et le vider AVANT la boucle asynchrone pour ne pas perdre les mutations survenues pendant l'écriture
+        const tablesToSave = Array.from(dirtyTables);
+        dirtyTables.clear();
+        for (const t of tablesToSave) {
           await persistTableState(t);
         }
-        dirtyTables.clear();
       } else {
         const tables = Object.keys(dbState);
         for (const t of tables) {
@@ -132,20 +134,28 @@ export async function saveStateToStorageImmediate(table?: string): Promise<void>
   }
 }
 
+const notifyingPaths = new Set<string>();
+
 export function triggerObservers(path: string) {
   const normPath = normalizePath(path);
+  if (notifyingPaths.has(normPath)) return;
   if (observers[normPath]) {
-    const val = getLocalValue(normPath);
-    observers[normPath].forEach(cb => {
-      try {
-        cb({
-          exists: () => val !== undefined && val !== null,
-          val: () => val
-        });
-      } catch (err) {
-        console.warn('Observer callback error:', err);
-      }
-    });
+    notifyingPaths.add(normPath);
+    try {
+      const val = getLocalValue(normPath);
+      observers[normPath].forEach(cb => {
+        try {
+          cb({
+            exists: () => val !== undefined && val !== null,
+            val: () => val
+          });
+        } catch (err) {
+          console.warn('Observer callback error:', err);
+        }
+      });
+    } finally {
+      notifyingPaths.delete(normPath);
+    }
   }
 }
 
@@ -178,23 +188,43 @@ export function getLocalValue(path: string): any {
   return dbState[table];
 }
 
+const TRANSIENT_DELTA_KEYS = [
+  'deltaBalance', 'deltaSpent', 'deltaPoints',
+  'delta_balance', 'delta_spent', 'delta_points',
+  'idempotencyKey', 'idempotency_key'
+];
+
+function stripTransientFields(obj: any): any {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  let cloned: any = null;
+  for (const k of TRANSIENT_DELTA_KEYS) {
+    if (k in obj) {
+      if (!cloned) cloned = { ...obj };
+      delete cloned[k];
+    }
+  }
+  return cloned || obj;
+}
+
 export function setLocalState(path: string, value: any) {
   const { table, id } = parsePath(path);
   if (!table) return;
   if (!dbState[table]) dbState[table] = {};
-  if (id) dbState[table][id] = value;
-  else dbState[table] = value || {};
+  const cleanVal = stripTransientFields(value);
+  if (id) dbState[table][id] = cleanVal;
+  else dbState[table] = cleanVal || {};
 }
 
 export function updateLocalState(path: string, value: any) {
   const { table, id } = parsePath(path);
   if (!table) return;
   if (!dbState[table]) dbState[table] = {};
+  const cleanVal = stripTransientFields(value);
   if (id) {
-    const existing = dbState[table][id] || {};
-    dbState[table][id] = { ...existing, ...value };
+    const existing = stripTransientFields(dbState[table][id] || {});
+    dbState[table][id] = { ...existing, ...cleanVal };
   } else {
-    dbState[table] = { ...dbState[table], ...value };
+    dbState[table] = { ...dbState[table], ...cleanVal };
   }
 }
 
@@ -248,13 +278,13 @@ export async function loadInitialState() {
     if (isSplit) {
       // Produits exclus : gérés directement et sans duplication par nexus_products_cache et useCoreStore
       const tables = [
-        'categories', 'brands', 'promotions', 'patterns',
+        'categories', 'brands', 'promotions', 'invoice_patterns',
         'transactions', 'purchase_orders', 'returns', 'online_orders', 'cash_shifts',
         'customers', 'suppliers', 'employees', 'users', 'stock_adjustments',
         'audits', 'damaged_items', 'supplier_syncs', 'attendance', 'purchases',
         'expenses', 'supplier_payments', 'advances', 'audit_logs', 'settings',
         'vouchers', 'cashier_alerts', 'cart_drafts', 'external_delivery_requests',
-        'goods_receipt_notes'
+        'goods_receipt_notes', 'shortage_items', 'custom_replenishment_lists'
       ];
       const loaded = await Promise.all(tables.map(t => getIDB(`nexus_db_${t}`)));
       for (let i = 0; i < tables.length; i++) {
@@ -294,7 +324,11 @@ export async function loadInitialState() {
 /**
  * ⚡ OPTIMISATION MÉMOIRE : Décharge les transactions >90 jours de la RAM vers un stockage IndexedDB archivé
  */
+let isPartitioning = false;
+
 export async function partitionOldTransactions() {
+  if (isPartitioning) return;
+  isPartitioning = true;
   try {
     const rawTxs = dbState['transactions'];
     if (!rawTxs || typeof rawTxs !== 'object') return;
@@ -326,6 +360,8 @@ export async function partitionOldTransactions() {
     }
   } catch (err) {
     console.warn('[MemoryOptimizer] Erreur partitionnement des transactions:', err);
+  } finally {
+    isPartitioning = false;
   }
 }
 

@@ -53,6 +53,11 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
   const receiptId = (t.id || 'N/A').slice(-8).toUpperCase();
   const subtotalBeforeDiscounts = ( (t.total || 0) + (t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0) );
   const totalSavings = ((t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0));
+  // 🛡️ BUG-10 : Ventilation fiscale légale TVA 19%
+  const taxRate = Number(settings.taxRate) || 19;
+  const totalTTC = Number(t.total) || 0;
+  const totalHT = totalTTC / (1 + taxRate / 100);
+  const totalTVA = totalTTC - totalHT;
   // Largeur utile réelle des imprimantes thermiques : 72mm (pour rouleau 80mm) et 48mm (pour rouleau 58/60mm)
   // Utiliser 80mm provoque un débordement qui force le pilote Windows/Electron en mode Paysage A4 (20cm horizontal)
   const paperWidth = settings.paperFormat === '60mm' ? '48mm' : settings.paperFormat === 'A4' ? '210mm' : '72mm';
@@ -146,7 +151,7 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
             <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
                <div style="width: 280px;">
                   <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #666;">
-                     <span>Sous-total HT</span>
+                     <span>Sous-total</span>
                      <span style="font-family: monospace; font-weight: bold;">${formatPrice(subtotalBeforeDiscounts)} ${settings.currency || 'DA'}</span>
                   </div>
                   ${totalSavings > 0 ? `
@@ -155,9 +160,17 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
                      <span style="font-family: monospace;">-${formatPrice(totalSavings)} ${settings.currency || 'DA'}</span>
                   </div>
                   ` : ''}
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #666;">
+                     <span>Total HT</span>
+                     <span style="font-family: monospace;">${formatPrice(totalHT)} ${settings.currency || 'DA'}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; color: #666;">
+                     <span>TVA (${taxRate}%)</span>
+                     <span style="font-family: monospace;">${formatPrice(totalTVA)} ${settings.currency || 'DA'}</span>
+                  </div>
                   <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; font-weight: 900; border-top: 2px solid #111; margin-top: 6px;">
                      <span>TOTAL TTC</span>
-                     <span style="font-family: monospace;">${formatPrice(t.total)} ${settings.currency || 'DA'}</span>
+                     <span style="font-family: monospace;">${formatPrice(totalTTC)} ${settings.currency || 'DA'}</span>
                   </div>
                </div>
             </div>

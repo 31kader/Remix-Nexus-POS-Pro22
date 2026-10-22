@@ -40,7 +40,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
 
   describe('Destock and Restock Lifecycle (Option 1)', () => {
     it('confirmer puis annuler une commande avec stock initial 0 ramène le stock exactement à 0', async () => {
-      const testProduct: Product = {
+      const testProduct = {
         id: 'prod-test-0',
         name: 'Produit Test 0',
         stock: 0,
@@ -50,7 +50,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
         categoryId: 'cat-1',
         unit: 'pièce',
         status: 'active'
-      };
+      } as unknown as Product;
 
       useCoreStore.getState().setProducts([testProduct]);
 
@@ -104,7 +104,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
 
     it('annuler une commande en attente (pending / non déstockée) ne doit PAS ajouter de stock fantôme (P0-2)', async () => {
       const initialStock = 5;
-      const testProduct: Product = {
+      const testProduct = {
         id: 'prod-test-5',
         name: 'Produit 5',
         stock: initialStock,
@@ -114,7 +114,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
         categoryId: 'cat-1',
         unit: 'pièce',
         status: 'active'
-      };
+      } as unknown as Product;
 
       useCoreStore.getState().setProducts([testProduct]);
 
@@ -149,7 +149,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
     });
 
     it('la double annulation doit être idempotente et ne pas réintégrer deux fois (P0-3)', async () => {
-      const testProduct: Product = {
+      const testProduct = {
         id: 'prod-idem',
         name: 'Produit Idempotent',
         stock: 10,
@@ -159,7 +159,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
         categoryId: 'cat-1',
         unit: 'pièce',
         status: 'active'
-      };
+      } as unknown as Product;
 
       useCoreStore.getState().setProducts([testProduct]);
 
@@ -202,9 +202,9 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
     });
 
     it('gère correctement les bundles (déstockage et réintégration des composants)', async () => {
-      const compA: Product = { id: 'comp-a', name: 'Composant A', stock: 10, price: 100, costPrice: 50, minStock: 1, categoryId: 'cat', unit: 'u', status: 'active' };
-      const compB: Product = { id: 'comp-b', name: 'Composant B', stock: 10, price: 150, costPrice: 70, minStock: 1, categoryId: 'cat', unit: 'u', status: 'active' };
-      const bundlePack: Product = {
+      const compA = { id: 'comp-a', name: 'Composant A', stock: 10, price: 100, costPrice: 50, minStock: 1, categoryId: 'cat', unit: 'u', status: 'active' } as unknown as Product;
+      const compB = { id: 'comp-b', name: 'Composant B', stock: 10, price: 150, costPrice: 70, minStock: 1, categoryId: 'cat', unit: 'u', status: 'active' } as unknown as Product;
+      const bundlePack = {
         id: 'bundle-pack',
         name: 'Pack Duo',
         stock: 0,
@@ -219,7 +219,7 @@ describe('Order Stock Lifecycle & Integrity Test Suite', () => {
           { productId: 'comp-a', quantity: 2 },
           { productId: 'comp-b', quantity: 1 }
         ]
-      };
+      } as unknown as Product;
 
       useCoreStore.getState().setProducts([compA, compB, bundlePack]);
 

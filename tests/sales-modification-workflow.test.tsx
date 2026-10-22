@@ -17,6 +17,8 @@ vi.mock('../src/services/LocalDatabase', () => ({
   localDb: {
     insert: vi.fn().mockResolvedValue(undefined),
     update: vi.fn().mockResolvedValue(undefined),
+    insertLocalOnly: vi.fn().mockResolvedValue(undefined),
+    updateLocalOnly: vi.fn().mockResolvedValue(undefined),
     get: vi.fn().mockResolvedValue({ exists: () => false, val: () => null })
   }
 }));

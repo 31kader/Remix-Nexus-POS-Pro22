@@ -10,7 +10,12 @@ import { getSecureItem, setSecureItem, removeSecureItem } from '../lib/security'
 export function useAuthActions(
   t: (key: string) => string
 ) {
-  const { setUser, setProfile, setAuthError, setIsLoggingIn, setIsUnauthorized, isLoggingIn } = useAuthStore();
+  const setUser = useAuthStore(s => s.setUser);
+  const setProfile = useAuthStore(s => s.setProfile);
+  const setAuthError = useAuthStore(s => s.setAuthError);
+  const setIsLoggingIn = useAuthStore(s => s.setIsLoggingIn);
+  const setIsUnauthorized = useAuthStore(s => s.setIsUnauthorized);
+  const isLoggingIn = useAuthStore(s => s.isLoggingIn);
 
   const handleIdentifierLogin = async (loginIdentifier: string, loginPassword: string) => {
     if (isLoggingIn) return;
@@ -124,13 +129,19 @@ export function useAuthActions(
       
       if (userCredential.user) {
         try {
+          const { checkIsOwner } = await import('../config/ownerConfig');
           const bcryptHash = bcrypt.hashSync(cleanPassword, 10);
           const userSnap = await localDb.get(`users/${userCredential.user.uid}`);
           const userData = userSnap.exists() ? userSnap.val() : null;
-          const role = userData ? (userData.role || 'cashier') : 'cashier';
-          const displayName = userCredential.user.displayName || userData?.displayName || 'Utilisateur';
-          const empId = userData ? (userData.employeeId || null) : null;
-          const phone = userData ? (userData.phone || '') : '';
+          const empSnap = await localDb.get(`employees/${userCredential.user.uid}`);
+          const empData = empSnap.exists() ? empSnap.val() : null;
+          const isOwnerAccount = checkIsOwner(email, userCredential.user.uid);
+          const role = isOwnerAccount
+            ? 'admin'
+            : ((userCredential.user as any).role || userData?.role || empData?.role || 'cashier');
+          const displayName = userCredential.user.displayName || userData?.displayName || empData?.name || 'Utilisateur';
+          const empId = userData?.employeeId || empData?.id || (empData ? userCredential.user.uid : null);
+          const phone = userData?.phone || empData?.phone || '';
 
           const offlineCreds = getSecureItem<Record<string, any>>('nexus_offline_credentials') || {};
           const credRecord = {

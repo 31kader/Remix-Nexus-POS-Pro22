@@ -8,7 +8,7 @@ import {
   startOfDay, endOfDay, subDays, startOfMonth, parseISO, isWithinInterval, isYesterday, isToday 
 } from 'date-fns';
 import { Card, Button } from '../ui';
-import { Transaction, Product, Category, CompanySettings, Employee } from '../../types';
+import { Transaction, Product, Category, CompanySettings, Employee, isTopUpTransaction } from '../../types';
 import { formatPrice, formatSafe, exportToExcel, exportToCSV, cn, calculateItemPrice } from '../../lib/utils';
 
 // Helper ultra-sécurisé pour désérialiser les items stockés en JSON string ou Array
@@ -113,7 +113,7 @@ export function GroupedSalesAndBasketsReport({
   const filteredTransactions = useMemo(() => {
     const now = new Date();
     return (transactions || []).filter(t => {
-      if (t.status === 'returned' || t.status === 'cancelled') return false;
+      if (t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return false;
       const dateVal = t.timestamp || (t as any).date || (t as any).created_at;
       if (!dateVal) return true;
       const tDate = new Date(dateVal);
@@ -158,12 +158,16 @@ export function GroupedSalesAndBasketsReport({
 
     filteredTransactions.forEach(t => {
       const items = parseTransactionItems(t.items);
+      // 🛡️ P1-BIZ-15 : Prise en compte du ratio de remise globale du panier (remises directes, bons, points fidélité)
+      const txSubtotal = items.reduce((s, it) => s + (Number(it.quantity) || 1) * calculateItemPrice(it, t.isWholesale), 0);
+      const discountRatio = txSubtotal > 0 ? Math.max(0, Math.min(1, (Number(t.total) || 0) / txSubtotal)) : 1;
+
       items.forEach(item => {
         const matchedProduct = resolveProduct(item);
         const prodId = matchedProduct?.id || (item as any).productId || item.id || item.name;
         const qty = Number(item.quantity) || 1;
         const itemPrice = calculateItemPrice(item, t.isWholesale);
-        const revenue = qty * itemPrice;
+        const revenue = qty * itemPrice * discountRatio;
         
         // Coût unitaire certifié
         const costPerUnit = resolveCostPerUnit(item, matchedProduct);

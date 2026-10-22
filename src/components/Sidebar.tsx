@@ -119,6 +119,7 @@ interface SidebarProps {
   isMobileOverlayOpen: boolean;
   setIsMobileOverlayOpen: (open: boolean) => void;
   permissions: RolePermissions;
+  canAccess?: (perm: keyof RolePermissions) => boolean;
   settings: CompanySettings;
   isCameraAgent: boolean;
   isAdmin: boolean;
@@ -144,6 +145,7 @@ export const Sidebar = ({
   isMobileOverlayOpen,
   setIsMobileOverlayOpen,
   permissions,
+  canAccess: propCanAccess,
   settings,
   isCameraAgent,
   isAdmin,
@@ -155,7 +157,12 @@ export const Sidebar = ({
   setIsStorePosterModalOpen
 }: SidebarProps) => {
   const { t } = useTranslation();
-  const canAccess = (perm: keyof RolePermissions) => permissions[perm];
+  const canAccess = (perm: keyof RolePermissions) => {
+    if (typeof propCanAccess === 'function') return propCanAccess(perm);
+    if (isAdmin) return true;
+    const snakePerm = perm.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
+    return Boolean(permissions?.[perm] ?? (permissions as any)?.[snakePerm]);
+  };
 
   // Calcul dynamique ciblé des commandes en attente
   const pendingOrdersCount = useTransactionStore(s => 
@@ -219,7 +226,8 @@ export const Sidebar = ({
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 240 }}
         className={cn(
-          "flex flex-col h-full bg-zinc-950 border-r border-zinc-800 shadow-xl overflow-hidden select-none",
+          "flex flex-col h-full bg-zinc-950 border-r border-zinc-800 shadow-xl select-none",
+          isCollapsed && !isMobile ? "overflow-visible" : "overflow-hidden",
           isMobile 
             ? cn(
                 "fixed inset-y-0 left-0 z-[75] w-[285px] max-w-[85vw] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
@@ -242,7 +250,7 @@ export const Sidebar = ({
                 <span className="font-black text-base truncate text-white tracking-tight uppercase flex items-center gap-1.5">
                   NEXUS 
                   <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono px-1.5 py-0.5 rounded-md normal-case">
-                    v1.2.28
+                    v1.2.54
                   </span>
                 </span>
                 <span className="text-[8px] font-black text-white/30 uppercase tracking-normal mt-0.5">Systems Guard</span>
@@ -281,8 +289,8 @@ export const Sidebar = ({
 
         {/* Contenu Défilant des Liens */}
         <nav className={cn(
-          "flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar touch-pan-y overscroll-contain text-left rtl:text-right relative z-10",
-          isCollapsed ? "p-2 space-y-3" : "p-4 space-y-5"
+          "flex-1 overflow-y-auto custom-scrollbar touch-pan-y overscroll-contain text-left rtl:text-right relative z-10",
+          isCollapsed ? "p-2 space-y-3 overflow-x-visible" : "p-4 space-y-5 overflow-x-hidden"
         )}>
           {/* Section Ventes */}
           <div className="space-y-1">
@@ -367,7 +375,7 @@ export const Sidebar = ({
                   {canAccess('canAccessAuditLogs') && <NavItem href="#audit_logs" icon={<ShieldCheck size={20} />} label={t("Audit")} active={activeTab === 'audit_logs'} onClick={() => { setActiveTab('audit_logs'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}
                   {(isCameraAgent || isAdmin || isManager) && settings.enableCameraPortal !== false && <NavItem href="#camera" icon={<Camera size={20} />} label={t("Audit Caméra")} active={activeTab === 'camera'} onClick={() => { setActiveTab('camera'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}
                   {canAccess('canAccessSettings') && <NavItem href="#settings" icon={<SettingsIcon size={20} />} label={t("Paramètres")} active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}
-                  {(settings as any)?.hideSyncStudioInSidebar !== true && (
+                  {isAdmin && (settings as any)?.hideSyncStudioInSidebar !== true && (
                     <NavItem href="#sync_studio" icon={<Activity size={20} />} label="Studio de Synchro" active={activeTab === 'sync_studio' || activeTab === 'sync'} onClick={() => { setActiveTab('sync_studio'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />
                   )}
                   {canAccess('canAccessSettings') && <NavItem href="#archives" icon={<Database size={20} />} label={t("Clôture de Mois")} active={activeTab === 'archives'} onClick={() => { setActiveTab('archives'); setIsMobileOverlayOpen(false); }} collapsed={isCollapsed} />}

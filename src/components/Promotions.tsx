@@ -7,7 +7,7 @@ import { PromotionPerformanceModal } from './promotions/PromotionPerformanceModa
 import { PromotionEditModal } from './promotions/PromotionEditModal';
 import { PromotionsStats } from './promotions/PromotionsStats';
 import { PromotionsGrid } from './promotions/PromotionsGrid';
-import { usePromotionsLogic } from './usePromotionsLogic';
+import { usePromotionsLogic } from '../hooks/usePromotionsLogic';
 
 export const Promotions = memo(function Promotions({ 
   promotions, products, categories, transactions, settings 

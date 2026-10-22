@@ -12,10 +12,23 @@ import { toast } from 'sonner';
 // Verrou mémoire atomique pour empêcher le traitement simultané d'une même commande
 const activeOrdersLock = new Set<string>();
 
+export interface OrderItemLike {
+  id?: string;
+  productId?: string;
+  barcode?: string;
+  name?: string;
+  quantity?: number;
+  price?: number;
+  costPrice?: number;
+  taxRate?: number;
+  unit?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Normalise l'ID d'une commande en ligne pour Supabase (int8 ou text)
  */
-export function toSupabaseOrderId(id: any): number | string {
+export function toSupabaseOrderId(id: string | number): number | string {
   const n = Number(id);
   return (!isNaN(n) && n > 0) ? n : id;
 }
@@ -97,7 +110,7 @@ export async function destockOrder(
       return { success: true, reason: 'already_synced' };
     }
 
-    const items = Array.isArray(freshOrder.items) ? freshOrder.items : [];
+    const items: OrderItemLike[] = Array.isArray(freshOrder.items) ? (freshOrder.items as OrderItemLike[]) : [];
     if (items.length === 0) {
       return { success: false, reason: 'no_items' };
     }
@@ -111,8 +124,8 @@ export async function destockOrder(
     if (!allowNegative) {
       const issues: string[] = [];
       for (const item of items) {
-        const prod = productMap.get((item as any).productId || (item as any).id) ||
-                     currentProducts.find(p => p.barcode === (item as any).barcode || p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
+        const prod = productMap.get(item.productId || item.id || '') ||
+                     currentProducts.find(p => p.barcode === item.barcode || p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
         if (prod && (prod.stock || 0) < Number(item.quantity || 1)) {
           issues.push(`${prod.name} (Requis: ${item.quantity}, Dispo: ${prod.stock})`);
         }
@@ -127,13 +140,13 @@ export async function destockOrder(
     const stockAdjustmentsToEnqueue: { productId: string; delta: number }[] = [];
 
     for (const item of items) {
-      const prodId = (item as any).productId || (item as any).id;
+      const prodId = item.productId || item.id;
       const qty = Number(item.quantity || 1);
       if (isNaN(qty) || qty <= 0) continue;
 
       let prod = prodId ? productMap.get(prodId) : undefined;
-      if (!prod && (item as any).barcode) {
-        prod = currentProducts.find(p => p.barcode === (item as any).barcode);
+      if (!prod && item.barcode) {
+        prod = currentProducts.find(p => p.barcode === item.barcode);
       }
       if (!prod && item.name) {
         prod = currentProducts.find(p => p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
@@ -188,9 +201,17 @@ export async function destockOrder(
       idbSet('nexus_products_cache', allProductsArray).catch(() => {});
     }
 
-    // Envoi des variations relatives à Supabase (SyncService utilise adjust_product_stock atomique)
+    // 🛡️ P1-SYNC-11 : Consolidation préalable par productId (Règle Anti-Écrasement GEMINI.md)
+    const consolidatedStockDeltas = new Map<string, number>();
     for (const adj of stockAdjustmentsToEnqueue) {
-      enqueueStockAdjustment(adj.productId, adj.delta);
+      if (adj.productId && adj.delta !== 0) {
+        consolidatedStockDeltas.set(adj.productId, (consolidatedStockDeltas.get(adj.productId) || 0) + adj.delta);
+      }
+    }
+    for (const [pId, totalDelta] of consolidatedStockDeltas.entries()) {
+      if (totalDelta !== 0) {
+        enqueueStockAdjustment(pId, totalDelta);
+      }
     }
 
     // 2. Recherche ou association du client
@@ -216,11 +237,11 @@ export async function destockOrder(
     if (!existingTx) {
       const tid = generateUniqueId();
       const transactionItems: CartItem[] = items.map((item, idx) => {
-        const prod = productMap.get((item as any).productId || (item as any).id);
+        const prod = productMap.get(item.productId || item.id || '');
         return {
           ...prod,
           cartItemId: generateUniqueId(),
-          id: (item as any).productId || prod?.id || `prod-${idx}`,
+          id: item.productId || prod?.id || `prod-${idx}`,
           name: item.name || prod?.name || 'Article',
           price: Number(item.price || 0),
           quantity: Math.max(1, Number(item.quantity || 1)),
@@ -242,8 +263,8 @@ export async function destockOrder(
         userId: options?.user?.uid || options?.user?.id || 'online_system',
         items: transactionItems,
         total: Number(freshOrder.total || 0),
-        paymentMethod: (freshOrder.paymentMethod as any) || 'cash',
-        deliveryMethod: (freshOrder.deliveryMethod as any) || 'delivery',
+        paymentMethod: (freshOrder.paymentMethod as Transaction['paymentMethod']) || 'cash',
+        deliveryMethod: (freshOrder.deliveryMethod as Transaction['deliveryMethod']) || 'delivery',
         timestamp: freshOrder.timestamp || new Date().toISOString(),
         status: 'completed',
         employeeId: 'online_sync',
@@ -257,16 +278,6 @@ export async function destockOrder(
 
       await localDb.insert(`transactions/${tid}`, transaction);
       useTransactionStore.getState().setTransactions(prev => [transaction, ...(Array.isArray(prev) ? prev : [])]);
-
-      if (isSupabaseConfigured && navigator.onLine) {
-        try {
-          await supabase.from('transactions').insert(sanitizePayloadForSupabase('transactions', transaction));
-        } catch (_) {
-          enqueueSync('transactions', tid, 'UPSERT', transaction);
-        }
-      } else {
-        enqueueSync('transactions', tid, 'UPSERT', transaction);
-      }
     }
 
     // 4. Attribution des points de fidélité (UNIQUEMENT par delta pour éviter tout double comptage)
@@ -298,7 +309,7 @@ export async function destockOrder(
       }
     }
 
-    // 5. Verrouillage syncedToPos: true sur la commande
+    // 5. Verrouillage syncedToPos: true sur la commande (localDb.update enfile automatiquement dans SyncService)
     freshOrder.syncedToPos = true;
     if (finalCustomerId) freshOrder.customerId = finalCustomerId;
 
@@ -318,28 +329,6 @@ export async function destockOrder(
     const updatedOnlineOrders = useTransactionStore.getState().onlineOrders;
     if (typeof indexedDB !== 'undefined') {
       idbSet('nexus_online_orders_cache', updatedOnlineOrders).catch(() => {});
-    }
-
-    const dbId = toSupabaseOrderId(orderIdStr);
-    if (isSupabaseConfigured && navigator.onLine) {
-      try {
-        await supabase.from('online_orders').update({
-          synced_to_pos: true,
-          ...(finalCustomerId ? { customer_id: finalCustomerId } : {})
-        }).eq('id', dbId);
-      } catch (_) {
-        enqueueSync('online_orders', orderIdStr, 'UPSERT', {
-          id: dbId,
-          synced_to_pos: true,
-          ...(finalCustomerId ? { customer_id: finalCustomerId } : {})
-        });
-      }
-    } else {
-      enqueueSync('online_orders', orderIdStr, 'UPSERT', {
-        id: dbId,
-        synced_to_pos: true,
-        ...(finalCustomerId ? { customer_id: finalCustomerId } : {})
-      });
     }
 
     toast.info(`Stock déduit pour la commande #${freshOrder.externalOrderId || orderIdStr} 📦`);
@@ -398,14 +387,20 @@ export async function restockOrder(
 
     // 1. Annulation des transactions liées et retrait des points
     for (const t of activeTxs) {
-      await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
-
       if (isSupabaseConfigured && navigator.onLine) {
         try {
-          await supabase.from('transactions').update({ status: 'cancelled' }).eq('id', t.id);
-        } catch (_) {}
+          const res = await supabase.from('transactions').update({ status: 'cancelled' }).eq('id', t.id);
+          if (res?.error) {
+            await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
+          } else {
+            await localDb.updateLocalOnly(`transactions/${t.id}`, { status: 'cancelled' });
+          }
+        } catch (_) {
+          await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
+        }
+      } else {
+        await localDb.update(`transactions/${t.id}`, { status: 'cancelled' });
       }
-      enqueueSync('transactions', t.id, 'UPSERT', { id: t.id, status: 'cancelled' });
 
       // Retrait des points fidélité (UNIQUEMENT par delta négatif)
       if (t.pointsEarned && t.customerId) {
@@ -444,9 +439,10 @@ export async function restockOrder(
     }
 
     // 2. Réintégration physique du stock
-    const items = (Array.isArray(freshOrder.items) && freshOrder.items.length > 0)
+    const rawItems = (Array.isArray(freshOrder.items) && freshOrder.items.length > 0)
       ? freshOrder.items
       : (matchingTxs.length > 0 && Array.isArray(matchingTxs[0].items) ? matchingTxs[0].items : []);
+    const items: OrderItemLike[] = rawItems as OrderItemLike[];
 
     if (items.length > 0) {
       const currentProducts = useCoreStore.getState().products || [];
@@ -454,13 +450,13 @@ export async function restockOrder(
       const adjustmentsToEnqueue: { productId: string; delta: number }[] = [];
 
       for (const item of items) {
-        const prodId = (item as any).productId || (item as any).id;
+        const prodId = item.productId || item.id;
         const qty = Number(item.quantity || 1);
         if (isNaN(qty) || qty <= 0) continue;
 
         let prod = prodId ? productMap.get(prodId) : undefined;
-        if (!prod && (item as any).barcode) {
-          prod = currentProducts.find(p => p.barcode === (item as any).barcode);
+        if (!prod && item.barcode) {
+          prod = currentProducts.find(p => p.barcode === item.barcode);
         }
         if (!prod && item.name) {
           prod = currentProducts.find(p => p.name?.toLowerCase().trim() === item.name?.toLowerCase().trim());
@@ -499,15 +495,23 @@ export async function restockOrder(
         idbSet('nexus_products_cache', allProductsArray).catch(() => {});
       }
 
-      // Envoi des deltas positifs relatifs à Supabase
+      // 🛡️ P1-SYNC-11 : Consolidation préalable par productId (Règle Anti-Écrasement GEMINI.md)
+      const consolidatedRestockDeltas = new Map<string, number>();
       for (const adj of adjustmentsToEnqueue) {
-        enqueueStockAdjustment(adj.productId, adj.delta);
+        if (adj.productId && adj.delta !== 0) {
+          consolidatedRestockDeltas.set(adj.productId, (consolidatedRestockDeltas.get(adj.productId) || 0) + adj.delta);
+        }
+      }
+      for (const [pId, totalDelta] of consolidatedRestockDeltas.entries()) {
+        if (totalDelta !== 0) {
+          enqueueStockAdjustment(pId, totalDelta);
+        }
       }
     }
 
-    // 3. Réinitialisation de syncedToPos: false sur la commande
+    // 3. Réinitialisation de syncedToPos: false sur la commande (updateLocalOnly pour éviter un doublon d'upsert)
     freshOrder.syncedToPos = false;
-    await localDb.update(`onlineOrders/${orderIdStr}`, { syncedToPos: false });
+    await localDb.updateLocalOnly(`onlineOrders/${orderIdStr}`, { syncedToPos: false });
 
     useTransactionStore.getState().setOnlineOrders(prev =>
       (Array.isArray(prev) ? prev : []).map(o => String(o.id) === orderIdStr ? { ...o, syncedToPos: false } : o)
@@ -521,7 +525,11 @@ export async function restockOrder(
     const dbId = toSupabaseOrderId(orderIdStr);
     if (isSupabaseConfigured && navigator.onLine) {
       try {
-        await supabase.from('online_orders').update({ synced_to_pos: false }).eq('id', dbId);
+        const res = await supabase.from('online_orders').update({ synced_to_pos: false }).eq('id', dbId);
+        if (res?.error) {
+          console.warn('[orderStockService] Erreur PostgREST mise à jour online_orders (restock), repli vers file de synchro:', res.error);
+          enqueueSync('online_orders', orderIdStr, 'UPSERT', { id: dbId, synced_to_pos: false });
+        }
       } catch (_) {
         enqueueSync('online_orders', orderIdStr, 'UPSERT', { id: dbId, synced_to_pos: false });
       }

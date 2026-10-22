@@ -4,6 +4,7 @@ import { preparePayload } from '../../lib/db-converters';
 import { enqueueStockAdjustment, enqueueSyncBatch } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
 import { useInventoryStore } from '../../store/useInventoryStore';
+import { useCoreStore } from '../../store/useCoreStore';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { Product, DamagedRecord, Supplier } from '../../types';
 import { toast } from 'sonner';
@@ -49,14 +50,35 @@ export function useSupplierDamaged({ user, viewingDetailsSupplier }: UseSupplier
         idbSet('nexus_damaged_items_cache', next).catch(() => {});
       }).catch(() => {});
 
-      // 2. Adjust stock via sync queue
+      // 2. Adjust stock via atomic sync queue and update local product state
       if (selectedProductForDamage.id && selectedProductForDamage.id !== 'undefined') {
-        enqueueStockAdjustment(selectedProductForDamage.id, -damageData.quantity);
-        const currentDamaged = selectedProductForDamage.damagedStock || 0;
-        localDb.update(`products/${selectedProductForDamage.id}`, {
-          damagedStock: currentDamaged + damageData.quantity,
-          updatedAt: new Date().toISOString()
+        const nowIso = new Date().toISOString();
+        const currentDamaged = Number(selectedProductForDamage.damagedStock) || 0;
+        const nextDamaged = currentDamaged + damageData.quantity;
+        const nextStock = Math.max(0, (Number(selectedProductForDamage.stock) || 0) - damageData.quantity);
+        enqueueStockAdjustment(selectedProductForDamage.id, -damageData.quantity, {
+          reason: damageData.reason || 'Avarie fournisseur',
+          isLoss: true
+        });
+        localDb.updateLocalOnly(`products/${selectedProductForDamage.id}`, {
+          ...selectedProductForDamage,
+          stock: nextStock,
+          damagedStock: nextDamaged,
+          updatedAt: nowIso
         }).catch(() => {});
+        useCoreStore.getState().setProducts(prev =>
+          (prev || []).map(p =>
+            p.id === selectedProductForDamage.id
+              ? { ...p, stock: nextStock, damagedStock: nextDamaged, updatedAt: nowIso }
+              : p
+          )
+        );
+        enqueueSyncBatch([{
+          table: 'products',
+          action: 'UPSERT',
+          recordId: selectedProductForDamage.id,
+          payload: { id: selectedProductForDamage.id, damagedStock: nextDamaged, updatedAt: nowIso }
+        }]);
       }
 
       // 3. Synchronisation Supabase

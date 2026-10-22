@@ -99,10 +99,20 @@ export function useInventoryActions({
     setIsMassDeleting(true);
     setMassDeleteProgress(0);
     try {
-      // Delete all products via localDb
-      await localDb.delete('products');
+      const idsToDelete = products.map(d => d.id).filter(Boolean);
+      for (let i = 0; i < idsToDelete.length; i++) {
+        await localDb.deleteLocalOnly(`products/${idsToDelete[i]}`);
+      }
+      if (idsToDelete.length > 0 && (typeof navigator === 'undefined' || navigator.onLine)) {
+        const CHUNK_SIZE = 200;
+        for (let i = 0; i < idsToDelete.length; i += CHUNK_SIZE) {
+          const batchIds = idsToDelete.slice(i, i + CHUNK_SIZE);
+          await supabase.from('products').delete().in('id', batchIds);
+          setMassDeleteProgress(Math.min(100, Math.round(((i + batchIds.length) / idsToDelete.length) * 100)));
+        }
+      }
       
-      window.dispatchEvent(new CustomEvent('products-batch-delete', { detail: { ids: products.map(d => d.id) } }));
+      window.dispatchEvent(new CustomEvent('products-batch-delete', { detail: { ids: idsToDelete } }));
       setIsMassDeleteConfirmOpen(false);
       toast.success("Tous les produits ont été supprimés.");
     } catch (error) {
@@ -127,6 +137,7 @@ export function useInventoryActions({
       const categoryIdToSet = bulkUpdateCategory ? (bulkSubCatId || bulkParentCatId || null) : undefined;
       const updatedAt = new Date().toISOString();
 
+      const selectedSet = new Set(selectedProductIds);
       for (const productId of selectedProductIds) {
         const prod = products.find(p => p.id === productId);
         if (prod) {
@@ -137,14 +148,30 @@ export function useInventoryActions({
         }
       }
 
+      const { useCoreStore } = await import('../store/useCoreStore');
+      const { set: idbSet } = await import('idb-keyval');
+      useCoreStore.getState().setProducts(prev => {
+        const next = (prev || []).map(p => {
+          if (!selectedSet.has(p.id)) return p;
+          return {
+            ...p,
+            updatedAt,
+            ...(brandIdToSet !== undefined ? { brandId: brandIdToSet || undefined } : {}),
+            ...(categoryIdToSet !== undefined ? { categoryId: categoryIdToSet || undefined } : {})
+          };
+        });
+        idbSet('nexus_products_cache', next).catch(() => {});
+        return next;
+      });
+
       const details = [
         bulkUpdateCategory ? `Catégorie: ${bulkSubCatId || bulkParentCatId || 'Aucune'}` : null,
         bulkUpdateBrand ? `Marque: ${bulkBrandId || 'Aucune'}` : null
       ].filter(Boolean).join(', ');
 
       logAction(
-        user.uid,
-        user.displayName || 'Utilisateur',
+        user?.uid || 'system',
+        user?.displayName || 'Utilisateur',
         'Mise à jour Groupée',
         'Inventaire',
         `Changement groupé pour ${selectedProductIds.length} articles (${details})`
@@ -182,7 +209,7 @@ export function useInventoryActions({
           }
           
           window.dispatchEvent(new CustomEvent('products-batch-delete', { detail: { ids: selectedProductIds } }));
-          logAction(user.uid, user.displayName || 'Utilisateur', 'Suppression Groupée', 'Inventaire', `${selectedProductIds.length} produits supprimés`);
+          logAction(user?.uid || 'system', user?.displayName || 'Utilisateur', 'Suppression Groupée', 'Inventaire', `${selectedProductIds.length} produits supprimés`);
           setSelectedProductIds([]);
           toast.success("Produits supprimés de l'inventaire avec succès.");
         } catch (error: any) {

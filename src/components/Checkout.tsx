@@ -14,6 +14,7 @@ import { CheckoutHeader } from './checkout/CheckoutHeader';
 import { CheckoutControlsPanel } from './checkout/CheckoutControlsPanel';
 import { CartItemsList } from './checkout/CartItemsList';
 import { useCheckoutLogic } from './checkout/useCheckoutLogic';
+import { LineDiscountModal } from './checkout/LineDiscountModal';
 import { broadcastCustomerDisplay } from '../services/customerDisplayService';
 
 // 🚀 Modals lourds chargés à la demande (Lazy Loading + Code Splitting)
@@ -84,6 +85,10 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
   ]);
 
   const logic = useCheckoutLogic(mergedProps as any);
+  const discountingItem = useMemo(() => {
+    if (!logic.discountingItemId) return null;
+    return (cart || []).find((i) => i && (i.cartItemId === logic.discountingItemId || i.id === logic.discountingItemId)) || null;
+  }, [logic.discountingItemId, cart]);
 
   const {
     role,
@@ -407,7 +412,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 z-[101] bg-zinc-950 border-t border-zinc-800 rounded-t-[3rem] shadow-md max-h-[90vh] overflow-y-auto no-scrollbar"
+                  className="fixed inset-x-0 bottom-0 z-[101] bg-zinc-950 border-t border-zinc-800 rounded-t-[3rem] shadow-md max-h-[90vh] overflow-y-auto no-scrollbar pb-[max(env(safe-area-inset-bottom,0px),16px)]"
                 >
                   <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto my-4" />
                   <CheckoutControlsPanel
@@ -513,7 +518,7 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
 
       {/* Mobile Action Bar (Panier / Catalogue + Encaisser) */}
       {isMobile && (
-        <div className="shrink-0 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-2.5 py-2 flex items-center justify-between gap-2.5 z-[50]">
+        <div className="shrink-0 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 px-2.5 py-2 pb-[max(env(safe-area-inset-bottom,0px),10px)] flex items-center justify-between gap-2.5 z-[50]">
           <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
             <button
               type="button"
@@ -553,6 +558,22 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
         </div>
       )}
 
+
+      {/* Modale de Remise par Ligne d'Article */}
+      {logic.discountingItemId && (
+        <LineDiscountModal
+          isOpen={Boolean(logic.discountingItemId)}
+          onClose={() => logic.setDiscountingItemId(null)}
+          item={discountingItem}
+          currency={settings?.currency || 'DA'}
+          isWholesale={isWholesale}
+          onApply={(discount) => {
+            if (logic.discountingItemId) {
+              logic.setLineDiscount(logic.discountingItemId, discount);
+            }
+          }}
+        />
+      )}
 
       {/* Success Notification */}
       {showSuccess && (

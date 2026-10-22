@@ -3,7 +3,7 @@ import { Product, CompanySettings, Transaction, ProductReturn, Customer } from '
 import { cn } from '../lib/utils';
 import { Modal, Button } from './ui';
 import { ReturnModalItemsList } from './returns/ReturnModalItemsList';
-import { useReturnModalLogic } from './useReturnModalLogic';
+import { useReturnModalLogic } from '../hooks/useReturnModalLogic';
 
 interface ReturnModalProps {
   isOpen: boolean;

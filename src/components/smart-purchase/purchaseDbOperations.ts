@@ -4,7 +4,7 @@ import { localDb } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { generateUniqueId, safeGetItems } from '../../lib/utils';
 import { Product, Supplier, InvoicePattern, Purchase, PurchaseOrder, CompanySettings } from '../../types';
-import { PurchaseCartItem } from '../usePurchaseCart';
+import { PurchaseCartItem } from '../../hooks/usePurchaseCart';
 import { toast } from 'sonner';
 import { safeOptionalMutation } from '../../lib/supabase/safeOptional';
 import { useFinanceStore } from '../../store/useFinanceStore';
@@ -88,34 +88,6 @@ export async function savePurchaseDb({
 
     const snakePattern = convertKeysToSnake(patternData);
 
-    if (existingPattern) {
-      await safeOptionalMutation(
-        'invoice_patterns.update',
-        () => supabase
-          .from('invoice_patterns')
-          .update(snakePattern)
-          .eq('id', existingPattern.id),
-        { module: 'purchaseDbOperations', action: 'updatePattern' }
-      );
-    } else {
-      const newPatternId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            const v = c === 'x' ? r : (r & 0x3) | 0x8;
-            return v.toString(16);
-          });
-      await safeOptionalMutation(
-        'invoice_patterns.upsert',
-        () => supabase
-          .from('invoice_patterns')
-          .upsert({
-            ...snakePattern,
-            id: newPatternId
-          }, { onConflict: 'id' }),
-        { module: 'purchaseDbOperations', action: 'insertPattern' }
-      );
-    }
 
     const totalValue = purchaseItems.reduce((sum: number, item: any) => {
       const subtotal = (item.costPrice || 0) * (item.quantity || 0);
@@ -213,14 +185,51 @@ export async function savePurchaseDb({
        if (newDebt < 0) newDebt = 0;
     }
 
-    const debtDelta = newDebt - oldDebt;
-    if (debtDelta !== 0) {
-      const supplier = suppliers.find(s => s.id === selectedSupplierId);
-      if (supplier) {
-        await localDb.update(`suppliers/${supplier.id}`, {
-          ...supplier,
-          balance: (supplier.balance || 0) + debtDelta
-        });
+    const oldSupplierId = oldPurchase?.supplierId || (oldPurchase as any)?.supplier_id || '';
+    if (oldSupplierId && oldSupplierId !== selectedSupplierId) {
+      if (oldDebt > 0) {
+        const prevSupplier = suppliers.find(s => s.id === oldSupplierId);
+        if (prevSupplier) {
+          const updatedPrevSupplier = {
+            ...prevSupplier,
+            balance: (Number(prevSupplier.balance) || 0) - oldDebt,
+            updatedAt: new Date().toISOString()
+          };
+          await localDb.update(`suppliers/${prevSupplier.id}`, updatedPrevSupplier);
+          usePeopleStore.setState(state => ({
+            suppliers: (state.suppliers || []).map(s => s.id === prevSupplier.id ? updatedPrevSupplier : s)
+          }));
+        }
+      }
+      if (newDebt > 0) {
+        const nextSupplier = suppliers.find(s => s.id === selectedSupplierId);
+        if (nextSupplier) {
+          const updatedNextSupplier = {
+            ...nextSupplier,
+            balance: (Number(nextSupplier.balance) || 0) + newDebt,
+            updatedAt: new Date().toISOString()
+          };
+          await localDb.update(`suppliers/${nextSupplier.id}`, updatedNextSupplier);
+          usePeopleStore.setState(state => ({
+            suppliers: (state.suppliers || []).map(s => s.id === nextSupplier.id ? updatedNextSupplier : s)
+          }));
+        }
+      }
+    } else {
+      const debtDelta = newDebt - oldDebt;
+      if (debtDelta !== 0) {
+        const supplier = suppliers.find(s => s.id === selectedSupplierId);
+        if (supplier) {
+          const updatedSupplier = {
+            ...supplier,
+            balance: (Number(supplier.balance) || 0) + debtDelta,
+            updatedAt: new Date().toISOString()
+          };
+          await localDb.update(`suppliers/${supplier.id}`, updatedSupplier);
+          usePeopleStore.setState(state => ({
+            suppliers: (state.suppliers || []).map(s => s.id === supplier.id ? updatedSupplier : s)
+          }));
+        }
       }
     }
 
@@ -266,14 +275,24 @@ export async function savePurchaseDb({
           
           const newItem = purchaseItems.find(i => i.productId === productId);
           if (purchaseStatus === 'completed' && newItem && newItem.costPrice !== undefined) {
-             updates.costPrice = newItem.costPrice;
+             const incomingCost = Number(newItem.costPrice) || 0;
+             const currentStock = Number(product.stock) || 0;
+             const currentCost = Number(product.costPrice) || 0;
+             let calculatedPmp = incomingCost;
+             if (currentStock > 0 && currentCost > 0 && delta > 0 && incomingCost > 0) {
+                const totalVal = (currentStock * currentCost) + (delta * incomingCost);
+                const totalQty = currentStock + delta;
+                calculatedPmp = totalQty > 0 ? Number((totalVal / totalQty).toFixed(2)) : incomingCost;
+             }
+             updates.costPrice = incomingCost;
+             updates.pmp = calculatedPmp;
              let newSellPrice = product.price || 0;
-             if (autoMargin && newItem.costPrice > (product.costPrice || 0)) {
+             if (autoMargin && incomingCost > (product.costPrice || 0)) {
                 const oldCost = product.costPrice || 0;
                 const oldPrice = product.price || 0;
                 if (oldCost > 0) {
                   const marginPercent = (oldPrice - oldCost) / oldCost;
-                  newSellPrice = parseFloat((newItem.costPrice * (1 + marginPercent)).toFixed(2));
+                  newSellPrice = parseFloat((incomingCost * (1 + marginPercent)).toFixed(2));
                   updates.price = newSellPrice;
                 }
              }
@@ -282,7 +301,7 @@ export async function savePurchaseDb({
                {
                  date: purchaseData.date,
                  price: newSellPrice,
-                 costPrice: Number(newItem.costPrice) || 0,
+                 costPrice: incomingCost,
                  supplierName: purchaseData.supplierName,
                  invoiceNumber: autoInvoiceNum,
                  purchaseId
@@ -292,23 +311,53 @@ export async function savePurchaseDb({
           }
           if (productId && productId !== 'undefined') {
             const fullUpdatedProduct = { ...product, ...updates };
-            await localDb.update(`products/${productId}`, fullUpdatedProduct);
+            await (localDb.updateLocalOnly ?? localDb.update)(`products/${productId}`, fullUpdatedProduct);
             useCoreStore.setState(state => ({
               products: (state.products || []).map(p => p.id === productId ? fullUpdatedProduct : p)
             }));
             window.dispatchEvent(new CustomEvent('product-cache-update', { detail: fullUpdatedProduct }));
-            if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-              const supaUpdate: any = {
-                stock: newStockVal,
-                updated_at: updates.updatedAt
-              };
-              if (updates.costPrice !== undefined) supaUpdate.cost_price = updates.costPrice;
-              if (updates.price !== undefined) supaUpdate.price = updates.price;
-              if (updates.priceHistory !== undefined) supaUpdate.price_history = updates.priceHistory;
-              await supabase.from('products').update(supaUpdate).eq('id', productId);
+
+            // 🛡️ Synchronisation atomique du stock avec Supabase via delta relatif uniquement
+            if (delta !== 0) {
+              enqueueStockAdjustment(productId, delta);
+            }
+
+            // Propager uniquement les colonnes hors-stock (prix/historique) via la file de synchro
+            const { stock: _ignoredStock, ...nonStockUpdates } = updates;
+            if (Object.keys(nonStockUpdates).some(k => k !== 'updatedAt')) {
+              const { enqueueSync } = await import('../../services/SyncService');
+              enqueueSync('products', productId, 'UPSERT', { id: productId, ...nonStockUpdates });
             }
           }
        }
+    }
+
+    // 🛡️ Apprentissage OCR / Fournisseur (Local d'abord, réplication cloud non-bloquante)
+    try {
+      const patternId = existingPattern?.id || (
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : 'pat_' + Math.random().toString(36).substring(2, 11)
+      );
+      await localDb.insert(`invoicePatterns/${patternId}`, { ...patternData, id: patternId });
+
+      if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
+        if (existingPattern) {
+          safeOptionalMutation(
+            'invoice_patterns.update',
+            () => supabase.from('invoice_patterns').update(snakePattern).eq('id', existingPattern.id),
+            { module: 'purchaseDbOperations', action: 'updatePattern' }
+          ).catch(() => {});
+        } else {
+          safeOptionalMutation(
+            'invoice_patterns.upsert',
+            () => supabase.from('invoice_patterns').upsert({ ...snakePattern, id: patternId }, { onConflict: 'id' }),
+            { module: 'purchaseDbOperations', action: 'insertPattern' }
+          ).catch(() => {});
+        }
+      }
+    } catch (patErr) {
+      console.warn('[SmartPurchase] Pattern learning error ignored:', patErr);
     }
 
     try {
@@ -371,12 +420,19 @@ export async function handleSupplierPaymentDb({
       note
     };
     
+    const updatedBalance = (supplier.balance || 0) - amount;
     await localDb.insert(`supplierPayments/${paymentId}`, payment);
 
     await localDb.update(`suppliers/${supplierId}`, {
       ...supplier,
-      balance: (supplier.balance || 0) - amount
+      balance: updatedBalance
     });
+
+    usePeopleStore.getState().setSuppliers(prev =>
+      (prev || []).map(s => s.id === supplierId ? { ...s, balance: updatedBalance } : s)
+    );
+
+    useFinanceStore.getState().setSupplierPayments(prev => [payment as any, ...(prev || [])]);
 
     toast.success("Paiement fournisseur enregistré avec succès !");
     setIsPaymentModalOpen(false);
@@ -440,32 +496,93 @@ export async function handleReceiveOrderDb({
       return { purchases: updated };
     });
 
-    for (const item of order.items) {
+    // 🛡️ Consolidation préalable par productId (Règle Anti-Écrasement GEMINI.md)
+    const consolidatedStockDeltas = new Map<string, number>();
+    const consolidatedCostPrices = new Map<string, number>();
+    const consolidatedPmpPrices = new Map<string, number>();
+
+    for (const item of safeGetItems(order)) {
       if (item.productId) {
         const product = products.find(p => p.id === item.productId);
         if (product) {
+          const incomingCost = Number(item.price) || 0;
+          const currentStock = Number(product.stock) || 0;
+          const currentCost = Number(product.costPrice) || 0;
+          const deltaQty = Number(item.quantity) || 0;
+          let calculatedCost = incomingCost;
+          if (currentStock > 0 && currentCost > 0 && deltaQty > 0 && incomingCost > 0) {
+            const totalVal = (currentStock * currentCost) + (deltaQty * incomingCost);
+            const totalQty = currentStock + deltaQty;
+            calculatedCost = totalQty > 0 ? Number((totalVal / totalQty).toFixed(2)) : incomingCost;
+          }
+          consolidatedCostPrices.set(item.productId, incomingCost);
+          consolidatedPmpPrices.set(item.productId, calculatedCost);
           if (product.isBundle && product.bundleItems) {
             for (const bi of product.bundleItems) {
               if (bi.productId && bi.productId !== 'undefined') {
                 const targetProd = products.find(p => p.id === bi.productId);
                 if (targetProd) {
-                  enqueueStockAdjustment(bi.productId, (item.quantity || 0) * bi.quantity);
-                  localDb.update(`products/${bi.productId}`, { updatedAt: new Date().toISOString() });
+                  const delta = (item.quantity || 0) * bi.quantity;
+                  consolidatedStockDeltas.set(bi.productId, (consolidatedStockDeltas.get(bi.productId) || 0) + delta);
                 }
               }
             }
-            localDb.update(`products/${item.productId}`, {
-              costPrice: item.price || 0,
-              updatedAt: new Date().toISOString()
-            });
           } else {
-            enqueueStockAdjustment(item.productId, item.quantity || 0);
-            localDb.update(`products/${item.productId}`, {
-              costPrice: item.price || 0,
-              updatedAt: new Date().toISOString()
-            });
+            const delta = item.quantity || 0;
+            consolidatedStockDeltas.set(item.productId, (consolidatedStockDeltas.get(item.productId) || 0) + delta);
           }
         }
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const touchedProductIds = new Set<string>([
+      ...Array.from(consolidatedStockDeltas.keys()),
+      ...Array.from(consolidatedCostPrices.keys())
+    ]);
+
+    for (const prodId of touchedProductIds) {
+      const targetProd = products.find(p => p.id === prodId);
+      if (!targetProd) continue;
+      const delta = consolidatedStockDeltas.get(prodId) || 0;
+      const newCost = consolidatedCostPrices.get(prodId);
+      const newPmp = consolidatedPmpPrices.get(prodId);
+      const nextStock = (Number(targetProd.stock) || 0) + delta;
+
+      const prodUpdates: Record<string, any> = {
+        updatedAt: nowIso
+      };
+      if (delta !== 0) prodUpdates.stock = nextStock;
+      if (newCost !== undefined) prodUpdates.costPrice = newCost;
+      if (newPmp !== undefined) prodUpdates.pmp = newPmp;
+
+      if (delta !== 0) {
+        enqueueStockAdjustment(prodId, delta);
+      }
+      await localDb.updateLocalOnly(`products/${prodId}`, { ...targetProd, ...prodUpdates });
+      if (newCost !== undefined) {
+        const { enqueueSync } = await import('../../services/SyncService');
+        enqueueSync('products', prodId, 'UPSERT', { id: prodId, costPrice: newCost, updatedAt: nowIso });
+      }
+      useCoreStore.setState(state => ({
+        products: (state.products || []).map(p => p.id === prodId ? { ...p, ...prodUpdates } : p)
+      }));
+    }
+
+    // 🛡️ Mise à jour de la dette fournisseur pour le bon de commande réceptionné
+    if (order.supplierId && (order.total || 0) > 0) {
+      const supplier = suppliers.find(s => s.id === order.supplierId);
+      if (supplier) {
+        const debtToAdd = order.total || 0;
+        const updatedSupplier = {
+          ...supplier,
+          balance: (supplier.balance || 0) + debtToAdd,
+          updatedAt: nowIso
+        };
+        await localDb.update(`suppliers/${supplier.id}`, updatedSupplier);
+        usePeopleStore.setState(state => ({
+          suppliers: (state.suppliers || []).map(s => s.id === supplier.id ? updatedSupplier : s)
+        }));
       }
     }
 
@@ -584,7 +701,7 @@ export async function handleDeletePurchaseDb({
           }
 
           const fullUpdatedProduct = { ...product, ...updates };
-          await localDb.update(`products/${prodId}`, fullUpdatedProduct);
+          await (localDb.updateLocalOnly ?? localDb.update)(`products/${prodId}`, fullUpdatedProduct);
           useCoreStore.setState(state => {
             const nextProducts = (state.products || []).map(p => p.id === prodId ? fullUpdatedProduct : p);
             import('idb-keyval').then(({ set: idbSet }) => {
@@ -594,17 +711,18 @@ export async function handleDeletePurchaseDb({
           });
           window.dispatchEvent(new CustomEvent('product-cache-update', { detail: fullUpdatedProduct }));
 
-          if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-            await supabase
-              .from('products')
-              .update({
-                stock: newStockVal,
-                cost_price: updates.costPrice ?? product.costPrice,
-                price_history: filteredHistory,
-                updated_at: updates.updatedAt
-              })
-              .eq('id', prodId);
+          // 🛡️ Déstockage atomique Supabase via delta négatif uniquement
+          if (delta !== 0) {
+            enqueueStockAdjustment(prodId, delta);
           }
+
+          const { enqueueSync } = await import('../../services/SyncService');
+          enqueueSync('products', prodId, 'UPSERT', {
+            id: prodId,
+            costPrice: updates.costPrice ?? product.costPrice,
+            priceHistory: filteredHistory,
+            updatedAt: updates.updatedAt
+          });
         }
       }
 
@@ -617,7 +735,7 @@ export async function handleDeletePurchaseDb({
       if (supplierId && debtToReverse > 0) {
         const supplier = allSuppliers.find(s => s && String(s.id) === String(supplierId));
         if (supplier) {
-          const newBalance = Math.max(0, (Number(supplier.balance) || 0) - debtToReverse);
+          const newBalance = (Number(supplier.balance) || 0) - debtToReverse;
           const updatedSupplier = {
             ...supplier,
             balance: newBalance,

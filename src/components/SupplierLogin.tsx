@@ -33,8 +33,9 @@ export function SupplierLogin({ onLogin }: { onLogin: (supplier: Supplier) => vo
       }
 
       const supplierData = await response.json();
+      const isAppUser = supplierData.isAppUser ?? supplierData.is_app_user;
 
-      if (!supplierData.isAppUser) {
+      if (!isAppUser) {
         setError("Identifiants incorrects ou compte non activé.");
         return;
       }

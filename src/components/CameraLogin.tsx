@@ -18,11 +18,19 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
 
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const response = await fetch('/api/auth/verify-password', {
+      let response = await fetch('/api/auth/verify-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ table: 'users', email: cleanEmail, password })
       });
+
+      if (!response.ok) {
+        response = await fetch('/api/auth/verify-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table: 'employees', email: cleanEmail, password })
+        });
+      }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -30,14 +38,23 @@ export function CameraLogin({ onLogin }: { onLogin: (user: UserProfile) => void 
         return;
       }
 
-      const userData = await response.json();
+      const rawData = await response.json();
+      const userData = rawData.user || rawData;
 
-      if (userData.role !== 'camera_agent') {
+      if (userData.role !== 'camera_agent' && userData.role !== 'admin') {
         setError("Identifiants incorrects ou vous n'êtes pas autorisé à accéder à ce portail.");
         return;
       }
 
-      onLogin(userData);
+      const normalizedProfile: UserProfile = {
+        uid: userData.uid || userData.id,
+        email: userData.email,
+        displayName: userData.displayName || userData.display_name || userData.name || 'Agent Caméra',
+        role: userData.role,
+        employeeId: userData.employeeId || userData.employee_id || userData.id
+      };
+
+      onLogin(normalizedProfile);
     } catch (err) {
       console.error('Camera Login error:', err);
       setError('Une erreur est survenue lors de la connexion.');

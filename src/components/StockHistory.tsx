@@ -39,7 +39,8 @@ export const StockHistory = memo(function StockHistory({ adjustments, products =
     livePreviewStock
   } = useStockHistoryLogic({ adjustments, products });
 
-  const pageSize = 20;
+  // 🛡️ PERF-02 : Pagination obligatoire à 50 items/page selon les règles du projet
+  const pageSize = 50;
 
   return (
     <div className="space-y-6">

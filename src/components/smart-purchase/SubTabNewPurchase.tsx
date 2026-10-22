@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { Card, Button, SafeImage } from '../ui';
 import { Product, Supplier, CompanySettings } from '../../types';
-import { PurchaseCartItem } from '../usePurchaseCart';
+import { PurchaseCartItem } from '../../hooks/usePurchaseCart';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
 import { PurchaseCartTable } from './PurchaseCartTable';
@@ -491,7 +491,7 @@ export function SubTabNewPurchase({
                     }}
                   >
                     <div className="inline-block min-w-full text-center">
-                      <img
+                      <SafeImage
                         src={localPreviewUrl}
                         alt="Bon d'achat scanné"
                         style={{

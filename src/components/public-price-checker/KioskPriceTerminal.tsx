@@ -6,7 +6,8 @@ import {
   Store, Camera, CameraOff, Delete, X, ArrowRight
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/library';
-import { get as getIDB } from 'idb-keyval';
+import { localDb } from '../../services/LocalDatabase';
+import { usePeopleStore } from '../../store/usePeopleStore';
 import bcrypt from 'bcryptjs';
 import { Product, CompanySettings, Category, Brand, Promotion } from '../../types';
 import { SafeImage } from '../ui/SafeImage';
@@ -330,47 +331,39 @@ export function KioskPriceTerminal({
     let isValid = false;
 
     // 1. Master PIN
-    if (customMaster) {
-      if (customMaster.startsWith('$2a$') || customMaster.startsWith('$2b$')) {
-        try { isValid = bcrypt.compareSync(candidate, customMaster); } catch (_) {}
-      } else if (customMaster === candidate) {
-        isValid = true;
-      }
+    if (customMaster && (customMaster.startsWith('$2a$') || customMaster.startsWith('$2b$'))) {
+      try { isValid = bcrypt.compareSync(candidate, customMaster); } catch (_) {}
     }
 
-    // 2. Vérification contre n'importe quel employé en base locale
+    // 2. Vérification contre n'importe quel employé en base locale (hachage Bcrypt uniquement)
     if (!isValid) {
       try {
-        const [usersObj, employeesObj] = await Promise.all([
-          getIDB<Record<string, any>>('nexus_db_users').catch(() => null),
-          getIDB<Record<string, any>>('nexus_db_employees').catch(() => null),
+        const [usersSnap, employeesSnap] = await Promise.all([
+          localDb.get('users').catch(() => null),
+          localDb.get('employees').catch(() => null),
         ]);
+        const usersObj = (usersSnap?.exists() && usersSnap?.val()) ? usersSnap.val() : {};
+        const employeesObj = (employeesSnap?.exists() && employeesSnap?.val()) ? employeesSnap.val() : {};
+        const offlineCreds = getSecureItem<Record<string, any>>('nexus_offline_credentials') || {};
         const allStaff = [
-          ...(usersObj ? Object.values(usersObj) : []),
-          ...(employeesObj ? Object.values(employeesObj) : []),
+          ...Object.values(usersObj),
+          ...Object.values(employeesObj),
+          ...(usePeopleStore.getState().users || []),
+          ...(usePeopleStore.getState().employees || []),
+          ...Object.values(offlineCreds),
         ];
-        for (const u of allStaff) {
-          const hash = u?.password_hash || u?.password || u?.pin_hash || u?.pin;
-          if (hash) {
-            if (hash.startsWith('$2a$') || hash.startsWith('$2b$')) {
-              try {
-                if (bcrypt.compareSync(candidate, hash)) {
-                  isValid = true;
-                  break;
-                }
-              } catch (_) {}
-            } else if (hash === candidate) {
-              isValid = true;
-              break;
-            }
+        for (const u of allStaff as any[]) {
+          const hash = u?.password_hash || u?.password || u?.pin_hash || u?.pin || u?.hash || u?.passwordHash;
+          if (hash && (hash.startsWith('$2a$') || hash.startsWith('$2b$'))) {
+            try {
+              if (bcrypt.compareSync(candidate, hash)) {
+                isValid = true;
+                break;
+              }
+            } catch (_) {}
           }
         }
       } catch (_) {}
-    }
-
-    // 3. Code d'urgence par défaut commerçant
-    if (!isValid && candidate === '1234') {
-      isValid = true;
     }
 
     if (isValid) {
@@ -412,7 +405,7 @@ export function KioskPriceTerminal({
       <header className="h-16 px-6 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           {(settings?.logoUrl || (settings as any)?.logo) ? (
-            <img 
+            <SafeImage 
               src={settings?.logoUrl || (settings as any)?.logo} 
               alt={storeName} 
               className="w-10 h-10 rounded-xl object-contain bg-white/5 p-1 border border-slate-700" 

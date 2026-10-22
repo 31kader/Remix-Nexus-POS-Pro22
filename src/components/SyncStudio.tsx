@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import { cn, formatSafe, sanitizeProductForSupabase } from '../lib/utils';
 import { fetchProductsFromSupabase } from '../hooks/data-fetching/supabaseFetchHelper';
 import { preparePayload } from '../lib/db-converters';
+import { localDb } from '../services/LocalDatabase';
+import { CompanySettings } from '../types';
 import { set as idbSet, del as idbDel, get as idbGet } from 'idb-keyval';
 
 interface SyncStudioProps {
@@ -43,15 +45,15 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
 
   const refreshFailedQueue = async () => {
     try {
-      const items = await getFailedSyncQueue();
-      setFailedQueue(items || []);
+      const items = (await getFailedSyncQueue()) || [];
+      setFailedQueue(prev => (prev.length === items.length && prev.every((x, i) => x?.opId === items[i]?.opId && x?.recordId === items[i]?.recordId)) ? prev : items);
     } catch (_) {}
   };
 
   const refreshQueue = () => {
     try {
-      const items = loadPendingSyncQueue();
-      setQueue(items || []);
+      const items = loadPendingSyncQueue() || [];
+      setQueue(prev => (prev.length === items.length && prev.every((x, i) => x?.opId === items[i]?.opId && x?.recordId === items[i]?.recordId)) ? prev : items);
       refreshFailedQueue();
     } catch (err) {
       console.error('[SyncStudio] Erreur de chargement de la file:', err);
@@ -92,6 +94,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
   useEffect(() => {
     refreshQueue();
     checkSupabaseAuth();
+    setLastSyncTime(prev => prev || new Date().toISOString());
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -99,12 +102,14 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const unsubscribe = onBackgroundSyncStatus(({ isSyncing: syncing, pendingCount }) => {
-      setIsSyncing(syncing);
+    let wasSyncing = false;
+    const unsubscribe = onBackgroundSyncStatus(({ isSyncing: syncing }) => {
+      setIsSyncing(prev => prev === syncing ? prev : syncing);
       refreshQueue();
-      if (!syncing) {
+      if (wasSyncing && !syncing) {
         setLastSyncTime(new Date().toISOString());
       }
+      wasSyncing = syncing;
     });
 
     const interval = setInterval(() => {
@@ -156,10 +161,36 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
     try {
       const BATCH_SIZE = 100;
       
+      const harmonizeChunkKeys = <T extends Record<string, any>>(chunk: T[]): T[] => {
+        if (chunk.length === 0) return chunk;
+        const allKeys = new Set<string>();
+        chunk.forEach(item => {
+          if (item && typeof item === 'object') {
+            Object.keys(item).forEach(k => allKeys.add(k));
+          }
+        });
+        return chunk.map(item => {
+          const harmonized: any = { ...item };
+          allKeys.forEach(k => {
+            if (!(k in harmonized)) {
+              harmonized[k] = null;
+            }
+          });
+          return harmonized;
+        });
+      };
+
       // 1. Catégories & Marques (Parents)
       if (allCategories.length > 0) {
         for (let i = 0; i < allCategories.length; i += BATCH_SIZE) {
-          const chunk = allCategories.slice(i, i + BATCH_SIZE).map(c => ({ id: c.id, name: c.name, parent_id: c.parentId || null }));
+          const rawChunk = allCategories.slice(i, i + BATCH_SIZE).map(c => ({
+            id: c.id,
+            name: c.name,
+            parent_id: c.parentId || (c as any).parent_id || null,
+            level: (c as any).level !== undefined ? (c as any).level : 1,
+            image_url: (c as any).imageUrl || (c as any).image_url || null,
+          }));
+          const chunk = harmonizeChunkKeys(rawChunk);
           try {
             await supabase.from('categories').upsert(chunk, { onConflict: 'id' });
           } catch (_) {}
@@ -168,7 +199,8 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
 
       if (allBrands.length > 0) {
         for (let i = 0; i < allBrands.length; i += BATCH_SIZE) {
-          const chunk = allBrands.slice(i, i + BATCH_SIZE).map(b => ({ id: b.id, name: b.name }));
+          const rawChunk = allBrands.slice(i, i + BATCH_SIZE).map(b => ({ id: b.id, name: b.name }));
+          const chunk = harmonizeChunkKeys(rawChunk);
           try {
             await supabase.from('brands').upsert(chunk, { onConflict: 'id' });
           } catch (_) {}
@@ -184,7 +216,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       const validProducts = allProducts.filter(p => Boolean(p && p.name && String(p.name).trim().length > 0));
       if (validProducts.length > 0) {
         for (let i = 0; i < validProducts.length; i += BATCH_SIZE) {
-          const chunk = validProducts.slice(i, i + BATCH_SIZE).map(p => {
+          const rawChunk = validProducts.slice(i, i + BATCH_SIZE).map(p => {
             const clean = sanitizeProductForSupabase(p);
             if (!clean.category_id || !validCatIds.has(clean.category_id)) {
               clean.category_id = 'uncategorized';
@@ -195,7 +227,8 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             return clean;
           }).filter(clean => Boolean(clean.name && String(clean.name).trim().length > 0));
 
-          if (chunk.length === 0) continue;
+          if (rawChunk.length === 0) continue;
+          const chunk = harmonizeChunkKeys(rawChunk);
 
           try {
             const { error } = await supabase.from('products').upsert(chunk, { onConflict: 'id' });
@@ -206,7 +239,13 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
               for (const singleProd of chunk) {
                 try {
                   const { error: sErr } = await supabase.from('products').upsert(singleProd, { onConflict: 'id' });
-                  if (!sErr) prodCount++;
+                  if (!sErr) {
+                    prodCount++;
+                  } else if (singleProd.id) {
+                    const { id: _, ...updProd } = singleProd;
+                    const { error: updErr } = await supabase.from('products').update(updProd).eq('id', singleProd.id);
+                    if (!updErr) prodCount++;
+                  }
                 } catch (_) {}
               }
             }
@@ -217,18 +256,12 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       // 3. Clients
       if (allCustomers.length > 0) {
         for (let i = 0; i < allCustomers.length; i += BATCH_SIZE) {
-          const chunk = allCustomers.slice(i, i + BATCH_SIZE).map(c => ({
-            id: c.id,
+          const rawChunk = allCustomers.slice(i, i + BATCH_SIZE).map(c => preparePayload('customers', c.id, {
+            ...c,
             name: c.name || 'Client',
-            phone: c.phone || '',
-            email: c.email || '',
-            notes: c.notes || '',
-            balance: Number(c.balance) || 0,
-            loyalty_points: Number(c.loyaltyPoints ?? (c as any).loyalty_points) || 0,
-            total_spent: Number(c.totalSpent ?? (c as any).total_spent) || 0,
-            last_visit: c.lastVisit || (c as any).last_visit || null,
-            join_date: c.joinDate || (c as any).join_date || new Date().toISOString().split('T')[0]
+            join_date: c.joinDate || c.join_date || new Date().toISOString().split('T')[0]
           }));
+          const chunk = harmonizeChunkKeys(rawChunk);
           try {
             await supabase.from('customers').upsert(chunk, { onConflict: 'id' });
           } catch (_) {}
@@ -253,12 +286,13 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       let txCount = 0;
       if (combinedTransactions.length > 0) {
         for (let i = 0; i < combinedTransactions.length; i += BATCH_SIZE) {
-          const chunk = combinedTransactions.slice(i, i + BATCH_SIZE).map(t => {
+          const rawChunk = combinedTransactions.slice(i, i + BATCH_SIZE).map(t => {
             const p = preparePayload('transactions', t.id, t);
             if (!p.created_at && p.timestamp) p.created_at = p.timestamp;
             if (!p.timestamp && p.created_at) p.timestamp = p.created_at;
             return p;
           });
+          const chunk = harmonizeChunkKeys(rawChunk);
           const { error } = await supabase.from('transactions').upsert(chunk, { onConflict: 'id' });
           if (!error) {
             txCount += chunk.length;
@@ -266,7 +300,13 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             // Fallback un par un
             for (const single of chunk) {
               const { error: sErr } = await supabase.from('transactions').upsert(single, { onConflict: 'id' });
-              if (!sErr) txCount++;
+              if (!sErr) {
+                txCount++;
+              } else if (single.id) {
+                const { id: _, ...updTx } = single;
+                const { error: updErr } = await supabase.from('transactions').update(updTx).eq('id', single.id);
+                if (!updErr) txCount++;
+              }
             }
           }
         }
@@ -287,12 +327,11 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
     }
     toast.loading("Rechargement complet du catalogue depuis Supabase...", { id: 'full-reload-toast' });
     try {
-      localStorage.removeItem('last_sync_timestamp');
-      localStorage.removeItem('nexus_has_cached_products');
-      await idbDel('nexus_products_cache');
-      
       const fullDocs = await fetchProductsFromSupabase();
       if (fullDocs && fullDocs.length > 0) {
+        localStorage.removeItem('last_sync_timestamp');
+        localStorage.removeItem('nexus_has_cached_products');
+        await idbDel('nexus_products_cache');
         useCoreStore.getState().setProducts(fullDocs);
         await idbSet('nexus_products_cache', fullDocs);
         localStorage.setItem('last_sync_timestamp', new Date().toISOString());
@@ -335,6 +374,9 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
       
       useCoreStore.getState().setProducts(validProducts);
       await idbSet('nexus_products_cache', validProducts).catch(() => {});
+      for (const ghostId of ghostIds) {
+        await localDb.deleteLocalOnly(`products/${ghostId}`);
+      }
 
       if (supabase && isSupabaseConfigured) {
         try {
@@ -440,7 +482,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
           <button
             onClick={handlePushLocalToSupabase}
             disabled={isSyncing || !isOnline}
-            className="flex-1 md:flex-none px-4 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-300 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer"
+            className="flex-1 md:flex-none px-4 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-xs font-bold text-emerald-300 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             title="Envoyer l'intégralité des produits locaux vers le cloud Supabase"
           >
             <Cloud size={16} className="text-emerald-400" />
@@ -450,7 +492,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
           <button
             onClick={handleFullProductReload}
             disabled={!isOnline}
-            className="flex-1 md:flex-none px-4 py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer"
+            className="flex-1 md:flex-none px-4 py-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-xs font-bold text-amber-300 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             title="Effacer le cache delta et forcer le téléchargement de TOUS les produits depuis Supabase"
           >
             <Package size={16} className="text-amber-400" />
@@ -470,7 +512,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             onClick={handleForceSync}
             disabled={isSyncing || !isOnline}
             className={cn(
-              "flex-1 md:flex-none px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer active:scale-95",
+              "flex-1 md:flex-none px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
               isSyncing ? "bg-indigo-700 opacity-70" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20"
             )}
           >
@@ -501,9 +543,9 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
           <button
             type="button"
             onClick={async () => {
-              const current = (settings as any)?.silentSyncNotifications !== false;
+              const current = settings?.silentSyncNotifications !== false;
               const nextVal = !current;
-              const updated = { ...settings, silentSyncNotifications: nextVal } as any;
+              const updated: CompanySettings = { ...settings, silentSyncNotifications: nextVal };
               useCoreStore.getState().setSettings(updated);
               const { localDb } = await import('../services/LocalDatabase');
               await localDb.insert('settings/company', updated);
@@ -511,12 +553,12 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
             }}
             className={cn(
               "px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
-              (settings as any)?.silentSyncNotifications !== false
+              settings?.silentSyncNotifications !== false
                 ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
                 : "bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700"
             )}
           >
-            {(settings as any)?.silentSyncNotifications !== false
+            {settings?.silentSyncNotifications !== false
               ? "🔕 Notifications bas-droite : Masquées (Silencieux)"
               : "🔔 Notifications bas-droite : Visibles"}
           </button>
@@ -524,7 +566,7 @@ export const SyncStudio: React.FC<SyncStudioProps> = ({ setActiveTab }) => {
           <button
             type="button"
             onClick={async () => {
-              const updated = { ...settings, hideSyncStudioInSidebar: true } as any;
+              const updated: CompanySettings = { ...settings, hideSyncStudioInSidebar: true };
               useCoreStore.getState().setSettings(updated);
               const { localDb } = await import('../services/LocalDatabase');
               await localDb.insert('settings/company', updated);

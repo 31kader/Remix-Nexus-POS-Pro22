@@ -49,7 +49,7 @@ export function isSafeExternalUrl(rawUrl: string): boolean {
   }
 }
 
-export const logAction = async (userId: string, userName: string, action: string, module: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info') => {
+export const logAction = async (userId: string, userName: string, action: string, module: string, details: string, severity: 'info' | 'warning' | 'critical' = 'info', targetId?: string) => {
   const id = Math.random().toString(36).substring(2, 11);
   const now = new Date().toISOString();
   try {
@@ -61,7 +61,8 @@ export const logAction = async (userId: string, userName: string, action: string
       action,
       module,
       details,
-      severity
+      severity,
+      ...(targetId ? { targetId } : {})
     });
   } catch (error) {
     console.error("Critical failure in logAction:", error);
@@ -365,14 +366,14 @@ export function sanitizeProductForSupabase(data: any): any {
   
   const clean: any = {};
   const ALLOWED = [
-    'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 
+    'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 'video_url',
     'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 
     'stock', 'min_stock', 'category_id', 'brand_id', 'supplier', 'unit', 
     'status', 'description', 'is_bundle', 'bundle_items', 'quantity_discounts', 
     'tags', 'expiration_date', 'batch_number', 'location', 'show_in_pos', 
     'damaged_stock', 'created_at', 'updated_at',
     'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id',
-    'is_quick_select'
+    'is_quick_select', 'price_history'
   ];
   
   for (const col of ALLOWED) {
@@ -408,7 +409,7 @@ export function sanitizeProductForSupabase(data: any): any {
         }
       }
       
-      const jsonColumns = ['bundle_items', 'quantity_discounts', 'batches'];
+      const jsonColumns = ['bundle_items', 'quantity_discounts', 'batches', 'price_history'];
       if (jsonColumns.includes(col)) {
         if (typeof val === 'string') {
           try { val = JSON.parse(val); } catch (_) { val = []; }

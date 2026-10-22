@@ -2,7 +2,7 @@
 <html lang="fr" class="light">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' capacitor: content: https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: capacitor:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data: capacitor:; img-src 'self' data: blob: https: capacitor: content: https://*.supabase.co https://images.unsplash.com; connect-src 'self' capacitor: https: wss: https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data: capacitor:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' capacitor: content: https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: capacitor:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data: capacitor:; img-src 'self' data: blob: https: capacitor: content: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org; connect-src 'self' capacitor: https: wss: https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data: capacitor:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -50,9 +50,27 @@
       <button onclick="location.reload()" style="padding:10px; margin-top:20px; background:#4f46e5; color:white; border:none; border-radius:8px; cursor:pointer;">Recharger la caisse</button>
     </div>
     <script>
+      // Polyfill défensif pour window.prompt (non supporté dans Electron et Android Capacitor)
+      try {
+        if (typeof window !== 'undefined') {
+          var _origPrompt = window.prompt;
+          window.prompt = function(msg, defVal) {
+            try {
+              if (typeof _origPrompt === 'function') {
+                return _origPrompt.call(window, msg, defVal);
+              }
+            } catch (err) {
+              console.warn('[Nexus Polyfill] window.prompt non supporté dans cet environnement (Electron/Capacitor):', err);
+            }
+            return null;
+          };
+        }
+      } catch (e) {}
+
       window.onerror = function(msg, url, line, col, error) {
         var str = String(msg).toLowerCase();
         if (
+          str.indexOf('prompt() is not supported') > -1 ||
           str.indexOf('failed to fetch') > -1 || 
           str.indexOf('load failed') > -1 || 
           str.indexOf('networkerror') > -1 || 
@@ -82,6 +100,7 @@
         var reason = event.reason && (event.reason.message || String(event.reason)) || '';
         var reasonStr = String(reason).toLowerCase();
         if (
+          reasonStr.indexOf('prompt() is not supported') > -1 ||
           reasonStr.indexOf('websocket') > -1 || 
           reasonStr.indexOf('failed to fetch') > -1 || 
           reasonStr.indexOf('load failed') > -1 || 

@@ -5,10 +5,11 @@ import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel,
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
 import { fetchTableFromSupabase } from './supabaseFetchHelper';
-import { setLocalState, saveStateToStorage, replaceTableState, removeLocalState } from '../../lib/local-db';
+import { setLocalState, saveStateToStorage, replaceTableState, removeLocalState, dbState } from '../../lib/local-db';
 import { getDeletedRecordIds, markRecordDeleted } from '../../services/LocalDatabase';
 import { getTerminalId } from '../../services/terminalService';
 import { withNetworkTimeout } from '../../services/networkErrorHandler';
+import { getSyncQueue } from '../../services/SyncService';
 
 interface useFastChangingDataParams {
   loading: boolean;
@@ -59,6 +60,7 @@ export function useFastChangingData({
           if (cachedShifts && cachedShifts.length > 0) {
             setShifts(cachedShifts);
             setActiveShift(findActiveShiftForTerminal(cachedShifts));
+            replaceTableState('cash_shifts', cachedShifts);
           }
         }
       } catch (err) {
@@ -130,20 +132,55 @@ export function useFastChangingData({
               }
               return convertKeysToCamel(item) as OnlineOrder;
             });
-          setOnlineOrders(onlineData);
-          idbSet('nexus_online_orders_cache', onlineData).catch(err => console.warn('[IDB Error]', err));
-          
-          // 🛡️ Réconciliation stricte : purger de la base locale interne toute commande absente de Supabase
-          replaceTableState('online_orders', onlineData);
+
+          // 🛡️ VULN-03 : Réconciliation avec les commandes locales en attente dans la file de sync
+          const pendingOrdersQueue = getSyncQueue().filter(q => q && (q.table === 'online_orders' || q.table === 'onlineOrders'));
+          const pendingOrderIds = new Set(pendingOrdersQueue.map(q => String(q.recordId || (q.payload && q.payload.id))));
+          const mergedOrders = [...onlineData];
+
+          const localOrdersObj = dbState?.online_orders || {};
+          Object.values(localOrdersObj).forEach((localOrd: any) => {
+            if (localOrd && localOrd.id && pendingOrderIds.has(String(localOrd.id))) {
+              const existingIdx = mergedOrders.findIndex(o => String(o.id) === String(localOrd.id));
+              if (existingIdx >= 0) {
+                mergedOrders[existingIdx] = { ...mergedOrders[existingIdx], ...localOrd };
+              } else {
+                mergedOrders.push(localOrd);
+              }
+            }
+          });
+
+          setOnlineOrders(mergedOrders);
+          idbSet('nexus_online_orders_cache', mergedOrders).catch(err => console.warn('[IDB Error]', err));
+          replaceTableState('online_orders', mergedOrders);
         }
         
         const shiftsDataRaw = (shiftsRes as any)?.data;
         if (Array.isArray(shiftsDataRaw)) {
           const shiftsData = shiftsDataRaw.map((item: any) => convertKeysToCamel(item) as CashShift);
-          shiftsData.sort((a: any, b: any) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
-          setShifts(shiftsData);
-          setActiveShift(findActiveShiftForTerminal(shiftsData));
-          idbSet('nexus_cash_shifts_cache', shiftsData).catch(err => console.warn('[IDB Error]', err));
+
+          // 🛡️ VULN-03 : Réconciliation avec les shifts locaux en attente dans la file de sync
+          const pendingShiftsQueue = getSyncQueue().filter(q => q && (q.table === 'cash_shifts' || q.table === 'shifts' || q.table === 'cashShifts'));
+          const pendingShiftIds = new Set(pendingShiftsQueue.map(q => String(q.recordId || (q.payload && q.payload.id))));
+          const mergedShifts = [...shiftsData];
+
+          const localShiftsObj = dbState?.cash_shifts || {};
+          Object.values(localShiftsObj).forEach((localShift: any) => {
+            if (localShift && localShift.id && pendingShiftIds.has(String(localShift.id))) {
+              const existingIdx = mergedShifts.findIndex(s => String(s.id) === String(localShift.id));
+              if (existingIdx >= 0) {
+                mergedShifts[existingIdx] = { ...mergedShifts[existingIdx], ...localShift };
+              } else {
+                mergedShifts.push(localShift);
+              }
+            }
+          });
+
+          mergedShifts.sort((a: any, b: any) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
+          setShifts(mergedShifts);
+          setActiveShift(findActiveShiftForTerminal(mergedShifts));
+          replaceTableState('cash_shifts', mergedShifts);
+          idbSet('nexus_cash_shifts_cache', mergedShifts).catch(err => console.warn('[IDB Error]', err));
         }
         
         const settData = (settingsRes as any)?.data;
@@ -216,9 +253,11 @@ export function useFastChangingData({
     // Shifts
     subscribe('shifts', (data) => {
       const docs = data as CashShift[];
-      docs.sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
-      setShifts(docs);
-      setActiveShift(findActiveShiftForTerminal(docs));
+      if (Array.isArray(docs) && docs.length > 0) {
+        docs.sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
+        setShifts(docs);
+        setActiveShift(findActiveShiftForTerminal(docs));
+      }
     });
 
     // Realtime Supabase pour settings, online_orders et cash_shifts

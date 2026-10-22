@@ -75,12 +75,12 @@ export function isTabAllowed(
 ): boolean {
   const { isAdmin = false, isOwner = false, isManager = false, isCameraAgent = false } = options || {};
 
-  // L'owner ou l'administrateur a accès universel
-  if (isOwner || isAdmin) return true;
+  // 🛡️ Seul l'owner authentifié (vérifié par checkIsOwner contre .env) a un court-circuit universel immédiat
+  if (isOwner) return true;
 
   // Cas spécifique : module Caméra
   if (tab === 'camera') {
-    return isCameraAgent || isAdmin || isManager;
+    return isCameraAgent || isManager || (isAdmin && (canAccess ? canAccess('canAccessInventory') : false));
   }
 
   const requiredPermission = TAB_PERMISSION_MAP[tab];
@@ -92,10 +92,10 @@ export function isTabAllowed(
 
   // Onglet réservé exclusivement à l'administrateur
   if (requiredPermission === 'admin_only') {
-    return isOwner || isAdmin;
+    return isOwner || (isAdmin && (canAccess ? canAccess('canAccessSettings') : false));
   }
 
-  // Vérifier la permission accordée au rôle
+  // Vérifier la permission accordée au rôle via canAccess
   if (!canAccess) return false;
   return canAccess(requiredPermission);
 }

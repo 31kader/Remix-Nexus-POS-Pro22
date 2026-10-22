@@ -212,7 +212,7 @@ export function InventoryModalsGroup(props: any) {
                 </div>
                 <Button onClick={() => { 
                   setIsSalesHistoryModalOpen(false);
-                  setActiveTab('pos');
+                  setActiveTab('checkout');
                 }}>Voir</Button>
               </div>
             ))}

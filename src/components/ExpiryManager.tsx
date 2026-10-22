@@ -1,6 +1,6 @@
 import React from 'react';
 import { Product, Category } from '../types';
-import { useExpiryManagerLogic } from './useExpiryManagerLogic';
+import { useExpiryManagerLogic } from '../hooks/useExpiryManagerLogic';
 import { ExpiryStats } from './expiry/ExpiryStats';
 import { ExpiryControls } from './expiry/ExpiryControls';
 import { ExpiryListView } from './expiry/ExpiryListView';

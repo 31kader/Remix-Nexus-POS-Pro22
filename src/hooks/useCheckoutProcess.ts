@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { enqueueStockAdjustment } from '../services/SyncService';
+import { enqueueStockAdjustment, enqueueSync } from '../services/SyncService';
 import { localDb } from '../services/LocalDatabase';
 import { logAction, generateUniqueId } from '../lib/utils';
-import { CartItem, Product, Customer, CompanySettings, Promotion, Transaction } from '../types';
+import { CartItem, Product, Customer, CompanySettings, Promotion, Transaction, normalizeBatches } from '../types';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { usePeopleStore } from '../store/usePeopleStore';
+import { useCoreStore } from '../store/useCoreStore';
 import { set as idbSet } from 'idb-keyval';
 import { getTerminalId, getTerminalName } from '../services/terminalService';
 import { triggerCashDrawer } from '../services/hardwareService';
@@ -78,19 +79,9 @@ export function useCheckoutProcess({
     const safeCart = Array.isArray(cart) ? cart : [];
     if (safeCart.length === 0) return;
     
-    if (method === 'balance') {
-      if (!selectedCustomer) {
-        toast.error("Veuillez sélectionner un client pour payer par solde / dette.");
-        return;
-      }
-      const currentBalance = Number(selectedCustomer.balance) || 0;
-      const creditLimit = Number(selectedCustomer.creditLimit) || 0;
-      // Si une limite de crédit est fixée (> 0), vérifier que le nouveau solde ne descend pas sous -creditLimit
-      if (creditLimit > 0 && (currentBalance - total) < -creditLimit) {
-        const currencySymbol = settings?.currency || 'DA';
-        toast.error(`Plafond de dette dépassé. Limite autorisée : ${creditLimit.toFixed(2)} ${currencySymbol}`);
-        return;
-      }
+    if (method === 'balance' && !selectedCustomer) {
+      toast.error("Veuillez sélectionner un client pour payer par solde / dette.");
+      return;
     }
 
     setIsProcessing(true);
@@ -100,7 +91,7 @@ export function useCheckoutProcess({
       
       const sanitizedCart = safeCart.map((item: CartItem) => {
         if (!item) return {} as CartItem;
-        const { imageUrl, imageUrls, description, bundleItems, ...rest } = item;
+        const { imageUrl, imageUrls, description, ...rest } = item;
         return rest;
       }) as CartItem[];
 
@@ -114,10 +105,25 @@ export function useCheckoutProcess({
         ? Math.max(0, total - (receivedAmount !== '' ? Math.max(0, parsedReceived) : 0))
         : ((receivedAmount !== '' && parsedReceived < total && total > 0) ? Math.max(0, total - Math.max(0, parsedReceived)) : 0);
 
-      if (unpaidShortfall > 0 && !selectedCustomer) {
-        toast.error("Montant reçu insuffisant. Veuillez sélectionner un client pour enregistrer le reste en dette.");
-        setIsProcessing(false);
-        return;
+      if (unpaidShortfall > 0) {
+        if (!selectedCustomer) {
+          toast.error("Montant reçu insuffisant. Veuillez sélectionner un client pour enregistrer le reste en dette.");
+          setIsProcessing(false);
+          return;
+        }
+        const currentBalance = Number(selectedCustomer.balance) || 0;
+        const creditLimit = Number(selectedCustomer.creditLimit) || 0;
+        if (creditLimit > 0) {
+          const isSameCustomerEditing = isEditing && editingTransaction?.customerId === selectedCustomer.id;
+          const oldBalanceUsed = isSameCustomerEditing ? Number(editingTransaction!.balanceUsed || (editingTransaction!.paymentMethod === 'balance' ? editingTransaction!.total : 0)) : 0;
+          const projectedBalance = currentBalance + oldBalanceUsed - unpaidShortfall;
+          if (projectedBalance < -creditLimit) {
+            const currencySymbol = settings?.currency || 'DA';
+            toast.error(`Plafond de dette dépassé. Limite autorisée : ${creditLimit.toFixed(2)} ${currencySymbol} (Dette résultante: ${Math.abs(projectedBalance).toFixed(2)} ${currencySymbol})`);
+            setIsProcessing(false);
+            return;
+          }
+        }
       }
 
       const parsedReturned = (receivedAmount !== '' && parsedReceived > total && !keepExcessInBalance) ? parsedReceived - total : 0;
@@ -181,7 +187,7 @@ export function useCheckoutProcess({
       const actionMsg = isEditing 
         ? `Mise à jour ticket #${transactionId.slice(-6).toUpperCase()} (Total: ${total.toFixed(2)} ${currencySymbol}, Original: ${Number(editingTransaction!.total || 0).toFixed(2)} ${currencySymbol})`
         : `Vente de ${total.toFixed(2)} ${currencySymbol} via ${method}`;
-      logAction(currentUserId, currentUserDisplayName, actionLabel, 'POS', actionMsg);
+      logAction(currentUserId, currentUserDisplayName, actionLabel, 'POS', actionMsg, 'info', transactionId);
       
       // SÉCURITÉ : Protection de la liste globale des produits
       const tempProducts = [...(products || [])];
@@ -236,6 +242,49 @@ export function useCheckoutProcess({
         }
 
         const allItemIds = new Set([...oldQtyMap.keys(), ...newQtyMap.keys()]);
+        // 🛡️ VULN-06 : Consolidation préalable des composants de bundle pour l'édition de vente
+        const consolidatedBundleDeltas = new Map<string, number>();
+        for (const itemId of allItemIds) {
+          const oldInfo = oldQtyMap.get(itemId);
+          const newInfo = newQtyMap.get(itemId);
+          const oldQty = oldInfo ? oldInfo.qty : 0;
+          const newQty = newInfo ? newInfo.qty : 0;
+          const delta = newQty - oldQty;
+          if (delta === 0) continue;
+          const isBundle = (newInfo && newInfo.isBundle) || (oldInfo && oldInfo.isBundle);
+          const bundleItems = (newInfo && newInfo.bundleItems) || (oldInfo && oldInfo.bundleItems);
+          if (isBundle && bundleItems) {
+            const safeBundleItems = Array.isArray(bundleItems) ? bundleItems : [];
+            for (const bundleItem of safeBundleItems) {
+              if (!bundleItem || !bundleItem.productId) continue;
+              const compDelta = bundleItem.quantity * delta;
+              consolidatedBundleDeltas.set(
+                bundleItem.productId,
+                (consolidatedBundleDeltas.get(bundleItem.productId) || 0) + compDelta
+              );
+            }
+          }
+        }
+
+        for (const [compProdId, totalCompDelta] of consolidatedBundleDeltas.entries()) {
+          if (totalCompDelta === 0) continue;
+          const comp = getProductFromTemp(compProdId);
+          if (comp) {
+            const newCompStock = comp.stock - totalCompDelta;
+            enqueueStockAdjustment(comp.id, -totalCompDelta);
+            updateTempProductStock(comp.id, newCompStock);
+
+            localDb.updateLocalOnly(`products/${comp.id}`, {
+              stock: newCompStock,
+              updatedAt: new Date().toISOString()
+            });
+
+            window.dispatchEvent(new CustomEvent('product-cache-update', {
+              detail: getProductFromTemp(comp.id)
+            }));
+          }
+        }
+
         for (const itemId of allItemIds) {
           const oldInfo = oldQtyMap.get(itemId);
           const newInfo = newQtyMap.get(itemId);
@@ -249,92 +298,14 @@ export function useCheckoutProcess({
           const bundleItems = (newInfo && newInfo.bundleItems) || (oldInfo && oldInfo.bundleItems);
 
           if (isBundle && bundleItems) {
-            const safeBundleItems = Array.isArray(bundleItems) ? bundleItems : [];
-            for (const bundleItem of safeBundleItems) {
-              if (!bundleItem) continue;
-              const comp = getProductFromTemp(bundleItem.productId);
-              if (comp) {
-                const compDelta = bundleItem.quantity * delta;
-                const newCompStock = comp.stock - compDelta;
-                enqueueStockAdjustment(comp.id, -compDelta);
-                updateTempProductStock(comp.id, newCompStock);
-
-                localDb.updateLocalOnly(`products/${comp.id}`, {
-                  stock: newCompStock,
-                  updatedAt: new Date().toISOString()
-                });
-
-                window.dispatchEvent(new CustomEvent('product-cache-update', {
-                  detail: getProductFromTemp(comp.id)
-                }));
-              }
-            }
+            continue; // Déjà traité de façon consolidée ci-dessus
           } else {
             const product = getProductFromTemp(itemId);
             if (product) {
+              let updatedBatches = normalizeBatches(product.batches).map(b => ({ ...b }));
               const newStock = product.stock - delta;
-              enqueueStockAdjustment(itemId, -delta);
-              updateTempProductStock(itemId, newStock, product.batches);
 
-              localDb.updateLocalOnly(`products/${itemId}`, {
-                stock: newStock,
-                updatedAt: new Date().toISOString()
-              });
-
-              window.dispatchEvent(new CustomEvent('product-cache-update', {
-                detail: getProductFromTemp(itemId)
-              }));
-            }
-          }
-        }
-      } else {
-        // Parcours sécurisé du panier pour les stocks (Nouvelle Vente)
-        for (const item of safeCart) {
-          if (!item || !item.id || item.id === 'undefined') continue;
-
-          if (item.isBundle && item.bundleItems) {
-            const safeBundleItems = Array.isArray(item.bundleItems) ? item.bundleItems : [];
-            for (const bundleItem of safeBundleItems) {
-              if (!bundleItem) continue;
-              const comp = getProductFromTemp(bundleItem.productId);
-              if (comp) {
-                const qtyDeducted = bundleItem.quantity * item.quantity;
-                const newCompStock = comp.stock - qtyDeducted;
-                enqueueStockAdjustment(comp.id, -qtyDeducted);
-                updateTempProductStock(comp.id, newCompStock);
-                
-                localDb.updateLocalOnly(`products/${comp.id}`, {
-                  stock: newCompStock,
-                  updatedAt: new Date().toISOString()
-                });
-                
-                window.dispatchEvent(new CustomEvent('product-cache-update', {
-                  detail: getProductFromTemp(comp.id)
-                }));
-              }
-            }
-          } else {
-            const product = getProductFromTemp(item.id);
-            if (product) {
-              let updatedBatches = product.batches ? product.batches.map(b => ({ ...b })) : [];
-              if (product.useMultiExpiry && updatedBatches.length > 0) {
-                let rem = item.quantity;
-                updatedBatches.sort((a, b) => new Date(a.expirationDate || 0).getTime() - new Date(b.expirationDate || 0).getTime());
-                for (let b of updatedBatches) {
-                  if (rem <= 0) break;
-                  if (b && b.stock > 0) {
-                    const deduct = Math.min(b.stock, rem);
-                    b.stock -= deduct;
-                    rem -= deduct;
-                  }
-                }
-                if (rem > 0 && updatedBatches[updatedBatches.length - 1]) {
-                  updatedBatches[updatedBatches.length - 1].stock -= rem;
-                }
-              }
-
-              const newStock = product.stock - item.quantity;
-              if (newStock < 0 && product.autoUnpack && product.parentId && product.unitsPerParent) {
+              if (delta > 0 && newStock < 0 && product.autoUnpack && product.parentId && product.unitsPerParent && product.unitsPerParent > 0) {
                 const parent = getProductFromTemp(product.parentId);
                 if (parent) {
                   const parentsNeeded = Math.ceil(-newStock / product.unitsPerParent);
@@ -351,27 +322,233 @@ export function useCheckoutProcess({
                     detail: getProductFromTemp(parent.id)
                   }));
                   
-                  const adjustedQty = -item.quantity + (parentsNeeded * product.unitsPerParent);
-                  const finalStock = product.stock + adjustedQty;
-                  enqueueStockAdjustment(item.id, adjustedQty);
-                  updateTempProductStock(item.id, finalStock, product.useMultiExpiry ? updatedBatches : product.batches);
+                  const unpackedUnits = parentsNeeded * product.unitsPerParent;
+                  const finalStock = product.stock + unpackedUnits - delta;
+                  const adjustedQty = -delta + unpackedUnits;
+                  enqueueStockAdjustment(itemId, adjustedQty);
+
+                  if (product.useMultiExpiry) {
+                    const parentBatches = normalizeBatches(parent.batches);
+                    const sourceExpiry = parentBatches[0]?.expirationDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+                    updatedBatches.push({
+                      id: generateUniqueId(),
+                      batchNumber: `UNPACK-${Date.now().toString(36).toUpperCase()}`,
+                      stock: unpackedUnits,
+                      expirationDate: sourceExpiry
+                    });
+
+                    let rem = delta;
+                    updatedBatches.sort((a, b) => new Date(a.expirationDate || 0).getTime() - new Date(b.expirationDate || 0).getTime());
+                    for (let b of updatedBatches) {
+                      if (rem <= 0) break;
+                      if (b && b.stock > 0) {
+                        const deduct = Math.min(b.stock, rem);
+                        b.stock -= deduct;
+                        rem -= deduct;
+                      }
+                    }
+                    if (rem > 0 && updatedBatches[updatedBatches.length - 1]) {
+                      updatedBatches[updatedBatches.length - 1].stock -= rem;
+                    }
+
+                    // 🛡️ VULN-04 : Pas de stock absolu pour éviter double déstockage avec enqueueStockAdjustment
+                    enqueueSync('products', itemId, 'UPSERT', {
+                      id: itemId,
+                      batches: updatedBatches,
+                      updatedAt: new Date().toISOString()
+                    });
+                  }
+
+                  updateTempProductStock(itemId, finalStock, product.useMultiExpiry ? updatedBatches : product.batches);
                   
-                  localDb.updateLocalOnly(`products/${item.id}`, {
+                  localDb.updateLocalOnly(`products/${itemId}`, {
                     stock: finalStock,
                     updatedAt: new Date().toISOString(),
                     batches: product.useMultiExpiry ? updatedBatches : product.batches
                   });
                   
                   window.dispatchEvent(new CustomEvent('product-cache-update', {
-                    detail: getProductFromTemp(item.id)
+                    detail: getProductFromTemp(itemId)
                   }));
                 }
               } else {
-                enqueueStockAdjustment(item.id, -item.quantity);
-                updateTempProductStock(item.id, newStock, product.useMultiExpiry ? updatedBatches : product.batches);
+                if (product.useMultiExpiry && updatedBatches.length > 0) {
+                  if (delta > 0) {
+                    let rem = delta;
+                    updatedBatches.sort((a, b) => new Date(a.expirationDate || 0).getTime() - new Date(b.expirationDate || 0).getTime());
+                    for (let b of updatedBatches) {
+                      if (rem <= 0) break;
+                      if (b && b.stock > 0) {
+                        const deduct = Math.min(b.stock, rem);
+                        b.stock -= deduct;
+                        rem -= deduct;
+                      }
+                    }
+                    if (rem > 0 && updatedBatches[updatedBatches.length - 1]) {
+                      updatedBatches[updatedBatches.length - 1].stock -= rem;
+                    }
+                  } else if (delta < 0) {
+                    const restoreQty = -delta;
+                    if (updatedBatches.length > 0) {
+                      updatedBatches[updatedBatches.length - 1].stock += restoreQty;
+                    } else {
+                      updatedBatches.push({
+                        id: generateUniqueId(),
+                        batchNumber: `RESTORE-${Date.now().toString(36).toUpperCase()}`,
+                        stock: restoreQty,
+                        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                      });
+                    }
+                  }
+
+                  // 🛡️ VULN-04 : Pas de stock absolu pour éviter double déstockage avec enqueueStockAdjustment
+                  enqueueSync('products', itemId, 'UPSERT', {
+                    id: itemId,
+                    batches: updatedBatches,
+                    updatedAt: new Date().toISOString()
+                  });
+                }
+
+                enqueueStockAdjustment(itemId, -delta);
+                updateTempProductStock(itemId, newStock, product.useMultiExpiry ? updatedBatches : product.batches);
+
+                localDb.updateLocalOnly(`products/${itemId}`, {
+                  stock: newStock,
+                  updatedAt: new Date().toISOString(),
+                  batches: product.useMultiExpiry ? updatedBatches : product.batches
+                });
+
+                window.dispatchEvent(new CustomEvent('product-cache-update', {
+                  detail: getProductFromTemp(itemId)
+                }));
+              }
+            }
+          }
+        }
+      } else {
+        // Parcours sécurisé du panier pour les stocks (Nouvelle Vente)
+        // 🛡️ CONSOLIDATION PRÉALABLE DU PANIER :
+        // Si le panier contient plusieurs lignes pour le même article (ex: 10 + 1 + 2),
+        // on consolide d'abord les quantités pour émettre un ajustement unique et éviter toute perte de delta.
+        const consolidatedMap = new Map<string, {
+          item: CartItem;
+          totalQuantity: number;
+        }>();
+
+        for (const item of safeCart) {
+          if (!item || !item.id || item.id === 'undefined') continue;
+          const existing = consolidatedMap.get(item.id);
+          const q = Number(item.quantity) || 1;
+          if (existing) {
+            existing.totalQuantity += q;
+          } else {
+            consolidatedMap.set(item.id, {
+              item,
+              totalQuantity: q
+            });
+          }
+        }
+
+        // 🛡️ VULN-06 : Consolidation préalable des composants de bundle pour nouvelle vente
+        const consolidatedBundleQuantities = new Map<string, number>();
+        for (const { item, totalQuantity } of consolidatedMap.values()) {
+          if (item.isBundle && item.bundleItems) {
+            const safeBundleItems = Array.isArray(item.bundleItems) ? item.bundleItems : [];
+            for (const bundleItem of safeBundleItems) {
+              if (!bundleItem || !bundleItem.productId) continue;
+              const qtyDeducted = (Number(bundleItem.quantity) || 1) * totalQuantity;
+              consolidatedBundleQuantities.set(
+                bundleItem.productId,
+                (consolidatedBundleQuantities.get(bundleItem.productId) || 0) + qtyDeducted
+              );
+            }
+          }
+        }
+
+        for (const [compProdId, totalCompQty] of consolidatedBundleQuantities.entries()) {
+          if (totalCompQty <= 0) continue;
+          const comp = getProductFromTemp(compProdId);
+          if (comp) {
+            const newCompStock = comp.stock - totalCompQty;
+            enqueueStockAdjustment(comp.id, -totalCompQty);
+            updateTempProductStock(comp.id, newCompStock);
+
+            localDb.updateLocalOnly(`products/${comp.id}`, {
+              stock: newCompStock,
+              updatedAt: new Date().toISOString()
+            });
+
+            window.dispatchEvent(new CustomEvent('product-cache-update', {
+              detail: getProductFromTemp(comp.id)
+            }));
+          }
+        }
+
+        for (const { item, totalQuantity } of consolidatedMap.values()) {
+          if (item.isBundle) continue;
+          const product = getProductFromTemp(item.id);
+          if (product) {
+            let updatedBatches = normalizeBatches(product.batches).map(b => ({ ...b }));
+            const newStock = product.stock - totalQuantity;
+
+            if (newStock < 0 && product.autoUnpack && product.parentId && product.unitsPerParent && product.unitsPerParent > 0) {
+              const parent = getProductFromTemp(product.parentId);
+              if (parent) {
+                const parentsNeeded = Math.ceil(-newStock / product.unitsPerParent);
+                const newParentStock = parent.stock - parentsNeeded;
+                enqueueStockAdjustment(parent.id, -parentsNeeded);
+                updateTempProductStock(parent.id, newParentStock);
+                
+                localDb.updateLocalOnly(`products/${parent.id}`, {
+                  stock: newParentStock,
+                  updatedAt: new Date().toISOString()
+                });
+                
+                window.dispatchEvent(new CustomEvent('product-cache-update', {
+                  detail: getProductFromTemp(parent.id)
+                }));
+                
+                const unpackedUnits = parentsNeeded * product.unitsPerParent;
+                const finalStock = product.stock + unpackedUnits - totalQuantity;
+                const adjustedQty = -totalQuantity + unpackedUnits;
+                enqueueStockAdjustment(item.id, adjustedQty);
+
+                if (product.useMultiExpiry) {
+                  const parentBatches = normalizeBatches(parent.batches);
+                  const sourceExpiry = parentBatches[0]?.expirationDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+                  updatedBatches.push({
+                    id: generateUniqueId(),
+                    batchNumber: `UNPACK-${Date.now().toString(36).toUpperCase()}`,
+                    stock: unpackedUnits,
+                    expirationDate: sourceExpiry
+                  });
+
+                  let rem = totalQuantity;
+                  updatedBatches.sort((a, b) => new Date(a.expirationDate || 0).getTime() - new Date(b.expirationDate || 0).getTime());
+                  for (let b of updatedBatches) {
+                    if (rem <= 0) break;
+                    if (b && b.stock > 0) {
+                      const deduct = Math.min(b.stock, rem);
+                      b.stock -= deduct;
+                      rem -= deduct;
+                    }
+                  }
+                  if (rem > 0 && updatedBatches[updatedBatches.length - 1]) {
+                    updatedBatches[updatedBatches.length - 1].stock -= rem;
+                  }
+
+                  // 🛡️ VULN-04 : Pas de stock absolu pour éviter double déstockage avec enqueueStockAdjustment
+                  enqueueSync('products', item.id, 'UPSERT', {
+                    id: item.id,
+                    batches: updatedBatches,
+                    updatedAt: new Date().toISOString()
+                  });
+                }
+
+                updateTempProductStock(item.id, finalStock, product.useMultiExpiry ? updatedBatches : product.batches);
                 
                 localDb.updateLocalOnly(`products/${item.id}`, {
-                  stock: newStock,
+                  stock: finalStock,
                   updatedAt: new Date().toISOString(),
                   batches: product.useMultiExpiry ? updatedBatches : product.batches
                 });
@@ -380,29 +557,112 @@ export function useCheckoutProcess({
                   detail: getProductFromTemp(item.id)
                 }));
               }
+            } else {
+              if (product.useMultiExpiry && updatedBatches.length > 0) {
+                let rem = totalQuantity;
+                updatedBatches.sort((a, b) => new Date(a.expirationDate || 0).getTime() - new Date(b.expirationDate || 0).getTime());
+                for (let b of updatedBatches) {
+                  if (rem <= 0) break;
+                  if (b && b.stock > 0) {
+                    const deduct = Math.min(b.stock, rem);
+                    b.stock -= deduct;
+                    rem -= deduct;
+                  }
+                }
+                if (rem > 0 && updatedBatches[updatedBatches.length - 1]) {
+                  updatedBatches[updatedBatches.length - 1].stock -= rem;
+                }
+
+                // 🛡️ VULN-04 : Pas de stock absolu pour éviter double déstockage avec enqueueStockAdjustment
+                enqueueSync('products', item.id, 'UPSERT', {
+                  id: item.id,
+                  batches: updatedBatches,
+                  updatedAt: new Date().toISOString()
+                });
+              }
+
+              enqueueStockAdjustment(item.id, -totalQuantity);
+              updateTempProductStock(item.id, newStock, product.useMultiExpiry ? updatedBatches : product.batches);
+              
+              localDb.updateLocalOnly(`products/${item.id}`, {
+                stock: newStock,
+                updatedAt: new Date().toISOString(),
+                batches: product.useMultiExpiry ? updatedBatches : product.batches
+              });
+              
+              window.dispatchEvent(new CustomEvent('product-cache-update', {
+                detail: getProductFromTemp(item.id)
+              }));
             }
           }
         }
       }
 
-      // Customer Updates : Différentiel si modification de vente
+      // Synchronisation immédiate du store Zustand et du cache IDB des produits
+      useCoreStore.getState().setProducts(tempProducts);
+      if (typeof indexedDB !== 'undefined') {
+        idbSet('nexus_products_cache', tempProducts).catch(() => {});
+      }
+
+      // Customer Updates : Gestion robuste du client (avec rollback en cas de changement de client lors d'une édition)
+      const pointVal = settings?.loyaltyPointValue || 0.01;
+
+      if (isEditing && editingTransaction?.customerId && editingTransaction.customerId !== selectedCustomer?.id) {
+        // Rollback de l'ancien client
+        const oldCustId = editingTransaction.customerId;
+        const oldTotal = Number(editingTransaction.total || 0);
+        const oldPointsEarned = Number(editingTransaction.pointsEarned || 0);
+        const oldPointsSpent = editingTransaction.pointsDiscount ? Math.floor(editingTransaction.pointsDiscount / pointVal) : 0;
+        const oldBalanceUsed = Number(editingTransaction.balanceUsed || (editingTransaction.paymentMethod === 'balance' ? oldTotal : 0));
+        const oldReceived = Number(editingTransaction.amountReceived || 0);
+        const oldReturned = Number(editingTransaction.amountReturned || 0);
+        const oldExcess = ((editingTransaction as any).keepExcessInBalance || (oldReceived > oldTotal && oldReturned === 0))
+          ? Math.max(0, oldReceived - oldTotal - oldReturned)
+          : 0;
+
+        const rollbackDeltaBalance = oldBalanceUsed - oldExcess;
+        const rollbackDeltaSpent = -oldTotal;
+        const rollbackDeltaPoints = -(oldPointsEarned - oldPointsSpent);
+
+        const oldCust = (usePeopleStore.getState().customers || []).find(c => c.id === oldCustId);
+        if (oldCust) {
+          const updatedOldCust = {
+            ...oldCust,
+            balance: (oldCust.balance || 0) + rollbackDeltaBalance,
+            totalSpent: Math.max(0, (oldCust.totalSpent || 0) + rollbackDeltaSpent),
+            loyaltyPoints: Math.max(0, (oldCust.loyaltyPoints || 0) + rollbackDeltaPoints),
+            deltaBalance: rollbackDeltaBalance,
+            deltaSpent: rollbackDeltaSpent,
+            deltaPoints: rollbackDeltaPoints
+          };
+          localDb.update(`customers/${oldCustId}`, updatedOldCust);
+          usePeopleStore.getState().setCustomers(prev =>
+            (prev || []).map(c => c.id === oldCustId ? { ...c, ...updatedOldCust } : c)
+          );
+        }
+      }
+
       if (selectedCustomer) {
-        const pointVal = settings?.loyaltyPointValue || 0.01;
         const pointsSpent = useLoyaltyPoints ? Math.floor((pointsDiscount || 0) / pointVal) : 0;
         let deltaBalance = 0;
         let deltaSpent = 0;
         let deltaPoints = 0;
 
-        if (isEditing) {
+        if (isEditing && editingTransaction?.customerId === selectedCustomer.id) {
           const oldTotal = Number(editingTransaction!.total || 0);
           const oldPointsEarned = Number(editingTransaction!.pointsEarned || 0);
           const oldPointsSpent = editingTransaction!.pointsDiscount ? Math.floor(editingTransaction!.pointsDiscount / pointVal) : 0;
           const oldBalanceUsed = Number(editingTransaction!.balanceUsed || (editingTransaction!.paymentMethod === 'balance' ? oldTotal : 0));
+          const oldReceived = Number(editingTransaction!.amountReceived || 0);
+          const oldReturned = Number(editingTransaction!.amountReturned || 0);
+          const oldExcess = ((editingTransaction as any).keepExcessInBalance || (oldReceived > oldTotal && oldReturned === 0))
+            ? Math.max(0, oldReceived - oldTotal - oldReturned)
+            : 0;
           const newBalanceUsed = unpaidShortfall;
 
           deltaSpent = total - oldTotal;
           deltaPoints = (pointsEarned - pointsSpent) - (oldPointsEarned - oldPointsSpent);
-          deltaBalance = (oldBalanceUsed - newBalanceUsed);
+          deltaBalance = (oldBalanceUsed - newBalanceUsed) - oldExcess;
           if (keepExcessInBalance && parsedReceived > total) deltaBalance += (parsedReceived - total);
         } else {
           if (unpaidShortfall > 0) deltaBalance -= unpaidShortfall;
@@ -432,17 +692,26 @@ export function useCheckoutProcess({
         );
       }
 
-      // Voucher Updates
-      if (appliedVoucher) {
-        if (appliedVoucher.type === 'fixed') {
-          const balanceKey = appliedVoucher.currentBalance ?? appliedVoucher.value;
-          const rem = Math.max(0, balanceKey - (voucherDiscount || 0));
-          const payload = rem <= 0 ? { status: 'used', currentBalance: 0 } : { currentBalance: rem };
-          localDb.update(`vouchers/${appliedVoucher.id}`, payload).catch(console.warn);
+      // Voucher / Promotion Updates : cibler uniquement la table correspondante
+      if (appliedVoucher && appliedVoucher.id) {
+        const payload = appliedVoucher.type === 'fixed'
+          ? (() => {
+              const balanceKey = appliedVoucher.currentBalance ?? appliedVoucher.value;
+              const rem = Math.max(0, balanceKey - (voucherDiscount || 0));
+              return rem <= 0 ? { status: 'used' as const, currentBalance: 0 } : { currentBalance: rem };
+            })()
+          : { status: 'used' as const };
+
+        const currentPromotions = useCoreStore.getState().promotions || [];
+        const isPromotion = currentPromotions.some(p => p.id === appliedVoucher.id);
+
+        if (isPromotion) {
           localDb.update(`promotions/${appliedVoucher.id}`, payload).catch(console.warn);
+          useCoreStore.getState().setPromotions(prev =>
+            (prev || []).map(p => p.id === appliedVoucher.id ? { ...p, ...payload } : p)
+          );
         } else {
-          localDb.update(`vouchers/${appliedVoucher.id}`, { status: 'used' }).catch(console.warn);
-          localDb.update(`promotions/${appliedVoucher.id}`, { status: 'used' }).catch(console.warn);
+          localDb.update(`vouchers/${appliedVoucher.id}`, payload).catch(console.warn);
         }
       }
 

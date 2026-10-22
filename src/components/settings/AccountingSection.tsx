@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign, Trash2, Plus, Percent, TrendingUp, Filter, Zap, CheckCircle2, RefreshCw } from 'lucide-react';
-import { CompanySettings } from '../../types';
+import { CompanySettings, Product } from '../../types';
 import { useCoreStore } from '../../store/useCoreStore';
 import { usePeopleStore } from '../../store/usePeopleStore';
 import { localDb } from '../../services/LocalDatabase';
@@ -13,8 +13,7 @@ interface SectionProps {
 }
 
 export function AccountingSection({ formData, setFormData }: SectionProps) {
-  const anyData = formData as any;
-  const updateField = (key: string, value: any) => {
+  const updateField = (key: keyof CompanySettings | string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
@@ -40,9 +39,9 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
   const [applyToOnline, setApplyToOnline] = useState<boolean>(true);
   const [isExecutingMargins, setIsExecutingMargins] = useState<boolean>(false);
 
-  const retailMargin = Number(anyData.defaultRetailMarginPercent ?? 30);
-  const wholesaleMargin = Number(anyData.defaultWholesaleMarginPercent ?? 15);
-  const onlineMargin = Number(anyData.defaultOnlineMarginPercent ?? 25);
+  const retailMargin = Number(formData.defaultRetailMarginPercent ?? 30);
+  const wholesaleMargin = Number(formData.defaultWholesaleMarginPercent ?? 15);
+  const onlineMargin = Number(formData.defaultOnlineMarginPercent ?? 25);
 
   const roundPrice = (val: number): number => {
     if (!Number.isFinite(val) || val <= 0) return 0;
@@ -108,8 +107,8 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
 
       if (execCategory !== 'ALL') {
         const catObj = categories.find(c => c.id === execCategory);
-        const pCatId = p.categoryId || (p as any).category_id || '';
-        const pCatName = ((p as any).category || '').toLowerCase();
+        const pCatId = p.categoryId || p.category_id || '';
+        const pCatName = (p.category || '').toLowerCase();
         if (pCatId !== execCategory && (!catObj || pCatName !== (catObj.name || '').toLowerCase())) {
           return false;
         }
@@ -121,7 +120,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
       }
 
       if (execBrand !== 'ALL') {
-        const pBrandId = p.brandId || (p as any).brand_id || '';
+        const pBrandId = p.brandId || p.brand_id || '';
         if (pBrandId !== execBrand) return false;
       }
 
@@ -131,13 +130,13 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
       if (execStockFilter === 'out_of_stock' && stock > 0) return false;
       if (execStockFilter === 'low_stock' && (stock <= 0 || stock > minStock)) return false;
 
-      const cost = Number(p.costPrice ?? (p as any).cost_price ?? 0);
+      const cost = Number(p.costPrice ?? p.cost_price ?? 0);
       if (minC !== null && !Number.isNaN(minC) && cost < minC) return false;
       if (maxC !== null && !Number.isNaN(maxC) && cost > maxC) return false;
 
       if (execOnlyMissingPrices) {
-        const w = Number((p as any).wholesalePrice ?? (p as any).wholesale_price ?? 0);
-        const o = Number((p as any).onlinePrice ?? (p as any).online_price ?? 0);
+        const w = Number(p.wholesalePrice ?? p.wholesale_price ?? 0);
+        const o = Number(p.onlinePrice ?? p.online_price ?? 0);
         if (w > 0 && o > 0) return false;
       }
 
@@ -181,15 +180,14 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
       const newProductsList = products.map(p => {
         if (!updatedIds.has(p.id)) return p;
         const calc = computeNewPrices(p);
-        const updatedProd: any = {
+        const updatedProd: Product = {
           ...p,
           price: applyToRetail ? calc.nextRetail : p.price,
-          wholesalePrice: applyToWholesale ? calc.nextWholesale : (p as any).wholesalePrice,
-          wholesale_price: applyToWholesale ? calc.nextWholesale : (p as any).wholesale_price,
-          onlinePrice: applyToOnline ? calc.nextOnline : (p as any).onlinePrice,
-          online_price: applyToOnline ? calc.nextOnline : (p as any).online_price,
-          updatedAt: nowIso,
-          updated_at: nowIso
+          wholesalePrice: applyToWholesale ? calc.nextWholesale : p.wholesalePrice,
+          wholesale_price: applyToWholesale ? calc.nextWholesale : p.wholesale_price,
+          onlinePrice: applyToOnline ? calc.nextOnline : p.onlinePrice,
+          online_price: applyToOnline ? calc.nextOnline : p.online_price,
+          updatedAt: nowIso
         };
         batchMap[p.id] = updatedProd;
         return updatedProd;
@@ -306,7 +304,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
             </div>
             <input
               type="number"
-              value={anyData.defaultRetailMarginPercent ?? 30}
+              value={formData.defaultRetailMarginPercent ?? 30}
               onChange={e => updateField('defaultRetailMarginPercent', parseFloat(e.target.value) || 0)}
               className="w-full h-10 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 text-slate-900 dark:text-white text-sm font-black outline-none focus:border-emerald-500"
             />
@@ -329,7 +327,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
             </div>
             <input
               type="number"
-              value={anyData.defaultWholesaleMarginPercent ?? 15}
+              value={formData.defaultWholesaleMarginPercent ?? 15}
               onChange={e => updateField('defaultWholesaleMarginPercent', parseFloat(e.target.value) || 0)}
               className="w-full h-10 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 text-slate-900 dark:text-white text-sm font-black outline-none focus:border-amber-500"
             />
@@ -352,7 +350,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
             </div>
             <input
               type="number"
-              value={anyData.defaultOnlineMarginPercent ?? 25}
+              value={formData.defaultOnlineMarginPercent ?? 25}
               onChange={e => updateField('defaultOnlineMarginPercent', parseFloat(e.target.value) || 0)}
               className="w-full h-10 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 text-slate-900 dark:text-white text-sm font-black outline-none focus:border-blue-500"
             />
@@ -447,7 +445,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
               <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">5. État du Stock</label>
               <select
                 value={execStockFilter}
-                onChange={e => setExecStockFilter(e.target.value as any)}
+                onChange={e => setExecStockFilter(e.target.value as 'all' | 'in_stock' | 'out_of_stock' | 'low_stock')}
                 className="w-full h-9 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="all">Tous les articles (Stock & Rupture)</option>
@@ -483,7 +481,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
               <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">7. Base de Calcul</label>
               <select
                 value={execBaseMode}
-                onChange={e => setExecBaseMode(e.target.value as any)}
+                onChange={e => setExecBaseMode(e.target.value as 'from_cost' | 'from_retail')}
                 className="w-full h-9 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="from_cost">Depuis Prix d'Achat (+% Marge)</option>
@@ -496,7 +494,7 @@ export function AccountingSection({ formData, setFormData }: SectionProps) {
               <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">8. Arrondi des Prix Calculés</label>
               <select
                 value={execRounding}
-                onChange={e => setExecRounding(e.target.value as any)}
+                onChange={e => setExecRounding(e.target.value as 'none' | '1' | '5' | '10')}
                 className="w-full h-9 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-2.5 text-xs font-bold text-slate-900 dark:text-white"
               >
                 <option value="5">Arrondir à 5 DA (Recommandé)</option>

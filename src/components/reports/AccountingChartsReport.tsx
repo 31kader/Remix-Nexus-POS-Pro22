@@ -7,7 +7,8 @@ import {
 import { fr } from 'date-fns/locale';
 import { formatSafe, calculateItemPrice } from '../../lib/utils';
 import { Card } from '../ui';
-import { Transaction, Product, Expense, CompanySettings } from '../../types';
+import { Transaction, Product, Expense, CompanySettings, isTopUpTransaction } from '../../types';
+import { useTransactionStore } from '../../store/useTransactionStore';
 
 interface AccountingChartsReportProps {
   transactions: Transaction[];
@@ -62,7 +63,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
     };
 
     safeTransactions.forEach(t => {
-      if (!t || t.status === 'returned') return;
+      if (!t || t.status === 'returned' || t.status === 'cancelled' || (t as any).source === 'topup') return;
       
       const items = getSafeItems(t);
       items.forEach(item => {
@@ -88,7 +89,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
 
     // Revenue by source
     const revenueBySource = safeTransactions.reduce((acc, t) => {
-        if (!t || t.status === 'returned') return acc;
+        if (!t || t.status === 'returned' || t.status === 'cancelled' || (t as any).source === 'topup') return acc;
         const source = t.onlineOrderId ? 'Application' : 'Magasin';
         acc[source] = (acc[source] || 0) + (Number(t.total) || 0);
         return acc;
@@ -98,11 +99,45 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       .sort((a, b) => b.revenue - a.revenue);
     const topProducts = productSalesData.slice(0, 10);
 
-    const totalRevenue = safeTransactions.reduce((sum, t) => sum + (!t || t.status === 'returned' ? 0 : (Number(t.total) || 0)), 0);
+    const returns = useTransactionStore.getState().returns || [];
+    const returnsByTxId = new Map<string, number>();
+    const returnedCostByTxId = new Map<string, number>();
+    returns.forEach((r: any) => {
+      if (r?.transactionId) {
+        returnsByTxId.set(r.transactionId, (returnsByTxId.get(r.transactionId) || 0) + (Number(r.totalRefund ?? r.refundAmount) || 0));
+        
+        let returnCost = 0;
+        const rItems = Array.isArray(r.items) ? r.items : (
+          (r.productId || r.product_id) ? [{
+            productId: r.productId || r.product_id,
+            quantity: r.quantity || 1
+          }] : []
+        );
+        rItems.forEach((ri: any) => {
+          const pId = ri.productId || ri.id;
+          const p = (pId ? productsById.get(pId) : null) || (ri.name ? productsByName.get(ri.name.toLowerCase().trim()) : null);
+          const cPrice = Number(ri.costPrice !== undefined ? ri.costPrice : (p?.costPrice || 0));
+          returnCost += cPrice * (Number(ri.quantity) || 1);
+        });
+        returnedCostByTxId.set(r.transactionId, (returnedCostByTxId.get(r.transactionId) || 0) + returnCost);
+      }
+    });
+
+    // 🛡️ P0-BIZ-6 : Déduction précise des retours partiels sur le CA net
+    const totalRevenue = safeTransactions.reduce((sum, t) => {
+      if (!t || t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return sum;
+      const base = Number(t.total) || 0;
+      if (t.status === 'partially_returned') {
+        const refunded = returnsByTxId.get(t.id) || 0;
+        return sum + Math.max(0, base - refunded);
+      }
+      return sum + base;
+    }, 0);
+
     const totalCost = safeTransactions.reduce((sum, t) => {
-      if (!t || t.status === 'returned') return sum;
+      if (!t || t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return sum;
       const items = getSafeItems(t);
-      return sum + items.reduce((itemSum, item) => {
+      const initialCost = items.reduce((itemSum, item) => {
         if (!item) return itemSum;
         const targetId = (item as any).productId || item.id;
         const cleanName = item.name ? item.name.toLowerCase().trim() : '';
@@ -121,9 +156,17 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         const qty = Number(item.quantity) || 1;
         return itemSum + (totalUnitCost * qty);
       }, 0);
+
+      if (t.status === 'partially_returned') {
+        const returnedCost = returnedCostByTxId.get(t.id) || 0;
+        return sum + Math.max(0, initialCost - returnedCost);
+      }
+      return sum + initialCost;
     }, 0);
 
-    const totalExpenses = safeExpenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
+    // 🛡️ P0-BIZ-4 : Exclure les dépenses 'Remboursement / Retour' des charges opérationnelles pour éliminer la double déduction
+    const operationalExpenses = safeExpenses.filter(e => e?.category !== 'Remboursement / Retour');
+    const totalExpenses = operationalExpenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - totalExpenses;
     const revenueBySourceData = Object.entries(revenueBySource).map(([name, value]) => ({ name, value }));
@@ -149,7 +192,7 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
     const safeTransactions = Array.isArray(transactions) ? transactions : [];
 
     safeTransactions.forEach(t => {
-      if (!t || t.status === 'returned') return;
+      if (!t || t.status === 'returned' || t.status === 'cancelled') return;
       const key = period === 'monthly' 
         ? formatSafe(t.timestamp, 'MMM yyyy', { locale: fr })
         : formatSafe(t.timestamp, 'yyyy', { locale: fr });

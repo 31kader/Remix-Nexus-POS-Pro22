@@ -32,8 +32,10 @@ const filesToUpdate = [
   'src/components/LoginView.tsx',
   'src/components/ErrorBoundary.tsx',
   'src/components/IOSInstallModal.tsx',
+  'server.ts',
   'build/license.txt',
-  'GEMINI.md'
+  'GEMINI.md',
+  'README.md'
 ];
 
 const escapedOld = oldVersion.replace(/\./g, '\\.');

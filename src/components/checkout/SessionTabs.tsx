@@ -167,6 +167,9 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
             onClick={() => {
               const nextState = !showQuickSelect;
               setShowQuickSelect(nextState);
+              if (nextState) {
+                window.dispatchEvent(new CustomEvent('nexus-collapse-sidebar'));
+              }
               // Auto-close right panel if opening left favoris on medium screens
               if (nextState && setShowControlsPanel && window.innerWidth < 1440) {
                 setShowControlsPanel(false);

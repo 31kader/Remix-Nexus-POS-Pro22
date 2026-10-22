@@ -1,7 +1,8 @@
-import React, { memo } from 'react';
-import { Store, Truck, ShoppingBag, X, Gift, Banknote, CreditCard, Wallet, Printer, ArrowRight, Zap, Shield, Tag } from 'lucide-react';
+import React, { memo, useState, useEffect } from 'react';
+import { Store, Truck, ShoppingBag, X, Banknote, CreditCard, Printer } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CompanySettings, Voucher, Customer, CartItem } from '../../types';
+import { toast } from 'sonner';
 
 interface PaymentOrderSummaryProps {
   deliveryMethod: 'in_store' | 'delivery' | 'pickup';
@@ -60,22 +61,68 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
   keepExcessInBalance = false,
   setKeepExcessInBalance
 }: PaymentOrderSummaryProps) {
-  const totalItems = (cart || []).reduce((sum, item) => sum + item.quantity, 0);
+  const totalItems = (cart || []).reduce((sum, item) => sum + Math.abs(item.quantity), 0);
   const isDense = Boolean(settings?.fastModeEnabled);
+
+  // État local pour le formulaire de remise globale
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>(
+    globalDiscount?.type || 'percentage'
+  );
+  const [discountInput, setDiscountInput] = useState<string>(
+    globalDiscount && globalDiscount.value > 0 ? String(globalDiscount.value) : ''
+  );
+
+  useEffect(() => {
+    if (globalDiscount && globalDiscount.value > 0) {
+      setDiscountType(globalDiscount.type);
+      setDiscountInput(String(globalDiscount.value));
+    } else {
+      setDiscountInput('');
+    }
+  }, [globalDiscount]);
+
+  const handleApplyGlobalDiscount = () => {
+    const val = parseFloat(discountInput);
+    if (!isNaN(val) && val > 0) {
+      if (setGlobalDiscount) {
+        setGlobalDiscount({
+          type: discountType,
+          value: val
+        });
+        toast.success(`Remise globale de ${val}${discountType === 'percentage' ? '%' : ` ${currency}`} appliquée`);
+      }
+    } else {
+      toast.warning("Veuillez saisir un montant de remise valide supérieur à 0");
+    }
+  };
+
+  const handleApplyPreset = (preset: number) => {
+    setDiscountInput(String(preset));
+    if (setGlobalDiscount) {
+      setGlobalDiscount({ type: discountType, value: preset });
+      toast.success(`Remise de ${preset}${discountType === 'percentage' ? '%' : ` ${currency}`} appliquée`);
+    }
+  };
+
+  const handleClearDiscount = () => {
+    setDiscountInput('');
+    if (setGlobalDiscount) setGlobalDiscount(null);
+    toast.info("Remise globale retirée");
+  };
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-black/20 select-none">
       <div className={cn(
         "flex-1 overflow-y-auto custom-scrollbar",
-        isDense ? "p-4 space-y-4" : "p-6 sm:p-5 space-y-8"
+        isDense ? "p-3 space-y-3" : "p-4 sm:p-5 space-y-6"
       )}>
         {/* Mode de Service */}
-        <div className={cn(isDense ? "space-y-2" : "space-y-6")}>
+        <div className="space-y-2">
           <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Mode de Service
           </h4>
-          <div className={cn(isDense ? "grid grid-cols-3 gap-2" : "grid grid-cols-3 gap-3 sm:gap-4")}>
+          <div className="grid grid-cols-3 gap-2">
             {[
               { id: 'in_store', icon: Store, label: 'COMPTOIR' },
               { id: 'delivery', icon: Truck, label: 'LIVRER' },
@@ -85,23 +132,14 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 key={m.id}
                 onClick={() => setDeliveryMethod(m.id as any)}
                 className={cn(
-                  "flex items-center justify-center border transition-all active:scale-95 group relative shadow-sm cursor-pointer",
-                  isDense 
-                    ? "gap-1.5 py-2.5 px-2 rounded-xl text-[10px] font-bold" 
-                    : "flex-col gap-3 p-4 sm:p-5 rounded-xl text-[9px] font-black tracking-normal",
+                  "flex items-center justify-center border transition-all active:scale-95 group relative shadow-sm cursor-pointer gap-1.5 py-2.5 px-2 rounded-xl text-xs font-bold",
                   deliveryMethod === m.id 
                     ? "bg-indigo-600 text-white border-indigo-400 shadow-xs ring-1 ring-white/20"
                     : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/5 hover:border-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
-                {!isDense ? (
-                  <div className={cn("p-2.5 sm:p-3 rounded-xl transition-all group-hover:scale-110", deliveryMethod === m.id ? "bg-white/20 shadow-inner" : "bg-white dark:bg-black/40 border border-slate-200 dark:border-white/5")}>
-                    <m.icon size={24} className={cn("transition-colors", deliveryMethod === m.id ? "text-white" : "text-slate-600 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400")} />
-                  </div>
-                ) : (
-                  <m.icon size={15} className="shrink-0" />
-                )}
-                <span className={cn(isDense ? "truncate" : "uppercase tracking-normal")}>{m.label}</span>
+                <m.icon size={16} className="shrink-0" />
+                <span className="truncate uppercase">{m.label}</span>
               </button>
             ))}
           </div>
@@ -117,9 +155,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
             {globalDiscount && globalDiscount.value > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  if (setGlobalDiscount) setGlobalDiscount(null);
-                }}
+                onClick={handleClearDiscount}
                 className="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <X size={12} /> Effacer
@@ -128,23 +164,23 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
           </div>
 
           <div className="flex gap-1.5">
-            <div className="flex bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-1 shrink-0">
+            <div className="flex bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl p-0.5 shrink-0">
               <button
                 type="button"
-                onClick={() => setGlobalDiscount && setGlobalDiscount({ type: 'percentage', value: globalDiscount?.value || 0 })}
+                onClick={() => setDiscountType('percentage')}
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer",
-                  (!globalDiscount || globalDiscount.type === 'percentage') ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  "px-2.5 py-1.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer",
+                  discountType === 'percentage' ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 %
               </button>
               <button
                 type="button"
-                onClick={() => setGlobalDiscount && setGlobalDiscount({ type: 'fixed', value: globalDiscount?.value || 0 })}
+                onClick={() => setDiscountType('fixed')}
                 className={cn(
-                  "px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase transition-all cursor-pointer",
-                  (globalDiscount?.type === 'fixed') ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  "px-2.5 py-1.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer",
+                  discountType === 'fixed' ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 {currency}
@@ -157,39 +193,13 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 type="number"
                 min="0"
                 step="any"
-                placeholder={(!globalDiscount || globalDiscount.type === 'percentage') ? "Ex: 10 (%)" : `Ex: 200 (${currency})`}
-                value={globalDiscount && globalDiscount.value > 0 ? globalDiscount.value : ''}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (setGlobalDiscount) {
-                    if (raw === '') {
-                      setGlobalDiscount({
-                        type: globalDiscount?.type || 'percentage',
-                        value: 0
-                      });
-                    } else {
-                      const val = parseFloat(raw);
-                      if (!isNaN(val) && val >= 0) {
-                        setGlobalDiscount({
-                          type: globalDiscount?.type || 'percentage',
-                          value: val
-                        });
-                      }
-                    }
-                  }
-                }}
+                placeholder={discountType === 'percentage' ? "Ex: 10 (%)" : `Ex: 200 (${currency})`}
+                value={discountInput}
+                onChange={(e) => setDiscountInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    const inputEl = e.currentTarget;
-                    const val = parseFloat(inputEl.value);
-                    if (setGlobalDiscount && !isNaN(val) && val > 0) {
-                      setGlobalDiscount({
-                        type: globalDiscount?.type || 'percentage',
-                        value: val
-                      });
-                      inputEl.blur();
-                    }
+                    handleApplyGlobalDiscount();
                   }
                 }}
                 className="w-full h-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 transition-all"
@@ -198,17 +208,8 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
             <button
               type="button"
-              onClick={() => {
-                const inputEl = document.getElementById('global-discount-input') as HTMLInputElement | null;
-                const val = inputEl ? parseFloat(inputEl.value) : (globalDiscount?.value || 0);
-                if (setGlobalDiscount && !isNaN(val) && val > 0) {
-                  setGlobalDiscount({
-                    type: globalDiscount?.type || 'percentage',
-                    value: val
-                  });
-                }
-              }}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
+              onClick={handleApplyGlobalDiscount}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-95 shrink-0 cursor-pointer shadow-xs"
             >
               APPLIQUER
             </button>
@@ -216,25 +217,24 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
 
           {/* Boutons de remise rapide en 1 clic */}
           <div className="flex items-center gap-1.5 pt-0.5">
-            {((!globalDiscount || globalDiscount.type === 'percentage')
+            {(discountType === 'percentage'
               ? [5, 10, 15, 20]
               : [50, 100, 200, 500]
             ).map((preset) => {
-              const isSelected = globalDiscount?.value === preset;
-              const currentType = globalDiscount?.type || 'percentage';
+              const isSelected = globalDiscount?.value === preset && globalDiscount?.type === discountType;
               return (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setGlobalDiscount && setGlobalDiscount({ type: currentType, value: preset })}
+                  onClick={() => handleApplyPreset(preset)}
                   className={cn(
-                    "flex-1 py-1 rounded-lg text-[10px] font-bold font-mono border transition-all cursor-pointer",
+                    "flex-1 py-1 rounded-lg text-[10px] font-bold font-mono border transition-all cursor-pointer active:scale-95",
                     isSelected
                       ? "bg-emerald-600 text-white border-emerald-500 shadow-xs"
                       : "bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:border-emerald-500/50 hover:text-emerald-600"
                   )}
                 >
-                  -{preset}{currentType === 'percentage' ? '%' : ` ${currency}`}
+                  -{preset}{discountType === 'percentage' ? '%' : ` ${currency}`}
                 </button>
               );
             })}
@@ -248,7 +248,7 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
               </span>
               <button
                 type="button"
-                onClick={() => setGlobalDiscount && setGlobalDiscount(null)}
+                onClick={handleClearDiscount}
                 className="p-1 hover:bg-rose-500/10 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                 title="Annuler la remise"
               >
@@ -259,24 +259,31 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
         </div>
 
         {/* Voucher Input */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="CODE COUPON / CADEAU..."
               value={voucherCode}
               onChange={(e) => setVoucherCode(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3.5 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 focus:outline-none focus:border-indigo-500/40 transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyVoucher();
+                }
+              }}
+              className="flex-1 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/40 transition-all"
             />
             <button
+              type="button"
               onClick={applyVoucher}
-              className="px-6 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-black text-[9px] uppercase tracking-normal text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
+              className="px-4 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl font-black text-xs uppercase tracking-normal text-slate-700 dark:text-slate-400 hover:bg-indigo-600 hover:text-white transition-all active:scale-95 cursor-pointer"
             >
               APPLIQUER
             </button>
           </div>
           {appliedVoucher && (
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-black">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl flex items-center justify-between text-emerald-700 dark:text-emerald-400 text-xs font-black">
               <span>{appliedVoucher.code} ({appliedVoucher.type === 'percent' ? `${appliedVoucher.value}%` : `${appliedVoucher.currentBalance ?? appliedVoucher.value} ${currency}`})</span>
               <button onClick={() => setAppliedVoucher(null)} className="hover:text-rose-500 transition-colors p-1 cursor-pointer"><X size={16} /></button>
             </div>
@@ -285,67 +292,71 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
       </div>
 
       <div className="p-4 sm:p-5 bg-slate-50 dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 space-y-4 shadow-xl">
-        <div className="space-y-3">
-          <div className="flex justify-between text-slate-500 text-[10px] font-black uppercase tracking-normal px-2 ">
+        <div className="space-y-2">
+          <div className="flex justify-between text-slate-500 text-xs font-black uppercase tracking-normal px-2">
             <span>SOUS-TOTAL BRUT</span>
-            <span className="font-mono text-slate-700 dark:text-slate-400 tracking-tighter">{(isNaN(subtotal) ? 0 : subtotal).toFixed(2)} {currency}</span>
+            <span className="font-mono text-slate-700 dark:text-slate-400 font-bold">{(isNaN(subtotal) ? 0 : subtotal).toFixed(2)} {currency}</span>
           </div>
 
-          <div className="space-y-2 px-2">
+          <div className="space-y-1.5 px-2">
             {(discountAmount || 0) > 0 && (
-              <div className="flex justify-between text-rose-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
-                <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-rose-500" /> REMISES TOTALES</span>
-                <span className="font-mono tracking-tighter">-{(isNaN(discountAmount) ? 0 : discountAmount).toFixed(2)} {currency}</span>
+              <div className="flex justify-between text-rose-500 text-xs font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
+                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-rose-500" /> REMISES TOTALES</span>
+                <span className="font-mono font-bold">-{(isNaN(discountAmount) ? 0 : discountAmount).toFixed(2)} {currency}</span>
               </div>
             )}
             {(pointsDiscount || 0) > 0 && (
-              <div className="flex justify-between text-amber-600 dark:text-amber-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
-                <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-amber-500" /> FIDÉLITÉ DÉDUITE</span>
-                <span className="font-mono tracking-tighter">-{(isNaN(pointsDiscount) ? 0 : pointsDiscount).toFixed(2)} {currency}</span>
+              <div className="flex justify-between text-amber-600 dark:text-amber-500 text-xs font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
+                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> FIDÉLITÉ DÉDUITE</span>
+                <span className="font-mono font-bold">-{(isNaN(pointsDiscount) ? 0 : pointsDiscount).toFixed(2)} {currency}</span>
               </div>
             )}
             {(voucherDiscount || 0) > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-500 text-[10px] font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
-                <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-emerald-500" /> COUPON / CADEAU</span>
-                <span className="font-mono tracking-tighter">-{(isNaN(voucherDiscount) ? 0 : voucherDiscount).toFixed(2)} {currency}</span>
+              <div className="flex justify-between text-emerald-600 dark:text-emerald-500 text-xs font-black uppercase tracking-normal animate-in fade-in slide-in-from-right-2">
+                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> COUPON / CADEAU</span>
+                <span className="font-mono font-bold">-{(isNaN(voucherDiscount) ? 0 : voucherDiscount).toFixed(2)} {currency}</span>
               </div>
             )}
           </div>
 
-          <div className={cn(
-            "flex justify-between items-center border-t border-slate-200 dark:border-white/5 font-black",
-            isDense ? "pt-3.5 text-3xl" : "pt-6 text-4xl  tracking-tighter"
-          )}>
+          {/* ZONE DU TOTAL GÉANT */}
+          <div className="flex justify-between items-center border-t-2 border-slate-200 dark:border-zinc-800 pt-3 sm:pt-4">
             <span className={cn(
-              "text-[10px] uppercase tracking-widest font-black flex flex-col not-",
-              total < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-500/80"
+              "text-xs sm:text-sm uppercase tracking-widest font-black flex flex-col",
+              total < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
             )}>
               {total < 0 ? "À REMBOURSER" : "TOTAL NET"}
-              <span className="text-[8px] text-slate-500 dark:text-slate-500 tracking-wider font-bold mt-0.5 uppercase">{totalItems || 0} ARTICLES</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 tracking-wider font-bold mt-0.5 uppercase">
+                {totalItems || 0} ARTICLE{totalItems > 1 ? 'S' : ''}
+              </span>
             </span>
             <div className="text-right flex flex-col items-end">
               {(selectedCustomer && !isNaN(total)) && (
                 total > 0 ? (
-                  <div className="text-[9px] font-black text-amber-600 dark:text-amber-500 mb-0.5 flex items-center justify-end gap-1.5 uppercase tracking-wider">
+                  <div className="text-[10px] font-black text-amber-600 dark:text-amber-500 mb-0.5 flex items-center justify-end gap-1.5 uppercase tracking-wider">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                     +{Math.floor(total * (settings.loyaltyPointsPerCurrencyUnit || 1))} PTS
                   </div>
                 ) : total < 0 ? (
-                  <div className="text-[9px] font-black text-rose-500 mb-0.5 flex items-center justify-end gap-1.5 uppercase tracking-wider">
+                  <div className="text-[10px] font-black text-rose-500 mb-0.5 flex items-center justify-end gap-1.5 uppercase tracking-wider">
                     <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                     -{Math.floor(Math.abs(total) * (settings.loyaltyPointsPerCurrencyUnit || 1))} PTS (DÉDUITS)
                   </div>
                 ) : null
               )}
               <span className={cn(
-                "flex items-baseline justify-end gap-1.5 font-mono tabular-nums",
+                "flex items-baseline justify-end gap-1 font-mono tabular-nums leading-none",
                 total < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
               )}>
-                {(isNaN(total) ? 0 : total).toFixed(2)}
+                <span className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight">
+                  {(isNaN(total) ? 0 : total).toFixed(2)}
+                </span>
                 <span className={cn(
-                  "text-sm uppercase tracking-widest font-black font-sans",
-                  total < 0 ? "text-rose-700 dark:text-rose-400/80" : "text-emerald-700 dark:text-emerald-500/80"
-                )}>{currency}</span>
+                  "text-lg sm:text-2xl uppercase tracking-wider font-black font-sans ml-1",
+                  total < 0 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
+                )}>
+                  {currency}
+                </span>
               </span>
             </div>
           </div>
@@ -469,70 +480,51 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
           </div>
         )}
 
-        <div className={cn("grid grid-cols-2", isDense ? "gap-2.5" : "gap-4")}>
+        <div className="grid grid-cols-2 gap-3">
           <button 
+            type="button"
             className={cn(
-              "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
-              isDense 
-                ? "py-3 px-3.5 rounded-xl text-xs" 
-                : "flex-col justify-center gap-3 py-6 px-4 rounded-xl text-[10px] tracking-normal relative overflow-hidden",
+              "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-3.5 rounded-xl text-xs",
               editingTransaction
                 ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 hover:bg-amber-100"
                 : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/50 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
             )}
-            onClick={() => handleCheckout('cash')}
+            onClick={() => handleCheckout('cash', false)}
             disabled={cart.length === 0 || isProcessing}
-            title="ENCAISSEMENT ESPÈCES (F1)"
+            title="ENCAISSEMENT ESPÈCES SANS IMPRESSION (F5)"
           >
             <div className="flex items-center gap-2">
-              <Banknote size={isDense ? 18 : 22} />
+              <Banknote size={18} />
               <span className="truncate">{editingTransaction ? 'MàJ ESPÈCES' : total < 0 ? 'REMBOURSER' : 'ESPÈCES'}</span>
             </div>
-            <span className={cn(
-              "font-mono font-black tracking-widest",
-              isDense 
-                ? "px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px]" 
-                : "absolute bottom-2 text-[8px] font-bold text-slate-500 dark:text-zinc-400 group-hover:text-white/80"
-            )}>
-              F1
+            <span className="font-mono font-black tracking-widest px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[9px]">
+              F5
             </span>
           </button>
 
           <button 
+            type="button"
             className={cn(
-              "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
-              isDense 
-                ? "py-3 px-3.5 rounded-xl text-xs" 
-                : "flex-col justify-center gap-3 py-6 px-4 rounded-xl text-[10px] tracking-normal relative overflow-hidden",
+              "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-3.5 rounded-xl text-xs",
               editingTransaction
                 ? "bg-amber-100/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300"
                 : "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
             )}
             onClick={() => handleCheckout('card')}
             disabled={cart.length === 0 || isProcessing}
-            title="ENCAISSEMENT CARTE / DIGITAL (F2)"
+            title="ENCAISSEMENT CARTE / DIGITAL"
           >
             <div className="flex items-center gap-2">
-              <CreditCard size={isDense ? 18 : 22} />
+              <CreditCard size={18} />
               <span className="truncate">{editingTransaction ? 'MàJ CARTE' : 'CARTE / TPE'}</span>
             </div>
-            <span className={cn(
-              "font-mono font-black tracking-widest",
-              isDense 
-                ? "px-1.5 py-0.5 rounded bg-indigo-500/20 text-[9px]" 
-                : "absolute bottom-2 text-[8px] font-bold text-slate-500 dark:text-zinc-400 group-hover:text-white/80"
-            )}>
-              F2
-            </span>
           </button>
         </div>
 
         <button 
+          type="button"
           className={cn(
-            "w-full text-white font-black uppercase transition-all flex items-center justify-center gap-3 shadow-md active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
-            isDense 
-              ? "py-3.5 rounded-xl text-xs tracking-wider" 
-              : "py-5 sm:py-6 rounded-xl text-[11px] tracking-normal  shadow-lg",
+            "w-full text-white font-black uppercase transition-all flex items-center justify-center gap-3 shadow-md active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-4 sm:py-4.5 rounded-xl text-xs sm:text-sm tracking-wider",
             editingTransaction
               ? "bg-amber-600 hover:bg-amber-700"
               : total < 0
@@ -541,14 +533,15 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
           )}
           onClick={() => handleCheckout('cash', true)}
           disabled={cart.length === 0 || isProcessing}
+          title="VALIDER & IMPRIMER LE TICKET (ALT+P)"
         >
-          <Printer size={isDense ? 18 : 20} />
+          <Printer size={18} />
           <span>
             {editingTransaction 
-              ? 'METTRE À JOUR LE TICKET (F4)' 
+              ? 'METTRE À JOUR LE TICKET [ALT+P]' 
               : total < 0 
-                ? 'VALIDER LE RETOUR (F4)' 
-                : 'VALIDER & IMPRIMER [F4]'}
+                ? 'VALIDER LE RETOUR [ALT+P]' 
+                : 'VALIDER & IMPRIMER [ALT+P]'}
           </span>
         </button>
       </div>

@@ -10,7 +10,7 @@ import { SupplierFormModal } from './suppliers/SupplierFormModal';
 import { SupplierPaymentModal } from './suppliers/SupplierPaymentModal';
 import { SupplierDamageModal } from './suppliers/SupplierDamageModal';
 import { SupplierList } from './suppliers/SupplierList';
-import { useSuppliersLogic } from './useSuppliersLogic';
+import { useSuppliersLogic } from '../hooks/useSuppliersLogic';
 
 export interface SuppliersProps {
   suppliers: Supplier[];

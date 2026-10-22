@@ -20,7 +20,7 @@ export function AddStaffModal({ isOpen, onClose, onSave }: AddStaffModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40  p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 pb-[max(env(safe-area-inset-bottom,0px),16px)] overflow-y-auto">
       <div
         className="bg-white dark:bg-zinc-900 rounded-xl shadow-md w-full max-w-md overflow-hidden border border-slate-200 dark:border-zinc-800 my-10"
       >

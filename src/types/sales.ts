@@ -12,6 +12,8 @@ export interface CartItem extends Product {
   };
 }
 
+export type PaymentMethod = 'cash' | 'card' | 'balance' | 'transfer' | 'check' | 'debt';
+
 export interface OnlineOrder {
   id: string;
   externalOrderId: string;
@@ -30,7 +32,7 @@ export interface OnlineOrder {
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   timestamp: string;
   paymentStatus: 'paid' | 'unpaid';
-  paymentMethod?: 'cash' | 'card' | string;
+  paymentMethod?: PaymentMethod;
   source: string;
   deliveryMethod?: 'delivery' | 'pickup';
   pickupTime?: string;
@@ -51,13 +53,14 @@ export interface OnlineOrder {
   mapsUrl?: string;
   gpsAccuracy?: number;
   notes?: string;
+  created_at?: string;
 }
 
 export interface Transaction {
   id: string;
   items: CartItem[];
   total: number;
-  paymentMethod: 'cash' | 'card' | 'balance' | string;
+  paymentMethod: PaymentMethod;
   deliveryMethod?: 'in_store' | 'delivery' | 'pickup';
   timestamp: string;
   userId: string;
@@ -90,6 +93,21 @@ export interface Transaction {
   originalItems?: CartItem[];
   terminalId?: string;
   terminalName?: string;
+  source?: string;
+  taxAmount?: number;
+  subtotal?: number;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  created_at?: string;
+  totalAmount?: number;
+}
+
+export function isTopUpTransaction(t: any): boolean {
+  if (!t) return false;
+  if (t.source === 'topup') return true;
+  if (typeof t.notes === 'string' && t.notes.startsWith('[REGLEMENT]')) return true;
+  if (typeof t.auditNote === 'string' && t.auditNote.startsWith('[REGLEMENT]')) return true;
+  return false;
 }
 
 export interface ProductReturn {
@@ -108,7 +126,11 @@ export interface ProductReturn {
   date?: string;
   userId: string;
   customerId?: string | null;
-  type: 'refund' | 'credit_note';
+  customerName?: string | null;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  type: 'refund' | 'credit_note' | 'credit';
+  refundMethod?: 'cash' | 'card' | 'credit' | 'voucher' | string;
   status?: string;
   notes?: string;
   refundAmount?: number;

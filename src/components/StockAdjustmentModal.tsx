@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Package, AlignLeft } from 'lucide-react';
-import { supabase } from '../supabase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import { convertKeysToSnake } from '../lib/db-converters';
 import { enqueueStockAdjustment } from '../services/SyncService';
+import { applyStockAdjustment } from '../services/stockService';
 import { localDb } from '../services/LocalDatabase';
 import { Product, CompanySettings } from '../types';
+import { normalizeBatches } from '../types/products';
 import { Button, Modal } from './ui';
 import { toast } from 'sonner';
 import { sanitizeProductForSupabase, cn } from '../lib/utils';
@@ -45,7 +47,7 @@ export function StockAdjustmentModal({
         setIsLoss(false);
       }
 
-      let batchesCopy = product.batches ? product.batches.map(b => ({ ...b })) : [];
+      let batchesCopy = normalizeBatches(product.batches).map(b => ({ ...b }));
       if (opts?.batchNumber && batchesCopy.length > 0) {
         batchesCopy = batchesCopy.map(b => b.batchNumber === opts.batchNumber ? { ...b, stock: 0 } : b);
         const sum = batchesCopy.reduce((sum, item) => sum + item.stock, 0);
@@ -83,8 +85,9 @@ export function StockAdjustmentModal({
 
     setIsProcessing(true);
     try {
-      const currentStock = product.stock || 0;
-      const delta = (newStock as number) - currentStock;
+      const currentStock = Number(product.stock || 0);
+      const targetStock = Number(newStock);
+      const delta = targetStock - currentStock;
       const isLossRecord = delta < 0 && isLoss;
       
       let earliestDate = product.expirationDate;
@@ -95,70 +98,118 @@ export function StockAdjustmentModal({
         primaryBatch = sorted[0].batchNumber;
       }
 
-      // Update product stocks
-      const updatedProduct = {
-        ...product,
-        stock: newStock,
-        batches: product.useMultiExpiry ? localBatches : (product.batches || null),
-        expirationDate: earliestDate,
-        batchNumber: primaryBatch,
-        damagedStock: isLossRecord ? (product.damagedStock || 0) + Math.abs(delta) : (product.damagedStock || 0),
-        updatedAt: new Date().toISOString()
-      };
+      const safeUserId = user?.uid || user?.id || 'system';
+      const safeUserName = user?.displayName || user?.name || 'Inconnu';
 
-      // Optimistic cache update for immediate local reflection
-      window.dispatchEvent(new CustomEvent('product-cache-update', { detail: updatedProduct }));
-      useCoreStore.getState().setProducts(prev => (prev || []).map(p => p.id === product.id ? (updatedProduct as Product) : p));
+      // Clé d'idempotence unique et déterministe (identique entre Direct-Write et Offline Queue)
+      const adjustmentId = `adj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
 
-      // Cleaned update for Supabase schema safety via sync queue
-      enqueueStockAdjustment(product.id, delta);
-      
-      localDb.update(`products/${product.id}`, {
-        stock: updatedProduct.stock,
-        damagedStock: updatedProduct.damagedStock,
-        batches: updatedProduct.batches,
-        expirationDate: updatedProduct.expirationDate,
-        batchNumber: updatedProduct.batchNumber,
-        updatedAt: updatedProduct.updatedAt
+      // ⚡ EXÉCUTION ATOMIQUE & IDEMPOTENTE VIA LE SERVICE UNIFIÉ (T5)
+      const result = await applyStockAdjustment({
+        productId: product.id,
+        value: targetStock,
+        mode: 'set',
+        adjustmentId,
+        reason: reason || (delta < 0 ? 'Ajustement négatif' : 'Ajustement positif'),
+        userId: safeUserId,
+        userName: safeUserName,
+        isLoss: isLossRecord
       });
 
+      const returnedStock = result.newStock;
+      const actualDelta = returnedStock - currentStock;
+      const nowIso = new Date().toISOString();
+
+      // Métadonnées produit complémentaires (lots, dates de péremption, pertes)
+      const normalizedExistingBatches = normalizeBatches(product.batches);
+      const updatedProduct: Product = {
+        ...product,
+        stock: returnedStock,
+        batches: product.useMultiExpiry 
+          ? (localBatches.length > 0 ? localBatches : undefined)
+          : (normalizedExistingBatches.length > 0 ? normalizedExistingBatches : undefined),
+        expirationDate: earliestDate,
+        batchNumber: primaryBatch,
+        damagedStock: isLossRecord ? (product.damagedStock || 0) + Math.abs(actualDelta) : (product.damagedStock || 0),
+        updatedAt: nowIso
+      };
+
+      // Persister localement dans LocalDatabase et useCoreStore (sans ré-enfiler stock qui est géré par applyStockAdjustment)
+      await (localDb.updateLocalOnly ?? localDb.update)(`products/${product.id}`, updatedProduct);
+      useCoreStore.getState().setProducts(prev =>
+        (prev || []).map(p => p.id === product.id ? updatedProduct : p)
+      );
+
+      // Mettre à jour les métadonnées produit dans Supabase (hors colonne stock déjà traitée par le RPC)
+      if (result.appliedDirectly && isSupabaseConfigured) {
+        try {
+          await supabase.from('products').update({
+            damaged_stock: updatedProduct.damagedStock,
+            batches: updatedProduct.batches || null,
+            expiration_date: updatedProduct.expirationDate || null,
+            batch_number: updatedProduct.batchNumber || null
+          }).eq('id', product.id);
+        } catch (syncErr) {
+          console.warn("[StockAdjustmentModal] Warning updating product metadata on Supabase:", syncErr);
+        }
+      } else {
+        await localDb.update(`products/${product.id}`, {
+          damagedStock: updatedProduct.damagedStock,
+          batches: updatedProduct.batches || null,
+          expirationDate: updatedProduct.expirationDate || null,
+          batchNumber: updatedProduct.batchNumber || null,
+          updatedAt: nowIso
+        });
+      }
+
+      // Enregistrement d'audit dans l'historique local avec le même adjustmentId
       const adjustmentData = {
-        id: Math.random().toString(36).substring(2, 10),
+        id: adjustmentId,
         productId: product.id,
         productName: product.name,
         oldQuantity: currentStock,
-        newQuantity: newStock,
-        adjustment: delta, // To match StockAdjustment interface
-        quantity: delta, // Legacy compatibility
-        type: delta > 0 ? 'found' : 'damage',
+        newQuantity: returnedStock,
+        adjustment: actualDelta,
+        quantity: actualDelta,
+        type: actualDelta > 0 ? 'found' : 'damage',
         reason: reason,
-        userId: user.uid,
-        userName: user.displayName || 'Inconnu',
-        date: new Date().toISOString(), // Legacy compatibility
-        timestamp: new Date().toISOString(), // To match StockAdjustment interface
+        userId: safeUserId,
+        userName: safeUserName,
+        date: nowIso,
+        timestamp: nowIso,
         isLoss: isLossRecord
       };
-      
-      await localDb.insert(`stock_adjustments/${adjustmentData.id}`, adjustmentData);
+
+      // Enregistrement d'audit dans l'historique local avec le même adjustmentId (local-only car applyStockAdjustment enfile déjà la synchronisation)
+      await localDb.insertLocalOnly(`stock_adjustments/${adjustmentId}`, adjustmentData);
 
       // ⚡ Synchronisation temps réel avec useInventoryStore (Rapport des Pertes & Historique)
       useInventoryStore.getState().setStockAdjustments(prev => [adjustmentData as any, ...(prev || [])]);
 
       if (isLossRecord) {
-        const damId = Math.random().toString(36).substring(2, 10);
+        const damId = `dam_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
         const damRecord = {
           id: damId,
           productId: product.id,
           productName: product.name,
-          quantity: Math.abs(delta),
+          quantity: Math.abs(actualDelta),
           reason: reason || "Perte/casse via ajustement",
-          date: new Date().toISOString(),
-          userId: user.uid,
-          userName: user.displayName || 'Inconnu',
+          date: nowIso,
+          userId: safeUserId,
+          userName: safeUserName,
           claimStatus: 'to_claim' as const,
           costPrice: product.costPrice || 0
         };
-        await localDb.insert(`damaged_items/${damId}`, damRecord);
+        if (result.appliedDirectly) {
+          try {
+            await supabase.from('damaged_items').insert(convertKeysToSnake(damRecord));
+          } catch (damErr) {
+            console.warn("[StockAdjustmentModal] Warning inserting damaged item on Supabase:", damErr);
+          }
+          await localDb.insertLocalOnly(`damaged_items/${damId}`, damRecord);
+        } else {
+          await localDb.insert(`damaged_items/${damId}`, damRecord);
+        }
         useInventoryStore.getState().setDamagedItems(prev => [damRecord as any, ...(prev || [])]);
       }
 
@@ -302,7 +353,7 @@ export function StockAdjustmentModal({
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full py-7 rounded-xl text-sm font-black uppercase tracking-normal bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all active:scale-95 border border-indigo-400 ring-1 ring-white/20  group relative overflow-hidden"
+            className="w-full py-7 rounded-xl text-sm font-black uppercase tracking-normal bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all active:scale-95 border border-indigo-400 ring-1 ring-white/20 group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
             {isProcessing ? "PROCESSING..." : "CONFIRMER CALIBRAGE SYSTÈME"}

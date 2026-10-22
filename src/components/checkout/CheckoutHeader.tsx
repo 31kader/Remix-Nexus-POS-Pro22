@@ -1,11 +1,7 @@
 import React from 'react';
-import { Search, Scan, X, Barcode, Zap } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { Search, Scan, X, Barcode } from 'lucide-react';
 import { SearchOverlay } from './SearchOverlay';
 import { Product } from '../../types';
-import { useCoreStore } from '../../store/useCoreStore';
-import { localDb } from '../../services/LocalDatabase';
-import { toast } from 'sonner';
 
 interface Props {
   search: string;
@@ -34,34 +30,6 @@ export const CheckoutHeader: React.FC<Props> = ({
     hasUsedArrowKeys.current = false;
   }, [search]);
 
-  const isFastMode = Boolean(settings?.fastModeEnabled);
-
-  const toggleFastMode = async () => {
-    const updated = !isFastMode;
-    const currentSettings = useCoreStore.getState().settings || {};
-    const newSettings = { ...currentSettings, fastModeEnabled: updated };
-    useCoreStore.getState().setSettings(newSettings);
-    toast.success(updated ? "Mode Caisse Haute Densité activé (Tableau compact)" : "Mode Caisse Standard réactivé (Cartes)");
-    try {
-      await localDb.update('settings/default', { fast_mode_enabled: updated });
-    } catch (_) {}
-  };
-
-  React.useEffect(() => {
-    const handleShortcuts = (e: KeyboardEvent) => {
-      if (e.key === 'F10') {
-        e.preventDefault();
-        barcodeRef.current?.focus();
-        barcodeRef.current?.select();
-      } else if (e.key === 'F8') {
-        e.preventDefault();
-        toggleFastMode();
-      }
-    };
-    window.addEventListener('keydown', handleShortcuts);
-    return () => window.removeEventListener('keydown', handleShortcuts);
-  }, [isFastMode, settings]);
-
   const handleClearSearch = () => {
     setSearch('');
     setTimeout(() => {
@@ -84,22 +52,22 @@ export const CheckoutHeader: React.FC<Props> = ({
   return (
     <div className="p-2 sm:p-4 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 z-30 shadow-xs">
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-3">
-        {/* Giant High-Visibility Centered Total Banner (Compact on Smartphone) */}
-        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-between sm:justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border border-emerald-400 dark:border-emerald-500/50 rounded-xl px-3.5 py-1.5 sm:px-5 sm:py-2 shadow-sm sm:min-w-[190px]">
-          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-100 dark:text-emerald-300 sm:block">TOTAL À PAYER</span>
-          <span className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-white dark:text-emerald-400">
-            {total.toFixed(2)} <span className="text-xs font-bold text-emerald-100 dark:text-emerald-300/80">{settings?.currency || 'DA'}</span>
+        {/* Giant High-Visibility Centered Total Banner */}
+        <div className="w-full sm:w-auto flex-shrink-0 flex items-center justify-between sm:justify-center bg-gradient-to-r from-emerald-600 via-emerald-500 to-emerald-600 dark:from-emerald-950/90 dark:via-emerald-900/90 dark:to-emerald-950/90 border border-emerald-400 dark:border-emerald-500/50 rounded-xl px-4 py-2 sm:px-6 sm:py-2.5 shadow-sm sm:min-w-[210px]">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-emerald-100 dark:text-emerald-300 sm:block mr-2">TOTAL :</span>
+          <span className="text-xl sm:text-3xl lg:text-4xl font-black font-mono text-white dark:text-emerald-300 tracking-tight">
+            {total.toFixed(2)} <span className="text-xs sm:text-sm font-bold text-emerald-100 dark:text-emerald-300/80">{settings?.currency || 'DA'}</span>
           </span>
         </div>
 
-        {/* Dedicated Direct Barcode / Shortcut Input (F10) - Hidden on small smartphone screens since main search handles barcodes */}
+        {/* Dedicated Direct Barcode / Shortcut Input (F10) */}
         <div className="hidden sm:block relative group sm:w-52 lg:w-60 flex-shrink-0">
           <Barcode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-400 transition-colors" size={18} />
           <input 
             ref={barcodeRef}
             id="direct-barcode-input"
             type="text"
-            placeholder="⚡ Code Raccourci (F10)"
+            placeholder="⚡ Code-barres (F10)"
             className="w-full pl-10 pr-3 py-2 bg-emerald-50/60 dark:bg-slate-950/80 border border-emerald-300 dark:border-emerald-500/40 rounded-xl outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-xs font-mono font-bold text-emerald-900 dark:text-emerald-300 placeholder:text-emerald-700/60 dark:placeholder:text-slate-500 transition-all"
             value={directBarcode}
             onChange={(e) => setDirectBarcode(e.target.value)}
@@ -114,7 +82,7 @@ export const CheckoutHeader: React.FC<Props> = ({
             ref={searchRef}
             id="product-search-input"
             type="text"
-            placeholder="Rechercher par nom, SKU... (F3 | Entrée)"
+            placeholder="Rechercher par nom, SKU... (F3)"
             className="w-full pl-11 pr-10 py-2.5 bg-slate-100 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all shadow-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -184,23 +152,10 @@ export const CheckoutHeader: React.FC<Props> = ({
           />
         </div>
 
+        {/* Scan Barcode Button */}
         <div className="flex items-center gap-2 shrink-0">
           <button 
             type="button"
-            onClick={toggleFastMode}
-            className={cn(
-              "px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 select-none",
-              isFastMode
-                ? "bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 font-black shadow-amber-500/25"
-                : "bg-slate-100 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-            )}
-            title={isFastMode ? "Mode Caisse Haute Densité Actif (F8 pour basculer)" : "Activer le Mode Caisse Haute Densité (F8)"}
-          >
-            <Zap size={15} className={cn("transition-transform", isFastMode && "fill-slate-950")} />
-            <span className="hidden sm:inline">{isFastMode ? "Haute Densité (F8)" : "Mode Rapide (F8)"}</span>
-          </button>
-
-          <button 
             onClick={() => setIsScannerOpen(true)}
             className="p-2.5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-500 transition-all shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
             title="DÉMARRER SCANNER OPTIQUE"

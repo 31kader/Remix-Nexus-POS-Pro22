@@ -1,10 +1,10 @@
 export const OWNER_EMAILS: string[] = [
-  ((import.meta as any).env?.VITE_OWNER_EMAIL || '').toLowerCase().trim(),
-  ((import.meta as any).env?.VITE_ADMIN_EMAIL || '').toLowerCase().trim(),
+  (import.meta.env.VITE_OWNER_EMAIL || '').toLowerCase().trim(),
+  (import.meta.env.VITE_ADMIN_EMAIL || '').toLowerCase().trim(),
 ].filter(Boolean);
 
 export const OWNER_UIDS: string[] = [
-  (import.meta as any).env?.VITE_OWNER_UID || '',
+  import.meta.env.VITE_OWNER_UID || '',
 ].filter(Boolean);
 
 export const PRIMARY_OWNER_EMAIL = OWNER_EMAILS[0] || '';

@@ -6,6 +6,8 @@ import { Modal } from '../ui';
 import { cn } from '../../lib/utils';
 import { Product, Category, CompanySettings } from '../../types';
 import { useCoreStore } from '../../store/useCoreStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { checkIsOwner } from '../../config/ownerConfig';
 import { localDb } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { preparePayload } from '../../lib/db-converters';
@@ -194,8 +196,24 @@ export const BulkPricingStudioModal: React.FC<BulkPricingStudioModalProps> = ({
     }
   };
 
-  const handleZeroAllStock = async () => {
-    if (!window.confirm(`ATTENTION : Voulez-vous vraiment remettre la quantité (Stock) à 0 pour les ${targetProducts.length} articles ciblés ?`)) {
+  const [isZeroConfirmOpen, setIsZeroConfirmOpen] = useState(false);
+  const [zeroConfirmInput, setZeroConfirmInput] = useState('');
+
+  const handleOpenZeroStockConfirm = () => {
+    const authUser = useAuthStore.getState().user;
+    const authProfile = useAuthStore.getState().profile;
+    const isAdmin = checkIsOwner(authUser?.email, authUser?.uid) || authProfile?.role === 'admin';
+    if (!isAdmin) {
+      toast.error("Action de remise à zéro de masse réservée exclusivement à l'administrateur.");
+      return;
+    }
+    setZeroConfirmInput('');
+    setIsZeroConfirmOpen(true);
+  };
+
+  const handleConfirmZeroAllStock = async () => {
+    if (zeroConfirmInput.trim().toUpperCase() !== 'ZERO') {
+      toast.error("Veuillez taper exactement 'ZERO' pour confirmer.");
       return;
     }
     setIsApplying(true);
@@ -221,9 +239,10 @@ export const BulkPricingStudioModal: React.FC<BulkPricingStudioModalProps> = ({
       }
 
       toast.success(`Quantité mise à 0 sur ${targetProducts.length} articles (Local & Supabase) !`);
+      setIsZeroConfirmOpen(false);
       onClose();
     } catch (err: any) {
-      toast.error("Erreur lors de la remise à zéro du stock.");
+      toast.error("Erreur lors de la remise à zéro du stock : " + (err.message || err));
     } finally {
       setIsApplying(false);
     }
@@ -245,7 +264,7 @@ export const BulkPricingStudioModal: React.FC<BulkPricingStudioModalProps> = ({
             </span>
             <button
               type="button"
-              onClick={handleZeroAllStock}
+              onClick={handleOpenZeroStockConfirm}
               disabled={isApplying}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
             >
@@ -253,6 +272,44 @@ export const BulkPricingStudioModal: React.FC<BulkPricingStudioModalProps> = ({
               <span>Mettre Stock à 0 ({targetProducts.length})</span>
             </button>
           </div>
+
+          {isZeroConfirmOpen && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/25 rounded-xl space-y-2.5 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-bold text-xs">
+                <AlertTriangle size={15} />
+                <span>Confirmer la remise à 0 de {targetProducts.length} article(s)</span>
+              </div>
+              <p className="text-[11px] text-rose-600 dark:text-rose-400">
+                Cette action est irréversible (Local & Supabase). Pour valider, tapez <strong>ZERO</strong> :
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={zeroConfirmInput}
+                  onChange={(e) => setZeroConfirmInput(e.target.value)}
+                  placeholder="Tapez ZERO"
+                  autoFocus
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-700 text-xs font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-rose-500 text-center flex-1 min-w-[120px] max-w-[160px]"
+                />
+                <button
+                  type="button"
+                  onClick={handleConfirmZeroAllStock}
+                  disabled={zeroConfirmInput.trim().toUpperCase() !== 'ZERO' || isApplying}
+                  className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isApplying ? "Application..." : "Confirmer"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsZeroConfirmOpen(false)}
+                  disabled={isApplying}
+                  className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[

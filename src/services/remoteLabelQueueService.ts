@@ -107,14 +107,17 @@ export async function persistQueueToCloud(items: RemoteLabelQueueItem[]): Promis
   if (!isOnline) return false;
 
   try {
-    const { error } = await supabase.from('settings').upsert(
-      {
-        id: SUPABASE_SETTINGS_ID,
-        name: 'File Impression Etiquettes Distante',
-        footer_text: JSON.stringify(markedItems.map(i => ({ ...i, pendingOfflineSync: false }))),
-      },
-      { onConflict: 'id' }
-    );
+    const payload = {
+      id: SUPABASE_SETTINGS_ID,
+      name: 'File Impression Etiquettes Distante',
+      footer_text: JSON.stringify(markedItems.map(i => ({ ...i, pendingOfflineSync: false }))),
+    };
+    let { error } = await supabase.from('settings').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      const { id: _, ...updPayload } = payload;
+      const res = await supabase.from('settings').update(updPayload).eq('id', SUPABASE_SETTINGS_ID);
+      error = res.error;
+    }
     if (!error) {
       saveLocalLabelQueue(markedItems.map(i => ({ ...i, pendingOfflineSync: false })));
       return true;

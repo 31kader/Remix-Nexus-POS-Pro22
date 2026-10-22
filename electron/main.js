@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, Menu, Tray, dialog, ipcMain, session } = requ
 const path = require('path');
 const { spawn } = require('child_process');
 const http = require('http');
+const net = require('net');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
@@ -52,8 +53,29 @@ let serverProcess = null;
 let tray = null;
 let logStream = null;
 
-const SERVER_PORT = 3000;
-const SERVER_URL = `http://localhost:${SERVER_PORT}`;
+let SERVER_PORT = 3000;
+let SERVER_URL = `http://localhost:${SERVER_PORT}`;
+
+// 🛡️ ELC-01 : Détection automatique d'un port disponible si le port 3000 est déjà occupé
+function findAvailablePort(startPort = 3000) {
+  return new Promise((resolve, reject) => {
+    const testServer = net.createServer();
+    testServer.unref();
+    testServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(findAvailablePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+    testServer.listen(startPort, () => {
+      const { port } = testServer.address();
+      testServer.close(() => {
+        resolve(port);
+      });
+    });
+  });
+}
 
 // ─── Initialisation des Logs ───────────────────────────────────────────────────
 function initLogging() {
@@ -95,7 +117,33 @@ function checkIfServerRunning() {
   return new Promise((resolve) => {
     const req = http.get(`${SERVER_URL}/api/health`, (res) => {
       if (res.statusCode === 200) {
-        resolve(true);
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(body);
+            // Si une ancienne version du serveur tourne encore en arrière-plan après une mise à jour, l'arrêter
+            if (app.isPackaged && parsed.version && parsed.version !== app.getVersion()) {
+              log(`[Update] Ancien serveur v${parsed.version} détecté (attendu: v${app.getVersion()}). Arrêt de l'ancien processus...`);
+              if (parsed.pid) {
+                try {
+                  process.kill(parsed.pid, 'SIGKILL');
+                } catch (_) {}
+                if (process.platform === 'win32') {
+                  try {
+                    const { execSync } = require('child_process');
+                    execSync(`taskkill /pid ${parsed.pid} /T /F`, { stdio: 'ignore' });
+                  } catch (_) {}
+                }
+              }
+              setTimeout(() => resolve(false), 400);
+              return;
+            }
+            resolve(true);
+          } catch (_) {
+            resolve(!app.isPackaged);
+          }
+        });
       } else {
         resolve(false);
       }
@@ -191,7 +239,9 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 768,
     title: 'Nexus POS Pro',
-    icon: path.join(__dirname, '..', 'dist', 'icon.svg'),
+    icon: fs.existsSync(path.join(__dirname, '..', 'build', 'icon.ico'))
+      ? path.join(__dirname, '..', 'build', 'icon.ico')
+      : path.join(__dirname, '..', 'dist', 'pwa-512x512.png'),
         webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -221,8 +271,15 @@ function createWindow() {
 
     const key = input.key.toLowerCase();
 
-    // Activer la console d'erreur (DevTools) avec F12, Ctrl+Shift+I, ou Ctrl+Alt+I
-    if (key === 'f12' || (input.control && input.shift && key === 'i') || (input.control && input.alt && key === 'i')) {
+    // Activer la console de développement (DevTools) :
+    // - En développement : F12, Ctrl+Shift+I, ou Ctrl+Alt+I
+    // - En production sécurisée : Raccourci administrateur secret (Ctrl+Shift+F12, Ctrl+Alt+D, ou Ctrl+Shift+I)
+    // F12 seul reste neutralisé en production pour éviter toute ouverture accidentelle par les caissiers.
+    const isDevToolsShortcut = !app.isPackaged
+      ? (key === 'f12' || (input.control && input.shift && key === 'i') || (input.control && input.alt && key === 'i'))
+      : ((input.control && input.shift && key === 'f12') || (input.control && input.alt && key === 'd') || (input.control && input.shift && key === 'i'));
+
+    if (isDevToolsShortcut) {
       mainWindow.webContents.toggleDevTools();
       event.preventDefault();
       return;
@@ -267,9 +324,19 @@ function createWindow() {
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:5173',
-        'http://127.0.0.1:5173'
+        'http://127.0.0.1:5173',
+        `http://localhost:${SERVER_PORT}`,
+        `http://127.0.0.1:${SERVER_PORT}`
       ];
-      if (!allowedOrigins.includes(target.origin)) {
+      const isAllowedLocal = allowedOrigins.some(o => {
+        try { return new URL(o).origin === target.origin; } catch (_) { return false; }
+      });
+      // Permettre la navigation vers le flux OAuth (Supabase Auth / Google Accounts) si bascule directe
+      const isOAuthNav = target.hostname.endsWith('supabase.co') || 
+                         target.hostname.endsWith('google.com') || 
+                         target.hostname.endsWith('accounts.google.com');
+
+      if (!isAllowedLocal && !isOAuthNav) {
         event.preventDefault();
         logError(`[Security] Navigation non autorisée bloquée vers : ${navigationUrl}`);
       }
@@ -280,7 +347,19 @@ function createWindow() {
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.includes('/auth/v1/authorize') || url.includes('accounts.google.com') || url.includes('supabase.co/auth')) {
-      return { action: 'allow' };
+      return { 
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 600,
+          height: 700,
+          autoHideMenuBar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true
+          }
+        }
+      };
     }
     // 🛡️ Protection Anti-OS Command Injection (CWE-78) : Valider les protocoles autorisés avant shell.openExternal
     try {
@@ -303,24 +382,89 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 }
 
+// ─── Nettoyage complet des verrous (SQLite + Serveur enfant) pour permettre les mises à jour directes ───
+function cleanupBeforeExit() {
+  if (db) {
+    try {
+      db.close();
+      db = null;
+      log('Base SQLite fermée proprement.');
+    } catch (e) {
+      logError('Erreur lors de la fermeture SQLite', e);
+    }
+  }
+  if (serverProcess) {
+    try {
+      const pid = serverProcess.pid;
+      serverProcess.kill('SIGKILL');
+      if (process.platform === 'win32' && pid) {
+        const { execSync } = require('child_process');
+        try {
+          execSync(`taskkill /pid ${pid} /T /F`, { stdio: 'ignore' });
+        } catch (_) {}
+      }
+      serverProcess = null;
+      log('Processus serveur enfant arrêté proprement.');
+    } catch (_) {}
+  }
+}
+
+// Verrou d'instance unique pour éviter les processus doublons qui bloquent l'installateur NSIS
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 // ─── Lifecycle Electron ────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   initLogging();
-  // Intercepter et autoriser tous les en-têtes CORS (notamment pour Supabase Cloud)
+
+  // 🔄 Purge automatique du cache HTTP & Service Worker lors d'une mise à jour de version (100% des données IndexedDB et SQLite sont préservées)
+  try {
+    const versionFile = path.join(app.getPath('userData'), 'last_installed_version.txt');
+    const currentVer = app.getVersion();
+    const lastVer = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '';
+    if (lastVer !== currentVer) {
+      log(`[Update] Mise à jour détectée (${lastVer || 'initiale'} -> ${currentVer}). Purge du cache JS/ServiceWorker...`);
+      await session.defaultSession.clearCache();
+      await session.defaultSession.clearStorageData({
+        storages: ['serviceworkers', 'cachestorage']
+      });
+      fs.writeFileSync(versionFile, currentVer, 'utf8');
+      log('[Update] Cache ServiceWorker purgé avec succès (données locales préservées).');
+    }
+  } catch (cacheErr) {
+    logError('Erreur lors du nettoyage du cache de mise à jour', cacheErr);
+  }
+
+  // Intercepter et autoriser les en-têtes CORS uniquement pour Supabase Cloud et origines locales
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const responseHeaders = { ...details.responseHeaders };
-    responseHeaders['access-control-allow-origin'] = ['*'];
-    responseHeaders['access-control-allow-methods'] = ['GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'];
-    responseHeaders['access-control-allow-headers'] = ['*'];
-    responseHeaders['access-control-allow-credentials'] = ['true'];
+    const url = details.url || '';
+    if (url.includes('.supabase.co') || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+      responseHeaders['access-control-allow-origin'] = [`http://localhost:${SERVER_PORT}`];
+      responseHeaders['access-control-allow-methods'] = ['GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'];
+      responseHeaders['access-control-allow-headers'] = ['Content-Type, Authorization, apikey, x-client-info, x-pos-token, x-gemini-key, x-nexus-lan-token'];
+      responseHeaders['access-control-allow-credentials'] = ['true'];
+    }
     callback({ responseHeaders });
   });
   initDatabase();
   try {
     const isAlreadyRunning = await checkIfServerRunning();
     if (isAlreadyRunning) {
-      log('Un serveur backend est déjà actif et prêt. Réutilisation.');
+      log('Un serveur backend de même version est déjà actif et prêt. Réutilisation.');
     } else {
+      SERVER_PORT = await findAvailablePort(3000);
+      SERVER_URL = `http://localhost:${SERVER_PORT}`;
+      log(`Port serveur assigné: ${SERVER_PORT}`);
       startServer();
       log('Attente du serveur...');
       await waitForServer();
@@ -338,6 +482,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  cleanupBeforeExit();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -350,9 +495,11 @@ app.on('activate', () => {
 });
 
 app.on('before-quit', () => {
-  if (serverProcess) {
-    serverProcess.kill();
-  }
+  cleanupBeforeExit();
+});
+
+app.on('will-quit', () => {
+  cleanupBeforeExit();
 });
 
 // Handler IPC pour générer des PDFs de façon asynchrone, invisible et vectorielle
@@ -408,11 +555,19 @@ function validateSqlStatement(sql) {
     throw new Error('Invalid SQL statement');
   }
   const norm = sql.trim().toLowerCase();
+  // Supprimer les commentaires SQL (/* ... */ et -- ...) avant inspection des mots-clés
+  const stripped = norm
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--.*$/gm, ' ')
+    .trim();
   // Bloquer les commandes d'évasion et les injections multi-requêtes
-  if (norm.includes(';') && norm.indexOf(';') !== norm.length - 1) {
+  if (stripped.includes(';') && stripped.indexOf(';') !== stripped.length - 1) {
     throw new Error('Multi-statement execution forbidden');
   }
-  if (norm.startsWith('attach ') || norm.startsWith('detach ') || norm.includes('pragma writable_schema')) {
+  if (
+    /\b(attach|detach|pragma|load_extension)\b/i.test(stripped) ||
+    /\bvacuum\s+into\b/i.test(stripped)
+  ) {
     throw new Error('Dangerous SQLite command forbidden');
   }
 }

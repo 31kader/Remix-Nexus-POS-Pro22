@@ -12,6 +12,7 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn, formatSafe } from '../lib/utils';
+import { isTopUpTransaction } from '../types';
 
 // Lazy loading des sous-rapports pour alléger le bundle initial (Règle GEMINI.md)
 const AccountingChartsReport = lazy(() => import('./reports/AccountingChartsReport').then(m => ({ default: m.AccountingChartsReport })));
@@ -72,22 +73,28 @@ export const DetailedReports = memo(function DetailedReports({
       'Mode de Règlement',
       'Total HT (DA)',
       'Taux TVA',
-      'TVA 19% Collectée (DA)',
-      'Total TTC (DA)',
+      'TVA Collectée (DA)',
+      'Total TTC Net (DA)',
       'Statut Transaction'
     ];
-    const vatRate = Number(settings.taxRate || 19) / 100;
-    const rows = transactions.map(t => {
-      const totalTtc = t.total || 0;
-      const totalHt = totalTtc / (1 + vatRate);
-      const taxAmount = totalTtc - totalHt;
+    const vatRatePercent = Number(settings.taxRate ?? 19);
+    const vatRate = vatRatePercent / 100;
+    const activeTransactions = (transactions || []).filter(t => t && t.status !== 'cancelled' && t.status !== 'returned' && !isTopUpTransaction(t));
+    const rows = activeTransactions.map(t => {
+      const refunded = returnsByTx.get(t.id) || 0;
+      const totalTtc = Math.max(0, (Number(t.total) || 0) - refunded);
+      const recordedTax = (t as any).taxAmount !== undefined ? Number((t as any).taxAmount) : undefined;
+      const taxAmount = recordedTax !== undefined && !isNaN(recordedTax) && refunded === 0
+        ? recordedTax
+        : (totalTtc - (totalTtc / (1 + vatRate)));
+      const totalHt = Math.max(0, totalTtc - taxAmount);
       const methodLabel = t.paymentMethod === 'cash' ? 'Espèces' : t.paymentMethod === 'card' ? 'Carte / TPE' : t.paymentMethod === 'balance' ? 'Crédit (Dette)' : (t.paymentMethod || 'Autre');
       return [
         `"${formatSafe(t.timestamp, 'yyyy-MM-dd HH:mm:ss')}"`,
         `"${t.id}"`,
         `"${methodLabel}"`,
         totalHt.toFixed(2),
-        `"19%"`,
+        `"${vatRatePercent}%"`,
         taxAmount.toFixed(2),
         totalTtc.toFixed(2),
         `"${t.status || 'completed'}"`
@@ -119,7 +126,7 @@ export const DetailedReports = memo(function DetailedReports({
 
   const totalRevenue = useMemo(() => {
     return transactions.reduce((sum, t) => {
-      if (t.status === 'returned' || t.status === 'cancelled') return sum;
+      if (t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return sum;
       let amount = t.total || 0;
       if (t.status === 'partially_returned') {
         const refunded = returnsByTx.get(t.id) ?? Number(t.amountReturned) ?? 0;

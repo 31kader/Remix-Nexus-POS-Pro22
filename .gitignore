@@ -11,6 +11,6 @@ dist/
 build/
 .cache/
 .agents/
-release/*
-!release/*.apk
+release/
+*.apk
 *.exe

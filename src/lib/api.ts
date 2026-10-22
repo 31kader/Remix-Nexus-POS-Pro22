@@ -9,7 +9,7 @@ export const getApiUrl = (path: string) => {
     (window as any).Capacitor?.isNativePlatform?.() === true;
   
   if (isCapacitorNative) {
-    const baseUrl = (import.meta as any).env.VITE_APP_URL || 'http://localhost:3000';
+    const baseUrl = import.meta.env.VITE_APP_URL || 'http://localhost:3000';
     const cleanBase = baseUrl.replace(/\/$/, '');
     const cleanPath = path.replace(/^\//, '');
     return `${cleanBase}/${cleanPath}`;

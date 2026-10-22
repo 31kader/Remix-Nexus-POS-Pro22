@@ -132,4 +132,17 @@ describe('Atomic Sync & Offline POS Resilience Suite', () => {
     expect(custRpc?.payload.deltaSpent).toBe(2500);
     expect(custRpc?.payload.deltaPoints).toBe(25);
   });
+
+  it('devrait consolider 3 lignes de vente du même produit (ex: 10 + 1 + 2 = 13) sans perte de delta', () => {
+    // Cas réel BABOU MAX 35G : 3 scans successifs du même article dans le panier
+    enqueueStockAdjustment('prod_babou', -10);
+    enqueueStockAdjustment('prod_babou', -1);
+    enqueueStockAdjustment('prod_babou', -2);
+
+    const queue = loadPendingSyncQueue();
+    const stockItems = queue.filter((item: any) => item.recordId === 'prod_babou');
+
+    expect(stockItems.length).toBe(1);
+    expect(stockItems[0].payload.adjustment).toBe(-13);
+  });
 });

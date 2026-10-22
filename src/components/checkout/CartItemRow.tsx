@@ -1,8 +1,7 @@
 import React, { memo } from 'react';
-import { Package, Trash2, Minus, Plus, Edit2, Tag, Percent } from 'lucide-react';
+import { Trash2, Minus, Plus, Edit2, Tag } from 'lucide-react';
 import { CartItem, Product, CompanySettings, RolePermissions } from '../../types';
 import { cn } from '../../lib/utils';
-import { SafeImage } from '../ui';
 import { QuantityInput } from './QuantityInput';
 
 interface CartItemRowProps {
@@ -37,10 +36,22 @@ export const CartItemRow = memo(({
   isWholesale,
   permissions,
   settings,
-  products,
   inputRef
 }: CartItemRowProps) => {
   const unit = (item as any).unit || 'PCS';
+
+  const unitPrice = item.overriddenPrice !== undefined 
+    ? item.overriddenPrice 
+    : (isWholesale && item.wholesalePrice ? item.wholesalePrice : item.price);
+
+  const discountAmountPerUnit = item.lineDiscount
+    ? (item.lineDiscount.type === 'percentage' 
+        ? unitPrice * (item.lineDiscount.value / 100)
+        : Math.min(unitPrice, item.lineDiscount.value))
+    : 0;
+
+  const finalUnitPrice = Math.max(0, unitPrice - discountAmountPerUnit);
+  const lineTotal = finalUnitPrice * item.quantity;
 
   return (
     <div 
@@ -67,7 +78,7 @@ export const CartItemRow = memo(({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate uppercase ">{item.name}</h5>
+              <h5 className="text-sm font-bold text-slate-900 dark:text-white truncate uppercase">{item.name}</h5>
               {item.quantity < 0 && (
                 <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-sm shrink-0">
                   RETOUR
@@ -81,8 +92,10 @@ export const CartItemRow = memo(({
             </div>
           </div>
           <button 
-            onClick={(e) => { e.stopPropagation(); onRemove(item.cartItemId || ''); }}
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all active:scale-90 cursor-pointer"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRemove(item.cartItemId || item.id); }}
+            className="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all active:scale-90 cursor-pointer"
+            title="Supprimer la ligne"
           >
             <Trash2 size={16} />
           </button>
@@ -97,15 +110,15 @@ export const CartItemRow = memo(({
                   e.stopPropagation();
                   if (item.quantity < 0) {
                     if (item.quantity < -1) {
-                      onSetQuantity(item.cartItemId || '', item.quantity + 1, true);
+                      onSetQuantity(item.cartItemId || item.id, item.quantity + 1, true);
                     } else {
-                      onRemove(item.cartItemId || '');
+                      onRemove(item.cartItemId || item.id);
                     }
                   } else {
-                    onSetQuantity(item.cartItemId || '', item.quantity - 1, true); 
+                    onSetQuantity(item.cartItemId || item.id, item.quantity - 1, true); 
                   }
                 }}
-                className="w-7 h-7 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all text-slate-500 dark:text-slate-400 active:scale-90 cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center hover:bg-white dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white rounded-lg transition-all text-slate-500 dark:text-slate-400 active:scale-90 cursor-pointer"
                 title={item.quantity < 0 ? "Réduire le retour" : "Diminuer quantité"}
               >
                 <Minus size={14} />
@@ -120,12 +133,12 @@ export const CartItemRow = memo(({
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   if (item.quantity < 0) {
-                    onSetQuantity(item.cartItemId || '', item.quantity - 1, true);
+                    onSetQuantity(item.cartItemId || item.id, item.quantity - 1, true);
                   } else {
-                    onSetQuantity(item.cartItemId || '', item.quantity + 1, true); 
+                    onSetQuantity(item.cartItemId || item.id, item.quantity + 1, true); 
                   }
                 }}
-                className="w-7 h-7 flex items-center justify-center hover:bg-white/10 hover:text-white rounded-lg transition-all text-slate-400 active:scale-90"
+                className="w-10 h-10 flex items-center justify-center hover:bg-white/10 hover:text-white rounded-lg transition-all text-slate-400 active:scale-90 cursor-pointer"
                 title={item.quantity < 0 ? "Augmenter le retour" : "Augmenter quantité"}
               >
                 <Plus size={14} />
@@ -137,60 +150,70 @@ export const CartItemRow = memo(({
             <div className="flex gap-1">
               {permissions.canAccessInventory && (
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     const { quantity, overriddenPrice, lineDiscount, productName, cartItemId, ...product } = item as any;
                     onOpenProductModal(product as Product);
                   }}
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-transparent hover:border-amber-500/20 active:scale-90"
+                  className="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-transparent hover:border-amber-500/20 active:scale-90 cursor-pointer"
                   title="DÉTAILS PRODUIT"
                 >
                   <Edit2 size={15} />
                 </button>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); onOpenDiscountModal(item.cartItemId || ''); }}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpenDiscountModal(item.cartItemId || item.id); }}
                 className={cn(
-                  "p-1.5 rounded-lg transition-all border active:scale-90",
-                  item.lineDiscount ? "bg-amber-500/10 text-amber-400 border-amber-500/40" : "text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400 border-transparent hover:border-indigo-500/20"
+                  "min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg transition-all border active:scale-90 cursor-pointer",
+                  item.lineDiscount ? "bg-amber-500/10 text-amber-500 border-amber-500/40" : "text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-400 border-transparent hover:border-indigo-500/20"
                 )}
-                title="APPLIQUER REMISE"
+                title="APPLIQUER UNE REMISE SUR L'ARTICLE"
               >
                 <Tag size={15} fill={item.lineDiscount ? "currentColor" : "none"} />
               </button>
             </div>
 
-            <div className="text-right border-l border-slate-200 dark:border-white/5 pl-3">
-              <div className="flex items-center gap-1 justify-end">
+            {/* Prix Ligne Grand Format & Prix Unitaire */}
+            <div className="text-right border-l border-slate-200 dark:border-white/10 pl-3 min-w-[110px]">
+              <div className={cn(
+                "text-lg sm:text-xl font-black font-mono tracking-tight leading-tight",
+                item.quantity < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
+              )}>
+                {lineTotal.toFixed(2)} <span className="text-[10px] font-bold text-slate-500 font-sans">{settings.currency}</span>
+              </div>
+              <div className="flex items-center gap-1 justify-end text-[11px] text-slate-500 font-mono mt-0.5">
+                <span className="text-[9px] uppercase font-bold text-slate-400">P.U:</span>
                 <input
                   type="number"
-                  value={item.overriddenPrice !== undefined ? item.overriddenPrice : (isWholesale && item.wholesalePrice ? item.wholesalePrice : item.price)}
+                  value={unitPrice}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === '') return;
                     const parsed = parseFloat(val);
                     if (!isNaN(parsed) && parsed >= 0) {
-                      onSetPrice(item.cartItemId || '', parsed);
+                      onSetPrice(item.cartItemId || item.id, parsed);
                     }
                   }}
                   onBlur={(e) => {
                     const val = e.target.value;
                     if (val === '' || isNaN(parseFloat(val))) {
                       const defaultPrice = isWholesale && item.wholesalePrice ? item.wholesalePrice : item.price;
-                      onSetPrice(item.cartItemId || '', defaultPrice);
+                      onSetPrice(item.cartItemId || item.id, defaultPrice);
                     }
                   }}
                   className={cn(
-                    "w-20 p-0.5 text-right text-base font-bold bg-transparent border-b border-dashed outline-none transition-all font-mono tracking-tighter",
-                    item.lineDiscount ? "text-amber-600 dark:text-amber-400 border-amber-500/40" : "text-slate-900 dark:text-white border-slate-300 dark:border-white/10 focus:border-indigo-500"
+                    "w-16 p-0 text-right text-xs font-black bg-transparent border-b border-dashed outline-none transition-all font-mono",
+                    item.lineDiscount ? "text-amber-600 dark:text-amber-400 border-amber-500/40" : "text-slate-700 dark:text-zinc-300 border-slate-300 dark:border-white/10 focus:border-indigo-500"
                   )}
+                  title="Modifier le prix unitaire"
                 />
-                <span className={cn("text-[9px] font-bold uppercase tracking-wider", item.lineDiscount ? "text-amber-600 dark:text-amber-500/60" : "text-slate-400 dark:text-slate-500")}>{settings.currency}</span>
               </div>
               {item.lineDiscount && (
-                <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mt-0.5 ">
-                  OFF: -{item.lineDiscount.value}{item.lineDiscount.type === 'percentage' ? '%' : settings.currency}
+                <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider mt-0.5">
+                  -{item.lineDiscount.value}{item.lineDiscount.type === 'percentage' ? '%' : ` ${settings.currency}`}
                 </p>
               )}
             </div>

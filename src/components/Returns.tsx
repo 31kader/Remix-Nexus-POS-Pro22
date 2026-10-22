@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { RotateCcw, Calendar, Search, Filter, Eye, FileSpreadsheet, Database, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { RotateCcw, Calendar, Search, Filter, Eye, FileSpreadsheet, Database, X, Trash2, ChevronLeft, ChevronRight, Clock, AlertCircle } from 'lucide-react';
 import { Product, CompanySettings, ProductReturn } from '../types';
 import { formatSafe, exportToExcel, exportToCSV, formatPrice } from '../lib/utils';
 import { Button, Card } from './ui';
@@ -108,26 +108,26 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
   }, [filteredReturns]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-black text-white tracking-tight uppercase flex items-center gap-2.5">
-            <RotateCcw className="text-rose-400" size={24} />
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase flex items-center gap-2.5">
+            <RotateCcw className="text-rose-500 dark:text-rose-400" size={24} />
             Gestion des Retours
           </h3>
-          <p className="text-sm text-slate-400 mt-0.5">
-            {filteredReturns.length} retours filtrés • Total Remboursé : <strong className="text-rose-400 font-mono">{formatPrice(totalRefundAmount)} {settings?.currency || 'DA'}</strong>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {filteredReturns.length} retours filtrés • Total Remboursé : <strong className="text-rose-600 dark:text-rose-400 font-mono">{formatPrice(totalRefundAmount)} {settings?.currency || 'DA'}</strong>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={() => exportToExcel(filteredReturns, 'retours')} className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">
+          <Button variant="secondary" onClick={() => exportToExcel(filteredReturns, 'retours')} className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20">
             <FileSpreadsheet size={16} /> Excel
           </Button>
-          <Button variant="secondary" onClick={() => exportToCSV(filteredReturns, 'retours')} className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20">
+          <Button variant="secondary" onClick={() => exportToCSV(filteredReturns, 'retours')} className="flex items-center gap-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 hover:bg-blue-500/20">
             <Database size={16} /> CSV
           </Button>
           {safeReturns.length > 0 && (
-            <Button variant="secondary" onClick={handlePurgeAllReturns} className="flex items-center gap-2 bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/30">
+            <Button variant="secondary" onClick={handlePurgeAllReturns} className="flex items-center gap-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/30">
               <Trash2 size={16} /> Vider les Retours
             </Button>
           )}
@@ -135,58 +135,58 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
       </div>
 
       {/* Date Filters & Search Bar */}
-      <Card className="p-4 bg-slate-900/60 border border-slate-800/80  space-y-3">
+      <Card className="p-4 bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text"
               placeholder="Rechercher par N° de transaction ou motif..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-xs outline-none focus:ring-2 focus:ring-indigo-500/40"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-indigo-500/40"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <X size={14} />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setDateFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Tout
             </button>
             <button
               onClick={() => setDateFilter('today')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'today' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'today' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Aujourd'hui
             </button>
             <button
               onClick={() => setDateFilter('yesterday')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'yesterday' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'yesterday' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Hier
             </button>
             <button
               onClick={() => setDateFilter('last7days')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last7days' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last7days' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               7 Jours
             </button>
             <button
               onClick={() => setDateFilter('last30days')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last30days' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'last30days' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               30 Jours
             </button>
             <button
               onClick={() => setDateFilter('custom')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${dateFilter === 'custom' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
             >
               Période
             </button>
@@ -196,14 +196,14 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
             <div className="flex items-center gap-2">
               <input 
                 type="date"
-                className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
                 value={customRange.start}
                 onChange={e => setCustomRange(prev => ({ ...prev, start: e.target.value }))}
               />
               <span className="text-slate-500 text-xs">à</span>
               <input 
                 type="date"
-                className="bg-slate-950 border border-slate-800 text-white rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
                 value={customRange.end}
                 onChange={e => setCustomRange(prev => ({ ...prev, end: e.target.value }))}
               />
@@ -212,20 +212,93 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden bg-slate-900/60 border border-slate-800/80">
+      {/* ============================================================== */}
+      {/* 1. VUE MOBILE : Cartes de Retours Tactiles 100% Largeur Écran   */}
+      {/* ============================================================== */}
+      <div className="block lg:hidden space-y-3">
+        {displayedReturns.map((r: any) => {
+          const dateVal = r.timestamp || r.date || r.created_at || r.updated_at;
+          const refundVal = typeof r.totalRefund === 'number' 
+            ? r.totalRefund 
+            : (typeof r.refundAmount === 'number' 
+                ? r.refundAmount 
+                : (parseFloat(r.refundAmount || r.totalRefund || r.refund_amount || r.total_refund || '0') || 0));
+          const returnTypeMapped = r.type || 'refund';
+          const txDisplay = String(r.transactionId || r.transaction_id || '').slice(-8).toUpperCase() || 'INCONNU';
+
+          return (
+            <div 
+              key={`mobile-return-${r.id}`}
+              className="p-4 rounded-2xl bg-white dark:bg-zinc-900/80 border border-slate-200 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 transition-all space-y-3 text-left shadow-xs"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/20">
+                    Ticket #{txDisplay}
+                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono mt-1 flex items-center gap-1">
+                    <Clock size={11} className="text-slate-400" />
+                    {dateVal ? formatSafe(dateVal, 'dd/MM/yyyy à HH:mm:ss') : '—'}
+                  </p>
+                </div>
+
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                  returnTypeMapped === 'refund' 
+                    ? "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30" 
+                    : "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                }`}>
+                  {returnTypeMapped === 'refund' ? 'Remboursement' : 'Note de Crédit'}
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 text-xs text-slate-700 dark:text-zinc-300">
+                <span className="font-bold text-slate-500 dark:text-zinc-400">Motif :</span> {r.reason || r.notes || 'Aucune raison indiquée'}
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Montant :</span>{' '}
+                  <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                    {formatPrice(refundVal)} {settings?.currency || 'DA'}
+                  </span>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => setSelectedReturn(r)}
+                  className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/20 dark:hover:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                  title="Voir les détails"
+                >
+                  <Eye size={15} /> Détails
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {filteredReturns.length === 0 && (
+          <div className="p-8 text-center bg-white dark:bg-zinc-900/60 rounded-2xl border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 font-mono text-xs">
+            AUCUN RETOUR CORRESPONDANT
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================== */}
+      {/* 2. VUE DESKTOP : Tableau Complet pour Ordinateur                */}
+      {/* ============================================================== */}
+      <Card className="hidden lg:block p-0 overflow-hidden bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="bg-slate-950 border-b border-slate-800">
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Heure</th>
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Transaction</th>
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Raison</th>
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Remboursement</th>
-                <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+              <tr className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Date & Heure Exacte</th>
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Transaction</th>
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Type</th>
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Raison</th>
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Remboursement</th>
+                <th className="p-4 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
               {displayedReturns.map((r: any) => {
                 const dateVal = r.timestamp || r.date || r.created_at || r.updated_at;
                 const refundVal = typeof r.totalRefund === 'number' 
@@ -236,30 +309,32 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
                 const returnTypeMapped = r.type || 'refund';
 
                 return (
-                  <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 text-xs font-mono text-slate-300">
-                      {dateVal ? formatSafe(dateVal, 'dd/MM/yyyy HH:mm') : '—'}
+                  <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="p-4 text-xs font-mono text-slate-800 dark:text-slate-300 font-semibold whitespace-nowrap">
+                      {dateVal ? formatSafe(dateVal, 'dd/MM/yyyy à HH:mm:ss') : '—'}
                     </td>
-                    <td className="p-4 text-xs font-mono text-indigo-400 font-bold">
+                    <td className="p-4 text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold whitespace-nowrap">
                       #{String(r.transactionId || r.transaction_id || '').slice(-8).toUpperCase() || 'INCONNU'}
                     </td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
                         returnTypeMapped === 'refund' 
-                          ? "bg-rose-500/10 text-rose-400 border-rose-500/20" 
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          ? "bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20" 
+                          : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20"
                       }`}>
                         {returnTypeMapped === 'refund' ? 'Remboursement' : 'Note de Crédit'}
                       </span>
                     </td>
-                    <td className="p-4 text-xs text-slate-400 ">
+                    <td className="p-4 text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate" title={r.reason || r.notes || ''}>
                       "{r.reason || r.notes || 'Aucune raison indiquée'}"
                     </td>
-                    <td className="p-4 font-black text-emerald-400 font-mono">{formatPrice(refundVal)} {settings?.currency || 'DA'}</td>
+                    <td className="p-4 font-black text-emerald-600 dark:text-emerald-400 font-mono whitespace-nowrap">
+                      {formatPrice(refundVal)} {settings?.currency || 'DA'}
+                    </td>
                     <td className="p-4 text-right">
                       <button 
                         onClick={() => setSelectedReturn(r)}
-                        className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-xl transition-all"
+                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
                         title="Voir les détails"
                       >
                         <Eye size={18} />
@@ -270,7 +345,9 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
               })}
               {filteredReturns.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-slate-500 font-mono ">AUCUN RETOUR CORRESPONDANT</td>
+                  <td colSpan={6} className="p-8 text-center text-slate-400 font-mono text-xs">
+                    AUCUN RETOUR CORRESPONDANT
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -278,18 +355,18 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
         </div>
 
         {/* Pagination bar */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-4">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/60 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Lignes par page :</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">Lignes par page :</span>
             {[50, 100, 200].map((size) => (
               <button
                 key={size}
                 type="button"
                 onClick={() => { setPageSize(size); setCurrentPage(1); }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   pageSize === size
                     ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-transparent'
                 }`}
               >
                 {size}
@@ -298,7 +375,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               {filteredReturns.length > 0
                 ? `${(validPage - 1) * pageSize + 1}-${Math.min(validPage * pageSize, filteredReturns.length)} sur ${filteredReturns.length}`
                 : '0 sur 0'}
@@ -310,18 +387,18 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
                   type="button"
                   disabled={validPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-transparent text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold cursor-pointer"
                 >
                   <ChevronLeft size={16} /> Précédent
                 </button>
-                <span className="text-xs font-bold text-indigo-400 px-2">
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 px-2 font-mono">
                   Page {validPage} / {totalPages}
                 </span>
                 <button
                   type="button"
                   disabled={validPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-transparent text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1 text-xs font-bold cursor-pointer"
                 >
                   Suivant <ChevronRight size={16} />
                 </button>
@@ -343,7 +420,7 @@ export function Returns({ returns = [], settings, products = [] }: { returns: Pr
 }
 
 export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, products = [] }: { isOpen: boolean, onClose: () => void, returnRecord: any, settings: CompanySettings, products?: Product[] }) {
-  if (!returnRecord) return null;
+  if (!isOpen || !returnRecord) return null;
 
   const dateVal = returnRecord.timestamp || returnRecord.date || returnRecord.created_at || returnRecord.updated_at;
   const refundVal = typeof returnRecord.totalRefund === 'number' 
@@ -376,64 +453,72 @@ export function ReturnDetailsModal({ isOpen, onClose, returnRecord, settings, pr
       })() : []);
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70  ${isOpen ? 'block' : 'hidden'}`}>
-      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-6 shadow-md">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
           <div>
-            <h4 className="text-lg font-black text-white uppercase tracking-wider">Détails du Retour</h4>
-            <p className="text-xs font-mono text-indigo-400 mt-0.5">#{String(returnRecord.id || '').slice(-8).toUpperCase()}</p>
+            <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-wider">Détails du Retour</h4>
+            <p className="text-xs font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">#{String(returnRecord.id || '').slice(-8).toUpperCase()}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/40">
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-slate-800/60 cursor-pointer">
             <X size={18} />
           </button>
         </div>
 
         <div className="space-y-4 text-xs">
-          <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800/60 font-mono">
+          <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800/60 font-mono">
             <div>
-              <span className="text-slate-500 block uppercase text-[10px]">Date & Heure</span>
-              <strong className="text-white">{dateVal ? formatSafe(dateVal, 'dd/MM/yyyy HH:mm') : '—'}</strong>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Date & Heure</span>
+              <strong className="text-slate-900 dark:text-white flex items-center gap-1 mt-0.5">
+                <Clock size={12} className="text-indigo-500 shrink-0" />
+                {dateVal ? formatSafe(dateVal, 'dd/MM/yyyy à HH:mm:ss') : '—'}
+              </strong>
             </div>
             <div>
-              <span className="text-slate-500 block uppercase text-[10px]">Transaction Liée</span>
-              <strong className="text-indigo-400">#{String(returnRecord.transactionId || '').slice(-8).toUpperCase() || '—'}</strong>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Transaction Liée</span>
+              <strong className="text-indigo-600 dark:text-indigo-400 mt-0.5 block">#{String(returnRecord.transactionId || '').slice(-8).toUpperCase() || '—'}</strong>
             </div>
             <div>
-              <span className="text-slate-500 block uppercase text-[10px]">Type</span>
-              <strong className="text-amber-400 uppercase">{returnTypeMapped === 'refund' ? 'Remboursement' : 'Note de Crédit'}</strong>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Type</span>
+              <strong className="text-amber-600 dark:text-amber-400 uppercase mt-0.5 block">{returnTypeMapped === 'refund' ? 'Remboursement' : 'Note de Crédit'}</strong>
             </div>
             <div>
-              <span className="text-slate-500 block uppercase text-[10px]">Montant Remboursé</span>
-              <strong className="text-emerald-400 text-sm font-black">{formatPrice(refundVal)} {settings?.currency || 'DA'}</strong>
+              <span className="text-slate-500 block uppercase text-[10px] font-bold">Montant Remboursé</span>
+              <strong className="text-emerald-600 dark:text-emerald-400 text-sm font-black mt-0.5 block">{formatPrice(refundVal)} {settings?.currency || 'DA'}</strong>
             </div>
           </div>
 
           <div className="space-y-2">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Articles Retournés</span>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Articles Retournés</span>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
               {items.map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
                   <div>
-                    <p className="font-bold text-white text-xs">{item.name}</p>
+                    <p className="font-bold text-slate-900 dark:text-white text-xs">{item.name}</p>
                     <p className="text-[10px] text-slate-500 font-mono">{item.quantity} x {formatPrice(item.price)} {settings?.currency || 'DA'}</p>
                   </div>
-                  <strong className="text-white font-mono">{formatPrice((item.quantity || 1) * (item.price || 0))} {settings?.currency || 'DA'}</strong>
+                  <strong className="text-slate-900 dark:text-white font-mono">{formatPrice((item.quantity || 1) * (item.price || 0))} {settings?.currency || 'DA'}</strong>
                 </div>
               ))}
+              {items.length === 0 && (
+                <div className="p-4 text-center text-xs text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-slate-800 italic">
+                  Aucun article spécifique détaillé dans ce retour
+                </div>
+              )}
             </div>
           </div>
 
           {returnRecord.reason && (
-            <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+            <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800">
               <span className="text-[10px] font-black uppercase text-slate-500 block mb-1">Motif</span>
-              <p className="text-slate-300 ">"{returnRecord.reason}"</p>
+              <p className="text-slate-700 dark:text-slate-300">"{returnRecord.reason}"</p>
             </div>
           )}
         </div>
 
         <button 
           onClick={onClose} 
-          className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold uppercase tracking-wider text-xs transition-colors"
+          className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-xl font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer"
         >
           Fermer
         </button>

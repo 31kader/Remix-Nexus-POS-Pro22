@@ -4,7 +4,7 @@ import {
   Package, Search, Plus, Trash2, ShoppingBag, 
   Upload, RefreshCw, Brain, Camera, ShoppingCart, 
   Wallet, Clock, CheckCircle2, AlertCircle, FileText, 
-  Edit, Printer, X, Sparkles, XCircle, Eye
+  Edit, Printer, X, Sparkles, XCircle, Eye, ClipboardList
 } from 'lucide-react';
 import { 
   Product, Supplier, InvoicePattern, Purchase, 
@@ -35,9 +35,11 @@ import {
 import { SubTabPurchasesHistory } from './smart-purchase/SubTabPurchasesHistory';
 import { SubTabDebts } from './smart-purchase/SubTabDebts';
 import { SubTabNewPurchase } from './smart-purchase/SubTabNewPurchase';
+import { SubTabShortages } from './smart-purchase/SubTabShortages';
 import { useSmartPurchaseLogic } from './smart-purchase/useSmartPurchaseLogic';
 import { SmartPurchaseModals } from './smart-purchase/SmartPurchaseModals';
-import { usePurchaseCart, PurchaseCartItem } from './usePurchaseCart';
+import { usePurchaseCart, PurchaseCartItem } from '../hooks/usePurchaseCart';
+import { useShortageStore } from '../store/useShortageStore';
 
 // Removed module-level AI initialization
 
@@ -90,6 +92,16 @@ export function SmartPurchase(props: SmartPurchaseProps) {
     historySearch, setHistorySearch,
     historyStartDate, setHistoryStartDate,
     historyEndDate, setHistoryEndDate,
+    historySupplierId, setHistorySupplierId,
+    historyPaymentStatus, setHistoryPaymentStatus,
+    historyReceiptStatus, setHistoryReceiptStatus,
+    historyQuickDate, setHistoryQuickDate,
+    historyMinAmount, setHistoryMinAmount,
+    historyMaxAmount, setHistoryMaxAmount,
+    historySortBy, setHistorySortBy,
+    isAdvancedFiltersOpen, setIsAdvancedFiltersOpen,
+    setQuickDatePeriod, resetHistoryFilters,
+    activeHistoryFiltersCount, purchasesSummary,
     paymentData, setPaymentData,
     isQuickSupplierModalOpen, setIsQuickSupplierModalOpen,
     quickSupplierData, setQuickSupplierData,
@@ -112,6 +124,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
   } = useSmartPurchaseLogic(props);
 
   const { products, suppliers, patterns, purchases, purchaseOrders, settings, user, categories, supplierPayments, setIsProductModalOpen, setEditingProduct, isProductModalOpen, editingProduct, setViewingPurchaseVoucher } = props;
+  const shortageCount = useShortageStore(s => s.items.length);
 
   if (step === 'updatePrices') {
     if (!lastPurchaseItems || lastPurchaseItems.length === 0 || !lastPurchaseItems.some(i => i.productId)) {
@@ -209,6 +222,21 @@ export function SmartPurchase(props: SmartPurchaseProps) {
           >
             Dettes & Versements
           </button>
+          <button 
+            onClick={() => setActiveSubTab('shortages')}
+            className={cn(
+              "px-6 py-2 rounded-lg text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-widest border border-transparent flex items-center gap-1.5",
+              activeSubTab === 'shortages' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-300"
+            )}
+          >
+            <ClipboardList size={13} />
+            <span>Cahier des Manques</span>
+            {shortageCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 bg-indigo-400/20 text-indigo-300 text-[9px] rounded-full font-mono font-bold">
+                {shortageCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -280,12 +308,32 @@ export function SmartPurchase(props: SmartPurchaseProps) {
       ) : activeSubTab === 'purchases' ? (
         <SubTabPurchasesHistory 
           filteredPurchases={filteredPurchases}
+          suppliers={suppliers}
           historySearch={historySearch}
           setHistorySearch={setHistorySearch}
           historyStartDate={historyStartDate}
           setHistoryStartDate={setHistoryStartDate}
           historyEndDate={historyEndDate}
           setHistoryEndDate={setHistoryEndDate}
+          historySupplierId={historySupplierId}
+          setHistorySupplierId={setHistorySupplierId}
+          historyPaymentStatus={historyPaymentStatus}
+          setHistoryPaymentStatus={setHistoryPaymentStatus}
+          historyReceiptStatus={historyReceiptStatus}
+          setHistoryReceiptStatus={setHistoryReceiptStatus}
+          historyQuickDate={historyQuickDate}
+          setQuickDatePeriod={setQuickDatePeriod}
+          historyMinAmount={historyMinAmount}
+          setHistoryMinAmount={setHistoryMinAmount}
+          historyMaxAmount={historyMaxAmount}
+          setHistoryMaxAmount={setHistoryMaxAmount}
+          historySortBy={historySortBy}
+          setHistorySortBy={setHistorySortBy}
+          isAdvancedFiltersOpen={isAdvancedFiltersOpen}
+          setIsAdvancedFiltersOpen={setIsAdvancedFiltersOpen}
+          resetHistoryFilters={resetHistoryFilters}
+          activeFiltersCount={activeHistoryFiltersCount}
+          purchasesSummary={purchasesSummary}
           setViewingPurchaseVoucher={setViewingPurchaseVoucher}
           handleEditPurchaseRequest={handleEditPurchaseRequest}
           setPurchaseToDelete={setPurchaseToDelete}
@@ -297,6 +345,33 @@ export function SmartPurchase(props: SmartPurchaseProps) {
           settings={settings}
           setPaymentData={setPaymentData}
           setIsPaymentModalOpen={setIsPaymentModalOpen}
+        />
+      ) : activeSubTab === 'shortages' ? (
+        <SubTabShortages 
+          products={products}
+          suppliers={suppliers}
+          purchases={purchases}
+          onConvertToPurchase={(itemsToConvert, targetSupplierId) => {
+            if (!itemsToConvert || itemsToConvert.length === 0) {
+              toast.error("Aucun article à convertir.");
+              return;
+            }
+            for (const item of itemsToConvert) {
+              addToCart({
+                productId: item.productId,
+                name: item.name,
+                quantity: item.quantityNeeded,
+                costPrice: item.costPrice,
+                taxRate: 19
+              });
+            }
+            if (targetSupplierId) {
+              setSelectedSupplierId(targetSupplierId);
+            }
+            setActiveSubTab('new');
+            setMode('manual');
+            toast.success(`${itemsToConvert.length} article(s) transféré(s) au Bon d'Achat !`);
+          }}
         />
       ) : null}
 

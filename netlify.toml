@@ -10,7 +10,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"

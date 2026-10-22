@@ -42,18 +42,13 @@ export async function safeOptionalMutation(
   try {
     const { error } = await mutationFn();
     if (error) {
-      if (isIgnorableSupabaseError(error)) {
-        logOptionalWarning(scope, error, meta);
-        return false;
-      }
-      throw error;
-    }
-    return true;
-  } catch (error) {
-    if (isIgnorableSupabaseError(error)) {
       logOptionalWarning(scope, error, meta);
       return false;
     }
-    throw error;
+    return true;
+  } catch (error) {
+    logOptionalWarning(scope, error, meta);
+    return false;
   }
 }
+

@@ -29,6 +29,33 @@ export interface ProductBatch {
   stock: number;
 }
 
+export function normalizeBatches(batches: any): ProductBatch[] {
+  if (!batches) return [];
+  let list = batches;
+  if (typeof list === 'string') {
+    const trimmed = list.trim();
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        list = Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    } else {
+      return [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter(b => b && typeof b === 'object')
+    .map(b => ({
+      id: b.id || '',
+      batchNumber: b.batchNumber || b.batch_number || '',
+      expirationDate: b.expirationDate || b.expiration_date || '',
+      stock: typeof b.stock === 'number' ? b.stock : (parseFloat(b.stock) || 0)
+    }));
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -37,6 +64,7 @@ export interface Product {
   price: number;
   onlinePrice?: number;
   costPrice: number;
+  pmp?: number;
   taxRate: number;
   stock: number;
   minStock: number;
@@ -71,4 +99,10 @@ export interface Product {
   priceHistory?: PriceHistoryEntry[];
   damagedStock?: number;
   originalPrice?: number;
+  category?: string;
+  category_id?: string;
+  brand_id?: string;
+  cost_price?: number;
+  wholesale_price?: number;
+  online_price?: number;
 }

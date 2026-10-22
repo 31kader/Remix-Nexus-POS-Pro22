@@ -374,14 +374,25 @@ export function useSmartPurchaseScanner({
           return;
         }
       } catch (aiErr: any) {
-        console.warn('IA Vision indisponible ou quota atteint, bascule automatique sur OCR Local:', aiErr?.message);
-        toast.info('Clé IA absente ou quota atteint : bascule automatique sur le moteur OCR Local (Hors-Ligne)...');
+        const isOffline = (typeof navigator !== 'undefined' && !navigator.onLine) || String(aiErr?.message || '').toLowerCase().includes('failed to fetch');
+        if (isOffline) {
+          toast.info('Mode déconnecté détecté : bascule automatique sur le moteur OCR Local...');
+        } else {
+          console.warn('IA Vision indisponible ou quota atteint, bascule automatique sur OCR Local:', aiErr?.message);
+          toast.info('Clé IA indisponible : bascule automatique sur le moteur OCR Local...');
+        }
       }
 
       setIsScanning(false);
       await runLocalImageOcr(selectedFile);
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'analyse de la photo");
+      const isOfflineErr = (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        String(err?.message || '').toLowerCase().includes('failed to fetch') ||
+        String(err?.message || '').toLowerCase().includes('network');
+      const friendlyMsg = isOfflineErr
+        ? "Connexion Internet requise pour le téléchargement initial du modèle OCR ou l'analyse IA. En mode hors-ligne, vous pouvez saisir le bon d'achat directement en mode manuel."
+        : (err.message || "Erreur lors de l'analyse de la photo");
+      setError(friendlyMsg);
       setShowMockOption(true);
       setIsScanning(false);
     }

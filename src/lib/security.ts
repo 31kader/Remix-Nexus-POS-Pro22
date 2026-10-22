@@ -3,7 +3,7 @@
 // Rétrocompatibilité descendante complète avec nx2: (XOR salé) et JSON brut
 
 const DEFAULT_KEY = 'default-nexus-key-salt-2026';
-const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+const envKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 const SECRET_KEY = envKey || DEFAULT_KEY;
 const LOCAL_SALT_STORAGE_KEY = 'nexus_local_salt_v1';
 const PBKDF2_ITERATIONS = 100000;
@@ -416,24 +416,53 @@ export function decryptData(cipherText: string): string {
 // ==========================================
 
 /**
- * Chiffre un objet et le stocke dans localStorage (synchrone).
+ * Chiffre un objet et le stocke (synchrone).
+ * 🛡️ SEC-02 : Si la clé concerne une session, isole dans sessionStorage (règle projet: sessions en sessionStorage).
  */
 export function setSecureItem(key: string, value: any): void {
   try {
     const str = typeof value === 'string' ? value : JSON.stringify(value);
-    localStorage.setItem(key, encryptData(str));
+    const encrypted = encryptData(str);
+    if (key.includes('session')) {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(key, encrypted);
+      }
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+      }
+      return;
+    }
+    localStorage.setItem(key, encrypted);
   } catch (err) {
     console.warn('[Security] Failed to set secure item:', err);
   }
 }
 
 /**
- * Récupère et déchiffre un élément de localStorage (synchrone).
+ * Récupère et déchiffre un élément (synchrone).
+ * 🛡️ SEC-02 : Vérifie sessionStorage pour les sessions avec migration et purge transparente depuis localStorage.
  * Rétrocompatible avec JSON en clair existant et nx2:.
  */
 export function getSecureItem<T = any>(key: string): T | null {
   try {
-    const cipherText = localStorage.getItem(key);
+    let cipherText: string | null = null;
+    if (key.includes('session')) {
+      if (typeof sessionStorage !== 'undefined') {
+        cipherText = sessionStorage.getItem(key);
+      }
+      if (!cipherText && typeof localStorage !== 'undefined') {
+        cipherText = localStorage.getItem(key);
+        if (cipherText) {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(key, cipherText);
+          }
+          localStorage.removeItem(key);
+        }
+      }
+    } else {
+      cipherText = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+    }
+
     if (!cipherText) return null;
 
     // Rétrocompatibilité : migration transparente du JSON en clair existant
@@ -458,11 +487,16 @@ export function getSecureItem<T = any>(key: string): T | null {
 }
 
 /**
- * Supprime un élément sécurisé de localStorage.
+ * Supprime un élément sécurisé de localStorage et de sessionStorage.
  */
 export function removeSecureItem(key: string): void {
   try {
-    localStorage.removeItem(key);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(key);
+    }
   } catch (err) {
     console.warn('[Security] Failed to remove secure item:', err);
   }

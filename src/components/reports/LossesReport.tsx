@@ -56,7 +56,7 @@ export const LossesReport = React.memo(function LossesReport({
     const formattedLosses = losses
       .map(adj => {
         const product = productsById.get(adj.productId);
-        const costPrice = Number(product?.costPrice || product?.price || 0);
+        const costPrice = Number(product?.costPrice ?? 0);
         const lossValue = Math.abs(Number(adj.adjustment || 0)) * costPrice;
 
         totalLossValue += lossValue;

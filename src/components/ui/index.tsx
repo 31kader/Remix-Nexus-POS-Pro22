@@ -135,15 +135,21 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 lg:p-4 bg-slate-950/50">
+    <div 
+      className="fixed inset-0 z-[200] flex items-center justify-center p-0 lg:p-4 bg-slate-950/60 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) safeClose();
+      }}
+    >
       <div 
         ref={modalRef}
-        className={cn("bg-white dark:bg-zinc-900 lg:rounded-xl shadow-lg w-full h-full lg:h-auto overflow-hidden border border-slate-200 dark:border-zinc-800", maxWidth, className)}
+        onClick={(e) => e.stopPropagation()}
+        className={cn("bg-white dark:bg-zinc-900 lg:rounded-2xl shadow-2xl w-full h-full lg:h-auto overflow-hidden border border-slate-200 dark:border-zinc-800 flex flex-col", maxWidth, className)}
       >
         {title && (
-          <div className="px-5 py-3.5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50 dark:bg-zinc-900">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
-            <div className="flex items-center gap-2.5">
+          <div className="px-4 sm:px-5 pt-[max(env(safe-area-inset-top,0px),14px)] pb-3.5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50 dark:bg-zinc-900/90 shrink-0">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate pr-2">{title}</h3>
+            <div className="flex items-center gap-2 shrink-0">
               {headerAction && (
                 <div className="border-r border-slate-200 dark:border-zinc-800 pr-2.5 mr-1 flex items-center">
                    {headerAction}
@@ -152,14 +158,15 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg",
               <button 
                 type="button" 
                 onClick={safeClose} 
-                className="p-1.5 hover:bg-rose-500/10 hover:text-rose-600 rounded-lg text-slate-500 dark:text-zinc-400 border border-transparent cursor-pointer"
+                aria-label="Fermer la boîte de dialogue"
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-200/80 dark:bg-zinc-800 hover:bg-rose-500/20 text-slate-700 dark:text-zinc-200 hover:text-rose-500 dark:hover:text-rose-400 border border-slate-300/80 dark:border-zinc-700 transition-all cursor-pointer active:scale-95"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
           </div>
         )}
-        <div className={cn("overflow-y-auto custom-scrollbar h-[calc(100%-54px)] lg:h-auto", maxHeight, padding)}>
+        <div className={cn("overflow-y-auto custom-scrollbar flex-1 lg:flex-initial pb-[max(env(safe-area-inset-bottom,0px),16px)]", maxHeight, padding)}>
           {children}
         </div>
       </div>

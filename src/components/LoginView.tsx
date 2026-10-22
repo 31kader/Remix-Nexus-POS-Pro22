@@ -13,7 +13,8 @@ import {
   Delete
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { get as getIDB } from 'idb-keyval';
+import { localDb } from '../services/LocalDatabase';
+import { usePeopleStore } from '../store/usePeopleStore';
 
 interface LoginViewProps {
   loginIdentifier: string;
@@ -71,9 +72,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
   React.useEffect(() => {
     const loadUsers = async () => {
       try {
-        const usersObj = await getIDB('nexus_db_users');
-        if (usersObj) {
-          const list = Object.values(usersObj).filter((u: any) => u && u.role !== 'customer' && u.role !== 'supplier');
+        const [usersSnap, empSnap] = await Promise.all([
+          localDb.get('users'),
+          localDb.get('employees')
+        ]);
+        const usersObj = (usersSnap?.exists() && usersSnap?.val()) ? usersSnap.val() : {};
+        const empObj = (empSnap?.exists() && empSnap?.val()) ? empSnap.val() : {};
+        const combined = [
+          ...Object.values(usersObj),
+          ...Object.values(empObj),
+          ...(usePeopleStore.getState().users || []),
+          ...(usePeopleStore.getState().employees || [])
+        ];
+        if (combined.length > 0) {
+          const list = combined.filter((u: any) => u && typeof u === 'object' && u.role !== 'customer' && u.role !== 'supplier');
           setLocalUsers(list);
         }
       } catch (e) {
@@ -499,7 +511,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         {/* Footer simple */}
         <div className="text-center pt-1">
           <span className="text-[10px] text-zinc-600 font-mono">
-            Nexus POS Pro v1.2.28 • Architecture Offline-First
+            Nexus POS Pro v1.2.54 • Architecture Offline-First
           </span>
         </div>
       </main>

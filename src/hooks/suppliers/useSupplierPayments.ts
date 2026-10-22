@@ -11,9 +11,10 @@ import { Supplier, SupplierPayment } from '../../types';
 interface UseSupplierPaymentsParams {
   suppliers: Supplier[];
   viewingDetailsSupplier: Supplier | null;
+  setViewingDetailsSupplier?: React.Dispatch<React.SetStateAction<Supplier | null>>;
 }
 
-export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSupplierPaymentsParams) {
+export function useSupplierPayments({ suppliers, viewingDetailsSupplier, setViewingDetailsSupplier }: UseSupplierPaymentsParams) {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<SupplierPayment | null>(null);
   const [paymentData, setPaymentData] = useState<{ amount: number, method: 'cash' | 'card' | 'transfer' | 'check', note: string, date: string, opType?: 'decaissement' | 'encaissement' }>({ 
@@ -66,7 +67,8 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
         date: paymentDate
       };
 
-      const currentBalance = viewingDetailsSupplier.balance || 0;
+      const latestSupplier = (usePeopleStore.getState().suppliers || suppliers).find(s => s.id === viewingDetailsSupplier.id) || viewingDetailsSupplier;
+      const currentBalance = Number(latestSupplier.balance) || 0;
       let newBalance = currentBalance;
 
       if (editingPayment) {
@@ -77,16 +79,17 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
         newBalance = currentBalance - signedAmount;
       }
 
-      // 1. Mettre à jour immédiatement le store local et LocalDatabase
+      // 1. Mettre à jour immédiatement le store local, viewingDetailsSupplier et LocalDatabase (qui enfile dans SyncService)
       const updatedSupplier: Supplier = {
-        ...viewingDetailsSupplier,
+        ...latestSupplier,
         balance: newBalance,
         updatedAt: new Date().toISOString()
       };
 
       usePeopleStore.getState().setSuppliers(prev =>
-        prev.map(s => s.id === viewingDetailsSupplier.id ? updatedSupplier : s)
+        (prev || []).map(s => s.id === viewingDetailsSupplier.id ? updatedSupplier : s)
       );
+      setViewingDetailsSupplier?.(updatedSupplier);
 
       // Mettre à jour immédiatement le store des paiements
       useFinanceStore.getState().setSupplierPayments(prev => {
@@ -97,42 +100,11 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
         return [payment, ...list];
       });
 
-      try {
-        await localDb.update(`suppliers/${viewingDetailsSupplier.id}`, updatedSupplier);
-      } catch (localErr) {
-        console.warn("LocalDb supplier update:", localErr);
-      }
-
-      // 2. Synchronisation Supabase (si connecté)
-      if (isSupabaseConfigured) {
-        try {
-          const payload = preparePayload('supplier_payments', payment.id, payment);
-          if (editingPayment) {
-            const { error: payErr } = await supabase
-              .from('supplier_payments')
-              .update(payload)
-              .eq('id', editingPayment.id);
-            if (payErr) throw payErr;
-          } else {
-            const { error: payErr } = await supabase
-              .from('supplier_payments')
-              .insert(payload);
-            if (payErr) throw payErr;
-          }
-
-          await supabase
-            .from('suppliers')
-            .update({ balance: newBalance, updated_at: new Date().toISOString() })
-            .eq('id', viewingDetailsSupplier.id);
-        } catch (cloudErr: any) {
-          console.warn("Supabase supplier payment error, enqueuing:", cloudErr);
-          enqueueSyncBatch([{
-            table: 'supplier_payments',
-            action: 'UPSERT',
-            recordId: payment.id,
-            payload: preparePayload('supplier_payments', payment.id, payment)
-          }]);
-        }
+      await localDb.update(`suppliers/${viewingDetailsSupplier.id}`, updatedSupplier);
+      if (editingPayment) {
+        await localDb.update(`supplierPayments/${payment.id}`, payment);
+      } else {
+        await localDb.insert(`supplierPayments/${payment.id}`, payment);
       }
 
       toast.success("Paiement fournisseur enregistré avec succès !");
@@ -150,11 +122,11 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
   const handlePaymentDelete = async (payment: SupplierPayment) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce versement ? Cela réajustera la dette du fournisseur.')) return;
     try {
-      const supplier = suppliers.find(s => s.id === payment.supplierId);
-      const currentBalance = supplier?.balance || 0;
+      const supplier = (usePeopleStore.getState().suppliers || suppliers).find(s => s.id === payment.supplierId);
+      const currentBalance = Number(supplier?.balance) || 0;
       const newBalance = currentBalance + payment.amount;
 
-      // 1. Local update
+      // 1. Local update (localDb.update / localDb.delete enfile automatiquement dans SyncService)
       if (supplier) {
         const updatedSupplier: Supplier = {
           ...supplier,
@@ -162,33 +134,20 @@ export function useSupplierPayments({ suppliers, viewingDetailsSupplier }: UseSu
           updatedAt: new Date().toISOString()
         };
         usePeopleStore.getState().setSuppliers(prev =>
-          prev.map(s => s.id === payment.supplierId ? updatedSupplier : s)
+          (prev || []).map(s => s.id === payment.supplierId ? updatedSupplier : s)
         );
-        try {
-          await localDb.update(`suppliers/${payment.supplierId}`, updatedSupplier);
-        } catch (e) {}
+        if (viewingDetailsSupplier?.id === payment.supplierId) {
+          setViewingDetailsSupplier?.(updatedSupplier);
+        }
+        await localDb.update(`suppliers/${payment.supplierId}`, updatedSupplier);
       }
+      await localDb.delete(`supplierPayments/${payment.id}`);
 
       // Update local finance store
       useFinanceStore.getState().setSupplierPayments(prev => 
         (Array.isArray(prev) ? prev : []).filter(p => p.id !== payment.id)
       );
 
-      // 2. Cloud update
-      if (isSupabaseConfigured) {
-        const { error: payError } = await supabase
-          .from('supplier_payments')
-          .delete()
-          .eq('id', payment.id);
-        if (payError) throw payError;
-        
-        if (supplier) {
-          await supabase
-            .from('suppliers')
-            .update({ balance: newBalance, updated_at: new Date().toISOString() })
-            .eq('id', payment.supplierId);
-        }
-      }
       toast.success("Versement supprimé avec succès.");
     } catch (error: any) {
       console.error("Error deleting payment:", error);

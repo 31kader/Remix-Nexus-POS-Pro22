@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ShoppingCart, ShoppingBag, History, Eye, RotateCcw, Image as ImageIcon, FileText, X, ZoomIn } from 'lucide-react';
 import { Button, Modal } from '../ui';
+import { SafeImage } from '../ui/SafeImage';
 import { Product, Transaction, Purchase, CompanySettings } from '../../types';
 import { cn, safeGetItems } from '../../lib/utils';
 import { useTransactionStore } from '../../store/useTransactionStore';
@@ -307,7 +308,7 @@ export function ProductHistoryModal({
                               className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-amber-500/40 shrink-0 group/img cursor-pointer shadow-sm"
                               title="Cliquer pour agrandir la photo scannée du bon d'achat"
                             >
-                              <img src={scannedImg} alt="Bon scanné" className="w-full h-full object-cover" />
+                              <SafeImage src={scannedImg} alt="Bon scanné" className="w-full h-full object-cover" />
                               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
                                 <ZoomIn size={18} className="text-white" />
                               </div>
@@ -463,10 +464,11 @@ export function ProductHistoryModal({
         >
           <div className="space-y-4 text-center">
             <div className="max-h-[72vh] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-950 p-2">
-              <img
+              <SafeImage
                 src={zoomedVoucherImage}
                 alt="Photo du bon d'achat scanné"
                 className="max-w-full h-auto mx-auto rounded-lg"
+                optimizeWidth={1200}
               />
             </div>
             <div className="flex justify-end gap-3">

@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 import { PerformanceSummary } from './employees/PerformanceSummary';
 import { EmployeeCard } from './employees/EmployeeCard';
 import { TeamManagement } from './employees/TeamManagement';
-import { useEmployeesLogic, EmployeesProps } from './useEmployeesLogic';
+import { useEmployeesLogic, EmployeesProps } from '../hooks/useEmployeesLogic';
 
 // Lazy load secondary tabs and recruitment modal to keep initial opening ultra-fast
 const AttendanceTab = lazy(() => import('./employees/AttendanceTab').then(m => ({ default: m.AttendanceTab })));

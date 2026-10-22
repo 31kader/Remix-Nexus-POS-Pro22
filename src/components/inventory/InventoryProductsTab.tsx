@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Package, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle2, AlertOctagon, AlertTriangle, Percent, RotateCcw } from 'lucide-react';
+import { Package, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle2, AlertOctagon, AlertTriangle, Percent, RotateCcw, RefreshCw } from 'lucide-react';
 import { set as idbSet } from 'idb-keyval';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { useCoreStore } from '../../store/useCoreStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { checkIsOwner } from '../../config/ownerConfig';
 import { DuplicateSKUAlert } from './DuplicateSKUAlert';
 import { InventoryActionBar } from './InventoryActionBar';
 import { BulkPricingStudioModal } from './BulkPricingStudioModal';
@@ -32,33 +34,59 @@ export function InventoryProductsTab(props: any) {
     requestSort, sortConfig, stockLevelFilter = 'all', setStockLevelFilter, categories = []
   } = props;
 
-  // Synchroniser une fois le cache local avec la remise à zéro du stock effectuée sur Supabase (v1.2.14)
-  useEffect(() => {
-    if (products.length > 0 && !localStorage.getItem('nexus_zero_stock_mcp_sync_v1')) {
-      const hasNonZero = products.some((p: any) => (Number(p.stock) || 0) !== 0);
-      if (hasNonZero) {
-        const zeroed = products.map((p: any) => ({ ...p, stock: 0 }));
-        useCoreStore.getState().setProducts(zeroed);
-        idbSet('nexus_products_cache', zeroed).catch(() => {});
-      }
-      localStorage.setItem('nexus_zero_stock_mcp_sync_v1', 'true');
-    }
-  }, [products]);
+  const [isForceSyncing, setIsForceSyncing] = React.useState(false);
+
+  const handleForceSyncFromCloud = () => {
+    setIsForceSyncing(true);
+    toast.info("Actualisation complète du catalogue depuis Supabase...");
+    window.dispatchEvent(new CustomEvent('force-full-sync'));
+    setTimeout(() => {
+      setIsForceSyncing(false);
+      toast.success("Catalogue synchronisé avec Supabase !");
+    }, 2500);
+  };
 
   const inStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) > 0).length, [products]);
   const outOfStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) <= 0).length, [products]);
   const lowStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (p.minStock || 5)).length, [products]);
 
-  const handleResetAllStockToZero = async () => {
-    if (!window.confirm(`Voulez-vous remettre la quantité (Stock) de tous les ${products.length} articles à 0 ?`)) return;
-    const nowIso = new Date().toISOString();
-    const zeroed = products.map((p: any) => ({ ...p, stock: 0, updatedAt: nowIso }));
-    useCoreStore.getState().setProducts(zeroed);
-    await idbSet('nexus_products_cache', zeroed).catch(() => {});
-    if (isSupabaseConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
-      await supabase.from('products').update({ stock: 0, updated_at: nowIso }).neq('stock', 0);
+  const [isResetStockModalOpen, setIsResetStockModalOpen] = useState(false);
+  const [resetStockConfirmInput, setResetStockConfirmInput] = useState('');
+  const [isResettingStock, setIsResettingStock] = useState(false);
+
+  const handleOpenResetStockModal = () => {
+    const authUser = useAuthStore.getState().user;
+    const authProfile = useAuthStore.getState().profile;
+    const isAdmin = checkIsOwner(authUser?.email, authUser?.uid) || authProfile?.role === 'admin';
+    if (!isAdmin) {
+      toast.error("Action de remise à zéro de masse réservée exclusivement à l'administrateur.");
+      return;
     }
-    toast.success(`Quantité mise à 0 sur tous les ${products.length} articles !`);
+    setResetStockConfirmInput('');
+    setIsResetStockModalOpen(true);
+  };
+
+  const handleConfirmResetStock = async () => {
+    if (resetStockConfirmInput.trim().toUpperCase() !== 'ZERO') {
+      toast.error("Veuillez taper exactement 'ZERO' pour confirmer.");
+      return;
+    }
+    setIsResettingStock(true);
+    try {
+      const nowIso = new Date().toISOString();
+      const zeroed = products.map((p: any) => ({ ...p, stock: 0, updatedAt: nowIso }));
+      useCoreStore.getState().setProducts(zeroed);
+      await idbSet('nexus_products_cache', zeroed).catch(() => {});
+      if (isSupabaseConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
+        await supabase.from('products').update({ stock: 0, updated_at: nowIso }).neq('stock', 0);
+      }
+      toast.success(`Quantité mise à 0 sur tous les ${products.length} articles !`);
+      setIsResetStockModalOpen(false);
+    } catch (err: any) {
+      toast.error("Erreur lors de la remise à zéro des stocks : " + (err.message || err));
+    } finally {
+      setIsResettingStock(false);
+    }
   };
 
   const renderSortHeader = (label: string, sortKey: string, align: 'left' | 'right' = 'right', widthClass: string = '') => {
@@ -170,8 +198,19 @@ export function InventoryProductsTab(props: any) {
           </button>
         </div>
 
-        {/* Boutons d'actions globales sur les Prix Gros/En Ligne (%) et Remise à 0 du Stock */}
+        {/* Boutons d'actions globales sur les Prix Gros/En Ligne (%), Synchro Cloud et Remise à 0 du Stock */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleForceSyncFromCloud}
+            disabled={isForceSyncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25 text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+            title="Recharger et synchroniser tous les produits et stocks réels depuis Supabase"
+          >
+            <RefreshCw size={13} className={cn(isForceSyncing && "animate-spin")} />
+            <span>{isForceSyncing ? "Synchro..." : "Synchro Cloud"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsPricingStudioOpen(true)}
@@ -183,7 +222,7 @@ export function InventoryProductsTab(props: any) {
 
           <button
             type="button"
-            onClick={handleResetAllStockToZero}
+            onClick={handleOpenResetStockModal}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
             title="Remettre la quantité (stock) de tous les articles à 0"
           >
@@ -409,6 +448,63 @@ export function InventoryProductsTab(props: any) {
           </div>
         </div>
       )}
+
+      {/* Modal Sécurisée de Remise à Zéro des Stocks */}
+      <Modal
+        isOpen={isResetStockModalOpen}
+        onClose={() => !isResettingStock && setIsResetStockModalOpen(false)}
+        title="⚠️ Remise à zéro totale du stock"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4 p-2 text-slate-800 dark:text-slate-200">
+          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-3">
+            <AlertOctagon className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" size={20} />
+            <div className="text-xs space-y-1">
+              <p className="font-bold text-rose-700 dark:text-rose-300">
+                Action critique & irréversible
+              </p>
+              <p className="text-rose-600/90 dark:text-rose-400/90">
+                Cette action va remettre le stock de l'ensemble des <strong>{products.length} articles</strong> du catalogue à <strong>0</strong> (sur le terminal local et sur Supabase Cloud).
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
+              Pour confirmer, tapez le mot <span className="text-rose-600 dark:text-rose-400 font-mono font-black">ZERO</span> ci-dessous :
+            </label>
+            <input
+              type="text"
+              value={resetStockConfirmInput}
+              onChange={(e) => setResetStockConfirmInput(e.target.value)}
+              placeholder="Tapez ZERO"
+              disabled={isResettingStock}
+              autoFocus
+              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-mono font-bold text-center uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isResettingStock}
+              onClick={() => setIsResetStockModalOpen(false)}
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              disabled={resetStockConfirmInput.trim().toUpperCase() !== 'ZERO' || isResettingStock}
+              onClick={handleConfirmResetStock}
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black"
+            >
+              {isResettingStock ? <Loader2 size={16} className="animate-spin" /> : "Remettre à 0"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

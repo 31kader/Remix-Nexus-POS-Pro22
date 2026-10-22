@@ -24,6 +24,17 @@ let currentDisplayState: CustomerDisplayState | null = null;
 let persistentBroadcastChannel: BroadcastChannel | null = null;
 let socketInstance: Socket | null = null;
 
+const DEFAULT_LAN_TOKEN = 'nexus-pos-lan-v1';
+
+export function getPosLanToken(): string {
+  try {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('nexus_lan_token') || DEFAULT_LAN_TOKEN;
+    }
+  } catch (_) {}
+  return DEFAULT_LAN_TOKEN;
+}
+
 /**
  * 🟢 Instance Socket.IO singleton pour diffusion ultra-rapide sur le réseau local (Wi-Fi)
  */
@@ -35,7 +46,10 @@ export function getCustomerDisplaySocket(): Socket | null {
         reconnection: true,
         reconnectionDelay: 1000,
         transports: ['websocket', 'polling'],
-        timeout: 5000
+        timeout: 5000,
+        auth: {
+          token: getPosLanToken()
+        }
       });
     } catch (e) {
       console.warn('[CustomerDisplay] Socket.IO initialization error:', e);
@@ -94,8 +108,9 @@ let httpPostTimeout: any = null;
  * (Supporte le multi-écrans local, les tablettes/smartphones Wi-Fi sans fil, et le Cloud Supabase)
  */
 export function broadcastCustomerDisplay(state: CustomerDisplayState): void {
-  currentDisplayState = state;
-  const serialized = JSON.stringify(state);
+  const stateWithTs = { ...state, updatedAt: (state as any).updatedAt || Date.now() };
+  currentDisplayState = stateWithTs;
+  const serialized = JSON.stringify(stateWithTs);
   if (serialized === lastBroadcastPayload) return;
   lastBroadcastPayload = serialized;
 
@@ -103,7 +118,7 @@ export function broadcastCustomerDisplay(state: CustomerDisplayState): void {
   try {
     const bc = getCustomerDisplayBroadcastChannel();
     if (bc) {
-      bc.postMessage(state);
+      bc.postMessage(stateWithTs);
     }
   } catch (_) {}
 
@@ -115,20 +130,25 @@ export function broadcastCustomerDisplay(state: CustomerDisplayState): void {
   } catch (_) {}
 
   // 3. Diffusion temps réel réseau local via Socket.IO (Wi-Fi, zéro latence pour smartphone/tablette)
+  let isSocketConnected = false;
   try {
     const socket = getCustomerDisplaySocket();
     if (socket && socket.connected) {
-      socket.emit('customer-display:send', state);
+      isSocketConnected = true;
+      socket.emit('customer-display:send', { ...stateWithTs, lanToken: getPosLanToken() });
     }
   } catch (_) {}
 
-  // 4. Diffusion HTTP REST au serveur local (relais SSE et persistance serveur)
-  if (typeof window !== 'undefined') {
+  // 4. Diffusion HTTP REST au serveur local (relais SSE et persistance serveur) uniquement si socket déconnecté
+  if (!isSocketConnected && typeof window !== 'undefined') {
     if (httpPostTimeout) clearTimeout(httpPostTimeout);
     httpPostTimeout = setTimeout(() => {
       fetch('/api/customer-display', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-nexus-lan-token': getPosLanToken()
+        },
         body: serialized
       }).catch(() => {});
     }, 40);

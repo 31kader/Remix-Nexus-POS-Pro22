@@ -20,6 +20,9 @@ export interface User {
   uid: string;
   email: string | null;
   displayName?: string | null;
+  role?: string;
+  employeeId?: string | null;
+  isOffline?: boolean;
   providerData?: { email: string | null; [key: string]: any }[];
   getIdToken?: () => Promise<string>;
 }
@@ -65,13 +68,20 @@ class AuthEmulator {
 
   trigger(user: any) {
     if (user) {
-      const safeUserData = {
+      const safeUserData: Record<string, any> = {
         uid: user.uid,
         email: user.email || null,
         displayName: user.displayName || null
       };
+      const resolvedRole = user.role || (this.currentUser && this.currentUser.uid === user.uid ? this.currentUser.role : undefined);
+      if (resolvedRole) {
+        safeUserData.role = resolvedRole;
+      }
+      if (user.employeeId !== undefined) {
+        safeUserData.employeeId = user.employeeId;
+      }
       this.currentUser = {
-        ...safeUserData,
+        ...(safeUserData as User),
         getIdToken: async () => {
           if (isSupabaseConfigured) {
             try {
@@ -119,8 +129,7 @@ export const signInWithPopup = async (...args: any[]) => {
       const isNative = (window as any).Capacitor?.isNativePlatform();
 
       if (isNative) {
-        // SOLUTION ABSOLUE : On passe par le flux Supabase officiel avec l'URL de redirection du projet
-        // Cette URL doit être enregistrée dans Supabase > Auth > URL Configuration
+        // SOLUTION ABSOLUE : Flux Supabase officiel avec le schéma custom d'URL pour Capacitor
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -132,12 +141,11 @@ export const signInWithPopup = async (...args: any[]) => {
         if (error) throw error;
 
         if (data?.url) {
-          // On ouvre le navigateur système
           await Browser.open({ url: data.url });
         }
         return { user: null };
       } else {
-        // SUR WEB : Garder la logique de popup standard
+        // SUR WEB & ELECTRON : Flux OAuth robuste avec support popup et redirection automatique
         const redirectUrl = window.location.origin;
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -155,15 +163,138 @@ export const signInWithPopup = async (...args: any[]) => {
           const left = window.screen.width / 2 - width / 2;
           const top = window.screen.height / 2 - height / 2;
 
-          const popup = window.open(
-            data.url,
-            'google_auth',
-            `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
-          );
+          let popup: Window | null = null;
+          try {
+            popup = window.open(
+              data.url,
+              'google_auth',
+              `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`
+            );
+          } catch (_) {
+            popup = null;
+          }
+
+          // La popup OAuth se ferme elle-même (main.tsx, isOAuthPopup). Appeler win.close() depuis
+          // l'opener est bloqué par Cross-Origin-Opener-Policy (accounts.google.com) et ne produit
+          // que l'avertissement "would block the window.close call" : on ne le fait donc plus.
+          const safeClosePopup = (_win: Window | null) => {};
 
           if (!popup) {
+            // Popup bloqué ou indisponible : basculer immédiatement en redirection directe
             window.location.href = data.url;
+            return { user: null };
           }
+
+          // Popup ouvert : attendre la transmission de session ou l'événement d'authentification
+          return new Promise<{ user: User | null }>((resolve, reject) => {
+            let resolved = false;
+            let broadcastChannel: BroadcastChannel | null = null;
+            let authSubscription: { unsubscribe: () => void } | null = null;
+            let safetyTimeout: any = null;
+
+            const cleanup = () => {
+              if (safetyTimeout) clearTimeout(safetyTimeout);
+              window.removeEventListener('message', handleMessage);
+              window.removeEventListener('focus', handleWindowFocus);
+              if (broadcastChannel) {
+                try { broadcastChannel.close(); } catch (_) {}
+              }
+              if (authSubscription) {
+                try { authSubscription.unsubscribe(); } catch (_) {}
+              }
+            };
+
+            const handleSuccess = async (sessionPayload?: any) => {
+              if (resolved) return;
+              resolved = true;
+              cleanup();
+              safeClosePopup(popup);
+              try {
+                if (sessionPayload) {
+                  await supabase.auth.setSession(sessionPayload);
+                }
+                const { data: sessData } = await supabase.auth.getSession();
+                const u = sessData?.session?.user || sessionPayload?.user;
+                if (u) {
+                  const safeUser = {
+                    uid: u.id,
+                    email: u.email || null,
+                    displayName: u.user_metadata?.full_name || u.email?.split('@')[0] || null
+                  };
+                  auth.trigger(safeUser);
+                  resolve({ user: auth.currentUser });
+                  return;
+                }
+              } catch (_) {}
+              resolve({ user: auth.currentUser });
+            };
+
+            const handleError = (errMsg: string) => {
+              if (resolved) return;
+              resolved = true;
+              cleanup();
+              safeClosePopup(popup);
+              reject(new Error(errMsg || "Échec de connexion Google"));
+            };
+
+            const handleMessage = (e: MessageEvent) => {
+              if (e.origin && e.origin !== window.location.origin) return;
+              if (e.data?.type === 'nexus_oauth_success') {
+                handleSuccess(e.data?.session);
+              } else if (e.data?.type === 'nexus_oauth_error') {
+                handleError(e.data?.error);
+              }
+            };
+
+            window.addEventListener('message', handleMessage);
+
+            if (typeof BroadcastChannel !== 'undefined') {
+              try {
+                broadcastChannel = new BroadcastChannel('nexus_oauth_channel');
+                broadcastChannel.onmessage = (e) => {
+                  if (e.data?.type === 'nexus_oauth_success') {
+                    handleSuccess(e.data?.session);
+                  } else if (e.data?.type === 'nexus_oauth_error') {
+                    handleError(e.data?.error);
+                  }
+                };
+              } catch (_) {}
+            }
+
+            // Écouter les événements d'authentification Supabase (session injectée en tâche de fond)
+            try {
+              const { data: authListener } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+                if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+                  handleSuccess(session);
+                }
+              });
+              authSubscription = authListener?.subscription || null;
+            } catch (_) {}
+
+            // Détection sécurisée au retour de focus sans toucher popup.closed (élimine Cross-Origin-Opener-Policy)
+            const handleWindowFocus = () => {
+              setTimeout(async () => {
+                if (resolved) return;
+                try {
+                  const { data: sessData } = await supabase.auth.getSession();
+                  if (sessData?.session?.user) {
+                    handleSuccess(sessData.session);
+                  }
+                } catch (_) {}
+              }, 600);
+            };
+
+            window.addEventListener('focus', handleWindowFocus);
+
+            // Timeout de sécurité de 5 minutes
+            safetyTimeout = setTimeout(() => {
+              if (resolved) return;
+              resolved = true;
+              cleanup();
+              safeClosePopup(popup);
+              resolve({ user: null });
+            }, 300000);
+          });
         }
         return { user: null };
       }
@@ -179,35 +310,34 @@ export const signInWithPopup = async (...args: any[]) => {
 
 import { checkIsOwner, PRIMARY_OWNER_UID } from '../config/ownerConfig';
 
-const ensureOwnerExists = async (cleanEmail: string, password: string): Promise<any> => {
-  if (!checkIsOwner(cleanEmail)) return null;
+const ensureOwnerExists = async (cleanEmail: string, uid?: string, password?: string): Promise<any> => {
+  if (!checkIsOwner(cleanEmail, uid)) return null;
+  // Ne provisionne le compte local que sur validation préalable du mot de passe auprès de Supabase
+  if (!password) return null;
   const users = getLocalValue('users') || {};
   let foundUser: any = Object.values(users).find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
   if (!foundUser) {
     const employees = getLocalValue('employees') || {};
     foundUser = Object.values(employees).find((e: any) => e.email?.toLowerCase().trim() === cleanEmail);
   }
-  if (!foundUser) {
-    const id = PRIMARY_OWNER_UID || 'owner_admin_id';
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const newUser = {
-      id,
-      uid: id,
-      email: cleanEmail,
-      passwordHash,
-      role: 'admin',
-      displayName: 'Administrateur',
-      joinDate: new Date().toISOString()
-    };
-    await localDb.insert(`users/${id}`, newUser);
-    foundUser = newUser;
-  }
-  return foundUser;
+  const id = uid || PRIMARY_OWNER_UID || 'owner_admin_id';
+  const passwordHash = bcrypt.hashSync(password, 10);
+  const updatedUser = {
+    ...(foundUser || {}),
+    id,
+    uid: id,
+    email: cleanEmail,
+    passwordHash,
+    role: 'admin',
+    displayName: foundUser?.displayName || 'Administrateur',
+    joinDate: foundUser?.joinDate || new Date().toISOString()
+  };
+  await localDb.updateLocalOnly(`users/${id}`, updatedUser);
+  return updatedUser;
 };
 
 export const signInWithEmailAndPassword = async (_auth: any, email: string, password: string) => {
   const cleanEmail = email.toLowerCase().trim();
-  await ensureOwnerExists(cleanEmail, password);
 
   const matchUserInList = (list: any[], identifier: string) => {
     if (!Array.isArray(list)) return null;
@@ -248,30 +378,69 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
     return lookup('users') || lookup('employees');
   };
 
+  const verifyUserPasswordOrPin = (foundUser: any, pwd: string): boolean => {
+    const candidateHashes = [
+      foundUser?.passwordHash,
+      foundUser?.password_hash,
+      foundUser?.pin,
+      foundUser?.password
+    ].filter((h): h is string => typeof h === 'string' && h.length > 0);
+
+    return candidateHashes.some(h => {
+      if (h.startsWith('$2a$') || h.startsWith('$2b$')) {
+        try {
+          return bcrypt.compareSync(pwd, h);
+        } catch (_) {
+          return false;
+        }
+      }
+      return false;
+    });
+  };
+
+  const hasAnyConfiguredCredential = (foundUser: any): boolean => {
+    return Boolean(
+      foundUser?.passwordHash ||
+      foundUser?.password_hash ||
+      foundUser?.pin ||
+      foundUser?.password
+    );
+  };
+
+  const stripSensitiveCredentials = (record: any) => {
+    if (!record || typeof record !== 'object') return record;
+    const { passwordHash, password_hash, password, pin, ...safeRecord } = record;
+    return safeRecord;
+  };
+
   const findRemoteUser = async (identifier: string) => {
     if (!isSupabaseConfigured || (typeof navigator !== 'undefined' && !navigator.onLine)) {
       return null;
     }
     try {
       // 1. Chercher dans la table public.users de Supabase
-      const { data: dbUsers, error: uErr } = await supabase.from('users').select('*');
+      const { data: dbUsers, error: uErr } = await supabase
+        .from('users')
+        .select('id, uid, email, display_name, name, phone, role, employee_id, status, join_date, password_hash, pin, updated_at');
       if (!uErr && Array.isArray(dbUsers) && dbUsers.length > 0) {
-        for (const u of dbUsers) {
-          const camel = convertKeysToCamel(u);
-          localDb.update(`users/${camel.id || camel.uid}`, camel);
+        const camelUsers = dbUsers.map(convertKeysToCamel);
+        for (const camel of camelUsers) {
+          localDb.updateLocalOnly(`users/${camel.id || camel.uid}`, stripSensitiveCredentials(camel));
         }
-        const matched = matchUserInList(dbUsers.map(convertKeysToCamel), identifier);
+        const matched = matchUserInList(camelUsers, identifier);
         if (matched) return matched;
       }
 
       // 2. Chercher dans la table public.employees de Supabase
-      const { data: dbEmp, error: eErr } = await supabase.from('employees').select('*');
+      const { data: dbEmp, error: eErr } = await supabase
+        .from('employees')
+        .select('id, name, role, phone, email, hire_date, status, is_clocked_in, permissions, password_hash, pin, updated_at');
       if (!eErr && Array.isArray(dbEmp) && dbEmp.length > 0) {
-        for (const e of dbEmp) {
-          const camel = convertKeysToCamel(e);
-          localDb.update(`employees/${camel.id}`, camel);
+        const camelEmps = dbEmp.map(convertKeysToCamel);
+        for (const camel of camelEmps) {
+          localDb.updateLocalOnly(`employees/${camel.id}`, stripSensitiveCredentials(camel));
         }
-        const matched = matchUserInList(dbEmp.map(convertKeysToCamel), identifier);
+        const matched = matchUserInList(camelEmps, identifier);
         if (matched) return matched;
       }
     } catch (err) {
@@ -290,10 +459,15 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       if (error) throw error;
 
       if (data.user) {
+        const isOwnerAccount = checkIsOwner(cleanEmail, data.user.id);
+        if (isOwnerAccount) {
+          await ensureOwnerExists(cleanEmail, data.user.id, password);
+        }
         const user = {
           uid: data.user.id,
           email: data.user.email || null,
-          displayName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || null
+          displayName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || null,
+          role: isOwnerAccount ? 'admin' : undefined
         };
         auth.trigger(user);
         return { user };
@@ -303,21 +477,21 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       const isNetwork = errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network') || err?.name === 'TypeError';
       
       let foundUser: any = findLocalUser(cleanEmail);
-      if (!foundUser && !isNetwork) {
-        foundUser = await findRemoteUser(cleanEmail);
+      if ((!foundUser || !hasAnyConfiguredCredential(foundUser)) && !isNetwork) {
+        const remoteMatch = await findRemoteUser(cleanEmail);
+        if (remoteMatch) foundUser = remoteMatch;
       }
 
       if (foundUser) {
         if (foundUser.status === 'inactive') {
           throw new Error("Ce compte a été désactivé");
         }
-        const hash = foundUser.passwordHash || foundUser.password_hash;
-        if (hash && bcrypt.compareSync(password, hash)) {
+        if (verifyUserPasswordOrPin(foundUser, password)) {
           const user = { 
             uid: foundUser.uid || foundUser.id, 
             email: foundUser.email || cleanEmail, 
             displayName: foundUser.displayName || foundUser.name || 'Utilisateur',
-            role: foundUser.role || 'cashier'
+            role: checkIsOwner(foundUser.email || cleanEmail, foundUser.uid || foundUser.id) ? 'admin' : (foundUser.role || 'cashier')
           };
           auth.trigger(user);
           return { user };
@@ -326,6 +500,9 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       }
 
       if (isNetwork) {
+        if (checkIsOwner(cleanEmail)) {
+          throw new Error("Première connexion administrateur requise en ligne pour valider et synchroniser vos identifiants.");
+        }
         const fetchErr = new Error("Failed to fetch");
         (fetchErr as any).code = 'auth/network-request-failed';
         throw fetchErr;
@@ -339,20 +516,25 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
   }
 
   let foundUser: any = findLocalUser(cleanEmail);
-  if (!foundUser) {
-    foundUser = await findRemoteUser(cleanEmail);
+  if (!foundUser || !hasAnyConfiguredCredential(foundUser)) {
+    const remoteMatch = await findRemoteUser(cleanEmail);
+    if (remoteMatch) foundUser = remoteMatch;
   }
-  if (!foundUser) throw new Error("Utilisateur non trouvé");
+  if (!foundUser) {
+    if (checkIsOwner(cleanEmail)) {
+      throw new Error("Première connexion administrateur requise en ligne pour valider et synchroniser vos identifiants.");
+    }
+    throw new Error("Utilisateur non trouvé");
+  }
   if (foundUser.status === 'inactive') throw new Error("Ce compte a été désactivé");
-  const hash = foundUser.passwordHash || foundUser.password_hash;
-  if (!hash) throw new Error("Ce compte n'a pas de mot de passe (créé via Google).");
-  if (!bcrypt.compareSync(password, hash)) throw new Error("Mot de passe ou code PIN incorrect");
+  if (!hasAnyConfiguredCredential(foundUser)) throw new Error("Ce compte n'a pas de mot de passe (créé via Google).");
+  if (!verifyUserPasswordOrPin(foundUser, password)) throw new Error("Mot de passe ou code PIN incorrect");
 
   const user = { 
     uid: foundUser.uid || foundUser.id, 
     email: foundUser.email || cleanEmail, 
     displayName: foundUser.displayName || foundUser.name || 'Utilisateur',
-    role: foundUser.role || 'cashier'
+    role: checkIsOwner(foundUser.email || cleanEmail, foundUser.uid || foundUser.id) ? 'admin' : (foundUser.role || 'cashier')
   };
   auth.trigger(user);
   return { user };

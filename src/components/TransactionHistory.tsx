@@ -11,18 +11,9 @@ import { fr } from 'date-fns/locale';
 import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { StockAdjustmentModal } from './StockAdjustmentModal';
-import { DuplicateSKUModal } from './DuplicateSKUModal';
-import { ImportModal } from './ImportModal';
-import { ProductFormModal } from './ProductFormModal';
-import { LabelPrinter } from './LabelPrinter';
-import { SupplierSyncManager } from './SupplierSyncManager';
-import { StockHistory } from './StockHistory';
-import { BarcodeScanner } from './BarcodeScanner';
-import { ManualQRCodeGenerator } from './ManualQRCodeGenerator';
 import { TransactionFilters } from './transactions/TransactionFilters';
 import { TransactionTable } from './transactions/TransactionTable';
-import { useTransactionHistoryLogic, TransactionHistoryProps } from './useTransactionHistoryLogic';
+import { useTransactionHistoryLogic, TransactionHistoryProps } from '../hooks/useTransactionHistoryLogic';
 
 export function TransactionHistory(props: TransactionHistoryProps) {
   const { transactions, onReturn, onMarkAsDelivered, onEdit, onRestore, settings, canAccess, profile } = props;

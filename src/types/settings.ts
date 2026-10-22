@@ -20,6 +20,16 @@ export interface RolePermissions {
   canManageUsers: boolean;
 }
 
+export type UserRole = 
+  | 'admin' 
+  | 'manager' 
+  | 'cashier' 
+  | 'delivery' 
+  | 'picker' 
+  | 'camera_agent' 
+  | 'customer' 
+  | 'supplier';
+
 export interface UserProfile {
   id?: string;
   uid: string;
@@ -27,9 +37,10 @@ export interface UserProfile {
   email: string;
   phone?: string;
   password?: string;
-  role: 'admin' | 'manager' | 'cashier' | 'delivery' | 'picker' | 'camera_agent';
+  role: UserRole;
   employeeId?: string | null;
   lastLogin?: string;
+  isOffline?: boolean;
 }
 
 export interface AuditLog {
@@ -41,6 +52,7 @@ export interface AuditLog {
   module: string;
   details: string;
   severity: 'info' | 'warning' | 'high' | 'critical';
+  targetId?: string;
 }
 
 export interface CashShift {
@@ -70,6 +82,9 @@ export interface Expense {
   date: string;
   userId: string;
   paymentMethod: 'cash' | 'card' | 'transfer';
+  createdAt?: string;
+  timestamp?: string;
+  receiptUrl?: string;
 }
 
 export interface InventoryAudit {
@@ -210,4 +225,13 @@ export interface CompanySettings {
   // 💾 Sauvegarde Automatique
   enableAutoBackupOnShiftClose?: boolean;
   autoBackupFrequency?: 'shift_close' | 'daily' | 'manual';
+
+  // 📊 Marges par Défaut
+  defaultRetailMarginPercent?: number;
+  defaultWholesaleMarginPercent?: number;
+  defaultOnlineMarginPercent?: number;
+
+  // 🔄 Synchronisation
+  silentSyncNotifications?: boolean;
+  hideSyncStudioInSidebar?: boolean;
 }

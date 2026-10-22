@@ -40,9 +40,17 @@ if (!process.env.GEMINI_API_KEY) {
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-const supabaseServer = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+let supabaseServer: any = null;
+if (supabaseUrl && supabaseAnonKey && (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://'))) {
+  try {
+    supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
+  } catch (err) {
+    console.warn("[Supabase] Failed to initialize supabaseServer:", err);
+    supabaseServer = null;
+  }
+}
 if (!supabaseServer) {
-  console.warn("[Supabase] Warning: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing. Server-side auth verification will be unavailable.");
+  console.warn("[Supabase] Warning: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing or invalid. Server-side auth verification will be unavailable.");
 }
 
 
@@ -71,21 +79,23 @@ const getPaths = () => {
 
 const { __filename: _filename, __dirname: _dirname } = getPaths();
 
-// Determine if we are in the AI Studio editor environment (Dev)
-const IS_EDITOR = !!(process.env.K_SERVICE && process.env.K_SERVICE.includes('-dev-'));
+// Helper function to evaluate production mode
+export const computeIsProd = (env: NodeJS.ProcessEnv = process.env, dirname = _dirname, filename = _filename) => {
+  return (
+    env.NODE_ENV === "production" ||
+    (typeof __dirname !== 'undefined' && __dirname.includes('dist')) ||
+    (Boolean(dirname) && dirname.includes('dist')) ||
+    (Boolean(filename) && (filename.includes('dist') || filename.includes('server.cjs')))
+  );
+};
 
-// Production mode if explicitly set, or if we're not in the editor, or if running from dist
-const IS_PROD = 
-  process.env.NODE_ENV === "production" || 
-  !IS_EDITOR ||
-  (typeof __dirname !== 'undefined' && __dirname.includes('dist')) ||
-  (_dirname && _dirname.includes('dist')) ||
-  (_filename && (_filename.includes('dist') || _filename.includes('server.cjs')));
+// Production mode if explicitly set to 'production' or if running from packaged dist output
+export const IS_PROD = computeIsProd();
 
 
 
 // Security Constants for Auth Hardening verification
-export const AUTH_MIN_PASSWORD_LENGTH = 8;
+export const AUTH_MIN_PASSWORD_LENGTH = 4;
 export const AUTH_WINDOW_MS = 60 * 1000; // 60 seconds lockout
 export const AUTH_MAX_ATTEMPTS = 5;
 export const invalidCredentialsError = "Identifiants incorrects";
@@ -133,12 +143,18 @@ async function startServer() {
         callback(null, false);
       },
       methods: ["GET", "POST", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "x-gemini-key"]
+      allowedHeaders: ["Content-Type", "Authorization", "x-gemini-key", "x-nexus-lan-token"]
     }));
 
-    app.use(express.json({ limit: '50mb' }));
+    // Global body parser with 1mb limit (DoS protection) - /api/ai/scan a son propre parseur 50mb
+    app.use((req, res, next) => {
+      if (req.path === '/api/ai/scan') {
+        return next();
+      }
+      express.json({ limit: '1mb' })(req, res, next);
+    });
     // 🛡️ Sécurité : extended: false bascule vers le module natif 'querystring' de Node.js, neutralisant les CVEs de 'qs'
-    app.use(express.urlencoded({ limit: '50mb', extended: false }));
+    app.use(express.urlencoded({ limit: '1mb', extended: false }));
 
     // Custom Hardened Security Headers
     app.use((req, res, next) => {
@@ -149,7 +165,7 @@ async function startServer() {
       res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
       res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
       );
       if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
@@ -203,7 +219,7 @@ async function startServer() {
 
     // API routes
     app.get("/api/health", (req, res) => {
-      res.json({ status: "ok" });
+      res.json({ status: "ok", version: "1.2.54", pid: process.pid });
     });
 
     app.get("/api/network-ip", (req, res) => {
@@ -252,16 +268,58 @@ async function startServer() {
       }
     });
 
+    const EXPECTED_LAN_TOKEN = process.env.NEXUS_LAN_TOKEN || 'nexus-pos-lan-v1';
+
+    const verifyPosLanRequest = async (req: express.Request): Promise<boolean> => {
+      const ip = req.socket.remoteAddress || req.ip || '';
+      const isLoopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1' || ip.endsWith('127.0.0.1');
+      const lanTokenHeader = req.headers['x-nexus-lan-token'];
+      if (typeof lanTokenHeader === 'string' && lanTokenHeader.length > 5 && lanTokenHeader === EXPECTED_LAN_TOKEN) {
+        return true;
+      }
+      if (req.body && typeof req.body === 'object' && req.body.lanToken && req.body.lanToken === EXPECTED_LAN_TOKEN) {
+        return true;
+      }
+      const authHeader = req.headers['authorization'];
+      if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7).trim();
+        if (token.length > 5 && token === EXPECTED_LAN_TOKEN) {
+          return true;
+        }
+        // offline_token_ n'est autorisé que pour les connexions locales (loopback) du POS
+        if (isLoopback && token.startsWith('offline_token_') && token.length > 14) {
+          return true;
+        }
+        if (supabaseServer && token.length > 20) {
+          try {
+            const { data, error } = await supabaseServer.auth.getUser(token);
+            if (!error && data?.user) return true;
+          } catch (_) {}
+        }
+      }
+      return false;
+    };
+
+    const requirePosLanAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      // Allow client-supplied Gemini API key on AI routes or verified POS/LAN token
+      const hasClientGeminiKey = typeof req.headers['x-gemini-key'] === 'string' && req.headers['x-gemini-key'].trim().length > 10;
+      if (hasClientGeminiKey || await verifyPosLanRequest(req)) {
+        return next();
+      }
+      return res.status(401).json({ error: "Non autorisé : jeton de session POS ou LAN requis." });
+    };
+
     // 🟢 Endpoints Afficheur Client Réseau Local (Wi-Fi / 2nd Écran)
     app.get("/api/customer-display", (req, res) => {
       res.setHeader('Cache-Control', 'no-cache, no-store');
       res.json(latestCustomerDisplayState);
     });
 
-    app.post("/api/customer-display", (req, res) => {
+    app.post("/api/customer-display", requirePosLanAuth, (req, res) => {
       if (req.body) {
+        const { lanToken, ...cleanBody } = req.body;
         latestCustomerDisplayState = {
-          ...req.body,
+          ...cleanBody,
           updatedAt: new Date().toISOString()
         };
 
@@ -298,11 +356,11 @@ async function startServer() {
       });
     });
 
-    // Relais code-barres depuis l'afficheur client vers la caisse
-    app.post("/api/customer-display/barcode", (req, res) => {
+    // Relais code-barres depuis l'afficheur client vers la caisse (protégé par token LAN/POS)
+    app.post("/api/customer-display/barcode", requirePosLanAuth, (req, res) => {
       const { barcode } = req.body || {};
-      if (barcode) {
-        io.emit('customer-display:barcode', { barcode });
+      if (typeof barcode === 'string' && barcode.trim().length > 0 && barcode.trim().length <= 128) {
+        io.emit('customer-display:barcode', { barcode: barcode.trim() });
       }
       res.json({ success: true });
     });
@@ -322,6 +380,37 @@ async function startServer() {
       next();
     };
 
+    // Custom Rate Limiter for AI endpoints (protect Gemini quotas & prevent abuse)
+    const aiRateState: Record<string, { count: number; resetAt: number }> = {};
+    const AI_RATE_LIMIT = 30; // Max 30 requêtes par minute par IP
+    const AI_WINDOW_MS = 60 * 1000;
+
+    const aiRateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const now = Date.now();
+      const client = aiRateState[ip] || { count: 0, resetAt: now + AI_WINDOW_MS };
+
+      if (now > client.resetAt) {
+        client.count = 0;
+        client.resetAt = now + AI_WINDOW_MS;
+      }
+
+      client.count += 1;
+      aiRateState[ip] = client;
+
+      if (client.count > AI_RATE_LIMIT) {
+        const secondsLeft = Math.ceil((client.resetAt - now) / 1000);
+        return res.status(429).json({ 
+          error: "Trop de requêtes IA", 
+          message: `Limite de requêtes IA atteinte. Veuillez patienter ${secondsLeft} secondes.` 
+        });
+      }
+      next();
+    };
+
+    // 🛡️ SEC-03 : Cache local sécurisé pour vérification des mots de passe en mode déconnecté
+    const authProfileCache = new Map<string, any>();
+
     // Secure server-side password verification route with rate limiter
     app.post("/api/auth/verify-password", loginRateLimiter, async (req, res) => {
       const { table, email, password } = req.body;
@@ -330,37 +419,63 @@ async function startServer() {
         return res.status(400).json({ error: "Missing fields" });
       }
 
-      if (password.length < AUTH_MIN_PASSWORD_LENGTH) {
-        return res.status(400).json({ error: `Le mot de passe doit faire au moins ${AUTH_MIN_PASSWORD_LENGTH} caractères.` });
+      if (String(password).length < AUTH_MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ error: `Le mot de passe ou PIN doit faire au moins ${AUTH_MIN_PASSWORD_LENGTH} caractères.` });
       }
 
-      if (table !== 'users' && table !== 'customers' && table !== 'suppliers') {
+      if (table !== 'users' && table !== 'employees' && table !== 'customers' && table !== 'suppliers') {
         return res.status(400).json({ error: "Invalid table" });
-      }
-
-      if (!supabaseServer) {
-        return res.status(503).json({ error: "Supabase client not configured on server" });
       }
 
       const ip = req.ip || req.socket.remoteAddress || 'unknown';
 
       try {
         const cleanEmail = email.toLowerCase().trim();
-        const mappedTable = table === 'users' ? 'users' : table === 'customers' ? 'customers' : 'suppliers';
+        const mappedTable = table === 'users'
+          ? 'users'
+          : table === 'employees'
+            ? 'employees'
+            : table === 'customers'
+              ? 'customers'
+              : 'suppliers';
 
-        // Fetch detailed profile fields along with password/password_hash securely on server-side
+        const cacheKey = `${mappedTable}:${cleanEmail}`;
+
+        // Fetch detailed profile fields along with password_hash and pin securely on server-side
         const selectColumns = mappedTable === 'users'
-          ? 'id, uid, email, display_name, password_hash, role, join_date'
-          : mappedTable === 'customers'
-            ? 'id, name, phone, email, loyalty_points, balance, loyalty_card_number, total_spent, last_visit, notes, is_app_user, password_hash, join_date, favorite_items, alerts, cashier_notes, updated_at'
-            : 'id, name, contact_name, phone, email, address, categories, feed_url, feed_format, last_sync, sync_enabled, is_app_user, password_hash, balance, pre_sale_days, delivery_days, payment_days, planning_notes, updated_at';
+          ? 'id, uid, email, display_name, password_hash, pin, role, join_date'
+          : mappedTable === 'employees'
+            ? 'id, name, role, phone, email, hire_date, status, is_clocked_in, permissions, password_hash, pin'
+            : mappedTable === 'customers'
+              ? 'id, name, phone, email, loyalty_points, balance, loyalty_card_number, total_spent, last_visit, notes, is_app_user, password_hash, join_date, favorite_items, alerts, cashier_notes, updated_at'
+              : 'id, name, contact_name, phone, email, address, categories, feed_url, feed_format, last_sync, sync_enabled, is_app_user, password_hash, balance, pre_sale_days, delivery_days, payment_days, planning_notes, updated_at';
 
-        const { data, error } = await supabaseServer
-          .from(mappedTable)
-          .select(selectColumns)
-          .eq('email', cleanEmail);
+        let record: any = null;
 
-        if (error || !data || data.length === 0) {
+        // 🛡️ SEC-03 : Tentative Supabase Cloud en ligne avec repli sur cache local en cas de coupure Internet
+        if (supabaseServer) {
+          try {
+            const { data, error } = await supabaseServer
+              .from(mappedTable)
+              .select(selectColumns)
+              .eq('email', cleanEmail);
+
+            if (!error && data && data.length > 0) {
+              record = data[0];
+              authProfileCache.set(cacheKey, record);
+            } else if (error) {
+              console.warn('[Auth API] Erreur Supabase, repli sur le cache local:', error.message);
+              record = authProfileCache.get(cacheKey);
+            }
+          } catch (supaErr) {
+            console.warn('[Auth API] Réseau Supabase indisponible, repli sur le cache local:', supaErr);
+            record = authProfileCache.get(cacheKey);
+          }
+        } else {
+          record = authProfileCache.get(cacheKey);
+        }
+
+        if (!record) {
           // Record failure on unknown emails to prevent username harvesting at speed
           const attempts = authRateState[ip] || { count: 0, lockUntil: 0 };
           attempts.count += 1;
@@ -372,14 +487,23 @@ async function startServer() {
           return res.status(401).json({ error: invalidCredentialsError });
         }
 
-        const record = data[0] as any;
-        const hash = record.password_hash || record.password;
+        const candidateHashes = [record.password_hash, record.pin, record.password].filter(
+          (h): h is string => typeof h === 'string' && h.length > 0
+        );
 
-        if (!hash) {
+        if (candidateHashes.length === 0) {
           return res.status(401).json({ error: "Aucun mot de passe configuré sur ce compte" });
         }
 
-        const isMatch = await bcrypt.compare(password, hash);
+        let isMatch = false;
+        for (const h of candidateHashes) {
+          if (h.startsWith('$2a$') || h.startsWith('$2b$')) {
+            if (await bcrypt.compare(String(password), h)) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
         if (!isMatch) {
           const attempts = authRateState[ip] || { count: 0, lockUntil: 0 };
           attempts.count += 1;
@@ -398,8 +522,9 @@ async function startServer() {
         const safeRecord = { ...(record as any) };
         delete safeRecord.password_hash;
         delete safeRecord.password;
-
-        return res.json(safeRecord);
+        delete safeRecord.pin;
+        safeRecord.isAppUser = safeRecord.is_app_user ?? safeRecord.isAppUser ?? true;
+        return res.json({ valid: true, user: safeRecord, ...safeRecord });
       } catch (err: any) {
         console.error("[Auth API Error] Verification failed:", err);
         return res.status(500).json({ error: "Internal server error" });
@@ -407,8 +532,8 @@ async function startServer() {
     });
 
 
-    // AI Analysis/Completion route
-    app.post("/api/ai/complete", async (req, res) => {
+    // AI Analysis/Completion route with Rate Limiter & Auth
+    app.post("/api/ai/complete", requirePosLanAuth, aiRateLimiter, async (req, res) => {
       const { data, userPrompt, systemPromptOverride } = req.body;
       const clientKey = req.headers['x-gemini-key'];
       const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || '');
@@ -490,7 +615,7 @@ async function startServer() {
         res.status(500).json({ error: "Erreur AI", message: errMsg });
       }
     });
-    app.post("/api/ai/scan", async (req, res) => {
+    app.post("/api/ai/scan", requirePosLanAuth, aiRateLimiter, express.json({ limit: '50mb' }), async (req, res) => {
       const { image, mimeType } = req.body;
       const clientKey = req.headers['x-gemini-key'];
       const apiKey = (typeof clientKey === 'string' && clientKey) ? clientKey : (process.env.GEMINI_API_KEY || '');
@@ -622,12 +747,14 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
       }
     });
 
-
-
-
-
     // 🟢 Socket.io events (Diffusion temps réel local pour afficheur client & caisse)
     io.on("connection", (socket) => {
+      const handshakeToken = socket.handshake.auth?.token || socket.handshake.headers['x-nexus-lan-token'];
+      const isAuthorizedSocket = Boolean(
+        handshakeToken === EXPECTED_LAN_TOKEN ||
+        (typeof handshakeToken === 'string' && handshakeToken.startsWith('offline_token_') && handshakeToken.length > 14)
+      );
+
       // Envoyer l'état actuel dès la connexion
       if (latestCustomerDisplayState) {
         socket.emit("customer-display:update", latestCustomerDisplayState);
@@ -638,11 +765,13 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
         socket.emit("customer-display:update", latestCustomerDisplayState);
       });
 
-      // Réception d'une mise à jour depuis la caisse
+      // Réception d'une mise à jour depuis la caisse (authentifiée)
       socket.on("customer-display:send", (state) => {
-        if (state) {
+        if (!isAuthorizedSocket && state?.lanToken !== EXPECTED_LAN_TOKEN) return;
+        if (state && typeof state === 'object') {
+          const { lanToken, ...cleanState } = state;
           latestCustomerDisplayState = {
-            ...state,
+            ...cleanState,
             updatedAt: new Date().toISOString()
           };
           // Diffuser à tous les autres clients connectés (écrans clients / tablettes)
@@ -656,9 +785,13 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
         }
       });
 
-      // Relais douchette code-barres depuis un écran client vers la caisse
+      // Relais douchette code-barres depuis un écran client vers la caisse (authentifié)
       socket.on("customer-display:barcode", (data) => {
-        socket.broadcast.emit("customer-display:barcode", data);
+        if (!isAuthorizedSocket && data?.lanToken !== EXPECTED_LAN_TOKEN) return;
+        const barcode = typeof data?.barcode === 'string' ? data.barcode.trim() : '';
+        if (barcode.length > 0 && barcode.length <= 128) {
+          socket.broadcast.emit("customer-display:barcode", { barcode });
+        }
       });
 
       socket.on("disconnect", () => {
@@ -681,50 +814,107 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
         // Prioriser 192.168.x.x ou 10.x.x.x (Wi-Fi / Ethernet local)
         const preferredIp = ips.find(ip => ip.startsWith('192.168.')) || ips.find(ip => ip.startsWith('10.')) || ips[0] || '127.0.0.1';
         const lanUrl = `http://${preferredIp}:${PORT}`;
+        const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/latest';
         res.json({
           lanIp: preferredIp,
           allIps: ips,
           port: PORT,
           lanUrl,
           apkLanUrl: `${lanUrl}/download/apk`,
-          githubApkUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk'
+          githubApkUrl: GITHUB_APK_FALLBACK
         });
       } catch (e) {
+        const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/latest';
         res.json({
           lanIp: '127.0.0.1',
           allIps: [],
           port: PORT,
           lanUrl: `http://127.0.0.1:${PORT}`,
-          apkLanUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk',
-          githubApkUrl: 'https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk'
+          apkLanUrl: `http://127.0.0.1:${PORT}/download/apk`,
+          githubApkUrl: GITHUB_APK_FALLBACK
         });
       }
     });
 
     // 📦 Route de téléchargement direct du fichier APK Android depuis le PC en Wi-Fi ou redirection GitHub
     app.get('/download/apk', (req, res) => {
+      const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-1.2.54.apk';
+      const releaseDirs = [
+        path.join(process.cwd(), 'release'),
+        path.join(_dirname, '..', 'release'),
+        path.join(_dirname, 'release'),
+        path.join('C:\\Users\\ks2\\antigravity\\Remix-Nexus-POS-Pro', 'release')
+      ];
+      const dynamicApks: string[] = [];
+      for (const dir of releaseDirs) {
+        if (fs.existsSync(dir)) {
+          try {
+            const files = fs.readdirSync(dir)
+              .filter(f => f.toLowerCase().endsWith('.apk'))
+              .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+            for (const f of files) {
+              dynamicApks.push(path.join(dir, f));
+            }
+          } catch (_) {
+            // ignore read error
+          }
+        }
+      }
       const candidatePaths = [
+        path.join(process.cwd(), 'release', 'Nexus-POS-Pro-1.2.45.apk'),
+        path.join(_dirname, '..', 'release', 'Nexus-POS-Pro-1.2.45.apk'),
+        path.join(process.cwd(), 'release', 'NexusPOSPro-1.2.45.apk'),
+        path.join(_dirname, '..', 'release', 'NexusPOSPro-1.2.45.apk'),
+        ...dynamicApks,
+        path.join(process.cwd(), 'release', 'NexusPOSPro-1.2.30.apk'),
+        path.join(_dirname, '..', 'release', 'NexusPOSPro-1.2.30.apk'),
+        path.join(process.cwd(), 'release', 'NexusPOSPro-1.2.29.apk'),
+        path.join(_dirname, '..', 'release', 'NexusPOSPro-1.2.29.apk'),
         path.join(process.cwd(), 'release', 'NexusPOSPro-1.2.14.apk'),
         path.join(_dirname, '..', 'release', 'NexusPOSPro-1.2.14.apk'),
         path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
       ];
       for (const p of candidatePaths) {
         if (fs.existsSync(p)) {
-          return res.download(p, 'NexusPOSPro-1.2.14.apk');
+          return res.download(p, path.basename(p));
         }
       }
-      return res.redirect('https://github.com/31kader/Remix-Nexus-POS-Pro22/releases/download/v1.2.14/NexusPOSPro-1.2.14.apk');
+      return res.redirect(GITHUB_APK_FALLBACK);
     });
 
-    // Ensure we correctly detect production mode in Cloud Run
+    // 📦 Route de téléchargement direct de l'installeur Windows EXE depuis le réseau local
+    app.get('/download/exe', (req, res) => {
+      const releaseDirs = [
+        path.join(process.cwd(), 'release'),
+        path.join(_dirname, '..', 'release'),
+        path.join(_dirname, 'release'),
+        path.join('C:\\Users\\ks2\\antigravity\\Remix-Nexus-POS-Pro', 'release')
+      ];
+      for (const dir of releaseDirs) {
+        if (fs.existsSync(dir)) {
+          try {
+            const files = fs.readdirSync(dir)
+              .filter(f => f.toLowerCase().endsWith('.exe') && !f.includes('uninstaller'))
+              .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+            if (files.length > 0) {
+              const exePath = path.join(dir, files[0]);
+              return res.download(exePath, files[0]);
+            }
+          } catch (_) {}
+        }
+      }
+      res.status(404).send("Fichier d'installation Windows non trouvé dans le dossier release.");
+    });
+
+    // Ensure we correctly detect development mode with Vite HMR in local environment
     if (!IS_PROD) {
       try {
-        console.log("Starting Vite in dev mode...");
+        console.log("Starting Vite in dev mode with HMR...");
         const { createServer: createViteServer } = await import("vite");
         const vite = await createViteServer({
           server: { 
             middlewareMode: true,
-            hmr: false,
+            hmr: true,
           },
           appType: "spa",
         });
@@ -783,7 +973,8 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
               // Read live, real-time environment variables at request time
               const envObj = {
                 VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-                VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || ''
+                VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+                VITE_SENTRY_DSN: process.env.VITE_SENTRY_DSN || ''
               };
 
               // Safety swap in case the user pasted the URL into the anon_key and vice-versa
@@ -835,4 +1026,6 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
   }
 }
 
-startServer();
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  startServer();
+}

@@ -108,8 +108,8 @@ describe('Simulation Totale Administrateur de A à Z (8 Étapes & Conformité Su
       loyaltyPoints: 120
     });
 
-    // 'credit_limit' n'existe pas dans la table Supabase customers
-    expect(custPayload).not.toHaveProperty('credit_limit');
+    // 'credit_limit' est maintenant une colonne officielle Supabase customers en v1.2.33
+    expect(custPayload.credit_limit).toBe(50000);
     expect(custPayload.balance).toBe(-15000);
     expect(custPayload.name).toBe('SARL Superette El Baraka');
     for (const key of Object.keys(custPayload)) {

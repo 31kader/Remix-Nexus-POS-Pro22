@@ -4,10 +4,10 @@ import { localDb } from '../../services/LocalDatabase';
 import { supabase, isSupabaseConfigured } from '../../supabase';
 import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
 import { CompanySettings, Employee, InvoicePattern, SupplierSync, UserProfile } from '../../types';
-import { safeOptionalQuery } from '../../lib/supabase/safeOptional';
-import { setLocalState, saveStateToStorage } from '../../lib/local-db';
+import { setLocalState, saveStateToStorage, replaceTableState } from '../../lib/local-db';
 import { usePeopleStore } from '../../store/usePeopleStore';
 import { withNetworkTimeout } from '../../services/networkErrorHandler';
+import { safeOptionalQuery } from '../../lib/supabase/safeOptional';
 
 interface useAdminStaticDataParams {
   loading: boolean;
@@ -128,6 +128,8 @@ export function useAdminStaticData({
                 const updatedEmployees = empData.map((item: any) => convertKeysToCamel(item) as Employee);
                 if (updatedEmployees.length > 0) {
                   setEmployees(updatedEmployees);
+                  replaceTableState('employees', updatedEmployees);
+                  usePeopleStore.getState().setEmployees(updatedEmployees);
                   idbSet('nexus_employees_cache', updatedEmployees);
                 }
               }
@@ -215,8 +217,76 @@ export function useAdminStaticData({
 
     fetchStaticData();
 
+    const unsubEmployees = localDb.subscribe('employees', (snapshot) => {
+      if (!isSubscribed || isPublicPriceMode) return;
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        if (data && typeof data === 'object') {
+          const docs = Object.keys(data).map(id => ({ id, ...data[id] } as Employee));
+          setEmployees(prev => {
+            const map = new Map<string, Employee>();
+            (Array.isArray(prev) ? prev : []).forEach(e => { if (e && e.id) map.set(e.id, e); });
+            docs.forEach(e => { if (e && e.id) map.set(e.id, { ...(map.get(e.id) || {}), ...e }); });
+            const next = Array.from(map.values());
+            usePeopleStore.getState().setEmployees(next);
+            idbSet('nexus_employees_cache', next).catch(() => {});
+            return next;
+          });
+        }
+      }
+    });
+
+    const unsubSettings = localDb.subscribe('settings/company', (snapshot) => {
+      if (!isSubscribed) return;
+      if (snapshot.exists()) {
+        const val = snapshot.val();
+        if (val && typeof val === 'object') {
+          setSettings(prev => ({ ...prev, ...val }));
+        }
+      }
+    });
+
+    let empChannel: any = null;
+    if (isSupabaseConfigured && !isPublicPriceMode) {
+      empChannel = supabase
+        .channel('nexus-admin-static-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'employees' },
+          (payload: any) => {
+            if (!isSubscribed) return;
+            if (payload.eventType === 'DELETE') {
+              const delId = payload.old?.id;
+              if (delId) {
+                setEmployees(prev => {
+                  const next = (Array.isArray(prev) ? prev : []).filter(e => e.id !== delId);
+                  idbSet('nexus_employees_cache', next).catch(() => {});
+                  return next;
+                });
+              }
+            } else if (payload.new && payload.new.id) {
+              const camelEmp = convertKeysToCamel(payload.new) as Employee;
+              setEmployees(prev => {
+                const map = new Map<string, Employee>();
+                (Array.isArray(prev) ? prev : []).forEach(e => map.set(e.id, e));
+                map.set(camelEmp.id, { ...(map.get(camelEmp.id) || {}), ...camelEmp });
+                const next = Array.from(map.values());
+                idbSet('nexus_employees_cache', next).catch(() => {});
+                return next;
+              });
+            }
+          }
+        )
+        .subscribe();
+    }
+
     return () => {
       isSubscribed = false;
+      unsubEmployees();
+      unsubSettings();
+      if (empChannel) {
+        supabase.removeChannel(empChannel).catch(() => {});
+      }
     };
   }, [loading, appMode, userId, userRole]);
 }

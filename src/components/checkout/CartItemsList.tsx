@@ -45,9 +45,24 @@ export const CartItemsList: React.FC<Props> = (props) => {
             <LayoutList size={14} className="opacity-70 text-indigo-600 dark:text-indigo-400"/> 
             Articles : <span className="text-slate-900 dark:text-white font-extrabold">{cart.length}</span>
           </span>
-          <span>
-            Pièces : <span className="text-slate-900 dark:text-white font-extrabold">{cart.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</span>
-          </span>
+          <div className="flex items-center gap-3">
+            <span>
+              Pièces : <span className="text-slate-900 dark:text-white font-extrabold">{cart.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Voulez-vous vraiment vider le panier ?")) {
+                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true }));
+                }
+              }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[10px] font-bold border border-rose-500/20 transition-all cursor-pointer"
+              title="Vider le panier (Raccourci F2)"
+            >
+              <Trash2 size={12} />
+              <span>Vider [F2]</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -80,11 +95,13 @@ export const CartItemsList: React.FC<Props> = (props) => {
                 settings={settings}
                 products={products}
                 inputRef={(el) => {
-                  const key = item.cartItemId || '';
+                  const key = item.cartItemId || item.id;
                   if (el) {
                     quantityInputRefs.current[key] = el;
+                    if (item.id) quantityInputRefs.current[item.id] = el;
                   } else {
                     delete quantityInputRefs.current[key];
+                    if (item.id) delete quantityInputRefs.current[item.id];
                   }
                 }}
               />
@@ -112,7 +129,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
                     setQuantity(activeItem.cartItemId || activeItem.id, currentQty - 1);
                   }
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 font-black text-xs transition-all active:scale-90 cursor-pointer border border-slate-200 dark:border-zinc-700"
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 font-black text-xs transition-all active:scale-90 cursor-pointer border border-slate-200 dark:border-zinc-700"
                 title="Diminuer de 1"
               >
                 -1
@@ -123,7 +140,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
                   const currentQty = activeItem.quantity || 0;
                   setQuantity(activeItem.cartItemId || activeItem.id, currentQty + 1);
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 font-black text-xs transition-all active:scale-90 cursor-pointer border border-slate-200 dark:border-zinc-700"
+                className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 font-black text-xs transition-all active:scale-90 cursor-pointer border border-slate-200 dark:border-zinc-700"
                 title="Augmenter de 1"
               >
                 +1
@@ -134,7 +151,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
                   type="button"
                   onClick={() => setQuantity(activeItem.cartItemId || activeItem.id, qtyVal)}
                   className={cn(
-                    "min-w-[28px] h-7 px-1.5 flex items-center justify-center rounded-lg font-mono font-black text-xs transition-all active:scale-90 cursor-pointer border",
+                    "min-w-[38px] h-10 px-2 flex items-center justify-center rounded-lg font-mono font-black text-xs transition-all active:scale-90 cursor-pointer border",
                     activeItem.quantity === qtyVal
                       ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
                       : "bg-white dark:bg-zinc-800/80 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700"

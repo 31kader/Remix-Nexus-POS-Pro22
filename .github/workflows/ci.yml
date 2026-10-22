@@ -1,0 +1,61 @@
+name: Continuous Integration (CI) - Quality & Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, Tests & Quality Assurance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: TypeScript Typecheck (0 error policy)
+        run: npm run lint
+
+      - name: Run Vitest Automated Test Suite (302 tests)
+        run: npm test
+
+  build:
+    name: Production Build Verification
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Application & Node Server
+        run: npm run build
+
+      - name: Verify Distribution Artifacts
+        run: |
+          test -d dist || { echo "dist/ directory missing"; exit 1; }
+          test -f dist/server.cjs || { echo "dist/server.cjs missing"; exit 1; }
+          test -f dist/index.html || { echo "dist/index.html missing"; exit 1; }

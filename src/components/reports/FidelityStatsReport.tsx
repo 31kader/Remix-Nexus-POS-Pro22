@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Gift, Tag, Award, Users, Search, Crown, TrendingUp, Download } from 'lucide-react';
 import { formatSafe, cn } from '../../lib/utils';
 import { Card } from '../ui';
-import { Transaction, CompanySettings, Customer } from '../../types';
+import { Transaction, CompanySettings, Customer, isTopUpTransaction } from '../../types';
 import { isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
   // 1. Calcul des statistiques des avantages sur les ventes (Remises + Bons + Points)
   const marketingData = useMemo(() => {
     const validTx = (transactions || []).filter(
-      t => t && t.status !== 'returned' && t.status !== 'cancelled'
+      t => t && t.status !== 'returned' && t.status !== 'cancelled' && !isTopUpTransaction(t)
     );
 
     const filtered = validTx.filter(t => {
@@ -171,16 +171,21 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
   }, [filteredPromoTx, currentPage]);
 
   const handleExportFidelityCSV = () => {
-    const headers = ['Client', 'Telephone', 'Palier Fidelite', 'Points Cumules', 'Total Achats (DA)', 'Solde Dette (DA)', 'Nombre Commandes'];
-    const rows = filteredCustomers.map(c => [
-      `"${(c.name || '').replace(/"/g, '""')}"`,
-      `"${c.phone || ''}"`,
-      `"${c.tier.label}"`,
-      c.points,
-      c.computedSpent.toFixed(2),
-      Number(c.balance || 0).toFixed(2),
-      c.txCount
-    ]);
+    const headers = ['Client', 'Telephone', 'Palier Fidelite', 'Points Cumules', 'Total Achats (DA)', 'Solde (DA)', 'Statut Solde', 'Nombre Commandes'];
+    const rows = filteredCustomers.map(c => {
+      const bal = Number(c.balance || 0);
+      const statusLabel = bal < 0 ? 'Dette' : bal > 0 ? 'Avoir' : 'Solde nul';
+      return [
+        `"${(c.name || '').replace(/"/g, '""')}"`,
+        `"${c.phone || ''}"`,
+        `"${c.tier.label}"`,
+        c.points,
+        c.computedSpent.toFixed(2),
+        bal.toFixed(2),
+        statusLabel,
+        c.txCount
+      ];
+    });
     const csv = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -414,14 +419,28 @@ export const FidelityStatsReport = React.memo(function FidelityStatsReport({
                         {c.computedSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}
                       </td>
                       <td className="p-4 text-right">
-                        <span
-                          className={cn(
-                            'font-bold text-xs',
-                            Number(c.balance || 0) > 0 ? 'text-rose-400' : 'text-zinc-400'
-                          )}
-                        >
-                          {Number(c.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}
-                        </span>
+                        {(() => {
+                          const bal = Number(c.balance || 0);
+                          if (bal < 0) {
+                            return (
+                              <span className="font-bold text-xs text-rose-400">
+                                Dette: {Math.abs(bal).toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}
+                              </span>
+                            );
+                          }
+                          if (bal > 0) {
+                            return (
+                              <span className="font-bold text-xs text-emerald-400">
+                                Avoir: {bal.toLocaleString(undefined, { minimumFractionDigits: 2 })} {settings.currency}
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="font-bold text-xs text-zinc-400">
+                              0.00 {settings.currency}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

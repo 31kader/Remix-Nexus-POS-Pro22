@@ -50,7 +50,7 @@ export function CheckoutSuccessModal({
           initial={{ opacity: 0, scale: 0.9, y: 50 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 50 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-5 py-6 rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 min-w-[380px]  ring-2 ring-emerald-500/20"
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-950 border-2 border-emerald-500/40 text-white px-5 py-6 rounded-xl shadow-[0_20px_70px_rgba(0,0,0,0.9)] flex flex-col gap-4 z-50 w-full max-w-sm mx-4 ring-2 ring-emerald-500/20"
         >
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/30 shadow-inner">

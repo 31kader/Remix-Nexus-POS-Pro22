@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { useUpdatePricesLogic } from './useUpdatePricesLogic';
+import { useUpdatePricesLogic } from '../hooks/useUpdatePricesLogic';
 import { UpdatePricesItem } from './inventory/UpdatePricesItem';
 
 interface UpdatePricesViewProps {

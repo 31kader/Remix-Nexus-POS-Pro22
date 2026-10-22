@@ -20,7 +20,8 @@ import { CustomerDebtsLedger } from './customers/CustomerDebtsLedger';
 import { CustomerAnalyticsView } from './customers/CustomerAnalyticsView';
 import { CustomerGlobalJournalView } from './customers/CustomerGlobalJournalView';
 import { CustomerGlobalGeneralView } from './customers/CustomerGlobalGeneralView';
-import { useCustomersLogic } from './useCustomersLogic';
+import { CustomerTableView } from './customers/CustomerTableView';
+import { useCustomersLogic } from '../hooks/useCustomersLogic';
 
 export interface CustomersProps {
   customers: Customer[];
@@ -386,390 +387,40 @@ export const Customers = memo(function Customers(props: CustomersProps) {
           }}
         />
       ) : directoryLayout === 'table' ? (
-        <div className="flex-1 flex flex-col gap-4 bg-slate-900/95 border border-slate-800 rounded-xl p-6 shadow-md overflow-hidden">
-          {/* Table Header Controls */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-xl font-black text-white  uppercase tracking-tight flex items-center gap-2.5">
-                <TableIcon className="text-indigo-400" size={22} /> Grand Tableau des Clients
-              </h3>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">
-                Vue panoramique complète avec gestion de solde, dettes, points et actions rapides
-              </p>
-            </div>
-
-            {/* Search Input in Table view */}
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-              <input
-                type="text"
-                placeholder="Rechercher client, tél, email..."
-                className="w-full pl-10 pr-9 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Filter Badges + Sorting Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-black uppercase tracking-wider">
-              <button
-                type="button"
-                onClick={() => setFilterStatus('all')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap",
-                  filterStatus === 'all'
-                    ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
-                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-                )}
-              >
-                Tous ({customers.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterStatus('debtors')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap flex items-center gap-1.5",
-                  filterStatus === 'debtors'
-                    ? "bg-rose-600 text-white border-rose-500 shadow-sm"
-                    : "bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
-                )}
-              >
-                <AlertTriangle size={13} /> Dettes ({debtorCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterStatus('credits')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap",
-                  filterStatus === 'credits'
-                    ? "bg-emerald-600 text-white border-emerald-500 shadow-sm"
-                    : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
-                )}
-              >
-                Avoirs ({kpiStats.creditCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterStatus('app_users')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap flex items-center gap-1.5",
-                  filterStatus === 'app_users'
-                    ? "bg-indigo-600 text-white border-indigo-500 shadow-sm"
-                    : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 hover:bg-indigo-500/20"
-                )}
-              >
-                <Smartphone size={13} /> App ({kpiStats.appUserCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterStatus('vip')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap flex items-center gap-1.5",
-                  filterStatus === 'vip'
-                    ? "bg-amber-600 text-white border-amber-500 shadow-sm"
-                    : "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
-                )}
-              >
-                <Award size={13} /> VIP
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterStatus('inactive')}
-                className={cn(
-                  "px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap",
-                  filterStatus === 'inactive'
-                    ? "bg-slate-700 text-white border-slate-600 shadow-sm"
-                    : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
-                )}
-              >
-                Inactifs
-              </button>
-            </div>
-
-            {/* Sorting Dropdown */}
-            <div className="flex items-center gap-2 text-xs text-slate-300 font-bold uppercase">
-              <span className="flex items-center gap-1 text-slate-400">
-                <ArrowUpDown size={13} className="text-indigo-400" /> Trier :
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-slate-950 border border-slate-700 text-slate-200 rounded-xl px-3 py-1.5 outline-none text-xs font-black uppercase tracking-wider cursor-pointer"
-              >
-                <option value="name_asc">Nom (A → Z)</option>
-                <option value="name_desc">Nom (Z → A)</option>
-                <option value="debt_desc">Dette la plus forte</option>
-                <option value="spent_desc">Volume d'achat (CA)</option>
-                <option value="points_desc">Points de fidélité</option>
-                <option value="recent_visit">Dernière visite</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Table Container with Overflow */}
-          <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/60">
-            {paginatedCustomers.length > 0 ? (
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-300 font-black text-xs uppercase tracking-wider sticky top-0 z-10">
-                    <th className="py-4 px-4">Client</th>
-                    <th className="py-4 px-4">Téléphone & Email</th>
-                    <th className="py-4 px-4">Situation Solde / Dette</th>
-                    <th className="py-4 px-4">Points</th>
-                    <th className="py-4 px-4">CA Total</th>
-                    <th className="py-4 px-4">Dernière Visite</th>
-                    <th className="py-4 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/80 text-xs">
-                  {paginatedCustomers.map((cust) => {
-                    const balance = Number(cust.balance || 0);
-                    return (
-                      <tr 
-                        key={cust.id} 
-                        className="hover:bg-slate-800/40 transition-colors group cursor-pointer"
-                        onClick={() => {
-                          setSelectedCustomerId(cust.id);
-                          setDirectoryLayout('split');
-                        }}
-                      >
-                        {/* Client Column */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-sm">
-                              {(cust.name || '?').charAt(0)}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-black text-white text-sm uppercase tracking-wide group-hover:text-indigo-300 transition-colors">
-                                  {cust.name || 'Client sans nom'}
-                                </span>
-                                {cust.isAppUser && (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[9px] font-black uppercase flex items-center gap-1 border border-indigo-500/30">
-                                    <Smartphone size={10} /> App
-                                  </span>
-                                )}
-                                {cust.isWholesale && (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase border border-purple-500/30">
-                                    Gros
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-tight">
-                                ID: {cust.id.slice(0, 8)}... {cust.loyaltyCardNumber ? `• N° ${cust.loyaltyCardNumber}` : ''}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Coordonnées Column */}
-                        <td className="py-3.5 px-4">
-                          {cust.phone ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-emerald-400 text-xs tracking-wider">
-                                {cust.phone}
-                              </span>
-                              <a
-                                href={`tel:${cust.phone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all"
-                                title="Appeler"
-                              >
-                                <Phone size={12} />
-                              </a>
-                            </div>
-                          ) : (
-                            <span className="text-slate-600  text-[11px]">Pas de téléphone</span>
-                          )}
-                          {cust.email && (
-                            <p className="text-[10px] text-slate-400 truncate max-w-[160px] mt-0.5">{cust.email}</p>
-                          )}
-                          {(cust.latitude || cust.address) && (
-                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                              <span className={cn(
-                                "text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1",
-                                cust.latitude 
-                                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" 
-                                  : "bg-slate-800 text-slate-300 border border-slate-700"
-                              )}>
-                                <MapPin size={10} className={cust.latitude ? "text-emerald-400" : "text-slate-400"} />
-                                {cust.latitude ? `GPS: ${Number(cust.latitude).toFixed(4)}` : (cust.city || 'Adresse')}
-                              </span>
-                              {cust.latitude && cust.longitude && (
-                                <a
-                                  href={`https://www.google.com/maps/dir/?api=1&destination=${cust.latitude},${cust.longitude}&travelmode=driving`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-0.5 text-indigo-400 hover:text-indigo-300 transition-colors"
-                                  title="Guidage Google Maps"
-                                >
-                                  <Compass size={12} />
-                                </a>
-                              )}
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Solde / Dette Column */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          {balance < 0 ? (
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono font-black text-xs text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2.5 py-1 rounded-lg">
-                                Dette : {Math.abs(balance).toFixed(2)} {settings.currency || 'DA'}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedCustomerId(cust.id);
-                                  setFinancialOpType('encaissement');
-                                  setFinancialMethod('cash');
-                                  setFinancialNote('Règlement dette client');
-                                  setIsTopUpModalOpen(true);
-                                }}
-                                className="px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 hover:bg-rose-600 hover:text-white border border-rose-500/40 text-[10px] font-black uppercase transition-all"
-                              >
-                                Régler
-                              </button>
-                            </div>
-                          ) : balance > 0 ? (
-                            <span className="font-mono font-black text-xs text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
-                              Solde : +{balance.toFixed(2)} {settings.currency || 'DA'}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-mono font-bold text-xs bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
-                              0.00 {settings.currency || 'DA'}
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Loyalty Points */}
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2.5 py-1 rounded-lg text-xs font-black font-mono">
-                            <Award size={13} /> {cust.loyaltyPoints || 0}
-                          </span>
-                        </td>
-
-                        {/* Total Spent */}
-                        <td className="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-white text-xs">
-                          {(Number(cust.totalSpent) || 0).toFixed(0)} <span className="text-[10px] text-slate-400 font-sans">{settings.currency || 'DA'}</span>
-                        </td>
-
-                        {/* Last Visit */}
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-400 text-xs font-medium font-mono">
-                          {cust.lastVisit ? formatSafe(cust.lastVisit, 'dd/MM/yyyy', { locale: fr }) : 'Aucune'}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedCustomerId(cust.id);
-                                setDirectoryLayout('split');
-                              }}
-                              className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/30 transition-all"
-                              title="Voir la fiche détaillée"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleLaunchSale(cust)}
-                              className="p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm"
-                              title="Vendre (charger en caisse)"
-                            >
-                              <ShoppingCart size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handlePrintStatement(cust)}
-                              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition-all"
-                              title="Imprimer relevé de compte"
-                            >
-                              <Printer size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openWhatsApp(cust.phone || '', balance < 0 ? 'debt' : undefined, cust)}
-                              className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all"
-                              title="Envoyer WhatsApp"
-                            >
-                              <MessageSquare size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setEditingCustomer(cust); setIsModalOpen(true); }}
-                              className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700 transition-all"
-                              title="Modifier la fiche"
-                            >
-                              <Edit size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-16 text-slate-400">
-                <Users size={40} className="mx-auto mb-3 text-slate-600" />
-                <p className="font-bold text-sm text-slate-300">Aucun client trouvé</p>
-                <p className="text-xs text-slate-500 mt-1">Modifiez vos critères de recherche ou vos filtres.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Table Pagination Controls */}
-          {filteredCustomers.length > TABLE_PAGE_SIZE && (
-            <div className="flex items-center justify-between pt-2 text-xs">
-              <span className="text-slate-400 font-medium">
-                Affichage de <span className="font-bold text-white">{(currentPage - 1) * TABLE_PAGE_SIZE + 1}</span> à <span className="font-bold text-white">{Math.min(currentPage * TABLE_PAGE_SIZE, filteredCustomers.length)}</span> sur <span className="font-bold text-white">{filteredCustomers.length}</span> clients
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={currentPage <= 1}
-                  onClick={() => setTablePage(p => Math.max(1, p - 1))}
-                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-black uppercase text-[11px]"
-                >
-                  <ChevronLeft size={14} /> Précédent
-                </button>
-                <span className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 font-mono font-bold text-xs">
-                  Page {currentPage} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setTablePage(p => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 font-black uppercase text-[11px]"
-                >
-                  Suivant <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <CustomerTableView
+          filteredCustomers={filteredCustomers}
+          paginatedCustomers={paginatedCustomers}
+          settings={settings}
+          search={search}
+          setSearch={setSearch}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          kpiStats={kpiStats}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          setTablePage={setTablePage}
+          TABLE_PAGE_SIZE={TABLE_PAGE_SIZE}
+          setSelectedCustomerId={setSelectedCustomerId}
+          setDirectoryLayout={setDirectoryLayout}
+          setFinancialOpType={setFinancialOpType}
+          setFinancialMethod={setFinancialMethod}
+          setFinancialNote={setFinancialNote}
+          setIsTopUpModalOpen={setIsTopUpModalOpen}
+          handleLaunchSale={handleLaunchSale}
+          handlePrintStatement={handlePrintStatement}
+          openWhatsApp={openWhatsApp}
+          setEditingCustomer={setEditingCustomer}
+          setIsModalOpen={setIsModalOpen}
+        />
       ) : (
         <div className="flex-1 flex flex-col md:flex-row gap-5 overflow-hidden">
           {/* Left Panel: Customer List */}
           <div className={cn(
-            "w-full md:w-1/3 flex flex-col gap-3 bg-white/5  p-5 rounded-xl shadow-xs/5 border border-white/5 h-1/2 md:h-full overflow-hidden transition-all duration-300",
-            isDetailExpanded && "hidden md:hidden"
+            "w-full md:w-1/3 flex flex-col gap-3 bg-white/5 p-4 sm:p-5 rounded-xl shadow-xs/5 border border-white/5 h-full overflow-hidden transition-all duration-300",
+            selectedCustomerId ? "hidden md:flex" : "flex",
+            isDetailExpanded && "md:hidden"
           )}>
             <div className="flex items-center justify-between">
               <div>
@@ -921,7 +572,8 @@ export const Customers = memo(function Customers(props: CustomersProps) {
           {/* Right Panel: Detail View */}
           <div className={cn(
             "bg-workspace rounded-xl shadow-xs/5 border border-white/5 flex flex-col overflow-hidden transition-all duration-300",
-            isDetailExpanded ? "w-full h-full" : "w-full md:w-2/3 h-1/2 md:h-full"
+            selectedCustomerId ? "flex flex-1 w-full h-full md:w-2/3 md:flex-initial" : "hidden md:flex md:w-2/3 md:h-full",
+            isDetailExpanded && "md:w-full"
           )}>
             {selectedCustomer ? (
               <>
@@ -929,12 +581,24 @@ export const Customers = memo(function Customers(props: CustomersProps) {
                 <div className="px-3.5 py-2 border-b border-white/10 bg-slate-900/95 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
                   {/* Left: Client Mini Badge */}
                   <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Bouton retour mobile (< md) : réinitialise la sélection pour revenir à la liste */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCustomerId(null)}
+                      className="md:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all flex items-center gap-1.5 text-xs font-black uppercase shadow-xs min-h-[38px]"
+                      title="Retour à la liste"
+                    >
+                      <ArrowLeft className="w-5 h-5 text-indigo-400" />
+                      <span>Retour à la liste</span>
+                    </button>
+
+                    {/* Bouton retour desktop si panneau maximisé */}
                     {isDetailExpanded && (
                       <button
                         type="button"
                         onClick={() => setIsDetailExpanded(false)}
-                        className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center gap-1 text-[11px] font-black uppercase"
-                        title="Retourner à la liste"
+                        className="hidden md:flex p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all items-center gap-1 text-[11px] font-black uppercase"
+                        title="Retourner à la vue scindée"
                       >
                         <ArrowLeft size={13} />
                         <span className="hidden sm:inline">Liste</span>

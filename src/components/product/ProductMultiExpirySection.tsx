@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { cn, generateUniqueId } from '../../lib/utils';
 import { toast } from 'sonner';
+import { normalizeBatches } from '../../types/products';
 
 interface Batch {
   id?: string;
@@ -56,7 +57,7 @@ export function ProductMultiExpirySection({
               const updated = { ...prev, useMultiExpiry: nextVal };
               if (nextVal) {
                 // Sum existing batch stocks or auto-seed with the first entered date/lot
-                let currentBatches = prev.batches ? [...prev.batches] : [];
+                let currentBatches = normalizeBatches(prev.batches);
                 if (currentBatches.length === 0 && prev.expirationDate) {
                   currentBatches.push({
                     id: Math.random().toString(36).substring(2, 9),
@@ -65,16 +66,17 @@ export function ProductMultiExpirySection({
                     stock: parseFloat(prev.stock || '0') || 0
                   });
                 }
-                const totalBatchStock = currentBatches.reduce((sum: number, b: any) => sum + b.stock, 0);
+                const totalBatchStock = currentBatches.reduce((sum: number, b: any) => sum + (b?.stock || 0), 0);
                 updated.batches = currentBatches;
                 updated.stock = totalBatchStock > 0 ? totalBatchStock.toString() : prev.stock;
               } else {
                 // Moving from multi back to single: populate parent values with the earliest batch if available
-                if (prev.batches && prev.batches.length > 0) {
-                  const sorted = [...prev.batches].sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
+                const existingBatches = normalizeBatches(prev.batches);
+                if (existingBatches.length > 0) {
+                  const sorted = [...existingBatches].sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
                   updated.expirationDate = sorted[0].expirationDate;
                   updated.batchNumber = sorted[0].batchNumber;
-                  updated.stock = prev.batches.reduce((sum: number, b: any) => sum + b.stock, 0).toString();
+                  updated.stock = existingBatches.reduce((sum: number, b: any) => sum + (b?.stock || 0), 0).toString();
                 }
               }
               return updated;
@@ -146,7 +148,7 @@ export function ProductMultiExpirySection({
                 };
 
                 setFormData((prev: any) => {
-                  const updatedBatches = [...(prev.batches || []), newBatch];
+                  const updatedBatches = [...normalizeBatches(prev.batches), newBatch];
                   const totalStock = updatedBatches.reduce((sum, b) => sum + b.stock, 0);
                   return {
                     ...prev,
@@ -167,7 +169,7 @@ export function ProductMultiExpirySection({
           </div>
 
           {/* Batches Table List */}
-          {(!formData.batches || formData.batches.length === 0) ? (
+          {normalizeBatches(formData.batches).length === 0 ? (
             <div className="p-5 text-center text-white/20  border border-dashed border-white/5 rounded-xl">
               Aucun lot enregistré. Renseignez un lot pour démarrer le suivi multi-DLC.
             </div>
@@ -183,7 +185,7 @@ export function ProductMultiExpirySection({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {(formData.batches || []).map((b, index) => (
+                  {normalizeBatches(formData.batches).map((b, index) => (
                     <tr key={b.id || index} className="hover:bg-white/[0.01]">
                       <td className="py-3 px-4 font-mono font-bold text-indigo-400">{b.batchNumber}</td>
                       <td className="py-3 px-4 text-white/80">
@@ -195,7 +197,7 @@ export function ProductMultiExpirySection({
                           type="button"
                           onClick={() => {
                             setFormData((prev: any) => {
-                              const filtered = (prev.batches || []).filter((_: any, idx: number) => idx !== index);
+                              const filtered = normalizeBatches(prev.batches).filter((_: any, idx: number) => idx !== index);
                               const totalStock = filtered.reduce((sum: number, item: any) => sum + item.stock, 0);
                               return {
                                 ...prev,

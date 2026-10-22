@@ -1,7 +1,7 @@
 import { useState, useMemo, useDeferredValue } from 'react';
 import { isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
 import { calculateItemPrice } from '../../../lib/utils';
-import { Transaction, Product, Employee, ProductReturn, CompanySettings, Category, Customer } from '../../../types';
+import { Transaction, Product, Employee, ProductReturn, CompanySettings, Category, Customer, isTopUpTransaction } from '../../../types';
 import { toast } from 'sonner';
 import { useTransactionStore } from '../../../store/useTransactionStore';
 import { set as setIDB } from 'idb-keyval';
@@ -121,7 +121,7 @@ export function useProfitsReportLogic({
     const stats: Record<string, { qty: number, revenue: number, cost: number }> = {};
 
     filteredTransactions.forEach(t => {
-      if (!t || t.status === 'returned' || t.status === 'cancelled') return;
+      if (!t || t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return;
       let items = t.items;
       if (typeof items === 'string') {
         try { items = JSON.parse(items); } catch (_) { items = []; }
@@ -197,6 +197,10 @@ export function useProfitsReportLogic({
         }
 
         const originalTx = transactionsById.get(ret.transactionId);
+        // Si la transaction d'origine a le statut 'returned', elle a déjà été intégralement exclue à la ligne 124 :
+        // ne pas soustraire une 2ème fois ses articles des statistiques d'autres ventes du même produit !
+        if (originalTx && originalTx.status === 'returned') return;
+
         if (profitFilterSource !== 'all' || profitFilterCustomer !== 'all' || profitFilterEmployee !== 'all') {
           if (profitFilterSource !== 'all') {
             const isOnline = !!originalTx?.onlineOrderId;
@@ -276,7 +280,7 @@ export function useProfitsReportLogic({
         const stats = productStats[p.id] || (p.name ? productStats[p.name] : null);
         const resolvedStats = stats || { qty: 0, revenue: 0, cost: 0 };
         const profit = resolvedStats.revenue - resolvedStats.cost;
-        const catalogMargin = Number(p.costPrice) > 0 ? ((Number(p.price) - Number(p.costPrice)) / Number(p.costPrice)) * 100 : 0;
+        const catalogMargin = Number(p.price) > 0 ? ((Number(p.price) - Number(p.costPrice || 0)) / Number(p.price)) * 100 : 0;
         const margin = resolvedStats.revenue > 0 ? (profit / resolvedStats.revenue) * 100 : catalogMargin;
         return {
           ...p,

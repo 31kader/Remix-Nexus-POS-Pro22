@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, Button, ConfirmDialog } from '../ui';
 import { Category, Product } from '../../types';
-import { PurchaseCartItem } from '../usePurchaseCart';
+import { PurchaseCartItem } from '../../hooks/usePurchaseCart';
 import { formatProductStock } from '../../lib/utils';
 import { BarcodeScanner } from '../BarcodeScanner';
 

@@ -32,8 +32,9 @@ export function CustomerLogin({ onLogin }: { onLogin: (customer: Customer) => vo
       }
 
       const customerData = await response.json();
+      const isAppUser = customerData.isAppUser ?? customerData.is_app_user;
 
-      if (!customerData.isAppUser) {
+      if (!isAppUser) {
         setError("Identifiants incorrects ou compte non activé.");
         return;
       }

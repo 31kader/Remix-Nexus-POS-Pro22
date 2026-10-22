@@ -6,9 +6,9 @@ export const getStoredAiVisionKey = (): string => {
   try {
     return (
       localStorage.getItem(AI_VISION_KEY_STORAGE) ||
-      (import.meta as any).env?.VITE_GROQ_API_KEY ||
+      import.meta.env?.VITE_GROQ_API_KEY ||
       localStorage.getItem('gemini_api_key') ||
-      (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+      import.meta.env?.VITE_GEMINI_API_KEY ||
       ''
     ).trim();
   } catch {
@@ -251,10 +251,14 @@ export const callGeminiAI = async (data: any, userPrompt: string, systemPromptOv
     }
 
     // 2. Fallback vers le serveur local /api/ai/complete
+    const lanToken = (() => {
+      try { return localStorage.getItem('nexus_lan_token') || 'nexus-pos-lan-v1'; } catch { return 'nexus-pos-lan-v1'; }
+    })();
     const response = await fetch(getApiUrl('/api/ai/complete'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-nexus-lan-token': lanToken,
         ...(apiKey ? { 'x-gemini-key': apiKey } : {})
       },
       body: JSON.stringify({ data, userPrompt, systemPromptOverride })
@@ -306,10 +310,14 @@ export const scanInvoice = async (imageBase64: string, mimeType: string = 'image
   }
 
   // 4. Fallback vers le serveur Express local (/api/ai/scan) avec transmission de x-gemini-key
+  const lanToken = (() => {
+    try { return localStorage.getItem('nexus_lan_token') || 'nexus-pos-lan-v1'; } catch { return 'nexus-pos-lan-v1'; }
+  })();
   const response = await fetch(getApiUrl('/api/ai/scan'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-nexus-lan-token': lanToken,
       ...(activeKey ? { 'x-gemini-key': activeKey } : {})
     },
     body: JSON.stringify({ image: imageBase64, mimeType })

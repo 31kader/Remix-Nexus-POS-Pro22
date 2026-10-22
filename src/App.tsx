@@ -11,7 +11,7 @@ import { useAppInitialization } from './hooks/useAppInitialization';
 import { useCartSync } from './hooks/useCartSync';
 import { useAuthActions } from './hooks/useAuthActions';
 import { useTranslation } from './translations';
-import { useAppPermissionsAndTheme } from './hooks/useAppPermissionsAndStats';
+import { useAppPermissionsAndTheme, useProductStats } from './hooks/useAppPermissionsAndStats';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 // Nouveaux hooks extraits
@@ -90,9 +90,17 @@ export default function App() {
   const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
   const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
   const [loading, setLoading] = useState(() => {
-    const cachedOffline = localStorage.getItem('nexus_active_offline_session');
+    let cachedOffline: string | null = null;
     let cachedOnline: string | null = null;
     try {
+      cachedOffline = sessionStorage.getItem('nexus_active_offline_session');
+      if (!cachedOffline) {
+        cachedOffline = localStorage.getItem('nexus_active_offline_session');
+        if (cachedOffline) {
+          sessionStorage.setItem('nexus_active_offline_session', cachedOffline);
+          localStorage.removeItem('nexus_active_offline_session');
+        }
+      }
       cachedOnline = sessionStorage.getItem('nexus_active_online_session');
       if (!cachedOnline) {
         cachedOnline = localStorage.getItem('nexus_active_online_session');
@@ -102,7 +110,8 @@ export default function App() {
         }
       }
     } catch (_) {
-      cachedOnline = localStorage.getItem('nexus_active_online_session');
+      cachedOffline = null;
+      cachedOnline = null;
     }
     return !(cachedOffline || cachedOnline);
   });
@@ -113,6 +122,7 @@ export default function App() {
   const isUnauthorized = useAuthStore(s => s.isUnauthorized);
   const authError = useAuthStore(s => s.authError);
   const setAuthError = useAuthStore(s => s.setAuthError);
+  const setUser = useAuthStore(s => s.setUser);
   const setProfile = useAuthStore(s => s.setProfile);
 
   const settings = useCoreStore(s => s.settings);
@@ -128,15 +138,6 @@ export default function App() {
     };
     window.addEventListener('error', handleGlobalError);
     return () => window.removeEventListener('error', handleGlobalError);
-  }, []);
-
-  // 🛡️ NETTOYAGE AUTOMATIQUE DU HASH OAUTH SUPABASE (#access_token=...)
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash && (hash.includes('access_token') || hash.includes('error_description'))) {
-      // Nettoie l'URL proprement sans recharger la page
-      window.history.replaceState(null, '', window.location.pathname);
-    }
   }, []);
 
   const EMPTY_ARRAY = React.useRef<any[]>([]);
@@ -192,6 +193,7 @@ export default function App() {
     permissions, isOwner, canAccess,
     currentEmployee, isClockedIn, handleClockInOut,
   } = useAppPermissionsAndTheme();
+  const { expiringProducts, lowStockProducts } = useProductStats();
 
   const { syncOrder } = useCartSync(autoSyncOrders);
 
@@ -218,21 +220,23 @@ export default function App() {
 
   // --- Navigation & Sécurité des Onglets ---
   const isCameraAgent = (profile?.role as string) === 'camera_agent';
+  const isVerifiedAdmin = isOwner || (profile?.role === 'admin' && canAccess('canAccessSettings'));
+
   const getInitialTab = useCallback(() => {
     if (isCameraAgent) return 'camera';
     const hash = window.location.hash.replace('#', '');
-    if (!hash || hash.includes('=') || hash.includes('&') || hash === 'dashboard' || hash === 'ai_assistant') return 'checkout';
-    if (!isTabAllowed(hash, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
+    if (!hash || hash.includes('=') || hash.includes('&') || hash === 'dashboard' || hash === 'ai_assistant' || hash === 'pos' || hash === 'caisse') return 'checkout';
+    if (!isTabAllowed(hash, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
       return 'checkout';
     }
     return hash;
-  }, [profile, canAccess, isOwner, isCameraAgent]);
+  }, [profile, canAccess, isOwner, isCameraAgent, isVerifiedAdmin]);
 
   const [activeTab, setActiveTabState] = useState(getInitialTab());
   const setActiveTab = useCallback((tab: string) => {
-    const targetTab = (tab === 'dashboard' || tab === 'ai_assistant') ? 'checkout' : tab;
+    const targetTab = (tab === 'dashboard' || tab === 'ai_assistant' || tab === 'pos' || tab === 'caisse') ? 'checkout' : tab;
     // 🛡️ Vérification d'autorisation (Défense en profondeur)
-    if (!isTabAllowed(targetTab, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
+    if (!isTabAllowed(targetTab, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
       toast.error(t("Accès refusé : vous n'avez pas l'autorisation pour ce module."));
       window.location.hash = 'checkout';
       setActiveTabState('checkout');
@@ -240,15 +244,15 @@ export default function App() {
     }
     window.location.hash = targetTab;
     setActiveTabState(targetTab);
-  }, [canAccess, profile, isOwner, isCameraAgent, t]);
+  }, [canAccess, profile, isOwner, isCameraAgent, isVerifiedAdmin, t]);
 
   // Synchronisation dynamique avec la barre d'adresse pour support multi-fenêtres & multi-onglets
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash && !hash.includes('=') && !hash.includes('&')) {
-        const target = (hash === 'dashboard' || hash === 'ai_assistant') ? 'checkout' : hash;
-        if (!isTabAllowed(target, canAccess, { isAdmin: profile?.role === 'admin', isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
+        const target = (hash === 'dashboard' || hash === 'ai_assistant' || hash === 'pos' || hash === 'caisse') ? 'checkout' : hash;
+        if (!isTabAllowed(target, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
           setActiveTab('checkout');
         } else {
           setActiveTabState(target);
@@ -257,14 +261,28 @@ export default function App() {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setActiveTab, canAccess, profile, isOwner, isCameraAgent]);
+  }, [setActiveTab, canAccess, profile, isOwner, isCameraAgent, isVerifiedAdmin]);
+
+  // Écouteur global pour les événements 'change-tab' (ex: encaissement rapide depuis la fiche client)
+  useEffect(() => {
+    const handleTabChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent && customEvent.detail) {
+        const tab = customEvent.detail;
+        const targetTab = (tab === 'dashboard' || tab === 'ai_assistant' || tab === 'pos' || tab === 'caisse') ? 'checkout' : tab;
+        setActiveTab(targetTab);
+      }
+    };
+    window.addEventListener('change-tab', handleTabChange);
+    return () => window.removeEventListener('change-tab', handleTabChange);
+  }, [setActiveTab]);
 
   // Si le profil utilisateur change (connexion d'un employé), forcer le retour à un onglet permis
   useEffect(() => {
-    if (profile && !isTabAllowed(activeTab, canAccess, { isAdmin: profile.role === 'admin', isOwner, isManager: profile.role === 'manager', isCameraAgent })) {
+    if (profile && !isTabAllowed(activeTab, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile.role === 'manager', isCameraAgent })) {
       setActiveTab('checkout');
     }
-  }, [profile, activeTab, canAccess, isOwner, isCameraAgent, setActiveTab]);
+  }, [profile, activeTab, canAccess, isOwner, isCameraAgent, isVerifiedAdmin, setActiveTab]);
 
   // --- Panier (Sélecteurs d'action ciblés et stables : évite tout re-render de l'App) ---
   const loadTransactionToCart = useCartStore(s => s.loadTransactionToCart);
@@ -412,49 +430,39 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    if (appMode === 'customer') {
+  if (appMode === 'customer') {
+    if (!currentCustomer) {
       return (
         <Suspense fallback={loadingFallback}>
-          <CustomerLogin onLogin={setCurrentCustomer}   />
+          <CustomerLogin onLogin={setCurrentCustomer} />
         </Suspense>
       );
     }
-    if (appMode === 'supplier') {
-      return (
-        <Suspense fallback={loadingFallback}>
-          <SupplierLogin onLogin={setCurrentSupplier}   />
-        </Suspense>
-      );
-    }
-    if (appMode === 'camera') {
-      return (
-        <Suspense fallback={loadingFallback}>
-          <CameraLogin onLogin={setProfile}   />
-        </Suspense>
-      );
-    }
-  }
-
-  if (user && appMode === 'customer') {
     return (
       <Suspense fallback={loadingFallback}>
         <CustomerDashboard
-          customer={currentCustomer!}
+          customer={currentCustomer}
           transactions={transactions}
           settings={settings}
-          onLogout={() => handleLogout(user)}
-          />
+          onLogout={() => { setCurrentCustomer(null); handleLogout(user); }}
+        />
       </Suspense>
     );
   }
 
-  if (user && appMode === 'supplier') {
+  if (appMode === 'supplier') {
+    if (!currentSupplier) {
+      return (
+        <Suspense fallback={loadingFallback}>
+          <SupplierLogin onLogin={setCurrentSupplier} />
+        </Suspense>
+      );
+    }
     return (
       <Suspense fallback={loadingFallback}>
         <SupplierDashboard
-          supplier={currentSupplier!}
-          onLogout={() => handleLogout(user)}
+          supplier={currentSupplier}
+          onLogout={() => { setCurrentSupplier(null); handleLogout(user); }}
           products={products}
           categories={categories}
           brands={brands}
@@ -470,9 +478,29 @@ export default function App() {
           purchases={purchases}
           supplierPayments={supplierPayments}
           setViewingPurchaseVoucher={setViewingPurchaseVoucher}
-          />
+        />
       </Suspense>
     );
+  }
+
+  if (!user) {
+    if (appMode === 'camera') {
+      return (
+        <Suspense fallback={loadingFallback}>
+          <CameraLogin onLogin={(empProfile) => {
+            setProfile(empProfile);
+            setUser({
+              uid: empProfile.uid,
+              email: empProfile.email,
+              displayName: empProfile.displayName,
+              role: empProfile.role,
+              employeeId: empProfile.employeeId,
+              isOffline: true
+            } as any);
+          }} />
+        </Suspense>
+      );
+    }
   }
 
   if (user && appMode === 'delivery') {
@@ -490,8 +518,14 @@ export default function App() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
       </div>
     }>
-      <Toaster position="top-right" richColors closeButton theme={theme === 'light' ? 'light' : 'dark'}   />
-      <SyncIndicator isOnline={isOnline} syncInfo={syncInfo} bgSyncActive={bgSyncActive} bgPendingChanges={bgPendingChanges}   />
+      {/* 🛡️ NAV-01 : Passer onOpenSyncStudio pour ouvrir directement le studio de synchronisation */}
+      <SyncIndicator 
+        isOnline={isOnline} 
+        syncInfo={syncInfo} 
+        bgSyncActive={bgSyncActive} 
+        bgPendingChanges={bgPendingChanges} 
+        onOpenSyncStudio={() => setActiveTab('sync_studio')} 
+      />
 
       <MainAppContent
         activeTab={activeTab} setActiveTab={setActiveTab}
@@ -500,6 +534,10 @@ export default function App() {
         isDataLoading={isDataLoading}
         setIsLowStockModalOpen={setIsLowStockModalOpen}
         setIsExpirationModalOpen={setIsExpirationModalOpen}
+        lowStockProducts={lowStockProducts}
+        expiringProducts={expiringProducts}
+        currentEmployee={currentEmployee}
+        isClockedIn={isClockedIn}
         handleClockInOut={handleClockInOut}
         language={language} setLanguage={setLanguage as any}
         isLangMenuOpen={isLangMenuOpen} setIsLangMenuOpen={setIsLangMenuOpen}
@@ -509,7 +547,7 @@ export default function App() {
         permissions={permissions}
         canAccess={canAccess}
         isOwner={isOwner}
-        isAdmin={profile?.role === 'admin'}
+        isAdmin={isVerifiedAdmin}
         isManager={profile?.role === 'manager'}
         handleLogout={handleLogout}
         handleInstallApp={handleInstallApp}
@@ -528,7 +566,7 @@ export default function App() {
           activeStaffId={activeStaffId}
           canAccess={canAccess}
           isOwner={isOwner}
-          isAdmin={profile?.role === 'admin'}
+          isAdmin={isVerifiedAdmin}
           isManager={profile?.role === 'manager'}
           isCameraAgent={profile?.role === 'camera_agent'}
           onUpdateProduct={handleUpdateProduct}
@@ -541,7 +579,11 @@ export default function App() {
           setIsAddUserModalOpen={setIsAddUserModalOpen}
           onReturn={(t: Transaction) => { setSelectedTransactionForReturn(t); setIsReturnModalOpen(true); }}
           onMarkAsDelivered={async (t: Transaction) => {
-            await localDb.insert(`transactions/${t.id}`, { ...t, status: 'delivered' });
+            const updated = { ...t, status: 'delivered' as const, updatedAt: new Date().toISOString() };
+            await localDb.update(`transactions/${t.id}`, updated);
+            useTransactionStore.getState().setTransactions(prev =>
+              (prev || []).map(tx => tx.id === t.id ? updated : tx)
+            );
           }}
           onEdit={(t: Transaction) => { setSelectedTransactionForEdit(t); setIsEditTransactionModalOpen(true); }}
           onRestore={(t: Transaction) => loadTransactionToCart(t, setActiveTab)}
@@ -582,7 +624,9 @@ export default function App() {
         }
         viewingPurchaseVoucher={viewingPurchaseVoucher} setViewingPurchaseVoucher={setViewingPurchaseVoucher}
         isLowStockModalOpen={isLowStockModalOpen} setIsLowStockModalOpen={setIsLowStockModalOpen}
+        lowStockProducts={lowStockProducts}
         isExpirationModalOpen={isExpirationModalOpen} setIsExpirationModalOpen={setIsExpirationModalOpen}
+        expiringProducts={expiringProducts}
         isStockAdjustmentModalOpen={isStockAdjustmentModalOpen} setIsStockAdjustmentModalOpen={setIsStockAdjustmentModalOpen}
         />
     </Suspense>

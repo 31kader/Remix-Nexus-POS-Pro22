@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { Truck, RefreshCw, Phone, Mail, Package, Trash2, Search, Wallet, LayoutGrid, List, Edit3 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Truck, RefreshCw, Phone, Mail, Package, Trash2, Search, Wallet, LayoutGrid, List, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Supplier } from '../../types';
 import { Card, Button } from '../ui';
 import { cn, formatPrice } from '../../lib/utils';
+
+const SUPPLIERS_PAGE_SIZE = 50;
 
 interface SupplierListProps {
   suppliers: Supplier[];
@@ -39,6 +41,11 @@ export function SupplierList({
   const [quickFilter, setQuickFilter] = useState<'all' | 'debt' | 'settled' | 'today' | 'top_rated'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'debt_desc' | 'rating_desc'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, quickFilter, sortBy]);
 
   const todayName = FRENCH_DAYS[new Date().getDay()];
 
@@ -94,6 +101,12 @@ export function SupplierList({
       return (a.name || '').localeCompare(b.name || '');
     });
   }, [suppliers, searchTerm, quickFilter, sortBy, todayName]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSuppliers.length / SUPPLIERS_PAGE_SIZE));
+  const paginatedSuppliers = useMemo(() => {
+    const start = (currentPage - 1) * SUPPLIERS_PAGE_SIZE;
+    return filteredSuppliers.slice(start, start + SUPPLIERS_PAGE_SIZE);
+  }, [filteredSuppliers, currentPage]);
 
   return (
     <div className="space-y-4 text-left">
@@ -193,7 +206,7 @@ export function SupplierList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {filteredSuppliers.map((supplier) => {
+                {paginatedSuppliers.map((supplier) => {
                   const debt = Number(supplier.balance) || 0;
                   return (
                     <tr key={supplier.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
@@ -260,7 +273,7 @@ export function SupplierList({
       ) : (
         /* VUE GRILLE DE CARTES PRO */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-left">
-          {filteredSuppliers.map((supplier: Supplier) => {
+          {paginatedSuppliers.map((supplier: Supplier) => {
             const debt = Number(supplier.balance) || 0;
             const avg = getRating(supplier);
 
@@ -423,6 +436,37 @@ export function SupplierList({
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {filteredSuppliers.length > SUPPLIERS_PAGE_SIZE && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs">
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            Affichage de <span className="text-slate-900 dark:text-white font-black">{(currentPage - 1) * SUPPLIERS_PAGE_SIZE + 1}</span> à{' '}
+            <span className="text-slate-900 dark:text-white font-black">{Math.min(currentPage * SUPPLIERS_PAGE_SIZE, filteredSuppliers.length)}</span> sur{' '}
+            <span className="text-slate-900 dark:text-white font-black">{filteredSuppliers.length}</span> fournisseurs
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black text-slate-700 dark:text-slate-200 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} /> Précédent
+            </button>
+            <span className="text-xs font-mono font-black text-slate-700 dark:text-slate-200 px-2">
+              Page {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black text-slate-700 dark:text-slate-200 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Suivant <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
     </div>

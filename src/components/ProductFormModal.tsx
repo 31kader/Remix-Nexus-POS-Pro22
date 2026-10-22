@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Product, Category, CompanySettings, Brand } from '../types';
 import { Modal, Button } from './ui';
+import { SafeImage } from './ui/SafeImage';
 import { BarcodeScanner } from './BarcodeScanner';
 import { ProductMultiExpirySection } from './product/ProductMultiExpirySection';
 import { ProductAdvancedOptions } from './product/ProductAdvancedOptions';
@@ -20,7 +21,7 @@ import { ProductBasicInfoSection } from './product/ProductBasicInfoSection';
 import { ProductPricingSection } from './product/ProductPricingSection';
 import { ProductStockSection } from './product/ProductStockSection';
 import { ProductMediaSection } from './product/ProductMediaSection';
-import { useProductFormLogic } from './useProductFormLogic';
+import { useProductFormLogic } from '../hooks/useProductFormLogic';
 import { cn } from '../lib/utils';
 
 interface ProductFormModalProps {
@@ -131,7 +132,7 @@ export function ProductFormModal(props: ProductFormModalProps) {
             <div className="flex items-center gap-3.5 min-w-0">
               <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden shrink-0">
                 {formData.imageUrl ? (
-                  <img src={formData.imageUrl} alt="" className="w-full h-full object-contain" />
+                  <SafeImage src={formData.imageUrl} alt={formData.name || ''} className="w-full h-full object-contain" />
                 ) : (
                   <Package size={20} className="text-indigo-500" />
                 )}

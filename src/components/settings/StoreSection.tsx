@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CompanySettings } from '../../types';
 import { generateUniqueId } from '../../lib/utils';
+import { SafeImage } from '../ui/SafeImage';
 
 interface SectionProps {
   formData: CompanySettings;
@@ -46,11 +47,10 @@ export function StoreSection({ formData, setFormData }: SectionProps) {
             </div>
           </div>
           {formData.logoUrl && (
-            <img
+            <SafeImage
               src={formData.logoUrl}
               alt="Logo"
               className="w-10 h-10 rounded-lg object-contain border border-slate-200 dark:border-zinc-700 bg-white p-1"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           )}
         </div>

@@ -3,7 +3,7 @@ import { Printer } from 'lucide-react';
 import { printPurchaseVoucher } from '../services/printService';
 import { fr } from 'date-fns/locale';
 import { formatSafe, safeGetItems } from '../lib/utils';
-import { Button, Modal } from './ui';
+import { Button, Modal, SafeImage } from './ui';
 
 const ReturnModal = lazy(() => import('./ReturnModal').then(m => ({ default: m.ReturnModal })));
 const EditTransactionModal = lazy(() => import('./EditTransactionModal').then(m => ({ default: m.EditTransactionModal })));
@@ -22,7 +22,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { usePeopleStore } from '../store/usePeopleStore';
-import { useProductStats } from '../hooks/useAppPermissionsAndStats';
 import { 
   Transaction, Product, Customer, CompanySettings, Category, Brand, 
   UserProfile, Purchase, ProductReturn 
@@ -94,21 +93,25 @@ interface AppModalsProps {
   setIsStockAdjustmentModalOpen: (open: boolean) => void;
 }
 
-export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'settings' | 'categories' | 'brands' | 'returns' | 'customers' | 'expiringProducts' | 'lowStockProducts'>> = ({
+export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'settings' | 'categories' | 'brands' | 'returns' | 'customers' | 'expiringProducts' | 'lowStockProducts'> & { expiringProducts?: Product[]; lowStockProducts?: Product[] }> = ({
+  expiringProducts: propExpiringProducts,
+  lowStockProducts: propLowStockProducts,
   ...props
 }) => {
   const user = useAuthStore(s => s.user);
+  const profile = useAuthStore(s => s.profile);
   const products = useCoreStore(s => s.products);
   const settings = useCoreStore(s => s.settings);
   const categories = useCoreStore(s => s.categories);
   const brands = useCoreStore(s => s.brands);
   const returns = useTransactionStore(s => s.returns);
   const customers = usePeopleStore(s => s.customers);
-  const { expiringProducts, lowStockProducts } = useProductStats();
+  const expiringProducts = propExpiringProducts ?? [];
+  const lowStockProducts = propLowStockProducts ?? [];
 
   const p: AppModalsProps = {
     ...props,
-    user: user ?? null,
+    user: profile ?? (user && 'role' in user ? (user as UserProfile) : null),
     products: products ?? [],
     settings: settings ?? ({} as CompanySettings),
     categories: categories ?? [],
@@ -311,7 +314,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
                     </a>
                   </div>
                   <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 p-2 text-center">
-                    <img
+                    <SafeImage
                       src={scannedPhotoUrl}
                       alt="Photo du bon d'achat"
                       className="max-w-full h-auto mx-auto rounded"
@@ -395,16 +398,6 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             user={p.user}
             settings={p.settings}
             />
-        </Suspense>
-      )}
-
-      {p.isAddUserModalOpen && (
-        <Suspense fallback={null}>
-          <AddStaffModal
-            isOpen={p.isAddUserModalOpen}
-            onClose={() => p.setIsAddUserModalOpen(false)}
-            onSave={p.handleAddStaffManual}
-          />
         </Suspense>
       )}
     </>

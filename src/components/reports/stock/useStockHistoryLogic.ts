@@ -11,7 +11,8 @@ interface UseStockHistoryLogicProps {
 export function useStockHistoryLogic({ adjustments, products }: UseStockHistoryLogicProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState<{ key: keyof StockAdjustment; direction: 'asc' | 'desc' } | null>({ key: 'timestamp', direction: 'desc' });
-  const pageSize = 20;
+  // 🛡️ PERF-02 : Pagination obligatoire à 50 items/page selon les règles du projet
+  const pageSize = 50;
 
   // Edit State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

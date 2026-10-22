@@ -108,7 +108,7 @@ export function useCheckoutSessionAndPromo({
   // Appliquer un bon de réduction
   const applyVoucher = async (subtotal: number) => {
     const trimmedCode = voucherCode.trim();
-    if (!trimmedCode) return;
+    if (!trimmedCode) { toast.warning("Veuillez saisir un code coupon ou cadeau"); return; }
 
     try {
       // 1. Chercher dans la base locale des vrais bons créés

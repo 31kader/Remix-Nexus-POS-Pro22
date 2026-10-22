@@ -22,32 +22,70 @@ export const CashflowReport = React.memo(function CashflowReport({
   const currency = settings.currency || 'DA';
 
   const flowData = useMemo(() => {
-    const activeTx = transactions.filter(t => t.status !== 'returned' && t.status !== 'cancelled');
-    const cashInTotal = activeTx.reduce((sum, t) => sum + Number(t.total || 0), 0);
+    // 🛡️ P0-BIZ-3 : En trésorerie, inclure toutes les transactions ayant encaissé des fonds (y compris celles retournées ultérieurement, car l'encaissement initial a bien eu lieu avant le décaissement du remboursement)
+    const activeTx = transactions.filter(t => t && t.status !== 'cancelled');
+    const getCollectedAmount = (t: Transaction) => {
+      const total = Number(t.total || 0);
+      if (t.paymentMethod === 'balance') {
+        const used = t.balanceUsed !== undefined ? Number(t.balanceUsed) : total;
+        return Math.max(0, total - used);
+      }
+      let collected = Math.max(0, total - Number(t.balanceUsed || 0));
+      // 🛡️ P1-BIZ-9 : Prise en compte de la monnaie conservée en solde (amountReceived - amountReturned)
+      if (t.amountReceived !== undefined && t.amountReturned !== undefined) {
+        const netCash = Math.max(0, Number(t.amountReceived) - Number(t.amountReturned));
+        if (netCash > collected) collected = netCash;
+      }
+      return collected;
+    };
+
+    const cashInTotal = activeTx.reduce((sum, t) => sum + getCollectedAmount(t), 0);
 
     const inByMethod: Record<string, number> = {};
     activeTx.forEach(t => {
+      const collected = getCollectedAmount(t);
+      if (collected <= 0) return;
       const method = t.paymentMethod || 'Espèces / Autre';
-      inByMethod[method] = (inByMethod[method] || 0) + Number(t.total || 0);
+      inByMethod[method] = (inByMethod[method] || 0) + collected;
     });
 
-    const expensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const hasReturnRecords = Array.isArray(returns) && returns.length > 0;
+    // Exclure les dépenses 'Remboursement / Retour' si les retours sont déjà comptabilisés dans `returns`
+    const operationalExpenses = hasReturnRecords
+      ? expenses.filter(e => e.category !== 'Remboursement / Retour')
+      : expenses;
+
+    // 🛡️ P0-BIZ-3 : Ne compter dans les sorties de trésorerie que les retours effectivement décaissés en espèces (hors avoir/crédit client ou bon d'achat)
+    const cashReturns = (returns || []).filter(r => {
+      if (!r) return false;
+      if (r.type === 'credit_note' || (r as any).type === 'credit' || (r as any).type === 'voucher') return false;
+      if (r.refundMethod === 'credit' || r.refundMethod === 'voucher') return false;
+      if (!r.refundMethod && r.transactionId) {
+        const tx = transactions.find(t => t && t.id === r.transactionId);
+        if (tx && tx.paymentMethod === 'balance') return false;
+      }
+      return true;
+    });
+
+    const expensesTotal = operationalExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const supplierTotal = supplierPayments.reduce((sum, s) => sum + Number(s.amount || 0), 0);
-    const returnsTotal = (returns || []).reduce((sum, r) => sum + (Number(r.totalRefund ?? r.refundAmount) || 0), 0);
+    const returnsTotal = cashReturns.reduce((sum, r) => sum + (Number(r.totalRefund ?? r.refundAmount) || 0), 0);
 
     const cashOutTotal = expensesTotal + supplierTotal + returnsTotal;
     const netCashflow = cashInTotal - cashOutTotal;
 
     const timeline = [
-      ...activeTx.map(t => ({
-        type: 'in' as const,
-        title: `Vente #${String(t.id || '').slice(-8)}`,
-        category: t.paymentMethod || 'Vente',
-        amount: Number(t.total || 0),
-        timestamp: t.timestamp || (t as any).date || new Date().toISOString(),
-        user: t.employeeName || 'Caisse',
-      })),
-      ...expenses.map(e => ({
+      ...activeTx
+        .map(t => ({
+          type: 'in' as const,
+          title: `Vente #${String(t.id || '').slice(-8)}`,
+          category: t.paymentMethod || 'Vente',
+          amount: getCollectedAmount(t),
+          timestamp: t.timestamp || (t as any).date || new Date().toISOString(),
+          user: t.employeeName || 'Caisse',
+        }))
+        .filter(item => item.amount > 0),
+      ...operationalExpenses.map(e => ({
         type: 'out' as const,
         title: `Dépense: ${e.description || e.category}`,
         category: e.category || 'Charge',
@@ -63,7 +101,7 @@ export const CashflowReport = React.memo(function CashflowReport({
         timestamp: s.date || new Date().toISOString(),
         user: 'Achats',
       })),
-      ...(returns || []).map(r => ({
+      ...cashReturns.map(r => ({
         type: 'out' as const,
         title: `Remboursement Client (Retour #${String(r.id || '').slice(-8)})`,
         category: 'Retour',

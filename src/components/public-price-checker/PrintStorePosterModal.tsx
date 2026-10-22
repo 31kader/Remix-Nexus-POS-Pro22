@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { CompanySettings } from '../../types';
+import { SafeImage } from '../ui/SafeImage';
 import { toast } from 'sonner';
 
 interface PrintStorePosterModalProps {
@@ -191,7 +192,7 @@ export function PrintStorePosterModal({
                 <div className="w-full flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2">
                     {(settings?.logoUrl || (settings as any)?.logo) ? (
-                      <img src={settings?.logoUrl || (settings as any)?.logo} alt={storeName} className="h-10 object-contain" />
+                      <SafeImage src={settings?.logoUrl || (settings as any)?.logo} alt={storeName} className="h-10 object-contain" />
                     ) : (
                       <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl">
                         {storeName.charAt(0)}

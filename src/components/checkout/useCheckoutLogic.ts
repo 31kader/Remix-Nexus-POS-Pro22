@@ -81,6 +81,9 @@ export function useCheckoutLogic(props: CheckoutProps) {
   useEffect(() => {
     try {
       localStorage.setItem('nexus_pos_show_quick_select', JSON.stringify(showQuickSelect));
+      if (showQuickSelect) {
+        window.dispatchEvent(new CustomEvent('nexus-collapse-sidebar'));
+      }
     } catch (e) {
       console.error('[Checkout] Erreur d\'écriture localStorage pour showQuickSelect:', e);
     }

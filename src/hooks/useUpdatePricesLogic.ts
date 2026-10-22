@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { localDb } from '../services/LocalDatabase';
+import { useCoreStore } from '../store/useCoreStore';
 import { Product } from '../types';
 
 export function useUpdatePricesLogic(items: any[], products: Product[], onComplete: () => void) {
@@ -58,7 +59,11 @@ export function useUpdatePricesLogic(items: any[], products: Product[], onComple
       for (const productId of Object.keys(updates)) {
         if (updates[productId].active) {
           if (!productId || productId === 'undefined') continue;
-          await localDb.update('products/' + productId, { price: updates[productId].price });
+          const newPrice = updates[productId].price;
+          await localDb.update('products/' + productId, { price: newPrice, updatedAt: new Date().toISOString() });
+          useCoreStore.getState().setProducts(prev =>
+            (prev || []).map(p => p.id === productId ? { ...p, price: newPrice, updatedAt: new Date().toISOString() } : p)
+          );
         }
       }
       handleClose();

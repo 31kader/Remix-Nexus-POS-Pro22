@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { uploadImageBlobToStorage, deleteImageFromStorageByUrl } from '../../supabase';
 import { compressImage } from '../../lib/image-optimizer';
 
@@ -16,6 +17,16 @@ export function useProductImageUpload({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, index?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // 🛡️ Validation préalable stricte du type MIME (rejet des SVG et types non autorisés)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+    const fileType = (file.type || '').toLowerCase().trim();
+
+    if (!fileType || !allowedTypes.includes(fileType)) {
+      toast.error("Format d'image non autorisé. Veuillez sélectionner un fichier JPG, PNG, WEBP, GIF ou AVIF.");
+      if (e.target) e.target.value = '';
+      return;
+    }
 
     setIsUploadingImage(true);
     try {

@@ -5,7 +5,7 @@ import { enqueueStockAdjustment } from '../../services/SyncService';
 import { localDb } from '../../services/LocalDatabase';
 import { supabase } from '../../supabase';
 import { generateUniqueId, logAction } from '../../lib/utils';
-import { usePurchaseCart, PurchaseCartItem } from '../usePurchaseCart';
+import { usePurchaseCart, PurchaseCartItem } from '../../hooks/usePurchaseCart';
 import { Product, Supplier, InvoicePattern, Purchase, PurchaseOrder, CompanySettings, SupplierPayment, Category } from '../../types';
 import { useSmartPurchaseScanner } from './useSmartPurchaseScanner';
 import { useSmartPurchaseQuickCreate } from './useSmartPurchaseQuickCreate';
@@ -20,7 +20,11 @@ import { usePurchaseShortcuts } from './usePurchaseShortcuts';
 import {
   filterPurchases,
   filterProducts,
-  buildCartFromPurchaseItems
+  buildCartFromPurchaseItems,
+  calculatePurchasesSummary,
+  PurchasePaymentStatusFilter,
+  PurchaseReceiptStatusFilter,
+  PurchaseSortOption
 } from './purchaseHelpers';
 
 interface UseSmartPurchaseLogicProps {
@@ -72,7 +76,7 @@ export function useSmartPurchaseLogic({
   const initialStep = (draft?.step === 'review' && Array.isArray(draft?.cart) && draft.cart.length > 0) ? 'review' : 'upload';
   const [step, setStep] = useState<'upload' | 'review' | 'confirm' | 'updatePrices'>(initialStep);
   const [lastPurchaseItems, setLastPurchaseItems] = useState<any[]>([]);
-  const [activeSubTab, setActiveSubTab] = useState<'new' | 'purchases' | 'debts' | 'payments'>((draft?.activeSubTab === 'suggestions' ? 'new' : draft?.activeSubTab) || 'new');
+  const [activeSubTab, setActiveSubTab] = useState<'new' | 'purchases' | 'debts' | 'payments' | 'shortages'>((draft?.activeSubTab === 'suggestions' ? 'new' : draft?.activeSubTab) || 'new');
   const [purchaseStatus, setPurchaseStatus] = useState<'draft' | 'ordered' | 'completed'>(draft?.purchaseStatus || 'completed');
   const [paidAmount, setPaidAmount] = useState<number>(draft?.paidAmount !== undefined ? draft.paidAmount : 0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'check'>(draft?.paymentMethod || 'cash');
@@ -178,6 +182,15 @@ export function useSmartPurchaseLogic({
   const [historySearch, setHistorySearch] = useState('');
   const [historyStartDate, setHistoryStartDate] = useState('');
   const [historyEndDate, setHistoryEndDate] = useState('');
+  const [historySupplierId, setHistorySupplierId] = useState('');
+  const [historyPaymentStatus, setHistoryPaymentStatus] = useState<PurchasePaymentStatusFilter>('all');
+  const [historyReceiptStatus, setHistoryReceiptStatus] = useState<PurchaseReceiptStatusFilter>('all');
+  const [historyQuickDate, setHistoryQuickDate] = useState<'all' | 'today' | 'yesterday' | '7days' | 'month' | 'last_month' | 'custom'>('all');
+  const [historyMinAmount, setHistoryMinAmount] = useState('');
+  const [historyMaxAmount, setHistoryMaxAmount] = useState('');
+  const [historySortBy, setHistorySortBy] = useState<PurchaseSortOption>('date-desc');
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+
   const [paymentData, setPaymentData] = useState({ supplierId: '', amount: 0, method: 'cash' as const, note: '', date: new Date().toISOString() });
   const [isQuickSupplierModalOpen, setIsQuickSupplierModalOpen] = useState(false);
   const [quickSupplierData, setQuickSupplierData] = useState({ name: '', phone: '', email: '' });
@@ -203,6 +216,70 @@ export function useSmartPurchaseLogic({
     } catch (_) {}
   };
 
+  const setQuickDatePeriod = (period: 'all' | 'today' | 'yesterday' | '7days' | 'month' | 'last_month') => {
+    setHistoryQuickDate(period);
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toYMD = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    if (period === 'all') {
+      setHistoryStartDate('');
+      setHistoryEndDate('');
+    } else if (period === 'today') {
+      const todayStr = toYMD(now);
+      setHistoryStartDate(todayStr);
+      setHistoryEndDate(todayStr);
+    } else if (period === 'yesterday') {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yStr = toYMD(y);
+      setHistoryStartDate(yStr);
+      setHistoryEndDate(yStr);
+    } else if (period === '7days') {
+      const d7 = new Date(now);
+      d7.setDate(d7.getDate() - 7);
+      setHistoryStartDate(toYMD(d7));
+      setHistoryEndDate(toYMD(now));
+    } else if (period === 'month') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      setHistoryStartDate(toYMD(firstDay));
+      setHistoryEndDate(toYMD(now));
+    } else if (period === 'last_month') {
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      setHistoryStartDate(toYMD(firstDayLastMonth));
+      setHistoryEndDate(toYMD(lastDayLastMonth));
+    }
+  };
+
+  const resetHistoryFilters = () => {
+    setHistorySearch('');
+    setHistoryStartDate('');
+    setHistoryEndDate('');
+    setHistorySupplierId('');
+    setHistoryPaymentStatus('all');
+    setHistoryReceiptStatus('all');
+    setHistoryQuickDate('all');
+    setHistoryMinAmount('');
+    setHistoryMaxAmount('');
+    setHistorySortBy('date-desc');
+  };
+
+  const activeHistoryFiltersCount = useMemo(() => {
+    let count = 0;
+    if (historySearch.trim()) count++;
+    if (historyStartDate || historyEndDate) count++;
+    if (historySupplierId && historySupplierId !== 'all') count++;
+    if (historyPaymentStatus !== 'all') count++;
+    if (historyReceiptStatus !== 'all') count++;
+    if (historyMinAmount.trim() || historyMaxAmount.trim()) count++;
+    if (historySortBy !== 'date-desc') count++;
+    return count;
+  }, [
+    historySearch, historyStartDate, historyEndDate, historySupplierId,
+    historyPaymentStatus, historyReceiptStatus, historyMinAmount, historyMaxAmount, historySortBy
+  ]);
+
   const handleEditPurchaseRequest = (purchase: Purchase) => {
     setEditingPurchaseId(purchase.id);
     setSelectedSupplierId(purchase.supplierId || '');
@@ -220,8 +297,33 @@ export function useSmartPurchaseLogic({
   };
 
   const filteredPurchases = useMemo(() => {
-    return filterPurchases(purchases, historySearch, historyStartDate, historyEndDate);
-  }, [purchases, historySearch, historyStartDate, historyEndDate]);
+    return filterPurchases(purchases, {
+      search: historySearch,
+      startDate: historyStartDate,
+      endDate: historyEndDate,
+      supplierId: historySupplierId,
+      paymentStatus: historyPaymentStatus,
+      receiptStatus: historyReceiptStatus,
+      minAmount: historyMinAmount,
+      maxAmount: historyMaxAmount,
+      sortBy: historySortBy
+    });
+  }, [
+    purchases,
+    historySearch,
+    historyStartDate,
+    historyEndDate,
+    historySupplierId,
+    historyPaymentStatus,
+    historyReceiptStatus,
+    historyMinAmount,
+    historyMaxAmount,
+    historySortBy
+  ]);
+
+  const purchasesSummary = useMemo(() => {
+    return calculatePurchasesSummary(filteredPurchases);
+  }, [filteredPurchases]);
 
   const handleQuickSupplierSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,6 +368,7 @@ export function useSmartPurchaseLogic({
     }
 
     let effectiveSupplierId = selectedSupplierId;
+    let effectiveSuppliersList = suppliers;
     if (!effectiveSupplierId) {
       const candidateName = (extractedData?.supplierName || 'Fournisseur Standard (Scan)').trim();
       const matched = suppliers.find(s => (s?.name || '').toLowerCase() === candidateName.toLowerCase());
@@ -282,6 +385,9 @@ export function useSmartPurchaseLogic({
           balance: 0
         };
         await localDb.insert(`suppliers/${autoId}`, autoSupplier);
+        const { usePeopleStore } = await import('../../store/usePeopleStore');
+        usePeopleStore.getState().setSuppliers(prev => [autoSupplier, ...(prev || [])]);
+        effectiveSuppliersList = [autoSupplier, ...suppliers];
         effectiveSupplierId = autoId;
         setSelectedSupplierId(autoId);
       }
@@ -293,7 +399,7 @@ export function useSmartPurchaseLogic({
       printPurchaseOrder({ 
         id: 'DRAFT', 
         items: cart, 
-        supplierName: suppliers.find(s => s.id === effectiveSupplierId)?.name || extractedData?.supplierName || 'Fournisseur Standard', 
+        supplierName: effectiveSuppliersList.find(s => s.id === effectiveSupplierId)?.name || extractedData?.supplierName || 'Fournisseur Standard', 
         total: cart.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0), 
         date: new Date().toISOString() 
       }, settings);
@@ -311,7 +417,7 @@ export function useSmartPurchaseLogic({
       paidAmount,
       editingPurchaseId,
       autoMargin,
-      suppliers,
+      suppliers: effectiveSuppliersList,
       patterns,
       purchases,
       products,
@@ -395,6 +501,16 @@ export function useSmartPurchaseLogic({
     historySearch, setHistorySearch,
     historyStartDate, setHistoryStartDate,
     historyEndDate, setHistoryEndDate,
+    historySupplierId, setHistorySupplierId,
+    historyPaymentStatus, setHistoryPaymentStatus,
+    historyReceiptStatus, setHistoryReceiptStatus,
+    historyQuickDate, setHistoryQuickDate,
+    historyMinAmount, setHistoryMinAmount,
+    historyMaxAmount, setHistoryMaxAmount,
+    historySortBy, setHistorySortBy,
+    isAdvancedFiltersOpen, setIsAdvancedFiltersOpen,
+    setQuickDatePeriod, resetHistoryFilters,
+    activeHistoryFiltersCount, purchasesSummary,
     paymentData, setPaymentData,
     isQuickSupplierModalOpen, setIsQuickSupplierModalOpen,
     quickSupplierData, setQuickSupplierData,

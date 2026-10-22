@@ -348,7 +348,140 @@ export const CustomerGlobalJournalView: React.FC<CustomerGlobalJournalViewProps>
       {/* Panoramic Table */}
       <div className="flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/60">
         {paginatedTimeline.length > 0 ? (
-          <table className="w-full text-left border-collapse min-w-[950px]">
+          <>
+            {/* Vue Cartes Tactiles Mobiles (< lg) */}
+            <div className="block lg:hidden space-y-3 p-3">
+              {paginatedTimeline.map((item) => {
+                const isSale = item.type === 'transaction';
+                const isExpanded = expandedTxId === item.id;
+                const itemsCount = (item.items || []).reduce((acc: number, it: any) => acc + Number(it.quantity || 1), 0);
+
+                return (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className={cn(
+                      "p-4 rounded-2xl border border-slate-800 bg-slate-900/90 shadow-sm space-y-3 transition-all",
+                      isExpanded && "border-indigo-500/40 bg-slate-900"
+                    )}
+                  >
+                    {/* Header: Date, Ref, Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider border",
+                          isSale
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                            : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                        )}>
+                          {isSale ? 'Vente' : 'Retour'}
+                        </span>
+                        <span className="font-mono text-xs text-slate-400">
+                          #{String(item.id).substring(0, 8)}
+                        </span>
+                      </div>
+                      <span className="text-slate-400 font-mono text-[11px]">
+                        {formatSafe(item.timestamp, 'dd/MM/yyyy HH:mm', { locale: fr })}
+                      </span>
+                    </div>
+
+                    {/* Customer & Articles Count */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-black text-white uppercase text-sm truncate block">
+                          {item.customerName || 'Client de passage'}
+                        </span>
+                        <span className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                          <ShoppingBag size={12} className="text-indigo-400" />
+                          {itemsCount} article(s)
+                        </span>
+                      </div>
+
+                      {/* Montant Net */}
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 uppercase font-bold block">Montant Net</span>
+                        <span className={cn(
+                          "font-mono font-black text-sm",
+                          isSale ? "text-emerald-400" : "text-rose-400"
+                        )}>
+                          {isSale ? '+' : '-'}{Number(item.total || 0).toFixed(2)} {settings.currency || 'DA'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mode de paiement & Actions */}
+                    <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/80">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono text-[10px] uppercase font-bold">
+                        Mode : {item.paymentMethod || 'cash'}
+                      </span>
+
+                      {/* Accordéon détail / boutons */}
+                      <div className="flex items-center gap-1.5">
+                        {isSale && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onRestore) {
+                                onRestore(item.raw);
+                              } else {
+                                loadTransactionToCart(item.raw, () => {
+                                  window.location.hash = '#checkout';
+                                });
+                              }
+                            }}
+                            className="min-h-[38px] px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5"
+                          >
+                            <ShoppingCart size={14} /> Reprendre
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTxId(isExpanded ? null : item.id)}
+                          className="min-w-[38px] min-h-[38px] p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all flex items-center justify-center"
+                          title="Détail du panier"
+                        >
+                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Accordéon déplié du panier sur mobile */}
+                    {isExpanded && (
+                      <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2 mt-2">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400 border-b border-slate-800 pb-1.5">
+                          <span>Détail ({item.items?.length || 0} lignes)</span>
+                          <span>#{String(item.id).substring(0, 8)}</span>
+                        </div>
+                        <div className="divide-y divide-slate-800/40 max-h-48 overflow-y-auto">
+                          {(item.items || []).map((it: any, idx: number) => {
+                            const unitPrice = Number(it.price || it.unitPrice || 0);
+                            const qte = Number(it.quantity || 1);
+                            const lineTotal = Number(it.total || (unitPrice * qte));
+                            return (
+                              <div key={idx} className="py-1.5 flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-400 font-mono text-[10px] font-black flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-white font-bold">{it.name || it.productName || 'Article'}</span>
+                                </div>
+                                <div className="flex items-center gap-2 font-mono text-[11px]">
+                                  <span className="text-slate-400">{qte} × {unitPrice.toFixed(0)}</span>
+                                  <span className="font-bold text-white">{lineTotal.toFixed(0)} {settings.currency || 'DA'}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Panoramic Table (Desktop >= lg) */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[950px]">
             <thead>
               <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-300 font-black text-xs uppercase tracking-wider sticky top-0 z-10">
                 <th className="py-3 px-3.5">Date & Heure</th>
@@ -505,7 +638,9 @@ export const CustomerGlobalJournalView: React.FC<CustomerGlobalJournalViewProps>
               })}
             </tbody>
           </table>
-        ) : (
+        </div>
+      </>
+    ) : (
           <div className="text-center py-16 text-slate-400">
             <History size={36} className="mx-auto mb-2 opacity-50" />
             <p className="font-bold text-sm text-slate-300">Aucune opération trouvée</p>

@@ -1,5 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { dbState } from './local-db';
+import { useCoreStore } from '../store/useCoreStore';
+import { usePeopleStore } from '../store/usePeopleStore';
 
 // Helper for generating standard matching IDs
 export function generateLocalId(): string {
@@ -23,18 +25,55 @@ export const TABLE_NAME_MAPPINGS: Record<string, string> = {
   'cashShifts': 'cash_shifts',
   'cartDrafts': 'cart_drafts',
   'cashierAlerts': 'cashier_alerts',
-  'externalDeliveryRequests': 'external_delivery_requests'
+  'externalDeliveryRequests': 'external_delivery_requests',
+  'shortageItems': 'shortage_items',
+  'customReplenishmentLists': 'custom_replenishment_lists'
 };
 
 // Convert camelCase keys to snake_case for Supabase PostgreSQL
 export function camelToSnakeCase(str: string): string {
   if (str === 'activeSessionId') return 'activeSessionId';
+  if (str === 'roleKPIs') return 'role_kpis';
+  if (str === 'displayPriceHT') return 'display_price_ht';
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
 // Convert snake_case keys back to camelCase for the React frontend
 export function snakeToCamelCase(str: string): string {
+  if (str === 'role_kpis') return 'roleKPIs';
+  if (str === 'display_price_ht') return 'displayPriceHT';
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+const RAW_JSONB_DICTIONARIES = new Set([
+  'itemMappings', 'item_mappings',
+  'metadata',
+  'conditions',
+  'discrepancies',
+  'customFields', 'custom_fields'
+]);
+
+const ROLE_DICTIONARY_KEYS = new Set([
+  'rolePermissions', 'role_permissions',
+  'roleKPIs', 'role_kpis'
+]);
+
+export function normalizeRoleDictionaryToCamel(obj: any): any {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const result: Record<string, any> = {};
+  for (const [roleKey, roleVal] of Object.entries(obj)) {
+    const normRoleKey = roleKey === 'cameraAgent' ? 'camera_agent' : roleKey;
+    if (roleVal && typeof roleVal === 'object' && !Array.isArray(roleVal)) {
+      const inner: Record<string, any> = {};
+      for (const [k, v] of Object.entries(roleVal)) {
+        inner[snakeToCamelCase(k)] = v;
+      }
+      result[normRoleKey] = inner;
+    } else {
+      result[normRoleKey] = roleVal;
+    }
+  }
+  return result;
 }
 
 export function convertKeysToSnake(obj: any): any {
@@ -46,7 +85,14 @@ export function convertKeysToSnake(obj: any): any {
     const newObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        newObj[camelToSnakeCase(key)] = convertKeysToSnake(obj[key]);
+        const snakeKey = camelToSnakeCase(key);
+        if (ROLE_DICTIONARY_KEYS.has(key) || ROLE_DICTIONARY_KEYS.has(snakeKey)) {
+          newObj[snakeKey] = normalizeRoleDictionaryToCamel(obj[key]);
+        } else if (RAW_JSONB_DICTIONARIES.has(key) || RAW_JSONB_DICTIONARIES.has(snakeKey)) {
+          newObj[snakeKey] = obj[key];
+        } else {
+          newObj[snakeKey] = convertKeysToSnake(obj[key]);
+        }
       }
     }
     return newObj;
@@ -78,7 +124,11 @@ export function convertKeysToCamel(obj: any): any {
           val = "";
         }
         const targetKey = snakeToCamelCase(key);
-        const camelVal = convertKeysToCamel(val);
+        const camelVal = (ROLE_DICTIONARY_KEYS.has(key) || ROLE_DICTIONARY_KEYS.has(targetKey))
+          ? normalizeRoleDictionaryToCamel(val)
+          : (RAW_JSONB_DICTIONARIES.has(key) || RAW_JSONB_DICTIONARIES.has(targetKey))
+            ? val
+            : convertKeysToCamel(val);
         if (newObj[targetKey] !== undefined && newObj[targetKey] !== null && (camelVal === undefined || camelVal === null)) {
           // Do not overwrite an existing non-null/non-undefined value with null/undefined
         } else {
@@ -107,6 +157,34 @@ export function convertKeysToCamel(obj: any): any {
         } catch (_) {}
       }
     }
+
+    // Safe auto-parse for JSONB / array columns if received as JSON string or non-array from Supabase / IndexedDB
+    const alwaysArrayKeys = [
+      'batches', 'bundleItems', 'quantityDiscounts', 'listIds', 'imageUrls',
+      'priceHistory', 'favoriteItems', 'alerts', 'addresses', 'statusHistory',
+      'discrepancies', 'usageLogs'
+    ];
+    for (const arrKey of alwaysArrayKeys) {
+      if (newObj[arrKey] !== undefined && newObj[arrKey] !== null) {
+        if (typeof newObj[arrKey] === 'string') {
+          const trimmed = newObj[arrKey].trim();
+          if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              newObj[arrKey] = Array.isArray(parsed) ? convertKeysToCamel(parsed) : [];
+            } catch (_) {
+              newObj[arrKey] = [];
+            }
+          } else {
+            newObj[arrKey] = [];
+          }
+        } else if (!Array.isArray(newObj[arrKey])) {
+          newObj[arrKey] = [];
+        } else {
+          newObj[arrKey] = convertKeysToCamel(newObj[arrKey]);
+        }
+      }
+    }
     
     return newObj;
   }
@@ -118,7 +196,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   categories: ['id', 'name', 'parent_id', 'level', 'image_url', 'created_at', 'updated_at'],
   brands: ['id', 'name', 'logo_url', 'description', 'created_at'],
   products: [
-    'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 
+    'id', 'name', 'barcode', 'sku', 'reference', 'image_url', 'image_urls', 'video_url',
     'price', 'online_price', 'cost_price', 'wholesale_price', 'tax_rate', 
     'stock', 'min_stock', 'category_id', 'brand_id', 'supplier', 'unit', 
     'status', 'description', 'is_bundle', 'bundle_items', 'quantity_discounts', 
@@ -132,7 +210,9 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'total_spent', 'last_visit', 'notes', 'is_app_user', 'join_date', 
     'favorite_items', 'alerts', 'cashier_notes', 'updated_at',
     'created_at', 'purchase_count', 'last_purchase_date', 'password', 'password_hash',
-    'address', 'latitude', 'longitude', 'maps_url'
+    'address', 'addresses', 'latitude', 'longitude', 'maps_url',
+    'auth_uid', 'storefront_image_url', 'store_name',
+    'credit_limit', 'is_wholesale', 'birthday', 'city'
   ],
   transactions: [
     'id', 'total', 'payment_method', 'delivery_method', 'timestamp', 'created_at', 'updated_at', 'user_id', 
@@ -146,7 +226,8 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   employees: [
     'id', 'name', 'role', 'phone', 'email', 'hire_date', 'status', 'is_clocked_in', 
     'base_salary', 'salary_type', 'hourly_rate', 'daily_rate', 
-    'id_card_recto_url', 'id_card_verso_url', 'contract_url', 'digital_signature_url'
+    'id_card_recto_url', 'id_card_verso_url', 'contract_url', 'digital_signature_url',
+    'password_hash', 'pin', 'permissions', 'updated_at'
   ],
   attendance: [
     'id', 'employee_id', 'employee_name', 'clock_in', 'clock_out', 'date', 
@@ -180,7 +261,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'delivery_days', 'payment_days', 'planning_notes', 'reminders', 'updated_at', 'password_hash'
   ],
   users: [
-    'id', 'uid', 'email', 'display_name', 'role', 'join_date', 'password', 'password_hash'
+    'id', 'uid', 'email', 'display_name', 'name', 'phone', 'employee_id', 'status', 'role', 'join_date', 'password', 'password_hash', 'pin', 'updated_at'
   ],
   settings: [
     'id', 'name', 'logo_url', 'address', 'phone', 'email', 'tax_number', 'receipt_template', 'label_template', 
@@ -191,7 +272,14 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'audit_log_retention_days', 'brand_color', 'fast_mode_enabled', 'default_lead_time_days', 'loyalty_points_per_unit',
     'allow_negative_stock', 'close_grid_on_select', 'enable_voice_guidance', 'role_permissions',
     'label_orientation', 'label_rotation', 'label_width_custom', 'label_height_custom',
-    'enable_camera_portal', 'favorite_category_ids', 'quick_select_groups'
+    'enable_camera_portal', 'favorite_category_ids', 'quick_select_groups',
+    'show_logo_on_receipt', 'show_savings_on_receipt', 'custom_receipt_message', 'receipt_social_qr_url',
+    'receipt_font_size', 'whatsapp_debt_reminder_template', 'whatsapp_receipt_template', 'scanner_sound_type',
+    'enable_voice_announcement', 'voice_language', 'enable_keyboard_shortcuts',
+    'expiry_critical_days_threshold', 'expiry_warning_days_threshold', 'cash_rounding_step',
+    'enable_auto_backup_on_shift_close', 'auto_backup_frequency',
+    'default_retail_margin_percent', 'default_wholesale_margin_percent', 'default_online_margin_percent',
+    'silent_sync_notifications', 'hide_sync_studio_in_sidebar'
   ],
   promotions: [
     'id', 'name', 'description', 'type', 'value', 'min_purchase', 'start_date', 'end_date', 
@@ -200,29 +288,30 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   ],
   returns: [
     'id', 'transaction_id', 'product_id', 'quantity', 'reason', 'condition', 'refund_amount', 'date', 'status', 'notes',
-    'items', 'total_refund', 'timestamp', 'user_id', 'customer_id', 'type'
+    'items', 'total_refund', 'timestamp', 'user_id', 'customer_id', 'type', 'refund_method', 'updated_at'
   ],
   online_orders: [
     'id', 'external_order_id', 'customer_id', 'customer_name', 'customer_phone', 'customer_email',
     'items', 'subtotal', 'total', 'status', 'payment_status', 'payment_method', 'source', 'delivery_method', 
     'pickup_time', 'shipping_address', 'delivery_notes', 'notes', 'loyalty_points', 'synced_to_pos', 'assigned_employee_id', 
     'assigned_employee_name', 'assigned_picker_id', 'assigned_picker_name', 'status_history', 'timestamp', 'updated_at', 'created_at',
-    'latitude', 'longitude', 'maps_url', 'gps_accuracy'
+    'latitude', 'longitude', 'maps_url', 'gps_accuracy',
+    'storefront_image_url', 'store_name', 'sales_rep_name'
   ],
   purchases: [
     'id', 'supplier_id', 'supplier_name', 'items', 'total_amount', 'status', 'invoice_number', 'date', 'payment_status', 'paid_amount', 'global_discount', 'global_tax', 'notes', 'updated_at', 'documents'
   ],
   purchase_orders: [
-    'id', 'supplier_id', 'items', 'total_amount', 'total', 'status', 'expected_date', 'notes', 'created_at'
+    'id', 'supplier_id', 'items', 'total_amount', 'total', 'status', 'expected_date', 'notes', 'order_number', 'created_at', 'updated_at'
   ],
   stock_adjustments: [
     'id', 'product_id', 'new_quantity', 'adjustment', 'reason', 'timestamp', 'user_id', 'user_name', 'is_loss', 'created_at', 'updated_at'
   ],
   supplier_payments: [
-    'id', 'supplier_id', 'supplier_name', 'amount', 'method', 'date', 'reference', 'note', 'notes'
+    'id', 'supplier_id', 'supplier_name', 'purchase_id', 'amount', 'method', 'date', 'reference', 'note', 'notes'
   ],
   audits: [
-    'id', 'date', 'auditor_id', 'status', 'discrepancies', 'notes', 'completed_at'
+    'id', 'date', 'start_date', 'end_date', 'auditor_id', 'status', 'items', 'discrepancies', 'total_discrepancy_value', 'notes', 'completed_at'
   ],
   audit_logs: [
     'id', 'timestamp', 'user_id', 'user_name', 'action', 'module', 'details', 'severity', 'is_cancelled', 'cancelled_at', 'updated_at'
@@ -231,7 +320,7 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'id', 'supplier_id', 'last_sync', 'status', 'items_updated', 'errors'
   ],
   damaged_items: [
-    'id', 'product_id', 'product_name', 'quantity', 'date', 'reported_by', 'user_id', 'user_name', 'reason', 'cost_price', 'claim_status', 'status', 'supplier_id'
+    'id', 'product_id', 'product_name', 'quantity', 'date', 'reported_by', 'user_id', 'user_name', 'reason', 'cost_price', 'claim_status', 'claim_notes', 'status', 'supplier_id'
   ],
   advances: [
     'id', 'employee_id', 'amount', 'date', 'reason', 'status', 'approved_by', 'repayment_date'
@@ -242,6 +331,24 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
   ],
   goodsReceiptNotes: [
     'id', 'supplier_id', 'date', 'items', 'global_discount', 'global_vat', 'status'
+  ],
+  shortage_items: [
+    'id', 'product_id', 'name', 'barcode', 'quantity_needed', 'cost_price',
+    'supplier_id', 'supplier_name', 'current_stock', 'min_stock', 'is_checked',
+    'list_ids', 'created_at', 'updated_at', 'image_url', 'sku', 'unit',
+    'is_custom_product', 'notes', 'priority'
+  ],
+  shortageItems: [
+    'id', 'product_id', 'name', 'barcode', 'quantity_needed', 'cost_price',
+    'supplier_id', 'supplier_name', 'current_stock', 'min_stock', 'is_checked',
+    'list_ids', 'created_at', 'updated_at', 'image_url', 'sku', 'unit',
+    'is_custom_product', 'notes', 'priority'
+  ],
+  custom_replenishment_lists: [
+    'id', 'name', 'description', 'color', 'created_at', 'updated_at'
+  ],
+  customReplenishmentLists: [
+    'id', 'name', 'description', 'color', 'created_at', 'updated_at'
   ]
 };
 
@@ -265,37 +372,70 @@ export const CONFLICT_MAPS: Record<string, string[][]> = {
   ]
 };
 
-import { useCoreStore } from '../store/useCoreStore';
-
 export function preparePayload(table: string, id: string, data: any) {
   let combined = { ...data };
   if (table === 'products') {
-    let cached = dbState?.products?.[id];
-    if (!cached) {
-      try {
-        cached = useCoreStore.getState().products?.find(p => p && p.id === id);
-      } catch (_) {}
-    }
-    if (cached) {
-      combined = { ...cached, ...data };
+    const dbCached = dbState?.products?.[id];
+    let storeCached: any = undefined;
+    try {
+      storeCached = useCoreStore.getState().products?.find(p => p && p.id === id);
+    } catch (_) {}
+    if (storeCached || dbCached) {
+      combined = { ...(storeCached || {}), ...(dbCached || {}), ...data };
     }
   } else if (table === 'customers') {
-    const cached = dbState?.customers?.[id];
+    let storeCached: any = undefined;
+    try {
+      storeCached = usePeopleStore.getState().customers?.find(c => c && c.id === id);
+    } catch (_) {}
+    const cached = dbState?.customers?.[id] || storeCached;
     if (cached) {
       combined = { ...cached, ...data };
     }
   } else if (table === 'suppliers') {
-    const cached = dbState?.suppliers?.[id];
+    let storeCached: any = undefined;
+    try {
+      storeCached = usePeopleStore.getState().suppliers?.find(s => s && s.id === id);
+    } catch (_) {}
+    const cached = dbState?.suppliers?.[id] || storeCached;
     if (cached) {
       combined = { ...cached, ...data };
     }
   } else if (table === 'users') {
-    const cached = dbState?.users?.[id];
+    let storeCached: any = undefined;
+    try {
+      storeCached = usePeopleStore.getState().users?.find(u => u && (u.id === id || (u as any).uid === id));
+    } catch (_) {}
+    const cached = dbState?.users?.[id] || storeCached;
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'employees') {
+    let storeCached: any = undefined;
+    try {
+      storeCached = usePeopleStore.getState().employees?.find(e => e && e.id === id);
+    } catch (_) {}
+    const cached = dbState?.employees?.[id] || storeCached;
     if (cached) {
       combined = { ...cached, ...data };
     }
   } else if (table === 'online_orders' || table === 'onlineOrders') {
     const cached = dbState?.online_orders?.[id] || dbState?.onlineOrders?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'shortage_items' || table === 'shortageItems') {
+    const cached = dbState?.shortage_items?.[id] || dbState?.shortageItems?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'custom_replenishment_lists' || table === 'customReplenishmentLists') {
+    const cached = dbState?.custom_replenishment_lists?.[id] || dbState?.customReplenishmentLists?.[id];
+    if (cached) {
+      combined = { ...cached, ...data };
+    }
+  } else if (table === 'transactions') {
+    const cached = dbState?.transactions?.[id];
     if (cached) {
       combined = { ...cached, ...data };
     }
@@ -351,9 +491,15 @@ export function preparePayload(table: string, id: string, data: any) {
       return null;
     }
     if (val === "" || val === undefined || val === null) {
-      if (key === 'name') return 'Sans nom';
+      if (key === 'name') {
+        if (table === 'products') return combined.name ? String(combined.name).trim() : undefined;
+        return 'Sans nom';
+      }
       if (key === 'unit') return 'pcs';
-      if (key === 'status') return 'active';
+      if (key === 'status') {
+        if (table === 'products' || table === 'employees' || table === 'users' || table === 'customers') return 'active';
+        return null;
+      }
       if (key === 'level') return 1;
 
       const nonNullableNumerics = [
@@ -368,7 +514,7 @@ export function preparePayload(table: string, id: string, data: any) {
       return null;
     }
 
-    const arrayKeys = ['tags', 'image_urls', 'categories', 'pre_sale_days', 'delivery_days', 'payment_days'];
+    const arrayKeys = ['tags', 'image_urls', 'categories', 'pre_sale_days', 'delivery_days', 'payment_days', 'list_ids'];
     if (arrayKeys.includes(key)) {
       if (typeof val === 'string') {
         try {
@@ -383,8 +529,13 @@ export function preparePayload(table: string, id: string, data: any) {
     const booleanKeys = [
       'is_bundle', 'show_in_pos', 'is_app_user', 'is_clocked_in', 'sync_enabled', 
       'has_full_inventory_access', 'use_multi_expiry', 'auto_unpack', 'synced_to_pos',
-      'active', 'is_wholesale', 'pushed', 'is_cancelled', 'allow_negative_stock',
-      'is_quick_select', 'close_grid_on_select', 'enable_voice_guidance', 'enable_camera_portal'
+      'active', 'is_active', 'is_wholesale', 'pushed', 'is_cancelled', 'allow_negative_stock',
+      'is_quick_select', 'close_grid_on_select', 'enable_voice_guidance', 'enable_camera_portal',
+      'is_checked', 'is_custom_product',
+      'show_logo_on_receipt', 'show_savings_on_receipt', 'enable_voice_announcement',
+      'enable_keyboard_shortcuts', 'enable_auto_backup_on_shift_close',
+      'silent_sync_notifications', 'hide_sync_studio_in_sidebar',
+      'silent_printing', 'display_price_ht', 'enable_time_clock', 'fast_mode_enabled'
     ];
     if (booleanKeys.includes(key)) return !!val;
 
@@ -395,7 +546,10 @@ export function preparePayload(table: string, id: string, data: any) {
       'initial_cash', 'total_sales', 'total_expenses', 'level', 'points_earned',
       'discount_amount', 'points_discount', 'balance_used', 'voucher_discount', 'value', 'current_balance', 'min_purchase',
       'units_per_parent', 'label_width_custom', 'label_height_custom',
-      'global_discount', 'global_vat'
+      'global_discount', 'global_vat', 'quantity_needed', 'current_stock',
+      'credit_limit', 'total_discrepancy_value',
+      'expiry_critical_days_threshold', 'expiry_warning_days_threshold', 'cash_rounding_step',
+      'default_retail_margin_percent', 'default_wholesale_margin_percent', 'default_online_margin_percent'
     ];
     if (numericKeys.includes(key)) {
       let parsedNum: number;
@@ -411,7 +565,12 @@ export function preparePayload(table: string, id: string, data: any) {
     if (dateKeys.includes(key)) {
       try {
         const d = new Date(val);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
       } catch (_) {}
       return null;
     }
@@ -429,10 +588,10 @@ export function preparePayload(table: string, id: string, data: any) {
 
     const jsonKeys = [
       'bundle_items', 'quantity_discounts', 'usage_logs', 'items', 'alerts', 
-      'favorite_items', 'usage_logs', 'batches', 'status_history', 'conditions',
+      'favorite_items', 'batches', 'status_history', 'conditions',
       'documents', 'discrepancies', 'notifications', 'role_kpis',
       'role_permissions', 'favorite_category_ids', 'quick_select_groups',
-      'price_history'
+      'price_history', 'reminders', 'addresses'
     ];
     if (jsonKeys.includes(key)) {
       if (typeof val === 'string') {
@@ -452,32 +611,60 @@ export function preparePayload(table: string, id: string, data: any) {
       }
     }
 
-    // Safety checks for product non-nullable fields to prevent PostgreSQL 23502 NOT NULL constraints violations on partial upserts
+    // Safety checks for product non-nullable fields on full upserts; keep name undefined on partial updates so SyncService uses UPDATE
     if (table === 'products') {
-      if (filtered.category_id === undefined || filtered.category_id === null) {
-        filtered.category_id = 'uncategorized';
+      const hasExplicitName = Boolean(data && typeof data === 'object' && ('name' in data));
+      if (!filtered.name) {
+        const cached = dbState?.products?.[id];
+        let storeProd: any = undefined;
+        if (!cached?.name && id) {
+          try {
+            storeProd = useCoreStore.getState().products?.find(p => p && p.id === id);
+          } catch (_) {}
+        }
+        const resolvedName = cached?.name || storeProd?.name || (typeof snakePayload.name === 'string' && snakePayload.name.trim() ? snakePayload.name.trim() : undefined);
+        if (resolvedName && resolvedName !== 'Sans nom') {
+          filtered.name = resolvedName;
+        } else if (hasExplicitName) {
+          filtered.name = 'Sans nom';
+        } else {
+          delete filtered.name;
+        }
       }
-      if (filtered.unit === undefined || filtered.unit === null) {
-        filtered.unit = 'pcs';
-      }
-      if (filtered.status === undefined || filtered.status === null) {
-        filtered.status = 'active';
+      if (filtered.name) {
+        if (filtered.category_id === undefined || filtered.category_id === null) {
+          filtered.category_id = 'uncategorized';
+        }
+        if (filtered.unit === undefined || filtered.unit === null) {
+          filtered.unit = 'pcs';
+        }
+        if (filtered.status === undefined || filtered.status === null) {
+          filtered.status = 'active';
+        }
       }
     }
 
     // Safety checks for customer non-nullable fields (e.g. name) on partial upserts
     if (table === 'customers') {
       if (!filtered.name) {
+        let storeCachedName: string | undefined;
+        try {
+          storeCachedName = usePeopleStore.getState().customers?.find(c => c && c.id === id)?.name;
+        } catch (_) {}
         const cached = dbState?.customers?.[id];
-        filtered.name = cleanValueForPostgres('name', cached?.name || snakePayload.name || 'Client');
+        filtered.name = cleanValueForPostgres('name', cached?.name || storeCachedName || snakePayload.name || 'Client');
       }
     }
 
     // Safety checks for supplier non-nullable fields (e.g. name) on partial upserts
     if (table === 'suppliers') {
       if (!filtered.name) {
+        let storeCachedName: string | undefined;
+        try {
+          storeCachedName = usePeopleStore.getState().suppliers?.find(s => s && s.id === id)?.name;
+        } catch (_) {}
         const cached = dbState?.suppliers?.[id];
-        filtered.name = cleanValueForPostgres('name', cached?.name || snakePayload.name || 'Fournisseur');
+        filtered.name = cleanValueForPostgres('name', cached?.name || storeCachedName || snakePayload.name || 'Fournisseur');
       }
     }
 
@@ -489,12 +676,16 @@ export function preparePayload(table: string, id: string, data: any) {
       if (!filtered.uid && filtered.id) {
         filtered.uid = filtered.id;
       }
+      let storeCachedUser: any = undefined;
+      try {
+        storeCachedUser = usePeopleStore.getState().users?.find(u => u && (u.id === id || (u as any).uid === id));
+      } catch (_) {}
+      const cached = dbState?.users?.[id] || storeCachedUser;
       if (!filtered.display_name) {
-        const cached = dbState?.users?.[id];
         filtered.display_name = cleanValueForPostgres('display_name', cached?.displayName || cached?.name || snakePayload.displayName || snakePayload.name || 'Utilisateur');
       }
       if (!filtered.role) {
-        filtered.role = 'staff';
+        filtered.role = cached?.role || snakePayload.role || 'staff';
       }
     }
 
@@ -515,6 +706,13 @@ export function preparePayload(table: string, id: string, data: any) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (filtered.id && !uuidRegex.test(String(filtered.id))) {
         delete filtered.id;
+      }
+    }
+
+    // Safety mapping for transactions notes -> audit_note
+    if (table === 'transactions') {
+      if (!filtered.audit_note && snakePayload.notes) {
+        filtered.audit_note = snakePayload.notes;
       }
     }
 

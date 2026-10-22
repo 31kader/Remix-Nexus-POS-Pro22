@@ -14,7 +14,7 @@ interface Props {
 }
 
 export const QuickSelectPanel: React.FC<Props> = ({ 
-  isMobile, activeShift, showQuickSelect, isReturnMode, addToCart, currency 
+  isMobile, activeShift, showQuickSelect, setShowQuickSelect, isReturnMode, addToCart, currency 
 }) => {
   return (
     <AnimatePresence mode="wait">
@@ -29,6 +29,7 @@ export const QuickSelectPanel: React.FC<Props> = ({
           <QuickSelect 
             onAddProduct={(p) => addToCart(p, isReturnMode ? -1 : 1)} 
             currency={currency} 
+            onClose={() => setShowQuickSelect(false)}
           />
         </motion.div>
       )}

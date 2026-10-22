@@ -1,15 +1,17 @@
-name: Build & Attach Windows EXE & Android APK to Release v1.2.14
+name: Build & Attach Windows EXE & Android APK to Release
 
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-windows-exe:
+  build-release:
+    name: Build Windows EXE & Electron Package
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -24,20 +26,33 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Build Web + Electron Windows Installer (.exe)
+      - name: Verify Quality (Typecheck & Vitest Tests)
         run: |
-          npm run build
-          npx electron-builder --win --x64 --publish never
+          npm run lint
+          npm test
 
-      - name: Upload Windows .EXE & Android .APK to GitHub Release v1.2.14
+      - name: Build Web Application & Node Server
+        run: npm run build
+
+      - name: Package Windows Installer (.exe) with Electron Builder
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Extract Project Version
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building Nexus POS Pro v$VERSION"
+
+      - name: Upload Binaries to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.14
-          name: "Nexus POS Pro v1.2.14 (Windows .EXE + Android .APK + iPhone iOS)"
+          tag_name: ${{ github.ref_name || format('v{0}', steps.get_version.outputs.VERSION) }}
+          name: "Nexus POS Pro v${{ steps.get_version.outputs.VERSION }} (Production Release)"
           files: |
-            release/NexusPOSPro-1.2.14-Setup.exe
-            release/NexusPOSPro-1.2.14-Portable.exe
-            release/NexusPOSPro-1.2.14.apk
-            release/NexusPOSPro-1.2.14-iPhone.mobileconfig
+            release/*-Setup.exe
+            release/*.apk
+            release/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

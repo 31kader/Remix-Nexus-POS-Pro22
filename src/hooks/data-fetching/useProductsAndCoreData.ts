@@ -8,11 +8,12 @@ import {
   AdvanceRecord, AttendanceRecord, InventoryAudit
 } from '../../types';
 import { fetchProductsFromSupabase, fetchTableFromSupabase } from './supabaseFetchHelper';
-import { convertKeysToCamel } from '../../lib/db-converters';
-import { getArchivedTransactionsFromStorage } from '../../lib/local-db';
+import { convertKeysToCamel, TABLE_NAME_MAPPINGS } from '../../lib/db-converters';
+import { getArchivedTransactionsFromStorage, replaceTableState } from '../../lib/local-db';
 import { toast } from 'sonner';
 import { playOrderChime } from '../../lib/audioNotification';
 import { useTransactionStore } from '../../store/useTransactionStore';
+import { loadPendingSyncQueue } from '../../services/SyncService';
 
 
 interface useProductsAndCoreDataParams {
@@ -92,33 +93,22 @@ export function useProductsAndCoreData({
       });
       idbSet('nexus_purchases_cache', []).catch(() => {});
       idbSet('nexus_db_purchases', {}).catch(() => {});
-      idbGet<Product[]>('nexus_products_cache').then(cachedProds => {
-        if (Array.isArray(cachedProds) && cachedProds.length > 0) {
-          const staleIds = new Set(['vhk8wr9xz', '77haf1ut6', 'qlnl27gff']);
-          const cleanedProds = cachedProds.map(p =>
-            p && staleIds.has(String(p.id)) ? { ...p, stock: 0, priceHistory: [] } : p
-          );
-          idbSet('nexus_products_cache', cleanedProds).catch(() => {});
-          setProducts(cleanedProds);
-        }
-      }).catch(() => {});
       localStorage.setItem('nexus_products_cache_version', CACHE_VERSION);
     }
 
     const isPublicPriceMode = appMode === 'price_checker' || appMode === 'client_scan' || appMode === 'kiosk';
     if (!isPublicPriceMode && (!userId || userId === 'unauthenticated')) {
       setIsDataLoading(false);
-      idbGet<UserProfile[]>('nexus_users').then(cachedUsers => {
-        if (cachedUsers && cachedUsers.length > 0) setUsers(cachedUsers);
+      localDb.get('users').then(snap => {
+        if (snap?.exists() && snap.val()) {
+          const vals = Object.values(snap.val()).map((u: any) => {
+            if (!u || typeof u !== 'object') return u;
+            const { password, passwordHash, password_hash, pin, ...rest } = u;
+            return rest;
+          });
+          if (vals.length > 0) setUsers(vals as any);
+        }
       }).catch(() => {});
-      if (isSupabaseConfigured) {
-        fetchTableFromSupabase<UserProfile>('users', 100).then(remoteUsers => {
-          if (remoteUsers && remoteUsers.length > 0) {
-            setUsers(remoteUsers);
-            idbSet('nexus_users', remoteUsers).catch(() => {});
-          }
-        }).catch(() => {});
-      }
       return;
     }
 
@@ -290,26 +280,156 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             }
 
             const modifiedProducts = await fetchProductsFromSupabase(undefined, true, fetchSince);
-            const nowIso = new Date().toISOString();
             if (isSubscribed && modifiedProducts && modifiedProducts.length > 0) {
               const mergedMap = new Map<string, Product>();
               cachedProducts.forEach(p => { if (p && p.id) mergedMap.set(p.id, p); });
               modifiedProducts.forEach(p => { if (p && p.id) mergedMap.set(p.id, p); });
+
+              // 🛡️ Protéger les produits locaux en attente de synchronisation
+              const pendingQueue = loadPendingSyncQueue();
+              pendingQueue
+                .filter(i => (i.table === 'products' || i.table === 'nexus_products') && i.payload)
+                .forEach(i => {
+                  const pId = i.recordId || i.payload?.id;
+                  if (pId) {
+                    if (i.action === 'UPSERT') {
+                      const existing = mergedMap.get(pId) || ({} as Product);
+                      mergedMap.set(pId, { ...existing, ...i.payload });
+                    } else if (i.action === 'DELETE') {
+                      mergedMap.delete(pId);
+                    }
+                  }
+                });
+
+              // 🛡️ Protéger également les deltas de stock en attente (stock_adjustments)
+              const pendingStockDeltas = new Map<string, number>();
+              const pendingStockSets = new Map<string, number>();
+              pendingQueue
+                .filter(i => (i.table === 'stock_adjustments' || i.table === 'stockAdjustments') && i.payload)
+                .forEach(i => {
+                  const pId = String(i.payload?.productId || i.payload?.id || i.recordId || '');
+                  if (!pId) return;
+                  if (i.payload?.mode === 'set') {
+                    pendingStockSets.set(pId, Number(i.payload?.newQuantity ?? i.payload?.value) || 0);
+                  } else {
+                    const delta = Number(i.payload?.adjustment ?? i.payload?.delta) || 0;
+                    pendingStockDeltas.set(pId, (pendingStockDeltas.get(pId) || 0) + delta);
+                  }
+                });
+
+              for (const [pId, setVal] of pendingStockSets.entries()) {
+                const prod = mergedMap.get(pId);
+                if (prod) {
+                  const extraDelta = pendingStockDeltas.get(pId) || 0;
+                  prod.stock = setVal + extraDelta;
+                  pendingStockDeltas.delete(pId);
+                }
+              }
+              for (const [pId, delta] of pendingStockDeltas.entries()) {
+                const prod = mergedMap.get(pId);
+                if (prod) {
+                  prod.stock = (Number(prod.stock) || 0) + delta;
+                }
+              }
+
               const mergedProducts = Array.from(mergedMap.values()).filter(p => p && p.name && p.name !== 'Sans nom' && p.name !== 'Article Sans Nom');
               setProducts(mergedProducts);
               await idbSet('nexus_products_cache', mergedProducts).catch(err => console.warn('[IDB Error]', err));
-              localStorage.setItem('last_sync_timestamp', nowIso);
+              
+              // 🛡️ Calcul de l'horodatage basé sur les données serveur avec marge de sécurité de 2 min (T10)
+              let maxUpdatedAt: string | null = null;
+              modifiedProducts.forEach(p => {
+                if (p?.updatedAt && (!maxUpdatedAt || p.updatedAt > maxUpdatedAt)) {
+                  maxUpdatedAt = p.updatedAt;
+                }
+              });
+              const safeSyncTimestamp = maxUpdatedAt 
+                ? new Date(new Date(maxUpdatedAt).getTime() - 2 * 60 * 1000).toISOString()
+                : new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              localStorage.setItem('last_sync_timestamp', safeSyncTimestamp);
               console.log(`[DeltaSync] ${modifiedProducts.length} produit(s) mis à jour incrémentalement.`);
             } else if (isSubscribed) {
-              localStorage.setItem('last_sync_timestamp', nowIso);
+              const safeSyncTimestamp = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+              localStorage.setItem('last_sync_timestamp', safeSyncTimestamp);
             }
           } else {
             // Pas de cache ou synchronisation complète forcée
             const fullDocs = await fetchProductsFromSupabase();
             if (fullDocs && fullDocs.length > 0 && isSubscribed) {
-              const validFullDocs = fullDocs.filter(p => p && p.id && p.name && p.name !== 'Sans nom' && p.name !== 'Article Sans Nom');
+              const mergedMap = new Map<string, Product>();
+              fullDocs.forEach(p => { if (p && p.id) mergedMap.set(p.id, p); });
+
+              // 🛡️ Protéger les produits locaux en attente de synchronisation
+              const pendingQueue = loadPendingSyncQueue();
+              const pendingProductIds = new Set<string>();
+              pendingQueue
+                .filter(i => (i.table === 'products' || i.table === 'nexus_products') && i.payload)
+                .forEach(i => {
+                  const pId = i.recordId || i.payload?.id;
+                  if (pId) {
+                    pendingProductIds.add(pId);
+                    if (i.action === 'UPSERT') {
+                      const existing = mergedMap.get(pId) || ({} as Product);
+                      mergedMap.set(pId, { ...existing, ...i.payload });
+                    } else if (i.action === 'DELETE') {
+                      mergedMap.delete(pId);
+                    }
+                  }
+                });
+
+              // 🛡️ Protéger également les deltas de stock en attente (stock_adjustments)
+              const pendingStockDeltas = new Map<string, number>();
+              const pendingStockSets = new Map<string, number>();
+              pendingQueue
+                .filter(i => (i.table === 'stock_adjustments' || i.table === 'stockAdjustments') && i.payload)
+                .forEach(i => {
+                  const pId = String(i.payload?.productId || i.payload?.id || i.recordId || '');
+                  if (!pId) return;
+                  if (i.payload?.mode === 'set') {
+                    pendingStockSets.set(pId, Number(i.payload?.newQuantity ?? i.payload?.value) || 0);
+                  } else {
+                    const delta = Number(i.payload?.adjustment ?? i.payload?.delta) || 0;
+                    pendingStockDeltas.set(pId, (pendingStockDeltas.get(pId) || 0) + delta);
+                  }
+                });
+
+              for (const [pId, setVal] of pendingStockSets.entries()) {
+                const prod = mergedMap.get(pId);
+                if (prod) {
+                  const extraDelta = pendingStockDeltas.get(pId) || 0;
+                  prod.stock = setVal + extraDelta;
+                  pendingStockDeltas.delete(pId);
+                }
+              }
+              for (const [pId, delta] of pendingStockDeltas.entries()) {
+                const prod = mergedMap.get(pId);
+                if (prod) {
+                  prod.stock = (Number(prod.stock) || 0) + delta;
+                }
+              }
+
+              const validFullDocs = Array.from(mergedMap.values()).filter(p => p && p.id && p.name && p.name !== 'Sans nom' && p.name !== 'Article Sans Nom');
               setProducts(validFullDocs);
               await idbSet('nexus_products_cache', validFullDocs).catch(err => console.warn('[IDB Error]', err));
+              
+              // 🛡️ Réconciliation des orphelins (T11) : aligner le cache local sur les 11 571 produits Supabase
+              try {
+                const serverIdSet = new Set(validFullDocs.map(p => p.id));
+                const localSnap = await localDb.get('products');
+                if (localSnap.exists()) {
+                  const localObj = localSnap.val() || {};
+                  for (const localId of Object.keys(localObj)) {
+                    // Ne jamais supprimer un produit local qui est en attente de synchro vers Supabase !
+                    // Et n'utiliser que deleteLocalOnly pour ne JAMAIS envoyer de DELETE à Supabase pour les orphelins locaux
+                    if (!serverIdSet.has(localId) && !pendingProductIds.has(localId)) {
+                      await localDb.deleteLocalOnly(`products/${localId}`);
+                    }
+                  }
+                }
+              } catch (purgeErr) {
+                console.warn('[Sync] Erreur réconciliation orphelins locaux:', purgeErr);
+              }
+
               localStorage.setItem('last_sync_timestamp', new Date().toISOString());
               localStorage.setItem('nexus_has_cached_products', 'true');
               console.log(`[FullSync] Synchronisation complète réussie : ${validFullDocs.length} produits mis en cache.`);
@@ -328,6 +448,42 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
     };
     window.addEventListener('force-full-sync', handleForceFullSync);
     unsubscribes.push(() => window.removeEventListener('force-full-sync', handleForceFullSync));
+
+    // ⚡ GESTION DE LA REPRISE AU PREMIER PLAN (T9) : Détection Android + Navigateur
+    const handleForegroundResume = () => {
+      if (!isSubscribed) return;
+      console.log('[Lifecycle] ⚡ Reprise au premier plan -> reconnexion Realtime et delta-sync');
+      realtimeCircuitBreaker.reset('foreground_resume');
+      if (typeof supabase?.realtime?.connect === 'function') {
+        try { supabase.realtime.connect(); } catch (_) {}
+      }
+      syncProducts(false);
+    };
+
+    window.addEventListener('app-foreground-resume', handleForegroundResume);
+    unsubscribes.push(() => window.removeEventListener('app-foreground-resume', handleForegroundResume));
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleForegroundResume();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    unsubscribes.push(() => document.removeEventListener('visibilitychange', handleVisibilityChange));
+
+    const handleOnlineEvent = () => {
+      handleForegroundResume();
+    };
+    window.addEventListener('online', handleOnlineEvent);
+    unsubscribes.push(() => window.removeEventListener('online', handleOnlineEvent));
+
+    // Synchronisation delta périodique toutes les 5 minutes en ligne
+    const periodicSyncInterval = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        syncProducts(false);
+      }
+    }, 5 * 60 * 1000);
+    unsubscribes.push(() => clearInterval(periodicSyncInterval));
 
     // Purge automatique de toute ancienne commande d'auto-réapprovisionnement
     const purgeAutoReapprovisionnement = async () => {
@@ -403,9 +559,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
               const arr = Array.isArray(raw) ? raw : [];
               const deletedIds = getDeletedRecordIds('online_orders');
               const filtered = arr.filter(o => o && o.id && !deletedIds.has(String(o.id)));
-              const map: Record<string, any> = {};
-              filtered.forEach(o => { if (o && o.id) map[o.id] = o; });
-              localDb.insertBatch('onlineOrders', map).catch(() => {});
+              replaceTableState('online_orders', filtered);
               return filtered;
             });
           }, 
@@ -443,7 +597,7 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
         { cacheKey: 'nexus_supplier_payments_cache', collectionName: 'supplierPayments', setState: setSupplierPayments, limit: 500, timestampColumn: 'date' },
         { cacheKey: 'nexus_damaged_items_cache', collectionName: 'damaged_items', setState: setDamagedItems, limit: 500 },
         { cacheKey: 'nexus_audit_logs_cache', collectionName: 'audit_logs', setState: setAuditLogs, limit: 500, timestampColumn: 'timestamp', enableRealtime: true },
-        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notesOrUpdater: any) => { const notes = typeof notesOrUpdater === 'function' ? notesOrUpdater([]) : notesOrUpdater; if (Array.isArray(notes) && notes.length > 0) { const map: Record<string, any> = {}; notes.forEach(n => { if (n && n.id) map[n.id] = n; }); localDb.insertBatch('goodsReceiptNotes', map).catch(() => {}); } }, limit: 500 }
+        { cacheKey: 'nexus_goods_receipt_notes_cache', collectionName: 'goodsReceiptNotes', setState: (notesOrUpdater: any) => { const notes = typeof notesOrUpdater === 'function' ? notesOrUpdater([]) : notesOrUpdater; if (Array.isArray(notes) && notes.length > 0) { replaceTableState('goods_receipt_notes', notes); } }, limit: 500 }
       );
       if (setAdvances) {
         deferredQueueConfig.push({
@@ -484,15 +638,74 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
       const processBatchedProductUpdates = () => {
         if (productUpdateQueue.length === 0 && productDeleteQueue.length === 0) return;
+        const deletedIds = getDeletedRecordIds('products');
+        const pendingQueue = loadPendingSyncQueue();
+        const pendingProdDeletes = new Set<string>();
+        const pendingProdUpserts = new Map<string, any>();
+        const pendingStockAdjustIds = new Set<string>();
+
+        pendingQueue.forEach(q => {
+          const tName = TABLE_NAME_MAPPINGS[q.table] || q.table;
+          const recId = String(q.recordId || q.payload?.id || '');
+          if (!recId) return;
+          if (tName === 'products') {
+            if (q.action === 'DELETE') pendingProdDeletes.add(recId);
+            else if (q.action === 'UPSERT' && q.payload) {
+              pendingProdUpserts.set(recId, { ...(pendingProdUpserts.get(recId) || {}), ...q.payload });
+            }
+          } else if ((q.action as string) === 'STOCK_ADJUST' || tName === 'stock_adjustments') {
+            const pId = String(q.payload?.productId || recId);
+            if (pId) pendingStockAdjustIds.add(pId);
+          }
+        });
+
         setProducts(prev => {
           const map = new Map<string, Product>();
           prev.forEach(p => map.set(p.id, p));
           let hasActualChange = false;
 
           productUpdateQueue.forEach(p => {
-            const existing = map.get(p.id);
-            if (!existing || existing.updatedAt !== p.updatedAt || existing.name !== p.name || existing.price !== p.price || existing.stock !== p.stock) {
-              map.set(p.id, { ...existing, ...p });
+            if (!p || !p.id) return;
+            const pid = String(p.id);
+            // 🛡️ Ignorer les produits supprimés localement ou en instance de suppression
+            if (deletedIds.has(pid) || pendingProdDeletes.has(pid)) {
+              if (map.has(pid)) {
+                map.delete(pid);
+                hasActualChange = true;
+              }
+              return;
+            }
+
+            const existing = map.get(pid);
+
+            // 🛡️ Garde d'ordre temporel (T12) : Ne jamais écraser par un événement plus ancien
+            if (existing && existing.updatedAt && p.updatedAt) {
+              const existingTime = new Date(existing.updatedAt).getTime();
+              const incomingTime = new Date(p.updatedAt).getTime();
+              if (incomingTime < existingTime) {
+                return;
+              }
+            }
+
+            const pendingUpsert = pendingProdUpserts.get(pid);
+            const hasPendingStock = pendingStockAdjustIds.has(pid) || (pendingUpsert && pendingUpsert.stock !== undefined);
+
+            // Protéger le stock contre les payloads partiels, indéfinis ou en cours d'ajustement local
+            const safeStock = (hasPendingStock && existing)
+              ? Number(existing.stock ?? 0)
+              : ((p.stock !== undefined && p.stock !== null && !isNaN(Number(p.stock)))
+                  ? Number(p.stock)
+                  : (existing?.stock ?? 0));
+
+            const mergedProd = {
+              ...existing,
+              ...p,
+              ...(pendingUpsert || {}),
+              stock: safeStock
+            } as Product;
+
+            if (!existing || existing.updatedAt !== mergedProd.updatedAt || existing.name !== mergedProd.name || existing.price !== mergedProd.price || existing.stock !== safeStock) {
+              map.set(pid, mergedProd);
               hasActualChange = true;
             }
           });
@@ -568,10 +781,66 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
 
         const processTableBatch = () => {
           if (tableUpdateQueue.length === 0 && tableDeleteQueue.length === 0) return;
+          const deletedIds = getDeletedRecordIds(mappedTable);
+          const pendingQueue = loadPendingSyncQueue();
+          const pendingDeletes = new Set<string>();
+          const pendingUpserts = new Map<string, any>();
+          const pendingCustomerBalanceIds = new Set<string>();
+
+          pendingQueue.forEach(q => {
+            const matchesTable = q.table === config.collectionName || q.table === mappedTable || TABLE_NAME_MAPPINGS[q.table] === mappedTable;
+            const recId = String(q.recordId || q.payload?.id || '');
+            if (matchesTable && recId) {
+              if (q.action === 'DELETE') pendingDeletes.add(recId);
+              else if (q.action === 'UPSERT' && q.payload) {
+                pendingUpserts.set(recId, { ...(pendingUpserts.get(recId) || {}), ...q.payload });
+              }
+            }
+            if (config.collectionName === 'customers') {
+              const hasDelta = q.payload && (
+                q.payload.deltaBalance !== undefined ||
+                q.payload.delta_balance !== undefined ||
+                q.payload.deltaSpent !== undefined ||
+                q.payload.delta_spent !== undefined ||
+                q.payload.deltaPoints !== undefined ||
+                q.payload.delta_points !== undefined
+              );
+              if (hasDelta || (q.action as string) === 'ADJUST_CUSTOMER_BALANCE') {
+                const cid = String(q.payload?.customerId || q.payload?.id || recId);
+                if (cid) pendingCustomerBalanceIds.add(cid);
+              }
+            }
+          });
+
           config.setState((prev: any[]) => {
             const map = new Map<string, any>();
-            (prev || []).forEach(item => { if (item && item.id) map.set(item.id, item); });
-            tableUpdateQueue.forEach(item => { if (item && item.id) map.set(item.id, item); });
+            (prev || []).forEach(item => {
+              if (item && item.id && !deletedIds.has(String(item.id)) && !pendingDeletes.has(String(item.id))) {
+                map.set(item.id, item);
+              }
+            });
+            tableUpdateQueue.forEach(item => {
+              if (!item || !item.id) return;
+              const itemId = String(item.id);
+              if (deletedIds.has(itemId) || pendingDeletes.has(itemId)) {
+                map.delete(itemId);
+                return;
+              }
+              const existing = map.get(itemId);
+              if (existing && existing.updatedAt && item.updatedAt) {
+                const existingTime = new Date(existing.updatedAt).getTime();
+                const incomingTime = new Date(item.updatedAt).getTime();
+                if (incomingTime < existingTime) return;
+              }
+              const pendingPatch = pendingUpserts.get(itemId);
+              let merged = { ...(existing || {}), ...item, ...(pendingPatch || {}) };
+              if (config.collectionName === 'customers' && pendingCustomerBalanceIds.has(itemId) && existing) {
+                merged.balance = existing.balance;
+                merged.totalSpent = existing.totalSpent;
+                merged.loyaltyPoints = existing.loyaltyPoints;
+              }
+              map.set(itemId, merged);
+            });
             tableDeleteQueue.forEach(id => map.delete(id));
             
             let updated = Array.from(map.values());
@@ -865,6 +1134,32 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             }
             camelData.forEach((newRow: any) => newRow && newRow.id && !deletedIds.has(String(newRow.id)) && mergedMap.set(newRow.id, newRow));
 
+            // 🛡️ Protéger les modifications locales en attente dans SyncService (Offline-First)
+            const pendingQueue = loadPendingSyncQueue();
+            const pendingRecords = pendingQueue.filter(item => 
+              (item.table === collectionName || TABLE_NAME_MAPPINGS[item.table] === collectionName) && item.payload
+            );
+            pendingRecords.forEach(item => {
+              const recId = item.recordId || item.payload?.id;
+              if (recId && !deletedIds.has(String(recId))) {
+                if (item.action === 'UPSERT') {
+                  const existing = mergedMap.get(recId) || {};
+                  const merged = { ...existing, ...item.payload };
+                  if (collectionName === 'customers') {
+                    const localCust = ((Array.isArray(cached) ? cached : []) as any[]).find((c: any) => c && c.id === recId);
+                    if (localCust && (item.payload?.deltaBalance !== undefined || item.payload?.delta_balance !== undefined)) {
+                      merged.balance = (localCust as any).balance;
+                      merged.totalSpent = (localCust as any).totalSpent;
+                      merged.loyaltyPoints = (localCust as any).loyaltyPoints;
+                    }
+                  }
+                  mergedMap.set(recId, merged);
+                } else if (item.action === 'DELETE') {
+                  mergedMap.delete(recId);
+                }
+              }
+            });
+
             let updatedCache = Array.from(mergedMap.values());
             if (timestampColumn) {
               updatedCache.sort((a: any, b: any) => 
@@ -878,6 +1173,37 @@ function debouncedSaveCategoriesCache(categories: Category[], delay = 300) {
             localStorage.setItem(`last_sync_${collectionName}`, new Date().toISOString());
           }
           // (Les événements temps réel sont gérés par le canal unique multiplexé 'nexus-pos-realtime')
+          // Souscription locale complémentaire pour répercuter immédiatement les mutations locales / hors-ligne
+          const unsubLocal = localDb.subscribe(collectionName, (snapshot) => {
+            if (!isSubscribed) return;
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              if (data && typeof data === 'object') {
+                const deletedSet = getDeletedRecordIds(collectionName);
+                setState((prev: any[]) => {
+                  const map = new Map<string, any>();
+                  (Array.isArray(prev) ? prev : []).forEach(r => {
+                    if (r && r.id && !deletedSet.has(String(r.id))) map.set(r.id, r);
+                  });
+                  Object.keys(data).forEach(id => {
+                    if (!deletedSet.has(String(id)) && data[id]) {
+                      map.set(id, { ...(map.get(id) || {}), id, ...data[id] });
+                    }
+                  });
+                  let next = Array.from(map.values());
+                  if (timestampColumn) {
+                    next.sort((a: any, b: any) =>
+                      new Date(b[timestampColumn] || b.timestamp || b.created_at || 0).getTime() -
+                      new Date(a[timestampColumn] || a.timestamp || a.created_at || 0).getTime()
+                    );
+                  }
+                  idbSet(cacheKey, next).catch(() => {});
+                  return next;
+                });
+              }
+            }
+          });
+          unsubscribes.push(unsubLocal);
         } else {
           const unsub = localDb.subscribe(collectionName, (snapshot) => {
             if (isSubscribed) {

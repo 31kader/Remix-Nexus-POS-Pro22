@@ -80,13 +80,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   handleInstallApp
 }) => {
   const hasInventoryAccess = canAccess ? canAccess('canAccessInventory') : (profile?.role === 'admin' || profile?.role === 'manager');
-  const [isPinLockOpen, setIsPinLockOpen] = React.useState(false);
+  const [isPinLockOpen, setIsPinLockOpen] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('nexus_pos_pin_locked') === 'true';
+    }
+    return false;
+  });
   const [isIOSInstallModalOpen, setIsIOSInstallModalOpen] = React.useState(false);
   const [syncStatus, setSyncStatus] = React.useState<{ isSyncing: boolean; pendingCount: number }>({ isSyncing: false, pendingCount: 0 });
   const [isOnline, setIsOnline] = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
   React.useEffect(() => {
-    const unsub = onBackgroundSyncStatus(status => setSyncStatus(status));
+    const unsub = onBackgroundSyncStatus(status => {
+      setSyncStatus(prev => (prev.isSyncing === status.isSyncing && prev.pendingCount === status.pendingCount) ? prev : status);
+    });
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);
@@ -101,18 +108,42 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const getTabTitle = (tab: string) => {
     const labels: Record<string, string> = {
       checkout: isMobile ? 'Caisse POS' : 'Terminal de Vente',
+      pos: isMobile ? 'Caisse POS' : 'Terminal de Vente',
+      caisse: isMobile ? 'Caisse POS' : 'Terminal de Vente',
       inventory: isMobile ? 'Stock' : 'Inventaire & Catalogue',
       customers: isMobile ? 'Clients' : 'Fichier Clients',
       suppliers: 'Fournisseurs',
       smart_purchase: isMobile ? 'Achats' : 'Approvisionnement & Achats',
+      purchases: isMobile ? 'Achats' : 'Approvisionnement & Achats',
       transactions: isMobile ? 'Ventes' : 'Historique des Ventes',
       reports: isMobile ? 'Rapports' : 'Rapports & Statistiques',
       expenses: isMobile ? 'Dépenses' : 'Dépenses & Charges',
       employees: isMobile ? 'Personnel' : 'Personnel & Pointage',
+      team: isMobile ? 'Équipe' : 'Planning & Équipe',
       settings: isMobile ? 'Paramètres' : 'Paramètres Système',
       catalog_printer: isMobile ? 'Catalogue A4' : 'Impression Catalogue A4',
+      labels: isMobile ? 'Étiquettes' : 'Étiquettes & Codes-Barres',
       label_printer: isMobile ? 'Étiquettes' : 'Étiquettes & Codes-Barres',
       cash_register: isMobile ? 'Caisse & Z' : 'Gestion de Caisse',
+      shifts: isMobile ? 'Clôture' : 'Clôture & Sessions de Caisse',
+      orders: isMobile ? 'Commandes' : 'Commandes en Ligne',
+      returns: isMobile ? 'Retours' : 'Retours & Avoirs Clients',
+      promotions: isMobile ? 'Promos' : 'Promotions & Remises',
+      grns: isMobile ? 'Bons Réception' : 'Bons de Réception (BR)',
+      grn: isMobile ? 'Bons Réception' : 'Bons de Réception (BR)',
+      audit: isMobile ? 'Inventaire' : 'Inventaire Physique',
+      inventory_audit: isMobile ? 'Inventaire' : 'Inventaire Physique',
+      expiry: isMobile ? 'Péremption' : 'Suivi des Péremptions',
+      inventory_settings: isMobile ? 'Classifications' : 'Catégories & Marques',
+      vouchers: isMobile ? 'Bons & Cartes' : 'Cartes Cadeaux & Bons d\'Achat',
+      marketing: isMobile ? 'Affiches' : 'Affiches & Posters Promo',
+      posters: isMobile ? 'Affiches' : 'Affiches & Posters Promo',
+      audit_logs: isMobile ? 'Audit' : 'Journal d\'Audit & Sécurité',
+      camera: isMobile ? 'Caméra' : 'Portail Caméra & Surveillance',
+      sync_studio: isMobile ? 'Synchro Cloud' : 'Studio de Synchronisation Cloud',
+      sync: isMobile ? 'Synchro Cloud' : 'Studio de Synchronisation Cloud',
+      archives: isMobile ? 'Clôture Mois' : 'Archives & Clôture de Mois',
+      help: isMobile ? 'Aide' : 'Confidentialité & Aide',
     };
     return labels[tab] || tab.toUpperCase();
   };
@@ -222,7 +253,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               flushSyncQueueImmediate();
               toast.info("Envoi immédiat des modifications locales vers le Cloud...");
             } else {
-              toast.success("Toutes les données sont parfaitement synchronisées avec le Cloud !");
+              window.dispatchEvent(new CustomEvent('force-full-sync'));
+              toast.info("Actualisation complète du catalogue depuis Supabase...");
             }
           }}
           className={cn(
@@ -302,7 +334,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Bouton Verrouillage Rapide PIN */}
         <button 
           type="button"
-          onClick={() => setIsPinLockOpen(true)}
+          onClick={() => {
+            sessionStorage.setItem('nexus_pos_pin_locked', 'true');
+            setIsPinLockOpen(true);
+          }}
           className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-rose-500 hover:border-rose-500/30 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           title="Verrouiller rapidement la caisse (Code PIN)"
         >
@@ -445,8 +480,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       <PinLockModal 
         isOpen={isPinLockOpen} 
-        onUnlock={() => setIsPinLockOpen(false)} 
-        currentEmployeeName={currentEmployee?.name || profile?.displayName || 'Caissier'} 
+        onUnlock={() => {
+          sessionStorage.removeItem('nexus_pos_pin_locked');
+          setIsPinLockOpen(false);
+        }} 
+        expectedPin={currentEmployee?.pin || currentEmployee?.passwordHash || (currentEmployee as any)?.password_hash || profile?.pin || profile?.passwordHash || profile?.password_hash}
+        currentEmployeeName={currentEmployee?.name || profile?.displayName || 'Caissier'}
+        currentEmployeeEmail={currentEmployee?.email || profile?.email || user?.email || undefined}
       />
       <IOSInstallModal
         isOpen={isIOSInstallModalOpen}

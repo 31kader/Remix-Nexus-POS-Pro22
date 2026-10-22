@@ -1,8 +1,9 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { localDb } from '../services/LocalDatabase';
+import { getLocalValue } from '../lib/local-db';
 import { generateUniqueId } from '../lib/utils';
-import { RolePermissions } from '../types';
+import { RolePermissions, normalizeBatches } from '../types';
 import { DEFAULT_PERMISSIONS } from '../constants';
 
 import { useAuthStore } from '../store/useAuthStore';
@@ -16,6 +17,7 @@ export function useAppPermissionsAndTheme() {
   const profile = useAuthStore(s => s.profile);
   const settings = useCoreStore(s => s.settings);
   const employees = usePeopleStore(s => s.employees);
+  const users = usePeopleStore(s => s.users);
   const attendance = useInventoryStore(s => s.attendance);
 
   const [autoSyncOrders, setAutoSyncOrders] = useState(() => {
@@ -52,27 +54,81 @@ export function useAppPermissionsAndTheme() {
     }
   }, [theme]);
 
-  const permissions = useMemo(() => {
-    if (!profile || !profile.role) return DEFAULT_PERMISSIONS.cashier;
-    return settings.rolePermissions?.[profile.role] || DEFAULT_PERMISSIONS[profile.role as keyof typeof DEFAULT_PERMISSIONS] || DEFAULT_PERMISSIONS.cashier;
-  }, [profile, settings]);
-
   const isOwner = checkIsOwner(user?.email, user?.uid) || checkIsOwner(profile?.email, profile?.uid);
 
-  const canAccess = (permission: keyof RolePermissions) => {
+  const permissions = useMemo(() => {
+    if (isOwner) return DEFAULT_PERMISSIONS.admin;
+    if (!profile || !profile.role) return DEFAULT_PERMISSIONS.cashier;
+    const roleKey = ((profile.role as string) === 'cameraAgent' ? 'camera_agent' : profile.role) as keyof typeof DEFAULT_PERMISSIONS;
+    const baseDefaults = DEFAULT_PERMISSIONS[roleKey] || DEFAULT_PERMISSIONS.cashier;
+    const rawCustom = settings.rolePermissions?.[roleKey] || (settings.rolePermissions as any)?.[profile.role];
+    if (!rawCustom || typeof rawCustom !== 'object') {
+      return baseDefaults;
+    }
+    const normalized: Record<string, boolean> = { ...baseDefaults };
+    for (const [k, v] of Object.entries(rawCustom)) {
+      const camelKey = k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      if (typeof v === 'boolean') {
+        normalized[camelKey] = v;
+      }
+    }
+    if (roleKey === 'admin') {
+      return {
+        ...DEFAULT_PERMISSIONS.admin,
+        ...normalized,
+        canAccessSettings: true,
+        canAccessInventory: true,
+        canAccessSales: true,
+      } as RolePermissions;
+    }
+    return normalized as unknown as RolePermissions;
+  }, [isOwner, profile, settings]);
+
+  const canAccess = useCallback((permission: keyof RolePermissions) => {
     if (isOwner) return true;
     if (!profile || !profile.role) return false;
 
     // 🛡️ Renforcement de sécurité (CWE-863 / CWE-269) : Vérifier l'authenticité stricte du rôle admin
     if (profile.role === 'admin') {
-      const isVerifiedAdmin = isOwner || (user?.email && (user.email === profile.email || user.email === settings?.email));
+      const cleanEmail = (user?.email || profile?.email || '').toLowerCase().trim();
+      const matchedEmp = employees.find(e =>
+        (profile.employeeId && e.id === profile.employeeId) ||
+        (user?.uid && e.id === user.uid) ||
+        (cleanEmail && e.email?.toLowerCase().trim() === cleanEmail)
+      );
+      // Si la fiche employé existe et que son rôle réel n'est pas 'admin', bloquer toute escalade
+      if (matchedEmp && matchedEmp.role !== 'admin') {
+        const empRoleKey = (matchedEmp.role || 'cashier') as keyof typeof DEFAULT_PERMISSIONS;
+        const empPerms = settings.rolePermissions?.[empRoleKey] || DEFAULT_PERMISSIONS[empRoleKey] || DEFAULT_PERMISSIONS.cashier;
+        const snakePerm = permission.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
+        return Boolean(empPerms[permission] ?? (empPerms as any)[snakePerm]);
+      }
+
+      const localUsers = getLocalValue('users') || {};
+      const matchedUserRecord: any = (user?.uid && localUsers[user.uid]) ||
+        Object.values(localUsers).find((u: any) => u && cleanEmail && u.email?.toLowerCase().trim() === cleanEmail) ||
+        (Array.isArray(users) ? users.find((u: any) => u && ((user?.uid && (u.uid === user.uid || u.id === user.uid)) || (cleanEmail && u.email?.toLowerCase().trim() === cleanEmail))) : null);
+
+      if (matchedUserRecord && matchedUserRecord.role && matchedUserRecord.role !== 'admin') {
+        const usrRoleKey = (matchedUserRecord.role || 'cashier') as keyof typeof DEFAULT_PERMISSIONS;
+        const usrPerms = settings.rolePermissions?.[usrRoleKey] || DEFAULT_PERMISSIONS[usrRoleKey] || DEFAULT_PERMISSIONS.cashier;
+        const snakePerm = permission.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
+        return Boolean(usrPerms[permission] ?? (usrPerms as any)[snakePerm]);
+      }
+
+      const isVerifiedAdmin =
+        isOwner ||
+        Boolean(cleanEmail && settings?.email && cleanEmail === settings.email.toLowerCase().trim()) ||
+        (matchedEmp?.role as string) === 'admin' ||
+        matchedUserRecord?.role === 'admin' ||
+        Boolean(user?.uid && (!matchedEmp || (matchedEmp.role as string) === 'admin'));
+
       if (isVerifiedAdmin) return true;
-      // Empêcher l'escalade de privilèges si le rôle admin a été manipulé côté client
       return false;
     }
 
     return !!permissions[permission];
-  };
+  }, [isOwner, profile, user?.email, user?.uid, employees, users, settings, permissions]);
 
   const currentEmployee = employees.find(e => e.email === user?.email);
   const isClockedIn = !!currentEmployee?.isClockedIn;
@@ -130,14 +186,18 @@ export function useAppPermissionsAndTheme() {
   };
 }
 
-export function useProductStats() {
-  const products = useCoreStore(s => s.products);
+const EMPTY_PRODUCTS: any[] = [];
+
+export function useProductStats(skip = false) {
+  const products = useCoreStore(s => (skip ? EMPTY_PRODUCTS : s.products));
 
   const expiringProducts = useMemo(() => {
+    if (skip || !products.length) return EMPTY_PRODUCTS;
     const list: any[] = [];
     products.forEach(p => {
-      if (p.useMultiExpiry && p.batches && p.batches.length > 0) {
-        p.batches.forEach(b => {
+      const batches = normalizeBatches(p.batches);
+      if (p.useMultiExpiry && batches.length > 0) {
+        batches.forEach(b => {
           if (b.stock <= 0 || !b.expirationDate) return;
           const expDate = new Date(b.expirationDate);
           const now = new Date();
@@ -154,11 +214,12 @@ export function useProductStats() {
       }
     });
     return list;
-  }, [products]);
+  }, [products, skip]);
 
   const lowStockProducts = useMemo(() => {
+    if (skip || !products.length) return EMPTY_PRODUCTS;
     return products.filter(p => p.stock <= (p.minStock || 0));
-  }, [products]);
+  }, [products, skip]);
 
   return {
     expiringProducts,

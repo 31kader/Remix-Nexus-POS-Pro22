@@ -92,7 +92,8 @@ export const SyncIndicator = ({
     if (onOpenSyncStudio) {
       onOpenSyncStudio();
     } else {
-      window.dispatchEvent(new CustomEvent('navigate-tab', { detail: 'sync_studio' }));
+      // 🛡️ NAV-01 : Harmonisation avec l'écouteur d'événements global change-tab
+      window.dispatchEvent(new CustomEvent('change-tab', { detail: 'sync_studio' }));
       processSyncQueue();
     }
   };
@@ -142,9 +143,16 @@ export const SyncIndicator = ({
             className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-indigo-200 dark:border-indigo-500/30 p-3 rounded-xl shadow-md flex items-center gap-3 cursor-pointer pointer-events-auto"
           >
             <RefreshCw size={16} className="text-indigo-600 dark:text-indigo-400 animate-spin" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Synchro Cloud ({Math.round(syncInfo?.progress || 50)}%)
-            </span>
+            <div className="flex flex-col text-left">
+              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                Synchro Cloud ({Math.round(syncInfo?.progress ?? 0)}%)
+              </span>
+              {syncInfo?.currentTable && (
+                <span className="text-[8px] text-slate-500 dark:text-slate-400 font-medium">
+                  {syncInfo.currentTable}
+                </span>
+              )}
+            </div>
           </motion.div>
         )}
 

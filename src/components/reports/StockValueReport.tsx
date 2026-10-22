@@ -127,6 +127,7 @@ export const StockValueReport = React.memo(function StockValueReport({
       const cost = Number(p.costPrice || 0);
       const wholesale = Number(p.wholesalePrice || price);
       const resolvedCat = categoryLookup.resolveCategoryId(p);
+      const isBundle = Boolean(p.isBundle);
 
       if (rawStock <= 0) outOfStockCount++;
       else if (rawStock <= minStock) {
@@ -136,15 +137,19 @@ export const StockValueReport = React.memo(function StockValueReport({
         inStockCount++;
       }
 
-      const lineCostVal = positiveStock * cost;
-      const lineWholesaleVal = positiveStock * wholesale;
-      const lineSaleVal = positiveStock * price;
-      const lineProfitVal = positiveStock * (price - cost);
+      // 🛡️ BUG-07 : Les bundles sont des packs virtuels dont la valeur réside
+      // dans leurs composants physiques individuels. Leurs lignes financières sont donc à 0 pour éviter le double comptage comptable.
+      const lineCostVal = isBundle ? 0 : positiveStock * cost;
+      const lineWholesaleVal = isBundle ? 0 : positiveStock * wholesale;
+      const lineSaleVal = isBundle ? 0 : positiveStock * price;
+      const lineProfitVal = isBundle ? 0 : positiveStock * (price - cost);
 
-      totalQty += positiveStock;
-      totalCostVal += lineCostVal;
-      totalWholesaleVal += lineWholesaleVal;
-      totalSaleVal += lineSaleVal;
+      if (!isBundle) {
+        totalQty += positiveStock;
+        totalCostVal += lineCostVal;
+        totalWholesaleVal += lineWholesaleVal;
+        totalSaleVal += lineSaleVal;
+      }
 
       if (!byCategory[resolvedCat.id]) {
         byCategory[resolvedCat.id] = {
@@ -159,7 +164,9 @@ export const StockValueReport = React.memo(function StockValueReport({
         };
       }
       byCategory[resolvedCat.id].productCount += 1;
-      byCategory[resolvedCat.id].qty += positiveStock;
+      if (!isBundle) {
+        byCategory[resolvedCat.id].qty += positiveStock;
+      }
       byCategory[resolvedCat.id].cost += lineCostVal;
       byCategory[resolvedCat.id].wholesale += lineWholesaleVal;
       byCategory[resolvedCat.id].retail += lineSaleVal;
@@ -175,7 +182,8 @@ export const StockValueReport = React.memo(function StockValueReport({
         cost,
         lineCostVal,
         lineSaleVal,
-        lineProfitVal
+        lineProfitVal,
+        isBundle
       };
     });
 

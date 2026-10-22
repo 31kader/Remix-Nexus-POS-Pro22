@@ -27,7 +27,7 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
         
         const parsed = parseFloat(normalized);
         if (!isNaN(parsed) && (isReturnItem || valStr.startsWith('-') ? parsed <= 0 : parsed >= 0)) {
-          setQuantity(item.cartItemId || '', parsed, false);
+          setQuantity(item.cartItemId || item.id, parsed, false);
         }
       }
     };
@@ -40,19 +40,19 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
       if (isReturnItem || normalized.startsWith('-') || parsed < 0) {
         if (isNaN(parsed) || parsed === 0) {
           setLocalVal('-1');
-          setQuantity(item.cartItemId || '', -1, false);
+          setQuantity(item.cartItemId || item.id, -1, false);
         } else {
           const neg = -Math.abs(parsed);
           setLocalVal(neg.toString());
-          setQuantity(item.cartItemId || '', neg, false);
+          setQuantity(item.cartItemId || item.id, neg, false);
         }
       } else {
         if (isNaN(parsed) || parsed <= 0) {
           setLocalVal('1');
-          setQuantity(item.cartItemId || '', 1, false);
+          setQuantity(item.cartItemId || item.id, 1, false);
         } else {
           setLocalVal(parsed.toString());
-          setQuantity(item.cartItemId || '', parsed, false);
+          setQuantity(item.cartItemId || item.id, parsed, false);
         }
       }
     };
@@ -74,6 +74,9 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
       <input
         type="text"
         inputMode="decimal"
+        data-quantity-input="true"
+        data-cart-item-id={item.cartItemId || item.id}
+        data-item-id={item.id}
         ref={ref}
         value={localVal}
         onFocus={(e) => {
@@ -85,7 +88,7 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
         onKeyDown={handleKeyDown}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-transparent border-none outline-none text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500/50 rounded-lg  font-mono"
+        className="w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-transparent border-none outline-none text-slate-900 dark:text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500/50 rounded-lg font-mono"
       />
     );
   }

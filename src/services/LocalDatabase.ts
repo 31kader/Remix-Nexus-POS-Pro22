@@ -88,50 +88,127 @@ const TABLE_TO_IDB_CACHE_KEY: Record<string, string> = {
   brands: 'nexus_brands',
   promotions: 'nexus_promotions',
   users: 'nexus_users',
-  products: 'nexus_products_cache'
+  products: 'nexus_products_cache',
+  employees: 'nexus_employees_cache',
+  shifts: 'nexus_shifts_cache',
+  cash_shifts: 'nexus_shifts_cache',
+  purchaseOrders: 'nexus_purchase_orders_cache',
+  purchase_orders: 'nexus_purchase_orders_cache',
+  advances: 'nexus_advances_cache',
+  vouchers: 'nexus_vouchers_cache',
+  attendance: 'nexus_attendance_cache',
+  audits: 'nexus_audits_cache',
+  shortage_items: 'nexus_shortage_items_cache',
+  shortageItems: 'nexus_shortage_items_cache',
+  custom_replenishment_lists: 'nexus_custom_replenishment_lists_cache',
+  customReplenishmentLists: 'nexus_custom_replenishment_lists_cache'
 };
 
-export function markRecordDeleted(table: string, id: string): void {
-  if (!id || typeof localStorage === 'undefined') return;
+// 🛡️ P1-SYNC-04 : Cache mémoire synchrone adossé à IndexedDB pour les IDs supprimés (sans limite de 1 000)
+const deletedRecordsCache: Record<string, Set<string>> = {};
+
+// 1. Initialisation synchrone immédiate depuis localStorage (migration douce rétrocompatible)
+if (typeof localStorage !== 'undefined') {
   try {
-    const normalized = TABLE_NAME_MAPPINGS[table] || table;
     const raw = JSON.parse(localStorage.getItem(DELETED_IDS_STORAGE_KEY) || '{}');
-    if (!Array.isArray(raw[normalized])) raw[normalized] = [];
-    if (!raw[normalized].includes(id)) {
-      raw[normalized].push(id);
-      if (raw[normalized].length > 1000) {
-        raw[normalized] = raw[normalized].slice(-1000);
-      }
-      localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(raw));
-    }
-    if (table !== normalized) {
-      if (!Array.isArray(raw[table])) raw[table] = [];
-      if (!raw[table].includes(id)) {
-        raw[table].push(id);
-        localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(raw));
+    if (raw && typeof raw === 'object') {
+      for (const [tbl, ids] of Object.entries(raw)) {
+        if (Array.isArray(ids)) {
+          deletedRecordsCache[tbl] = new Set(ids.map(String));
+        }
       }
     }
   } catch (_) {}
 }
 
-export function getDeletedRecordIds(table: string): Set<string> {
-  const result = new Set<string>();
-  if (typeof localStorage === 'undefined') return result;
+// 2. Initialisation asynchrone depuis IndexedDB et fusion continue
+async function initDeletedRecordsFromIDB(): Promise<void> {
   try {
-    const normalized = TABLE_NAME_MAPPINGS[table] || table;
-    const raw = JSON.parse(localStorage.getItem(DELETED_IDS_STORAGE_KEY) || '{}');
-    if (Array.isArray(raw[table])) raw[table].forEach((id: string) => result.add(String(id)));
-    if (Array.isArray(raw[normalized])) raw[normalized].forEach((id: string) => result.add(String(id)));
+    if (typeof indexedDB === 'undefined') return;
+    const idbData = await idbGet<Record<string, string[]>>(DELETED_IDS_STORAGE_KEY);
+    if (idbData && typeof idbData === 'object') {
+      for (const [tbl, ids] of Object.entries(idbData)) {
+        if (!deletedRecordsCache[tbl]) deletedRecordsCache[tbl] = new Set();
+        if (Array.isArray(ids)) {
+          ids.forEach(id => deletedRecordsCache[tbl].add(String(id)));
+        }
+      }
+    }
   } catch (_) {}
+}
+initDeletedRecordsFromIDB().catch(() => {});
+
+let persistDeletedTimeout: any = null;
+function persistDeletedRecordsToIDB(): void {
+  if (typeof indexedDB === 'undefined') return;
+  if (persistDeletedTimeout) clearTimeout(persistDeletedTimeout);
+  persistDeletedTimeout = setTimeout(async () => {
+    try {
+      const serializable: Record<string, string[]> = {};
+      for (const [tbl, set] of Object.entries(deletedRecordsCache)) {
+        serializable[tbl] = Array.from(set);
+      }
+      await idbSet(DELETED_IDS_STORAGE_KEY, serializable);
+    } catch (_) {}
+  }, 100);
+}
+
+export function markRecordDeleted(table: string, id: string): void {
+  if (!id) return;
+  const strId = String(id);
+  const normalized = TABLE_NAME_MAPPINGS[table] || table;
+  
+  if (!deletedRecordsCache[normalized]) deletedRecordsCache[normalized] = new Set();
+  deletedRecordsCache[normalized].add(strId);
+
+  if (table !== normalized) {
+    if (!deletedRecordsCache[table]) deletedRecordsCache[table] = new Set();
+    deletedRecordsCache[table].add(strId);
+  }
+
+  // Miroir rétrocompatible dans localStorage
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const raw: Record<string, string[]> = {};
+      for (const [tbl, set] of Object.entries(deletedRecordsCache)) {
+        raw[tbl] = Array.from(set);
+      }
+      localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(raw));
+    } catch (_) {}
+  }
+
+  persistDeletedRecordsToIDB();
+}
+
+export function getDeletedRecordIds(table: string): Set<string> {
+  const normalized = TABLE_NAME_MAPPINGS[table] || table;
+  const result = new Set<string>();
+  
+  const normSet = deletedRecordsCache[normalized];
+  if (normSet) {
+    normSet.forEach(id => result.add(id));
+  }
+  if (table !== normalized) {
+    const directSet = deletedRecordsCache[table];
+    if (directSet) {
+      directSet.forEach(id => result.add(id));
+    }
+  }
   return result;
 }
 
 // Tables managed directly via Supabase-First (NOT through SyncService queue)
-// online_orders is handled directly in useOrderActions.ts and useOrdersLogic.tsx
-const SUPABASE_FIRST_TABLES = new Set(['onlineOrders', 'online_orders']);
+const SUPABASE_FIRST_TABLES = new Set<string>([]);
+
+// Tables gérées exclusivement en local (IndexedDB) sans persistance distante Supabase
+export const LOCAL_ONLY_TABLES = new Set<string>([]);
 
 const normalizeSyncTable = (table: string): string => {
   return TABLE_NAME_MAPPINGS[table] || table;
+};
+
+export const isLocalOnlyTable = (table: string): boolean => {
+  return LOCAL_ONLY_TABLES.has(table) || LOCAL_ONLY_TABLES.has(normalizeSyncTable(table));
 };
 
 // ⚡ Canal de synchronisation inter-onglets et multi-fenêtres (BroadcastChannel natif 0ms de latence)
@@ -199,8 +276,8 @@ export const localDb = {
       crossTabBc?.postMessage({ type: 'offline-return-created', detail: val });
     }
 
-    // Skip SyncService queue for Supabase-First tables (handled directly)
-    if (!SUPABASE_FIRST_TABLES.has(table)) {
+    // Skip SyncService queue for Supabase-First tables (handled directly) and Local-Only tables
+    if (!SUPABASE_FIRST_TABLES.has(table) && !isLocalOnlyTable(table)) {
       enqueueSync(normalizeSyncTable(table), id || '', 'UPSERT', val);
     }
   },
@@ -214,8 +291,8 @@ export const localDb = {
       triggerObservers(table);
       crossTabBc?.postMessage({ type: 'table-updated', detail: { table } });
       
-      // Skip SyncService queue for Supabase-First tables
-      if (!SUPABASE_FIRST_TABLES.has(table)) {
+      // Skip SyncService queue for Supabase-First tables and Local-Only tables
+      if (!SUPABASE_FIRST_TABLES.has(table) && !isLocalOnlyTable(table)) {
         enqueueSyncBatch(
           Object.entries(records).map(([id, val]) => ({
             table: normalizeSyncTable(table),
@@ -264,9 +341,12 @@ export const localDb = {
       crossTabBc?.postMessage({ type: 'offline-return-created', detail: newValue });
     }
 
-    // Skip SyncService queue for Supabase-First tables (handled directly)
-    if (!SUPABASE_FIRST_TABLES.has(table)) {
-      enqueueSync(normalizeSyncTable(table), id || '', 'UPSERT', newValue);
+    // Skip SyncService queue for Supabase-First tables (handled directly) and Local-Only tables
+    if (!SUPABASE_FIRST_TABLES.has(table) && !isLocalOnlyTable(table)) {
+      const syncPayload = (val && typeof val === 'object' && newValue && typeof newValue === 'object')
+        ? { ...newValue, ...val }
+        : (newValue ?? val);
+      enqueueSync(normalizeSyncTable(table), id || '', 'UPSERT', syncPayload);
     }
   },
 
@@ -292,6 +372,28 @@ export const localDb = {
     crossTabBc?.postMessage({ type: 'table-updated', detail: { table, path } });
   },
 
+  insertLocalOnly: async (pathOrRef: any, value: any): Promise<void> => {
+    let path = typeof pathOrRef === 'string' ? pathOrRef : (pathOrRef.path || pathOrRef);
+    let val = value;
+    if (typeof path === 'string' && !path.includes('/') && val && typeof val === 'object' && val.id) {
+      path = `${path}/${val.id}`;
+    }
+
+    setLocalState(path, val);
+    const parts = path.split('/');
+    const table = parts[0];
+    const id = parts.slice(1).join('/');
+
+    if (CRITICAL_IMMEDIATE_TABLES.has(table)) {
+      await saveStateToStorageImmediate(table);
+    } else {
+      saveStateToStorage(table);
+    }
+    triggerObservers(table);
+    if (id) triggerObservers(path);
+    crossTabBc?.postMessage({ type: 'table-updated', detail: { table, path } });
+  },
+
   push: (pathOrRef: any, value?: any) => {
     const id = generateLocalId();
     const parentPath = typeof pathOrRef === 'string' ? pathOrRef : (pathOrRef.path || pathOrRef);
@@ -300,6 +402,38 @@ export const localDb = {
       localDb.insert(path, value);
     }
     return { key: id, path };
+  },
+
+  insertBatchLocalOnly: async (table: string, records: Record<string, any>): Promise<void> => {
+    try {
+      for (const [id, value] of Object.entries(records)) {
+        setLocalState(`${table}/${id}`, value);
+      }
+      saveStateToStorage(table);
+      triggerObservers(table);
+      crossTabBc?.postMessage({ type: 'table-updated', detail: { table } });
+    } catch (err) {
+      console.warn(`[LocalDatabase] insertBatchLocalOnly error on ${table}:`, err);
+    }
+  },
+
+  deleteLocalOnly: async (pathOrRef: any): Promise<void> => {
+    const path = typeof pathOrRef === 'string' ? pathOrRef : (pathOrRef.path || pathOrRef);
+    removeLocalState(path);
+    const parts = path.split('/');
+    const table = parts[0];
+    const id = parts.slice(1).join('/');
+    if (!id) {
+      replaceTableState(table, {});
+    }
+    if (CRITICAL_IMMEDIATE_TABLES.has(table)) {
+      await saveStateToStorageImmediate(table);
+    } else {
+      saveStateToStorage(table);
+    }
+    triggerObservers(table);
+    if (id) triggerObservers(path);
+    crossTabBc?.postMessage({ type: 'table-updated', detail: { table, path } });
   },
 
   delete: async (pathOrRef: any): Promise<void> => {
@@ -321,6 +455,14 @@ export const localDb = {
           }
         } catch (_) {}
       }
+    } else {
+      replaceTableState(table, {});
+      const cacheKey = TABLE_TO_IDB_CACHE_KEY[table] || TABLE_TO_IDB_CACHE_KEY[normalizeSyncTable(table)];
+      if (cacheKey) {
+        try {
+          await idbSet(cacheKey, []);
+        } catch (_) {}
+      }
     }
 
     if (CRITICAL_IMMEDIATE_TABLES.has(table)) {
@@ -332,13 +474,10 @@ export const localDb = {
     if (id) triggerObservers(path);
     crossTabBc?.postMessage({ type: 'table-updated', detail: { table, path } });
 
-    // Skip SyncService queue for Supabase-First tables (handled directly)
-    if (!SUPABASE_FIRST_TABLES.has(table)) {
+    // Skip SyncService queue for Supabase-First tables, Local-Only tables, or whole-table clear without recordId
+    if (id && !SUPABASE_FIRST_TABLES.has(table) && !isLocalOnlyTable(table)) {
       const targetTable = normalizeSyncTable(table);
-      enqueueSync(targetTable, id || '', 'DELETE', null);
-      if (id && isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-        Promise.resolve(supabase.from(targetTable).delete().eq('id', id)).catch(() => {});
-      }
+      enqueueSync(targetTable, id, 'DELETE', null);
     }
   },
 

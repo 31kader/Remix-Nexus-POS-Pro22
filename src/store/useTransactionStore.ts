@@ -26,16 +26,10 @@ export const useTransactionStore = create<TransactionState>((set) => ({
   activeShift: null,
 
   setTransactions: (update) => set((state) => {
-    let incoming: Transaction[];
-    if (typeof update === 'function') {
-      incoming = update(state.transactions);
-    } else {
-      incoming = update;
-    }
-
-    const merged = [...(state.transactions || []), ...(Array.isArray(incoming) ? incoming : [])];
+    const rawList = typeof update === 'function' ? update(state.transactions || []) : update;
+    const safeList = Array.isArray(rawList) ? rawList : [];
     const uniqueMap = new Map<string, Transaction>();
-    merged.forEach(t => {
+    safeList.forEach(t => {
       if (t && t.id) {
         uniqueMap.set(t.id, t);
       }

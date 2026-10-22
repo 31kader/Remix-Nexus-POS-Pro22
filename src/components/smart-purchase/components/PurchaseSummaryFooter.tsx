@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '../../ui';
 import { Printer, X, RefreshCw, CheckCircle2 } from 'lucide-react';
-import { PurchaseCartItem } from '../../usePurchaseCart';
+import { PurchaseCartItem } from '../../../hooks/usePurchaseCart';
 import { CompanySettings, Supplier } from '../../../types';
 import { printPurchaseOrder } from '../../../services/printService';
 
