@@ -1249,14 +1249,8 @@ export async function processSyncQueue(): Promise<void> {
       const skuToRemoteId = new Map<string, string>();
       const barcodeToRemoteId = new Map<string, string>();
       const validCategories = new Set<string>((remoteCategories || []).map((c: any) => c.id));
+      validCategories.add('uncategorized');
       const validBrands = new Set<string>((remoteBrands || []).map((b: any) => b.id));
-
-      if (!validCategories.has('uncategorized')) {
-        try {
-          await supabase.from('categories').upsert({ id: 'uncategorized', name: 'Général', level: 1 }, { onConflict: 'id' });
-          validCategories.add('uncategorized');
-        } catch (_) {}
-      }
 
       if (remoteProducts && Array.isArray(remoteProducts)) {
         for (const rp of remoteProducts) {
@@ -1468,11 +1462,25 @@ export async function processSyncQueue(): Promise<void> {
         }
       }
 
-      // 2. Traitement des nouveaux produits (INSERT en lots de 15)
+      // 2. Traitement des nouveaux produits (UPSERT natif en lots de 15 avec déduplication stricte par ID)
       const PRODUCT_BATCH_SIZE = 15;
       const chunks: any[][] = [];
-      const withStockList = newProductsToInsert.filter(e => 'stock' in e.payload);
-      const withoutStockList = newProductsToInsert.filter(e => !('stock' in e.payload));
+
+      // Déduplication intra-lot par id pour éliminer tout risque d'erreur Postgres "ON CONFLICT DO UPDATE command cannot affect row a second time"
+      const dedupStockMap = new Map<string, any>();
+      newProductsToInsert.filter(e => 'stock' in e.payload).forEach(e => {
+        const id = e.payload?.id || e.recordId;
+        if (id) dedupStockMap.set(id, e);
+      });
+      const withStockList = Array.from(dedupStockMap.values());
+
+      const dedupNoStockMap = new Map<string, any>();
+      newProductsToInsert.filter(e => !('stock' in e.payload)).forEach(e => {
+        const id = e.payload?.id || e.recordId;
+        if (id) dedupNoStockMap.set(id, e);
+      });
+      const withoutStockList = Array.from(dedupNoStockMap.values());
+
       for (const list of [withStockList, withoutStockList]) {
         for (let i = 0; i < list.length; i += PRODUCT_BATCH_SIZE) chunks.push(list.slice(i, i + PRODUCT_BATCH_SIZE));
       }
@@ -1489,10 +1497,7 @@ export async function processSyncQueue(): Promise<void> {
           return harmonized;
         });
         try {
-          const prodTable = supabase.from('products') as any;
-          const { error } = (typeof prodTable.insert === 'function')
-            ? await prodTable.insert(payloads)
-            : await prodTable.upsert(payloads, { onConflict: 'id' });
+          const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
           if (!error) {
             chunk.forEach(c => {
               completedKeys.add(c.originalKey);
@@ -1504,14 +1509,11 @@ export async function processSyncQueue(): Promise<void> {
               hadNetworkError = true;
               break;
             }
-            // Fallback un par un : si doublon concurrent (409), bascule vers UPDATE direct
+            // Fallback un par un : upsert unitaire résilient avec repli UPDATE
             for (const single of chunk) {
               if (hadNetworkError) break;
               try {
-                const singleProdTable = supabase.from('products') as any;
-                const { error: singleErr, status: singleStatus } = (typeof singleProdTable.insert === 'function')
-                  ? await singleProdTable.insert(single.payload)
-                  : await singleProdTable.upsert(single.payload, { onConflict: 'id' });
+                const { error: singleErr, status: singleStatus } = await supabase.from('products').upsert(single.payload, { onConflict: 'id' });
                 if (!singleErr) {
                   completedKeys.add(single.originalKey);
                   processedSnapshots.set(single.originalKey, { opId: single.opId });

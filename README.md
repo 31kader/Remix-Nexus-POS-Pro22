@@ -1,4 +1,4 @@
-# 🛒 Nexus POS Pro (v1.2.56)
+# 🛒 Nexus POS Pro (v1.2.57)
 
 Système de Point de Vente (POS) moderne, ultra-performant et **offline-first**, conçu pour les commerces de détail et supermarchés. Adapté aux normes comptables et commerciales algériennes (Devise **DA**, TVA **19%**).
 

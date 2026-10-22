@@ -511,7 +511,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         {/* Footer simple */}
         <div className="text-center pt-1">
           <span className="text-[10px] text-zinc-600 font-mono">
-            Nexus POS Pro v1.2.56 • Architecture Offline-First
+            Nexus POS Pro v1.2.57 • Architecture Offline-First
           </span>
         </div>
       </main>

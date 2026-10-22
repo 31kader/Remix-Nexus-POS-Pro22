@@ -86,9 +86,12 @@ export function useProductImport({ products, categories, importPreviewData, setI
       if (cat.name) categoryByNameMap.set(cat.name.toLowerCase().trim(), cat);
     });
 
-    // Ensure default category exists in localDb
+    // Ensure default category exists in localDb (only if not already present)
     try {
-      await localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
+      const existingCat = await localDb.get('categories/uncategorized');
+      if (!existingCat?.val) {
+        await localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
+      }
     } catch (err) {
       console.warn('[Import] Default category check:', err);
     }

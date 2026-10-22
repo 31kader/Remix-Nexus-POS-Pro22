@@ -113,8 +113,13 @@ export function QuickAddProductModal({
         updatedAt: new Date().toISOString()
       };
       
-      // Ensure 'uncategorized' category exists before inserting the product
-      await localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
+      // Ensure 'uncategorized' category exists before inserting the product (if not already cached)
+      try {
+        const existingCat = await localDb.get('categories/uncategorized');
+        if (!existingCat?.val) {
+          await localDb.insert('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
+        }
+      } catch (_) {}
       
       await localDb.insert(`products/${newProduct.id}`, newProduct);
       

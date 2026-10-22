@@ -219,7 +219,7 @@ async function startServer() {
 
     // API routes
     app.get("/api/health", (req, res) => {
-      res.json({ status: "ok", version: "1.2.56", pid: process.pid });
+      res.json({ status: "ok", version: "1.2.57", pid: process.pid });
     });
 
     app.get("/api/network-ip", (req, res) => {
@@ -838,7 +838,7 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 
     // 📦 Route de téléchargement direct du fichier APK Android depuis le PC en Wi-Fi ou redirection GitHub
     app.get('/download/apk', (req, res) => {
-      const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-1.2.56.apk';
+      const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-1.2.57.apk';
       const releaseDirs = [
         path.join(process.cwd(), 'release'),
         path.join(_dirname, '..', 'release'),
