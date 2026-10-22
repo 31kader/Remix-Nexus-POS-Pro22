@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, History, Tag, RefreshCw, Trash2, Plus, FileSpreadsheet, Upload, ShoppingBag, AlertTriangle, Boxes, TrendingUp, AlertCircle, FileText } from 'lucide-react';
+import { Package, History, Tag, RefreshCw, Trash2, Plus, FileSpreadsheet, Upload, Boxes, TrendingUp, AlertCircle, AlertTriangle, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Product, CompanySettings } from '../../types';
 
@@ -31,46 +31,47 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
   const tabs = [
     { id: 'products', label: 'Articles & Stock', icon: Package },
-    { id: 'history', label: 'Historique Mouvements', icon: History },
+    { id: 'history', label: 'Historique', icon: History },
     { id: 'labels', label: 'Étiquettes', icon: Tag },
-    { id: 'catalog', label: 'Catalogue & Affiches', icon: FileText },
-    { id: 'losses', label: 'Pertes & Démarque', icon: Trash2 },
+    { id: 'catalog', label: 'Catalogue', icon: FileText },
+    { id: 'losses', label: 'Pertes', icon: Trash2 },
     { id: 'sync', label: 'Synchronisation', icon: RefreshCw },
   ] as const;
 
   return (
-    <div className="space-y-6">
-      {/* Top Row: Title, Subtitle, and Main Action Buttons */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80  p-6 rounded-xl shadow-sm dark:shadow-xl">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-              <Boxes size={22} />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Gestion des Stocks & Inventaire
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Consultez, ajoutez et suivez vos articles en temps réel
-              </p>
-            </div>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Top Row: Titre compact & Boutons d'actions rapides */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 p-3 sm:p-5 rounded-xl shadow-xs">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Boxes size={20} />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              Gestion des Stocks & Inventaire
+            </h2>
+            <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Consultez, ajoutez et suivez vos articles en temps réel
+            </p>
           </div>
         </div>
 
         {/* Action Buttons Toolbar */}
-        <div className="flex items-center flex-wrap gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           <button
+            type="button"
             onClick={onAddProduct}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg shadow-indigo-600/25 transition-all active:scale-95 cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md shadow-indigo-600/20 transition-all active:scale-95 cursor-pointer"
           >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Nouveau Produit</span>
+            <Plus size={15} strokeWidth={2.5} />
+            <span>Nouveau</span>
+            <span className="hidden sm:inline">Produit</span>
           </button>
 
           <button
+            type="button"
             onClick={onExportExcel}
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+            className="h-9 w-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2.5 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
             title="Exporter le catalogue en fichier Excel / CSV"
           >
             <FileSpreadsheet size={15} />
@@ -78,7 +79,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
           </button>
 
           <label 
-            className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-sm"
+            className="h-9 w-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2.5 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs shrink-0"
             title="Importer des articles depuis un fichier CSV ou Excel"
           >
             <input 
@@ -93,54 +94,54 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
         </div>
       </div>
 
-      {/* KPI Cards (Summary Metrics) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-            <Package size={22} />
+      {/* KPI Cards (Compacts sur smartphone) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3.5">
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 sm:p-3.5 flex items-center gap-2.5 shadow-xs">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Package size={18} />
           </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Produits</span>
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">{totalProducts}</span>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Total Produits</span>
+            <span className="text-base sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">{totalProducts}</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
-            <TrendingUp size={22} />
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 sm:p-3.5 flex items-center gap-2.5 shadow-xs">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+            <TrendingUp size={18} />
           </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Valeur du Stock</span>
-            <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-              {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase">{settings?.currency || 'DZD'}</span>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Valeur Stock</span>
+            <span className="text-sm sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight font-mono">
+              {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} 
+              <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 ml-1 font-sans">{settings?.currency || 'DA'}</span>
             </span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
-            <AlertTriangle size={22} />
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 sm:p-3.5 flex items-center gap-2.5 shadow-xs">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <AlertTriangle size={18} />
           </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Stocks Faibles</span>
-            <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{lowStockCount}</span>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">Stock Faible</span>
+            <span className="text-base sm:text-xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{lowStockCount}</span>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 flex-shrink-0">
-            <AlertCircle size={22} />
+        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 sm:p-3.5 flex items-center gap-2.5 shadow-xs">
+          <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+            <AlertCircle size={18} />
           </div>
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">En Rupture</span>
-            <span className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 tracking-tight">{outOfStockCount}</span>
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">En Rupture</span>
+            <span className="text-base sm:text-xl font-black text-rose-600 dark:text-rose-400 tracking-tight">{outOfStockCount}</span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs Bar */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-x-auto no-scrollbar shadow-inner">
+      {/* Navigation Tabs Bar — Défilement horizontal fluide sur mobile */}
+      <div className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-x-auto no-scrollbar shadow-inner">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = inventoryTab === tab.id;
@@ -149,13 +150,13 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
               key={tab.id}
               onClick={() => setInventoryTab(tab.id as any)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer",
+                "flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0",
                 isActive 
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
+                  ? "bg-indigo-600 text-white shadow-sm" 
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800/50"
               )}
             >
-              <Icon size={15} />
+              <Icon size={14} />
               <span>{tab.label}</span>
             </button>
           );

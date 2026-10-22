@@ -1,5 +1,5 @@
 import React, { memo, useState, useEffect } from 'react';
-import { Store, Truck, ShoppingBag, X, Banknote, CreditCard, Printer } from 'lucide-react';
+import { Store, Truck, ShoppingBag, X, Banknote, CreditCard, Printer, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { CompanySettings, Voucher, Customer, CartItem } from '../../types';
 import { toast } from 'sonner';
@@ -477,6 +477,44 @@ export const PaymentOrderSummary = memo(function PaymentOrderSummary({
                 );
               })}
             </div>
+
+            {/* Options & alertes de crédit/solde pour le client sélectionné */}
+            {selectedCustomer && (() => {
+              const typed = parseFloat(receivedAmount || '');
+              if (!isNaN(typed) && receivedAmount !== '') {
+                if (typed < total) {
+                  const diff = total - typed;
+                  return (
+                    <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-2 text-rose-700 dark:text-rose-400 text-[11px] animate-in fade-in duration-200">
+                      <AlertCircle size={15} className="shrink-0 text-rose-500" />
+                      <div className="leading-tight">
+                        <span className="font-bold">Crédit client (+{diff.toFixed(2)} {currency}) : </span>
+                        <span>Sera imputé à la dette de {selectedCustomer.name}.</span>
+                      </div>
+                    </div>
+                  );
+                } else if (typed > total && setKeepExcessInBalance) {
+                  const diff = typed - total;
+                  return (
+                    <label className="flex items-center gap-2.5 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl cursor-pointer hover:bg-emerald-500/15 transition-all text-[11px] select-none text-emerald-800 dark:text-emerald-300">
+                      <input
+                        type="checkbox"
+                        checked={keepExcessInBalance}
+                        onChange={(e) => setKeepExcessInBalance(e.target.checked)}
+                        className="accent-emerald-600 rounded cursor-pointer w-4 h-4 shrink-0"
+                      />
+                      <div className="leading-tight flex-1">
+                        <span className="font-bold uppercase tracking-wider text-[10px]">Abonder le solde (+{diff.toFixed(2)} {currency})</span>
+                        <div className="text-[9px] opacity-75 font-mono">
+                          Nouveau solde : {((selectedCustomer.balance || 0) + diff).toFixed(2)} {currency}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                }
+              }
+              return null;
+            })()}
           </div>
         )}
 

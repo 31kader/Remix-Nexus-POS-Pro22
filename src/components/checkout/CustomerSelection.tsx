@@ -1,9 +1,7 @@
-import React, { memo, useMemo } from 'react';
-import { Search, X, Gift, Wallet, DollarSign, AlertCircle, CheckCircle2, UserPlus } from 'lucide-react';
+import React, { memo, useMemo, useState } from 'react';
+import { Search, X, Gift, UserPlus, FileText, Check } from 'lucide-react';
 import { Customer, CompanySettings } from '../../types';
-import { cn } from '../../lib/utils';
-import { Button } from '../ui';
-import { CustomerProfile } from '../CustomerProfile';
+import { cn, parseCashierNotes } from '../../lib/utils';
 
 interface CustomerSelectionProps {
   selectedCustomer: Customer | null;
@@ -38,14 +36,12 @@ export const CustomerSelection = memo(function CustomerSelection({
   setUseLoyaltyPoints,
   settings,
   total,
-  receivedAmount,
-  setReceivedAmount,
-  keepExcessInBalance,
-  setKeepExcessInBalance,
-  handleCheckout,
   addCustomerNote,
   setIsPOSCustomerModalOpen
 }: CustomerSelectionProps) {
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [newNote, setNewNote] = useState('');
+
   const filteredCustomerResults = useMemo(() => {
     if (!customerSearch || !customerSearch.trim()) return [];
     const term = customerSearch.trim().toLowerCase();
@@ -59,306 +55,279 @@ export const CustomerSelection = memo(function CustomerSelection({
       .slice(0, 50);
   }, [customers, customerSearch]);
 
+  const existingNotes = useMemo(() => {
+    if (!selectedCustomer) return [];
+    return parseCashierNotes(selectedCustomer.cashierNotes || (selectedCustomer as any)?.cashier_notes);
+  }, [selectedCustomer]);
+
+  const handleSaveNote = () => {
+    const trimmed = newNote.trim();
+    if (trimmed && addCustomerNote) {
+      addCustomerNote(trimmed);
+      setNewNote('');
+      setShowNoteInput(false);
+    }
+  };
+
+  const currency = settings?.currency || 'DA';
+
   return (
-    <div className="space-y-6 p-6 sm:p-5 bg-white dark:bg-black/40 border-b border-slate-200 dark:border-white/5 ring-1 ring-slate-200/50 dark:ring-white/5">
+    <div className="p-3 sm:p-3.5 bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 space-y-2.5">
+      {/* Barre supérieure : Titre et toggle mode gros/détail */}
       <div className="flex items-center justify-between">
-        <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-normal flex items-center gap-2">
-           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs" />
-           Identification Client
-        </h4>
-        <button 
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          Client
+        </span>
+
+        <button
+          type="button"
           onClick={() => setIsWholesale(!isWholesale)}
           className={cn(
-            "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-normal transition-all border shadow-sm active:scale-90",
-            isWholesale ? "bg-indigo-600 text-white border-indigo-400 shadow-xs ring-1 ring-white/20" : "bg-slate-100 dark:bg-black/60 text-slate-600 dark:text-slate-500 border-slate-200 dark:border-white/5 hover:border-slate-300"
+            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border shadow-xs cursor-pointer active:scale-95",
+            isWholesale
+              ? "bg-indigo-600 text-white border-indigo-500 shadow-indigo-600/20"
+              : "bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700"
           )}
+          title="Basculer entre Tarif Détail et Tarif de Gros"
         >
-          {isWholesale ? "MODE GROS ACTIF" : "TARIF DÉTAIL"}
+          {isWholesale ? "Mode Gros Actif" : "Tarif Détail"}
         </button>
       </div>
 
       {selectedCustomer ? (
-        <div className="space-y-6 animate-in slide-in-from-top-2 duration-500">
-          <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm dark:shadow-md space-y-5 relative overflow-hidden group ring-1 ring-slate-200/50 dark:ring-white/5">
-            <div className="absolute top-0 right-0 p-1 opacity-20">
-               <div className="w-32 h-32 bg-indigo-500/10 rounded-full absolute -top-16 -right-16 blur-[40px]" />
+        /* FICHE DU CLIENT SÉLECTIONNÉ — Compacte, claire et ordonnée */
+        <div className="p-3 bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 rounded-xl space-y-2.5 shadow-xs animate-in fade-in duration-200">
+          {/* Ligne 1 : Avatar, Nom, Téléphone et Bouton Désélectionner */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-black text-sm flex items-center justify-center border border-indigo-200 dark:border-indigo-500/30 shrink-0">
+              {(selectedCustomer.name || 'C').charAt(0).toUpperCase()}
             </div>
-            <div className="flex items-center gap-5 relative">
-              <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center font-black border border-indigo-200 dark:border-indigo-500/20 shadow-sm dark:shadow-md text-xl  shadow-inner">
-                {(selectedCustomer.name || 'C').charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-lg font-black text-slate-900 dark:text-white truncate uppercase tracking-tight ">{selectedCustomer.name || 'Client sans nom'}</p>
-                <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400/60 tracking-normal font-mono mt-1">TEL: {selectedCustomer.phone || 'NON RENSEIGNÉ'}</p>
-              </div>
-              <button onClick={() => { setSelectedCustomer(null); setUseLoyaltyPoints(false); }} className="text-slate-400 hover:text-rose-500 p-3 transition-all hover:bg-rose-500/10 rounded-xl active:scale-90 border border-transparent hover:border-rose-500/20 cursor-pointer">
-                <X size={24} />
-              </button>
+
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black text-slate-900 dark:text-white uppercase truncate leading-tight">
+                {selectedCustomer.name || 'Client sans nom'}
+              </p>
+              <p className="text-[10px] font-mono text-slate-500 dark:text-zinc-400 mt-0.5">
+                {selectedCustomer.phone ? `Tél: ${selectedCustomer.phone}` : 'Sans numéro'}
+              </p>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-4 bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/5 shadow-inner group/stat">
-                <div>
-                  <p className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal mb-1">FIDÉLITÉ</p>
-                  <p className="text-base font-black text-amber-500 font-mono tracking-tighter">{selectedCustomer.loyaltyPoints} PTS</p>
-                </div>
-                {selectedCustomer.loyaltyPoints >= 10 && (
-                  <button
-                    onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
-                    className={cn(
-                      "p-2.5 rounded-xl transition-all border active:scale-90 cursor-pointer",
-                      useLoyaltyPoints ? "bg-amber-600 text-white border-amber-400 shadow-xs" : "bg-slate-100 dark:bg-black/60 border-slate-200 dark:border-white/5 text-amber-600 dark:text-amber-500 hover:bg-amber-600 hover:text-white"
-                    )}
-                  >
-                    <Gift size={16} />
-                  </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCustomer(null);
+                setUseLoyaltyPoints(false);
+                setShowNoteInput(false);
+              }}
+              className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+              title="Détacher le client du panier actuel"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Ligne 2 : Badges Solde/Dette et Points Fidélité */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Carte Solde / Dette */}
+            <div className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex flex-col justify-between">
+              <span className="text-[8px] font-black uppercase text-slate-400 dark:text-zinc-500 tracking-wider">
+                {(selectedCustomer.balance || 0) < 0 ? 'Dette' : 'Solde'}
+              </span>
+              <span
+                className={cn(
+                  "text-xs font-black font-mono mt-0.5",
+                  (selectedCustomer.balance || 0) > 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : (selectedCustomer.balance || 0) < 0
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-slate-500 dark:text-zinc-400"
                 )}
+              >
+                {Math.abs(selectedCustomer.balance || 0).toFixed(2)} {currency}
+              </span>
+            </div>
+
+            {/* Carte Fidélité */}
+            <div className="p-2 rounded-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 flex items-center justify-between">
+              <div>
+                <span className="text-[8px] font-black uppercase text-slate-400 dark:text-zinc-500 tracking-wider block">
+                  Fidélité
+                </span>
+                <span className="text-xs font-black font-mono text-amber-600 dark:text-amber-400 mt-0.5 block">
+                  {selectedCustomer.loyaltyPoints || 0} pts
+                </span>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/5 shadow-inner">
-                <div>
-                  <p className="text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal mb-1">
-                    {(selectedCustomer.balance || 0) < 0 ? "DETTE" : "SOLDE"}
-                  </p>
-                  <p className={cn(
-                    "text-base font-black font-mono tracking-tighter",
-                    (selectedCustomer.balance || 0) > 0
-                      ? "text-emerald-500 dark:text-emerald-400"
-                      : (selectedCustomer.balance || 0) < 0
-                        ? "text-rose-500"
-                        : "text-slate-400"
-                  )}>
-                    {Math.abs(selectedCustomer.balance || 0).toFixed(2)}
-                    <span className="text-[9px] ml-1 opacity-60 ">{settings.currency}</span>
-                  </p>
-                </div>
-                {(selectedCustomer.balance || 0) >= total && total > 0 && (
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-xs">
-                    <CheckCircle2 size={16} />
-                  </div>
-                )}
-              </div>
+              {(selectedCustomer.loyaltyPoints || 0) >= 10 && (
+                <button
+                  type="button"
+                  onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                  className={cn(
+                    "px-2 py-1 rounded-md text-[9px] font-black transition-all border cursor-pointer active:scale-95 flex items-center gap-1",
+                    useLoyaltyPoints
+                      ? "bg-amber-600 text-white border-amber-500 shadow-xs"
+                      : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700/60 hover:bg-amber-100"
+                  )}
+                  title={useLoyaltyPoints ? "Désactiver la déduction des points" : "Utiliser les points fidélité"}
+                >
+                  <Gift size={11} />
+                  <span>{useLoyaltyPoints ? 'Actif' : 'Utiliser'}</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Calculateur de Règlement */}
-          {total > 0 && (
-            <div className="p-6 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl space-y-5 relative overflow-hidden text-left shadow-sm dark:shadow-md ring-1 ring-slate-200/50 dark:ring-white/5">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4">
-                <h4 className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal flex items-center gap-2 ">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Terminal de Règlement
-                </h4>
-                {receivedAmount !== '' && (
-                  <button
-                    onClick={() => { setReceivedAmount(''); setKeepExcessInBalance(false); }}
-                    className="text-[8px] font-black text-rose-500/80 hover:text-rose-500 uppercase tracking-normal transition-colors cursor-pointer"
-                  >
-                    ANNULER SAISIE
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className="block text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal ml-1">MONTANT REÇU</label>
-                  <div className="relative group">
-                    <input
-                      type="number"
-                      step="any"
-                      value={receivedAmount}
-                      onChange={(e) => setReceivedAmount(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleCheckout('cash');
-                        }
-                      }}
-                      placeholder={(total || 0).toFixed(2)}
-                      className="w-full bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-xl font-black font-mono rounded-xl pl-4 pr-10 py-4 focus:outline-none focus:border-indigo-500/40 focus:ring-8 focus:ring-indigo-500/5 transition-all text-left placeholder:text-slate-400 dark:placeholder:text-slate-700 shadow-inner group-hover:border-slate-300 dark:group-hover:border-white/20"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-500 dark:text-slate-400 font-black font-mono">{settings.currency}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-right">
-                  <label className="block text-[8px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-normal mr-1">DIFFÉRENTIEL</label>
-                  <div className="w-full bg-white dark:bg-black/30 border border-slate-200 dark:border-white/5 text-slate-900 dark:text-white rounded-xl px-5 py-3.5 font-mono flex items-center justify-end min-h-[60px] shadow-inner">
-                    {(() => {
-                      const typed = parseFloat(receivedAmount);
-                      if (isNaN(typed)) return <span className="text-slate-400 dark:text-slate-700 text-[9px] font-black uppercase tracking-normal">WAITING...</span>;
-                      if (typed > total) {
-                        return (
-                          <div className="flex flex-col text-right">
-                            <span className="text-emerald-500 dark:text-emerald-400 text-xl font-black leading-none tracking-tighter ">
-                              +{(typed - total).toFixed(2)}
-                            </span>
-                            <span className="text-[7.5px] font-black text-emerald-600 dark:text-emerald-500/60 uppercase tracking-normal mt-1.5">À RESTITUER</span>
-                          </div>
-                        );
-                      } else if (typed < total) {
-                        return (
-                          <div className="flex flex-col text-right">
-                            <span className="text-rose-500 text-xl font-black leading-none tracking-tighter ">
-                              -{(total - typed).toFixed(2)}
-                            </span>
-                            <span className="text-[7.5px] font-black text-rose-500/60 uppercase tracking-normal mt-1.5">CRÉDIT CLIENT</span>
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div className="flex flex-col text-right">
-                            <span className="text-indigo-600 dark:text-indigo-400 text-xl font-black leading-none tracking-tighter ">COMPLET</span>
-                          </div>
-                        );
-                      }
-                    })()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Raccourcis de paiement rapides (Dinars Algériens) */}
-              <div className="flex flex-wrap gap-2 pt-2">
-                <button
-                  onClick={() => setReceivedAmount(total.toFixed(2))}
-                  className="px-3.5 py-2 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 font-black text-[9px] uppercase tracking-normal rounded-xl border border-emerald-300 dark:border-emerald-700/60 transition-all shadow-sm active:scale-90 cursor-pointer"
-                >
-                  COMPTE JUSTE
-                </button>
-                {[500, 1000, 2000].map(val => (
-                  <button
-                    key={val}
-                    onClick={() => setReceivedAmount(val.toString())}
-                    className="px-3 py-2 bg-white dark:bg-zinc-900 hover:bg-slate-100 dark:hover:bg-zinc-800 active:scale-95 text-[9px] text-slate-800 dark:text-zinc-200 font-mono font-black rounded-xl border border-slate-200 dark:border-zinc-700 transition-all cursor-pointer shadow-sm"
-                  >
-                    {val} DA
-                  </button>
-                ))}
-                {[500, 1000].map(addVal => {
-                  const currentVal = parseFloat(receivedAmount) || 0;
-                  return (
-                    <button
-                      key={`+${addVal}`}
-                      onClick={() => setReceivedAmount((currentVal + addVal).toString())}
-                      className="px-2.5 py-2 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 active:scale-95 text-[9px] text-slate-700 dark:text-zinc-300 font-mono font-black rounded-xl border border-slate-300 dark:border-zinc-700 transition-all cursor-pointer"
-                    >
-                      +{addVal}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Explications & Options du Crédit */}
-              {(() => {
-                const typed = parseFloat(receivedAmount);
-                if (!isNaN(typed)) {
-                  if (typed < total) {
-                    const diff = total - typed;
-                    return (
-                      <div className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl flex items-start gap-3 ring-1 ring-rose-500/5 animate-in fade-in zoom-in-95 duration-300">
-                        <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black uppercase text-rose-500 tracking-normal">Transaction à Crédit Détectée</p>
-                          <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                            La dette de <span className="font-black text-slate-900 dark:text-white">{diff.toFixed(2)} {settings.currency}</span> sera imputée au compte de <span className="font-black text-indigo-600 dark:text-indigo-400 uppercase ">{selectedCustomer.name}</span>.
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  } else if (typed > total) {
-                    const diff = typed - total;
-                    return (
-                      <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                        <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-3 ring-1 ring-emerald-500/5">
-                          <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-black uppercase text-emerald-500 tracking-normal">Surplus de Règlement</p>
-                            <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                              Un excédent de <span className="font-black text-slate-900 dark:text-white">{diff.toFixed(2)} {settings.currency}</span> a été versé par le client.
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <label className="flex items-center gap-4 cursor-pointer p-4 bg-white dark:bg-black/40 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 hover:border-indigo-500/30 transition-all select-none group shadow-inner">
-                          <input 
-                            type="checkbox"
-                            checked={keepExcessInBalance}
-                            onChange={(e) => setKeepExcessInBalance(e.target.checked)}
-                            className="accent-indigo-500 rounded cursor-pointer w-4 h-4"
-                          />
-                          <div className="text-left flex-1">
-                            <p className="text-[10px] font-black uppercase text-slate-800 dark:text-slate-200 tracking-normal group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">ABONDER LE SOLDE PRÉPAYÉ</p>
-                            <p className="text-[8.5px] text-slate-500 dark:text-slate-400 font-black leading-none mt-1.5 uppercase tracking-tighter ">NOUVEAU SOLDE ESTIMÉ: {((selectedCustomer.balance || 0) + diff).toFixed(2)} {settings.currency}</p>
-                          </div>
-                        </label>
-                      </div>
-                    );
-                  }
-                }
-                return null;
-              })()}
+          {/* Alertes solde suffisant pour régler le ticket */}
+          {(selectedCustomer.balance || 0) >= total && total > 0 && (
+            <div className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg text-[10px] font-bold text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+              <span>✓ Solde prépayé suffisant ({Number(selectedCustomer.balance).toFixed(2)} {currency})</span>
             </div>
           )}
 
-          <CustomerProfile customer={selectedCustomer} onAddNote={addCustomerNote} hideHeader />
-        </div>
-       ) : (
-          <div className="flex gap-3">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 group-focus-within:text-indigo-500 transition-all duration-300" size={18} />
-              <input 
-                type="text"
-                placeholder="RECHERCHE CLIENT ACTIF..."
-                className="w-full pl-12 pr-4 py-4 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 text-[10px] font-black uppercase tracking-normal text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-800 shadow-sm transition-all"
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-              />
-              {customerSearch && (
-                <div className="absolute top-full left-0 right-0 mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-md z-50 max-h-72 overflow-y-auto  no-scrollbar animate-in fade-in slide-in-from-top-4 duration-300">
-                  {filteredCustomerResults.length === 0 ? (
-                    <div className="p-5 text-center text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-normal ">Aucun client correspondant</div>
-                  ) : (
-                    filteredCustomerResults.map((c: Customer) => (
-                        <button
-                          key={c.id}
-                          className="w-full p-4 sm:p-5 text-left hover:bg-indigo-50 dark:hover:bg-indigo-600 hover:text-indigo-900 dark:hover:text-white border-b border-slate-100 dark:border-white/5 flex items-center justify-between transition-all group/item cursor-pointer"
-                          onClick={() => {
-                            setSelectedCustomer(c);
-                            setCustomerSearch('');
-                          }}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center font-black text-slate-600 dark:text-slate-500 border border-slate-200 dark:border-white/5 group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all ">
-                              {String(c?.name || 'C').charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover/item:text-indigo-900 dark:group-hover/item:text-white transition-colors">{c.name}</p>
-                              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-normal mt-0.5 font-mono">{c.phone || 'SANS CONTACT'}</p>
-                            </div>
-                          </div>
-                          {(c.balance || 0) !== 0 && (
-                            <span className={cn(
-                              "text-[10px] font-black font-mono tracking-tighter px-3 py-1 rounded-lg border",
-                              (c.balance || 0) > 0 ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5" : "text-rose-600 dark:text-rose-500 border-rose-500/20 bg-rose-50 dark:bg-rose-500/5"
-                            )}>
-                              {(c.balance || 0).toFixed(2)}
-                            </span>
-                          )}
-                        </button>
-                      ))
-                  )}
-                </div>
-              )}
-            </div>
-            <button 
-              onClick={() => setIsPOSCustomerModalOpen(true)}
-              className="px-5 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-indigo-600 text-slate-600 dark:text-slate-600 hover:text-white transition-all flex items-center justify-center shadow-sm active:scale-90 group relative overflow-hidden cursor-pointer"
-              title="CRÉER NOUVEAU CLIENT"
-            >
-              <UserPlus size={22} className="relative z-10" />
-            </button>
+          {/* Notes caissier compactes */}
+          <div className="pt-0.5">
+            {existingNotes.length > 0 && !showNoteInput && (
+              <div className="mb-1.5 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] text-amber-900 dark:text-amber-300 space-y-0.5">
+                <span className="font-bold flex items-center gap-1 text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                  <FileText size={11} /> Note client :
+                </span>
+                <p className="line-clamp-2">{existingNotes[existingNotes.length - 1]?.text}</p>
+              </div>
+            )}
+
+            {showNoteInput ? (
+              <div className="flex items-center gap-1.5 animate-in fade-in duration-150">
+                <input
+                  type="text"
+                  placeholder="Note pour ce client..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveNote();
+                    }
+                  }}
+                  className="flex-1 h-8 px-2.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs outline-none focus:border-indigo-500 text-slate-900 dark:text-white"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveNote}
+                  className="h-8 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowNoteInput(false); setNewNote(''); }}
+                  className="h-8 px-2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNoteInput(true)}
+                className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <FileText size={11} />
+                <span>+ Ajouter une note</span>
+              </button>
+            )}
           </div>
-       )}
+        </div>
+      ) : (
+        /* ZONE DE RECHERCHE CLIENT — Simple, rapide et compacte */
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 group">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within:text-indigo-500 transition-colors pointer-events-none"
+              size={15}
+            />
+            <input
+              type="text"
+              placeholder="Rechercher client (Nom, Tél)..."
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              className="w-full h-10 pl-9 pr-8 bg-slate-50 hover:bg-slate-100/70 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 rounded-xl outline-none focus:bg-white dark:focus:bg-zinc-900 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 text-xs font-medium text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 transition-all shadow-xs"
+            />
+            {customerSearch && (
+              <button
+                type="button"
+                onClick={() => setCustomerSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 p-0.5 rounded cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
+
+            {/* Menu déroulant des résultats de recherche */}
+            {customerSearch && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-150 divide-y divide-slate-100 dark:divide-zinc-800">
+                {filteredCustomerResults.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-400 dark:text-zinc-500">
+                    Aucun client correspondant
+                  </div>
+                ) : (
+                  filteredCustomerResults.map((c: Customer) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="w-full p-2.5 text-left hover:bg-indigo-50 dark:hover:bg-indigo-950/50 flex items-center justify-between transition-colors cursor-pointer group/item"
+                      onClick={() => {
+                        setSelectedCustomer(c);
+                        setCustomerSearch('');
+                      }}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-bold text-xs flex items-center justify-center shrink-0 group-hover/item:bg-indigo-600 group-hover/item:text-white transition-colors">
+                          {String(c?.name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate uppercase">
+                            {c.name}
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
+                            {c.phone || 'Sans contact'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {(c.balance || 0) !== 0 && (
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border shrink-0 ml-2",
+                            (c.balance || 0) > 0
+                              ? "text-emerald-700 dark:text-emerald-400 border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10"
+                              : "text-rose-700 dark:text-rose-400 border-rose-500/20 bg-rose-50 dark:bg-rose-500/10"
+                          )}
+                        >
+                          {(c.balance || 0).toFixed(2)} {currency}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bouton Créer Nouveau Client */}
+          <button
+            type="button"
+            onClick={() => setIsPOSCustomerModalOpen(true)}
+            className="h-10 w-10 flex items-center justify-center bg-slate-50 hover:bg-indigo-50 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700/80 rounded-xl text-slate-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-xs active:scale-95 shrink-0 cursor-pointer"
+            title="Créer un nouveau client (F6)"
+          >
+            <UserPlus size={17} />
+          </button>
+        </div>
+      )}
     </div>
   );
 });
+
+CustomerSelection.displayName = 'CustomerSelection';

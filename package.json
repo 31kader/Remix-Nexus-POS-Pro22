@@ -3,7 +3,7 @@
   "description": "Système de Caisse et Gestion Commerciale Professionnelle Offline-First",
   "author": "Nexus POS Pro Team",
   "private": true,
-  "version": "1.2.57",
+  "version": "1.2.58",
   "main": "electron/main.js",
   "scripts": {
     "start": "node dist/server.cjs",
@@ -136,9 +136,10 @@
       "artifactName": "NexusPOSPro-${version}-Portable.exe"
     },
     "nsis": {
-      "oneClick": true,
+      "oneClick": false,
       "perMachine": false,
       "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false,
       "artifactName": "NexusPOSPro-${version}-Setup.exe",
       "differentialPackage": false,

@@ -231,13 +231,6 @@ export const Checkout = memo(function Checkout(props: CheckoutProps) {
     } catch {}
   }, [showControlsPanel]);
 
-  // When left sidebar opens (isSidebarOpen = true), automatically close right panel to avoid squishing
-  useEffect(() => {
-    if (props.isSidebarOpen) {
-      setShowControlsPanel(false);
-    }
-  }, [props.isSidebarOpen]);
-
   return (
     <div className="relative h-full flex flex-col w-full bg-slate-100 dark:bg-[#05070a] overflow-hidden">
       {isCustomerDisplayModalOpen && (

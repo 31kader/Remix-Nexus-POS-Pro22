@@ -76,7 +76,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-100 dark:bg-zinc-950">
-          <div className="p-3 space-y-2">
+          <div className="p-2 sm:p-2.5 space-y-1 sm:space-y-1.5">
             {cart.map((item: CartItem, idx: number) => (
               <CartItemRow 
                 key={item.cartItemId || item.id}

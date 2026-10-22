@@ -170,10 +170,6 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
               if (nextState) {
                 window.dispatchEvent(new CustomEvent('nexus-collapse-sidebar'));
               }
-              // Auto-close right panel if opening left favoris on medium screens
-              if (nextState && setShowControlsPanel && window.innerWidth < 1440) {
-                setShowControlsPanel(false);
-              }
             }}
             className={cn(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shadow-sm",
@@ -196,10 +192,6 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
             onClick={() => {
               const nextState = !showControlsPanel;
               setShowControlsPanel(nextState);
-              // Auto-close left favoris if opening right panel on medium screens
-              if (nextState && setShowQuickSelect && window.innerWidth < 1440) {
-                setShowQuickSelect(false);
-              }
             }}
             className={cn(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shadow-sm",

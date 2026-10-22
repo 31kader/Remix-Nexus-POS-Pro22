@@ -56,7 +56,7 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
   const [activeCatalogSubTab, setActiveCatalogSubTab] = useState<'pdf' | 'marketing'>('pdf');
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3.5 sm:space-y-6">
       <InventoryHeader 
         inventoryTab={inventoryTab}
         setInventoryTab={setInventoryTab}
@@ -78,7 +78,7 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
             <LabelPrinter products={products} settings={settings} initialSelectedProductIds={selectedProductIds} />
           </div>
         ) : inventoryTab === 'catalog' ? (
-          <div className="space-y-6">
+          <div className="space-y-3.5 sm:space-y-6">
             <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 w-fit shadow-sm">
               <button
                 onClick={() => setActiveCatalogSubTab('pdf')}
