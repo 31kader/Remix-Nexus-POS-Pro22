@@ -118,6 +118,24 @@ export const CartItemsList: React.FC<Props> = (props) => {
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 shrink-0">
               Qté [F11] ({activeItem.name.slice(0, 14)}{activeItem.name.length > 14 ? '…' : ''}) :
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                const key = activeItem.cartItemId || activeItem.id;
+                const inputEl = (quantityInputRefs?.current && (quantityInputRefs.current[key] || quantityInputRefs.current[activeItem.id])) ||
+                  (document.querySelector(`input[data-cart-item-id="${key}"]`) as HTMLInputElement | null) ||
+                  (document.querySelector(`input[data-item-id="${activeItem.id}"]`) as HTMLInputElement | null);
+                if (inputEl) {
+                  inputEl.focus();
+                  inputEl.select();
+                  try { inputEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+                }
+              }}
+              className="text-xs font-black font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
+              title="Cliquez pour sélectionner et modifier la quantité au clavier [F11]"
+            >
+              {activeItem.quantity}
+            </button>
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
               <button
                 type="button"

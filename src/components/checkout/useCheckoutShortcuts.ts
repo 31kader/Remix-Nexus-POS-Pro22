@@ -113,8 +113,8 @@ export function useCheckoutShortcuts({
             if (typeof setSelectedItemId === 'function') {
               setSelectedItemId(itemId);
             }
-            // Cibler immédiatement et avec multi-passes le champ de saisie de quantité
-            const focusInput = () => {
+
+            const focusInput = (shouldSelect = true) => {
               const refs = quantityInputRefs?.current;
               const inputEl = (refs && (refs[itemId] || refs[targetItem.id])) ||
                 (document.querySelector(`input[data-cart-item-id="${itemId}"]`) as HTMLInputElement | null) ||
@@ -122,16 +122,25 @@ export function useCheckoutShortcuts({
                 (document.querySelector(`input[data-quantity-input="true"]`) as HTMLInputElement | null);
               if (inputEl) {
                 inputEl.focus();
-                inputEl.select();
+                if (shouldSelect) {
+                  inputEl.select();
+                }
                 try {
                   inputEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 } catch (_) {}
+                return true;
               }
+              return false;
             };
 
-            focusInput();
-            setTimeout(focusInput, 30);
-            setTimeout(focusInput, 100);
+            // Focus et sélection immédiate
+            const focused = focusInput(true);
+            // Rattrapage unique si le DOM était en cours de cycle de rendu React
+            if (!focused) {
+              setTimeout(() => {
+                focusInput(true);
+              }, 40);
+            }
             toast.info(`Quantité : ${targetItem.name}`);
           }
         } else {

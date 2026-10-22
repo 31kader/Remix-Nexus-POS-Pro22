@@ -184,7 +184,7 @@ export function useCheckoutLogic(props: CheckoutProps) {
   useEffect(() => {
     // 🛡️ SÉCURISÉ : Remplacement de cart.find par un fallback tableau vide
     const safeCart = Array.isArray(cart) ? cart : [];
-    if (selectedItemId && !safeCart.find(item => item && item.id === selectedItemId)) {
+    if (selectedItemId && !safeCart.find(item => item && (item.id === selectedItemId || item.cartItemId === selectedItemId))) {
       setSelectedItemId(null);
     }
   }, [cart, selectedItemId]);
