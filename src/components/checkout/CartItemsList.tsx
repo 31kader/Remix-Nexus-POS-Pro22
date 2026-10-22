@@ -116,7 +116,7 @@ export const CartItemsList: React.FC<Props> = (props) => {
         <div className="flex-shrink-0 px-3 py-2 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-2 shadow-sm">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-zinc-400 shrink-0">
-              Qté ({activeItem.name.slice(0, 14)}{activeItem.name.length > 14 ? '…' : ''}) :
+              Qté [F11] ({activeItem.name.slice(0, 14)}{activeItem.name.length > 14 ? '…' : ''}) :
             </span>
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
               <button

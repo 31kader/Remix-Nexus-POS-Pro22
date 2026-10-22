@@ -4,6 +4,7 @@ import { CartItem } from '../../types';
 
 interface UseCheckoutShortcutsProps {
   cart: CartItem[];
+  selectedItemId?: string | null;
   searchRef: RefObject<HTMLInputElement | null>;
   setSelectedItemId?: (id: string | null) => void;
   quantityInputRefs?: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
@@ -26,6 +27,7 @@ interface UseCheckoutShortcutsProps {
  */
 export function useCheckoutShortcuts({
   cart,
+  selectedItemId,
   searchRef,
   setSelectedItemId,
   quantityInputRefs,
@@ -101,24 +103,36 @@ export function useCheckoutShortcuts({
         e.preventDefault();
         e.stopPropagation();
         if (safeCart.length > 0) {
-          const lastItem = safeCart[safeCart.length - 1];
-          if (lastItem) {
-            const itemId = lastItem.cartItemId || lastItem.id;
+          // Si un article est déjà sélectionné, cibler celui-ci, sinon le dernier article ajouté
+          const targetItem = (selectedItemId
+            ? safeCart.find(i => (i.cartItemId && i.cartItemId === selectedItemId) || i.id === selectedItemId)
+            : null) || safeCart[safeCart.length - 1];
+
+          if (targetItem) {
+            const itemId = targetItem.cartItemId || targetItem.id;
             if (typeof setSelectedItemId === 'function') {
               setSelectedItemId(itemId);
             }
-            // Cibler immédiatement le champ de saisie de quantité
-            setTimeout(() => {
+            // Cibler immédiatement et avec multi-passes le champ de saisie de quantité
+            const focusInput = () => {
               const refs = quantityInputRefs?.current;
-              const inputEl = (refs && (refs[itemId] || refs[lastItem.id])) ||
+              const inputEl = (refs && (refs[itemId] || refs[targetItem.id])) ||
                 (document.querySelector(`input[data-cart-item-id="${itemId}"]`) as HTMLInputElement | null) ||
+                (document.querySelector(`input[data-item-id="${targetItem.id}"]`) as HTMLInputElement | null) ||
                 (document.querySelector(`input[data-quantity-input="true"]`) as HTMLInputElement | null);
               if (inputEl) {
                 inputEl.focus();
                 inputEl.select();
-                toast.info(`Modification quantité: ${lastItem.name}`);
+                try {
+                  inputEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (_) {}
               }
-            }, 30);
+            };
+
+            focusInput();
+            setTimeout(focusInput, 30);
+            setTimeout(focusInput, 100);
+            toast.info(`Quantité : ${targetItem.name}`);
           }
         } else {
           toast.warning("Le panier est vide");
@@ -151,5 +165,5 @@ export function useCheckoutShortcuts({
     // Capture = true pour intercepter les touches de fonction avant le comportement natif
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [safeCart, searchRef, setSelectedItemId, quantityInputRefs, handleCheckout, setCart, addNewSession]);
+  }, [safeCart, selectedItemId, searchRef, setSelectedItemId, quantityInputRefs, handleCheckout, setCart, addNewSession]);
 }

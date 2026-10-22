@@ -410,6 +410,7 @@ export function useCheckoutLogic(props: CheckoutProps) {
   // Shortcuts keys handler Sub-hook integration
   useCheckoutShortcuts({
     cart, 
+    selectedItemId,
     searchRef, 
     setSelectedItemId, 
     quantityInputRefs, 

@@ -6,6 +6,46 @@ interface QuantityInputProps {
   setQuantity: (cartItemId: string, quantity: number, shouldFocusSearch?: boolean) => void;
 }
 
+/**
+ * Normalise la saisie pour gérer nativement les claviers AZERTY français/algériens
+ * sans forcer l'utilisateur à maintenir Shift ou verrouiller Majuscule.
+ * & -> 1, é -> 2, " -> 3, ' -> 4, ( -> 5, è -> 7, _ -> 8, ç -> 9, à -> 0
+ */
+function normalizeAzertyDigits(rawStr: string, isNegativeAllowed: boolean): string {
+  if (!rawStr) return rawStr;
+  
+  const azertyMap: Record<string, string> = {
+    '&': '1',
+    'é': '2',
+    'É': '2',
+    '"': '3',
+    "'": '4',
+    '(': '5',
+    'è': '7',
+    'È': '7',
+    '_': '8',
+    'ç': '9',
+    'Ç': '9',
+    'à': '0',
+    'À': '0',
+  };
+
+  let out = '';
+  for (let i = 0; i < rawStr.length; i++) {
+    const ch = rawStr[i];
+    if (ch === '-' && i === 0 && isNegativeAllowed) {
+      out += '-';
+    } else if (ch === '-' && i > 0) {
+      out += '6'; // sur AZERTY standard, la touche 6 sans shift produit un tiret '-'
+    } else if (azertyMap[ch] !== undefined) {
+      out += azertyMap[ch];
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputProps>(
   ({ item, setQuantity }, ref) => {
     const [localVal, setLocalVal] = useState<string>(item.quantity.toString());
@@ -19,14 +59,16 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
 
     const isReturnItem = item.quantity < 0;
 
-    const handleChange = (valStr: string) => {
-      const normalized = valStr.replace(',', '.');
+    const handleChange = (rawValStr: string) => {
+      // 1. Conversion AZERTY & normalisation virgule vers point
+      const converted = normalizeAzertyDigits(rawValStr, isReturnItem || rawValStr.startsWith('-'));
+      const normalized = converted.replace(',', '.');
       
-      if (valStr === '' || valStr === '-' || valStr === '.' || valStr === ',' || /^-?\d*[.,]?\d*$/.test(valStr)) {
-        setLocalVal(valStr);
+      if (normalized === '' || normalized === '-' || normalized === '.' || /^-?\d*[.]?\d*$/.test(normalized)) {
+        setLocalVal(normalized);
         
         const parsed = parseFloat(normalized);
-        if (!isNaN(parsed) && (isReturnItem || valStr.startsWith('-') ? parsed <= 0 : parsed >= 0)) {
+        if (!isNaN(parsed) && (isReturnItem || normalized.startsWith('-') ? parsed <= 0 : parsed >= 0)) {
           setQuantity(item.cartItemId || item.id, parsed, false);
         }
       }
@@ -34,7 +76,8 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
 
     const commitValue = () => {
       setIsFocused(false);
-      const normalized = localVal.replace(',', '.');
+      const converted = normalizeAzertyDigits(localVal, isReturnItem || localVal.startsWith('-'));
+      const normalized = converted.replace(',', '.');
       const parsed = parseFloat(normalized);
 
       if (isReturnItem || normalized.startsWith('-') || parsed < 0) {
@@ -67,6 +110,11 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
         e.stopPropagation();
         commitValue();
         (e.target as HTMLInputElement).blur();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setLocalVal(item.quantity.toString());
+        (e.target as HTMLInputElement).blur();
       }
     };
 
@@ -86,9 +134,13 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          (e.target as HTMLInputElement).select();
+        }}
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-transparent border-none outline-none text-slate-900 dark:text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500/50 rounded-lg font-mono"
+        className="qty-input w-24 min-w-[5.5rem] px-1 text-center text-lg font-black bg-white dark:bg-zinc-800/80 border border-slate-300 dark:border-white/10 outline-none text-slate-900 dark:text-white appearance-none m-0 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 rounded-lg font-mono shadow-xs"
+        title="Modifier la quantité [F11]"
       />
     );
   }

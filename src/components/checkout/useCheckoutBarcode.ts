@@ -115,13 +115,23 @@ export function useCheckoutBarcode({
       const target = e.target as HTMLElement | null;
       
       // Si l'utilisateur est dans une boîte modale ou un champ de texte spécifique (hors recherche principale)
-      const isQuantityOrPriceInput = Boolean(target?.classList?.contains?.('qty-input') || target?.classList?.contains?.('price-input'));
+      const isQuantityOrPriceInput = Boolean(
+        target?.classList?.contains?.('qty-input') || 
+        target?.classList?.contains?.('price-input') ||
+        target?.getAttribute?.('data-quantity-input') === 'true' ||
+        target?.getAttribute?.('data-cart-item-id')
+      );
+      const isTextInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA';
       const isModalInput = typeof target?.closest === 'function' && Boolean(target.closest('.modal-content') || target.closest('[role="dialog"]'));
 
       const now = Date.now();
       const diff = now - scannerBuffer.current.lastTime;
       
       if (e.key === 'Enter') {
+        if (isQuantityOrPriceInput || isModalInput) {
+          scannerBuffer.current.text = '';
+          return;
+        }
         if (scannerBuffer.current.text.length >= 2 && diff < 250) {
           // Bloquer immédiatement toute action par défaut (ex: soumission, clic de bouton ou ouverture de menu)
           e.preventDefault();
@@ -134,7 +144,7 @@ export function useCheckoutBarcode({
       } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         // Détection de frappe rapide typique d'une douchette code-barres (< 65ms) ou saisie hors champ texte
         const isFastScan = diff < 65;
-        const isNotInModal = !isModalInput && !isQuantityOrPriceInput;
+        const isNotInModal = !isModalInput && !isQuantityOrPriceInput && (!isTextInput || isFastScan);
 
         if (isFastScan || isNotInModal) {
           if (diff < 120 || scannerBuffer.current.text === '') {
