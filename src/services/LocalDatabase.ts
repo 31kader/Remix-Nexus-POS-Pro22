@@ -201,7 +201,7 @@ export function getDeletedRecordIds(table: string): Set<string> {
 const SUPABASE_FIRST_TABLES = new Set<string>([]);
 
 // Tables gérées exclusivement en local (IndexedDB) sans persistance distante Supabase
-export const LOCAL_ONLY_TABLES = new Set<string>([]);
+export const LOCAL_ONLY_TABLES = new Set<string>(['cart_drafts', 'cartDrafts']);
 
 const normalizeSyncTable = (table: string): string => {
   return TABLE_NAME_MAPPINGS[table] || table;

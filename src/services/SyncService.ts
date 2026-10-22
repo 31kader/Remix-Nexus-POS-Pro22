@@ -57,7 +57,7 @@ export type SyncStatusCallback = (status: {
 const syncStatusListeners: Set<SyncStatusCallback> = new Set();
 
 // Tables gérées exclusivement en local (IndexedDB) sans persistance distante Supabase
-export const LOCAL_ONLY_TABLES = new Set<string>([]);
+export const LOCAL_ONLY_TABLES = new Set<string>(['cart_drafts', 'cartDrafts']);
 
 // Tables protégées par RLS exigeant une session Supabase active (évite le spam 403 Forbidden hors connexion)
 export const ADMIN_RESTRICTED_SYNC_TABLES = new Set<string>(['employees', 'settings', 'audit_logs', 'users']);
@@ -1069,6 +1069,16 @@ export async function processSyncQueue(): Promise<void> {
               continue;
             }
           }
+        }
+
+        if (targetTable === 'cart_drafts' || targetTable === 'cartDrafts') {
+          const parentKey = `${item.table}:${item.recordId || payload.id}`;
+          completedKeys.add(parentKey);
+          if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+          if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+          processedSnapshots.set(parentKey, { opId: item.opId });
+          updateProgress(targetTable);
+          continue;
         }
 
         let res = await supabase.from(targetTable).upsert(payload, { onConflict: 'id' });

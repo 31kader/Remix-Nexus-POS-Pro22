@@ -70,7 +70,7 @@ export function useCheckoutDrafts({
         const hasContent = posSessions.some(s => s.cart && s.cart.length > 0);
         
         if (!hasContent) {
-          await localDb.delete(`cartDrafts/${user.uid}`);
+          await localDb.deleteLocalOnly(`cartDrafts/${user.uid}`);
           return;
         }
 
@@ -82,7 +82,7 @@ export function useCheckoutDrafts({
           })
         }));
 
-        await localDb.insert(`cartDrafts/${user.uid}`, {
+        await localDb.insertLocalOnly(`cartDrafts/${user.uid}`, {
           id: user.uid,
           userId: user.uid,
           sessions: sanitizedSessions,

@@ -3,7 +3,7 @@
   "description": "Système de Caisse et Gestion Commerciale Professionnelle Offline-First",
   "author": "Nexus POS Pro Team",
   "private": true,
-  "version": "1.2.54",
+  "version": "1.2.55",
   "main": "electron/main.js",
   "scripts": {
     "start": "node dist/server.cjs",
