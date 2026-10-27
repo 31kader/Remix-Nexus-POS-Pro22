@@ -36,6 +36,7 @@ import { supabase } from '../supabase';
 import { convertKeysToSnake, preparePayload, TABLE_COLUMNS, TABLE_NAME_MAPPINGS } from '../lib/db-converters';
 import { useCoreStore } from '../store/useCoreStore';
 import { isNetworkOrTimeoutError, notifyNetworkIssue } from './networkErrorHandler';
+import { lanSyncService } from './lanSyncService';
 
 export type SyncAction = 'UPSERT' | 'DELETE';
 
@@ -514,6 +515,12 @@ export function enqueueStockAdjustment(
     newQuantity: options?.newQuantity,
     timestamp: new Date().toISOString()
   });
+
+  // 🟢 Diffusion immédiate en réseau local LAN (Ethernet / Wi-Fi) entre les caisses
+  try {
+    lanSyncService.broadcastStockAdjustment(productId, adjustment, options);
+  } catch (_) {}
+
   if (typeof navigator !== 'undefined' && navigator.onLine) {
     scheduleQueueProcessing(0);
   }
@@ -536,6 +543,11 @@ export function enqueueCustomerBalanceAdjustment(
     deltaPoints,
     ...fallbackData
   });
+
+  // 🟢 Diffusion immédiate en réseau local LAN entre les caisses
+  try {
+    lanSyncService.broadcastCustomerBalance(customerId, deltaBalance, deltaSpent, deltaPoints);
+  } catch (_) {}
 }
 
 /**
@@ -648,6 +660,8 @@ export function sanitizePayloadForSupabase(table: string, payload: any, fallback
 export const TABLE_PRIORITY: Record<string, number> = {
   settings: 0,
   categories: 1,
+  carton_templates: 12,
+  cartonTemplates: 12,
   brands: 2,
   suppliers: 3,
   users: 4,
@@ -1060,6 +1074,32 @@ export async function processSyncQueue(): Promise<void> {
               continue;
             } else if (isAuthOrPermissionError(updateRes.error)) {
               console.warn(`[SyncService] Écriture employees réservée aux administrateurs (401/403). Fiche conservée localement.`);
+              const parentKey = `${item.table}:${item.recordId || payload.id}`;
+              completedKeys.add(parentKey);
+              if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+              if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+              processedSnapshots.set(parentKey, { opId: item.opId });
+              updateProgress(targetTable);
+              continue;
+            }
+          }
+        }
+
+        // Élimination des collisions 409 : UPDATE direct pour les carton_templates existants
+        if ((targetTable === 'carton_templates' || targetTable === 'cartonTemplates') && (payload.id || item.recordId)) {
+          const cartonId = payload.id || item.recordId;
+          let existsOnSupabase = false;
+          try {
+            const { data: existingCarton } = await supabase.from('carton_templates').select('id').eq('id', cartonId).maybeSingle();
+            if (existingCarton?.id) existsOnSupabase = true;
+          } catch (_) {}
+
+          if (existsOnSupabase) {
+            const updatePayload = { ...payload };
+            delete updatePayload.id;
+            delete updatePayload.created_at;
+            const updateRes = await supabase.from('carton_templates').update(updatePayload).eq('id', cartonId);
+            if (!updateRes.error) {
               const parentKey = `${item.table}:${item.recordId || payload.id}`;
               completedKeys.add(parentKey);
               if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
@@ -1839,12 +1879,12 @@ export async function processSyncQueue(): Promise<void> {
                     if (single.payload?.id) {
                       const updatePayload = { ...single.payload };
                       delete updatePayload.id;
+                      delete updatePayload.created_at;
                       if (table === 'products') {
-                        delete updatePayload.created_at;
                         delete updatePayload.stock;
                       }
                       const { error: updErr } = await supabase.from(table).update(updatePayload).eq('id', single.payload.id);
-                      if (!updErr || isTableMissingError(updErr)) {
+                      if (!updErr || isTableMissingError(updErr) || isDuplicateKeyError(updErr)) {
                         markOtherRecordCompleted(table, single);
                       } else if (isAuthOrPermissionError(updErr)) {
                         hadAuthOrPermissionError = true;
@@ -1895,12 +1935,12 @@ export async function processSyncQueue(): Promise<void> {
                     if (single.payload?.id) {
                       const updatePayload = { ...single.payload };
                       delete updatePayload.id;
+                      delete updatePayload.created_at;
                       if (table === 'products') {
-                        delete updatePayload.created_at;
                         delete updatePayload.stock;
                       }
                       const { error: updErr } = await supabase.from(table).update(updatePayload).eq('id', single.payload.id);
-                      if (!updErr || isTableMissingError(updErr)) {
+                      if (!updErr || isTableMissingError(updErr) || isDuplicateKeyError(updErr)) {
                         markOtherRecordCompleted(table, single);
                       }
                     }

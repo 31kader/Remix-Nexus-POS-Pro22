@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Printer, CheckCircle2, X, AlertCircle, ShoppingBag, 
   Upload, Sparkles, RefreshCw, Eye, Brain, FileText, Clock, Search, Camera, Package,
-  ZoomIn, ZoomOut, RotateCw, Maximize2, Columns
+  ZoomIn, ZoomOut, RotateCw, Maximize2, Columns, Smartphone, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { subscribeToCartonIntakes, resolveBarcodeOrCarton, getCartonTemplates, CartonTemplate } from '../../services/cartonIntakeService';
+import { MobileCartonReception } from '../mobile/MobileCartonReception';
 import { Card, Button, SafeImage } from '../ui';
 import { Product, Supplier, CompanySettings } from '../../types';
 import { PurchaseCartItem } from '../../hooks/usePurchaseCart';
@@ -40,6 +43,7 @@ interface SubTabNewPurchaseProps {
   setSearch: (v: string) => void;
   setIsPurchaseScannerOpen: (v: boolean) => void;
   filteredProducts: Product[];
+  cartonTemplates?: CartonTemplate[];
   addToCart: (p: any) => void;
   settings: CompanySettings;
   selectedSupplierId: string;
@@ -84,7 +88,7 @@ export function SubTabNewPurchase({
   setEditingProduct, setIsProductModalOpen, fileInputRef, handleFileChange, isScanning,
   isOfflineScanning, processFile, processFileOffline, offlineScanProgress, showMockOption,
   file, simulateInvoiceScanning, searchInputRef, search, setSearch, setIsPurchaseScannerOpen,
-  filteredProducts, addToCart, settings, selectedSupplierId, setSelectedSupplierId, suppliers,
+  filteredProducts, cartonTemplates: cartonTemplatesProp = [], addToCart, settings, selectedSupplierId, setSelectedSupplierId, suppliers,
   setIsQuickSupplierModalOpen, purchaseStatus, setPurchaseStatus, rawOcrText, scannedImageUrl, setIsOcrInspectorOpen,
   detectedOcrType, invoiceNumber, setInvoiceNumber, receptionDate, setReceptionDate,
   cart, products, openQuickCreateModal, setLinkingItem, setIsLinkModalOpen,
@@ -98,6 +102,113 @@ export function SubTabNewPurchase({
   const [zoomLevel, setZoomLevel] = useState<number>(150);
   const [rotation, setRotation] = useState<number>(0);
   const [highContrast, setHighContrast] = useState<boolean>(false);
+  const [isCartonMobileModalOpen, setIsCartonMobileModalOpen] = useState<boolean>(false);
+  const [isDirectIntakeOpen, setIsDirectIntakeOpen] = useState<boolean>(false);
+  const [lanIp, setLanIp] = useState<string>('');
+
+  useEffect(() => {
+    fetch('/api/network-ip')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.ip) setLanIp(data.ip);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToCartonIntakes((item) => {
+      addToCart({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.totalUnits,
+        costPrice: item.unitCostPrice,
+        cartonCount: item.cartonCount,
+        unitsPerCarton: item.unitsPerCarton,
+        cartonCostPrice: item.cartonCostPrice,
+        cartonPhotoUrl: item.cartonPhotoUrl,
+        imageUrl: item.cartonPhotoUrl
+      });
+      toast.success(`📦 Carton reçu du mobile : ${item.productName} (${item.cartonCount} cartons = ${item.totalUnits} pcs) ajouté au panier !`);
+    });
+    return () => unsubscribe();
+  }, [addToCart]);
+
+  const [localCartonTemplates, setLocalCartonTemplates] = useState<CartonTemplate[]>([]);
+  useEffect(() => {
+    let isMounted = true;
+    getCartonTemplates().then(list => {
+      if (isMounted && Array.isArray(list)) setLocalCartonTemplates(list);
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const effectiveCartonTemplates = cartonTemplatesProp && cartonTemplatesProp.length > 0
+    ? cartonTemplatesProp
+    : localCartonTemplates;
+
+  const handleExecuteScan = React.useCallback((rawCode: string): boolean => {
+    if (!rawCode || !rawCode.trim()) return false;
+    const res = resolveBarcodeOrCarton(rawCode, products, effectiveCartonTemplates);
+    if (res?.type === 'carton') {
+      addToCart({
+        productId: res.product.id,
+        productName: res.product.name,
+        cartonCount: res.cartonCount,
+        unitsPerCarton: res.unitsPerCarton,
+        cartonCostPrice: res.cartonCostPrice,
+        costPrice: res.unitCostPrice,
+        cartonPhotoUrl: res.cartonPhotoUrl,
+        imageUrl: res.cartonPhotoUrl || res.product.imageUrl
+      });
+      setSearch('');
+      toast.success(`📦 Carton ajouté : ${res.product.name} (${res.cartonCount} ct × ${res.unitsPerCarton} = ${res.cartonCount * res.unitsPerCarton} pcs)`);
+      return true;
+    } else if (res?.type === 'product') {
+      addToCart({ ...res.product, quantity: res.multiplier || 1 });
+      setSearch('');
+      toast.success(`Produit ajouté : ${res.product.name}`);
+      return true;
+    }
+    return false;
+  }, [products, effectiveCartonTemplates, addToCart, setSearch]);
+
+  const scannerBuffer = React.useRef<{ text: string; lastTime: number }>({ text: '', lastTime: 0 });
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target === searchInputRef.current) return;
+      const isInput = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA';
+      if (isInput && (target?.getAttribute('type') === 'number' || target?.classList.contains('qty-input') || target?.classList.contains('price-input'))) {
+        return;
+      }
+
+      const now = Date.now();
+      const diff = now - scannerBuffer.current.lastTime;
+      if (diff > 150) {
+        scannerBuffer.current.text = '';
+      }
+      scannerBuffer.current.lastTime = now;
+
+      if (e.key === 'Enter') {
+        if (scannerBuffer.current.text.length >= 3) {
+          e.preventDefault();
+          e.stopPropagation();
+          const scanned = scannerBuffer.current.text.trim();
+          scannerBuffer.current.text = '';
+          const handled = handleExecuteScan(scanned);
+          if (!handled) {
+            toast.error(`Aucun produit ni carton trouvé pour : ${scanned}`);
+          }
+        }
+      } else if (e.key.length === 1) {
+        scannerBuffer.current.text += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, [handleExecuteScan, searchInputRef]);
 
   useEffect(() => {
     if (scannedImageUrl) {
@@ -149,6 +260,15 @@ export function SubTabNewPurchase({
                   >
                     <FileText size={12} className={cn((mode === 'scan' && scanMethod === 'ocr') ? "text-emerald-300" : "")} />
                     📂 Importer Fichier (Excel, CSV, PDF)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setIsCartonMobileModalOpen(true)} 
+                    className="px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 focus:outline-none bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30"
+                    title="Connecter un smartphone Android pour photographier les cartons physiques et approvisionner directement"
+                  >
+                    <Package size={13} className="text-amber-400" />
+                    <span>📱 Agent Mobile (Réception Cartons)</span>
                   </button>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -240,19 +360,14 @@ export function SubTabNewPurchase({
                             e.preventDefault();
                             e.stopPropagation();
                             if (val.trim() !== '') {
-                              const exactProduct = products.find(p => 
-                                (p.barcode && p.barcode.trim().toLowerCase() === val.trim().toLowerCase()) ||
-                                (p.sku && p.sku.trim().toLowerCase() === val.trim().toLowerCase())
-                              );
-                              if (exactProduct) {
-                                addToCart(exactProduct);
-                                setSearch('');
-                                toast.success(`Produit ajouté : ${exactProduct.name}`);
-                              } else if (filteredProducts.length > 0) {
-                                addToCart(filteredProducts[0]);
-                                setSearch('');
-                              } else {
-                                toast.error(`Aucun produit trouvé pour : ${val}`);
+                              const handled = handleExecuteScan(val);
+                              if (!handled) {
+                                if (filteredProducts.length > 0) {
+                                  addToCart(filteredProducts[0]);
+                                  setSearch('');
+                                } else {
+                                  toast.error(`Aucun produit ni carton trouvé pour : ${val}`);
+                                }
                               }
                               
                               setTimeout(() => {
@@ -280,37 +395,78 @@ export function SubTabNewPurchase({
                             exit={{ opacity: 0, y: 10 }}
                             className="absolute z-[100] left-0 right-0 mt-2 bg-industrial-950 border border-industrial-700 rounded-xl shadow-md overflow-hidden max-h-80 overflow-y-auto"
                           >
-                            {filteredProducts.map(p => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  addToCart(p);
-                                  setSearch('');
-                                }}
-                                className="w-full flex items-center gap-4 p-4 hover:bg-industrial-800 transition-colors border-b border-industrial-800 last:border-0 text-left group"
-                              >
-                                  <div className="w-12 h-12 rounded-lg bg-industrial-900 border border-industrial-800 flex items-center justify-center overflow-hidden">
-                                    {(() => {
-                                      const imgSource = p.imageUrl || (p.imageUrls && p.imageUrls[0]) || p.image || '';
-                                      return imgSource ? (
-                                        <SafeImage 
-                                          src={imgSource} 
-                                          className="w-full h-full object-cover" 
-                                          fallback={<Package size={20} className="text-industrial-600"/>}
-                                        />
-                                      ) : <Package size={20} className="text-industrial-600"/>;
-                                    })()}
+                            {filteredProducts.map(p => {
+                              const cartonTpl = effectiveCartonTemplates.find(t => t.productId === p.id);
+                              return (
+                                <div
+                                  key={p.id}
+                                  className="w-full flex items-center gap-4 p-3.5 hover:bg-industrial-800 transition-colors border-b border-industrial-800 last:border-0 text-left group"
+                                >
+                                  <div 
+                                    className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+                                    onClick={() => {
+                                      addToCart(p);
+                                      setSearch('');
+                                    }}
+                                  >
+                                    <div className="w-12 h-12 rounded-lg bg-industrial-900 border border-industrial-800 flex items-center justify-center overflow-hidden shrink-0">
+                                      {(() => {
+                                        const imgSource = (cartonTpl && cartonTpl.cartonPhotoUrl) || p.imageUrl || (p.imageUrls && p.imageUrls[0]) || p.image || '';
+                                        return imgSource ? (
+                                          <SafeImage 
+                                            src={imgSource} 
+                                            className="w-full h-full object-cover" 
+                                            fallback={<Package size={20} className="text-industrial-600"/>}
+                                          />
+                                        ) : <Package size={20} className="text-industrial-600"/>;
+                                      })()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-black text-white uppercase truncate tracking-tight group-hover:text-indigo-400 transition-colors">{p.name}</p>
+                                        {cartonTpl && (
+                                          <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                            📦 Carton ({cartonTpl.unitsPerCarton} pcs)
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[10px] font-mono text-industrial-500 uppercase tracking-widest">
+                                        {p.sku || p.id} {cartonTpl?.barcode ? `• Code-barres Carton: ${cartonTpl.barcode}` : (p.barcode ? `• ${p.barcode}` : '')}
+                                      </p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="font-black text-indigo-400 font-mono text-xs">{Number(p.costPrice ?? p.price ?? 0).toFixed(2)} {settings?.currency || 'DA'}</p>
+                                      <p className="text-[10px] font-black text-industrial-600 uppercase">Stock: {p.stock ?? 0}</p>
+                                    </div>
                                   </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-black text-white uppercase truncate tracking-tight group-hover:text-indigo-400 transition-colors">{p.name}</p>
-                                  <p className="text-[10px] font-mono text-industrial-500 uppercase tracking-widest">{p.sku || p.id}</p>
+
+                                  {cartonTpl && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        addToCart({
+                                          productId: p.id,
+                                          productName: p.name,
+                                          cartonCount: 1,
+                                          unitsPerCarton: cartonTpl.unitsPerCarton,
+                                          cartonCostPrice: cartonTpl.cartonCostPrice,
+                                          costPrice: cartonTpl.unitCostPrice || p.costPrice || 0,
+                                          cartonPhotoUrl: cartonTpl.cartonPhotoUrl,
+                                          imageUrl: cartonTpl.cartonPhotoUrl || p.imageUrl
+                                        });
+                                        setSearch('');
+                                        toast.success(`📦 1 Carton ajouté : ${p.name} (${cartonTpl.unitsPerCarton} pcs)`);
+                                      }}
+                                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
+                                      title="Ajouter directement sous forme de Carton complet"
+                                    >
+                                      📦 +1 Carton
+                                    </button>
+                                  )}
                                 </div>
-                                <div className="text-right">
-                                  <p className="font-black text-indigo-400 font-mono text-xs">{Number(p.costPrice ?? p.price ?? 0).toFixed(2)} {settings?.currency || 'DA'}</p>
-                                  <p className="text-[10px] font-black text-industrial-600 uppercase">Stock: {p.stock ?? 0}</p>
-                                </div>
-                              </button>
-                            ))}
+                              );
+                            })}
                           </motion.div>
                         )}
                         {search && filteredProducts.length === 0 && (
@@ -556,6 +712,108 @@ export function SubTabNewPurchase({
               />
             )}
           </Card>
-        </div>
+
+        {/* Modale QR Code Agent Mobile (Réception Cartons) */}
+        {isCartonMobileModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="relative max-w-md w-full bg-industrial-900 border border-industrial-700 rounded-2xl overflow-hidden shadow-2xl p-6 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-industrial-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center">
+                    <Smartphone size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                      Agent Mobile : Réception Cartons
+                    </h3>
+                    <p className="text-[11px] text-industrial-400">
+                      Application smartphone Android pour le dépôt
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCartonMobileModalOpen(false)}
+                  className="text-industrial-400 hover:text-white p-1 rounded-lg hover:bg-industrial-800 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* QR Code */}
+              <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center mx-auto shadow-inner w-56 h-56">
+                <QRCodeSVG
+                  value={`http://${lanIp || (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1')}:${typeof window !== 'undefined' ? (window.location.port || '3000') : '3000'}/#carton-reception`}
+                  size={192}
+                  level="M"
+                  includeMargin={true}
+                />
+              </div>
+
+              {/* URL & Instructions */}
+              <div className="space-y-2 text-center">
+                <p className="text-xs text-industrial-300 font-medium">
+                  Scannez ce QR Code avec l'appareil photo du smartphone Android de l'agent :
+                </p>
+                <div className="p-2 rounded-lg bg-industrial-950 border border-industrial-800 text-[11px] font-mono text-amber-400 select-all break-all">
+                  {`http://${lanIp || (typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1')}:${typeof window !== 'undefined' ? (window.location.port || '3000') : '3000'}/#carton-reception`}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-industrial-950/70 border border-industrial-800/80 space-y-1.5 text-[11px] text-industrial-400">
+                <p className="flex items-center gap-1.5 text-industrial-200 font-bold">
+                  <CheckCircle2 size={13} className="text-amber-400 shrink-0" />
+                  1. Aucun scan de code-barres requis
+                </p>
+                <p className="flex items-center gap-1.5 text-industrial-200 font-bold">
+                  <CheckCircle2 size={13} className="text-amber-400 shrink-0" />
+                  2. L'agent prend la photo du carton physique (12 pcs)
+                </p>
+                <p className="flex items-center gap-1.5 text-industrial-200 font-bold">
+                  <CheckCircle2 size={13} className="text-amber-400 shrink-0" />
+                  3. Le produit et son prix sortent directement dans ce panier !
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCartonMobileModalOpen(false);
+                    setIsDirectIntakeOpen(true);
+                  }}
+                  className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-industrial-950 font-black text-xs uppercase tracking-wider transition-all"
+                >
+                  Tester sur cet écran
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCartonMobileModalOpen(false)}
+                  className="py-2.5 px-4 rounded-xl bg-industrial-800 hover:bg-industrial-700 text-white font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de test direct Réception Cartons */}
+        {isDirectIntakeOpen && (
+          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+            <div className="relative max-w-lg w-full max-h-[92vh] overflow-y-auto rounded-3xl bg-industrial-950 border border-industrial-700 shadow-2xl">
+              <MobileCartonReception
+                products={products}
+                suppliers={suppliers}
+                onBackToPos={() => setIsDirectIntakeOpen(false)}
+                onAddToCartDirectly={(item) => {
+                  addToCart(item);
+                  setIsDirectIntakeOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
   );
 }

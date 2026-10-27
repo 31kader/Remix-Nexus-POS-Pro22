@@ -26,6 +26,7 @@ import {
   PurchaseReceiptStatusFilter,
   PurchaseSortOption
 } from './purchaseHelpers';
+import { getCartonTemplates, resolveBarcodeOrCarton, CartonTemplate } from '../../services/cartonIntakeService';
 
 interface UseSmartPurchaseLogicProps {
   products: Product[];
@@ -86,6 +87,17 @@ export function useSmartPurchaseLogic({
   const [isPurchaseScannerOpen, setIsPurchaseScannerOpen] = useState(false);
   const [mode, setMode] = useState<'manual' | 'scan'>(draft?.mode || 'manual');
   const [scanMethod, setScanMethod] = useState<'ai' | 'ocr'>(draft?.scanMethod || 'ai');
+  const [cartonTemplates, setCartonTemplates] = useState<CartonTemplate[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    getCartonTemplates().then(list => {
+      if (isMounted && Array.isArray(list)) {
+        setCartonTemplates(list);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Scanner sub-hook integration
   const scanner = useSmartPurchaseScanner({
@@ -337,20 +349,52 @@ export function useSmartPurchaseLogic({
   };
 
   const filteredProducts = useMemo(() => {
-    return filterProducts(products, deferredSearch);
-  }, [deferredSearch, products]);
+    const base = filterProducts(products, deferredSearch);
+    if (!deferredSearch || deferredSearch.trim().length === 0) return base;
+
+    const cleanSearch = deferredSearch.trim().toLowerCase();
+    const matchedCartons = cartonTemplates.filter(t => {
+      const b = (t.barcode || '').toLowerCase();
+      const s = (t.sku || '').toLowerCase();
+      const pb = (t.productBarcode || '').toLowerCase();
+      const name = (t.productName || '').toLowerCase();
+      return b.includes(cleanSearch) || s.includes(cleanSearch) || pb.includes(cleanSearch) || name.includes(cleanSearch);
+    });
+
+    if (matchedCartons.length > 0) {
+      const extraProds: Product[] = [];
+      matchedCartons.forEach(t => {
+        const found = products.find(p => p.id === t.productId);
+        if (found && !base.some(b => b.id === found.id) && !extraProds.some(e => e.id === found.id)) {
+          extraProds.push(found);
+        }
+      });
+      return [...base, ...extraProds];
+    }
+
+    return base;
+  }, [deferredSearch, products, cartonTemplates]);
 
   const handlePurchaseBarcodeScan = (barcode: string) => {
-    const foundProduct = products.find((p: Product) => 
-      (p.barcode && p.barcode.trim() === barcode.trim()) ||
-      (p.sku && p.sku.trim() === barcode.trim())
-    );
+    const res = resolveBarcodeOrCarton(barcode, products, cartonTemplates);
 
-    if (foundProduct) {
-      addToCart(foundProduct);
-      toast.success(`Produit ajouté : ${foundProduct.name}`);
+    if (res?.type === 'carton') {
+      addToCart({
+        productId: res.product.id,
+        productName: res.product.name,
+        cartonCount: res.cartonCount,
+        unitsPerCarton: res.unitsPerCarton,
+        cartonCostPrice: res.cartonCostPrice,
+        costPrice: res.unitCostPrice,
+        cartonPhotoUrl: res.cartonPhotoUrl,
+        imageUrl: res.cartonPhotoUrl || res.product.imageUrl
+      });
+      toast.success(`📦 Carton ajouté : ${res.product.name} (${res.cartonCount} ct × ${res.unitsPerCarton} = ${res.cartonCount * res.unitsPerCarton} pcs)`);
+    } else if (res?.type === 'product') {
+      addToCart({ ...res.product, quantity: res.multiplier || 1 });
+      toast.success(`Produit ajouté : ${res.product.name}`);
     } else {
-      toast.error(`Aucun produit trouvé avec le code-barres : ${barcode}`);
+      toast.error(`Aucun produit ni carton trouvé avec le code-barres : ${barcode}`);
     }
     setIsPurchaseScannerOpen(false);
   };
@@ -516,7 +560,7 @@ export function useSmartPurchaseLogic({
     quickSupplierData, setQuickSupplierData,
     
     // Derived
-    filteredProducts, filteredPurchases,
+    filteredProducts, filteredPurchases, cartonTemplates,
     
     // Refs
     fileInputRef, searchInputRef, quantityInputRefs,
