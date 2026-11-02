@@ -1,6 +1,7 @@
-import React from 'react';
-import { Package, Trash2, RefreshCw, Plus, Camera, ShoppingCart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Package, Trash2, RefreshCw, Plus, Camera, ShoppingCart, Sparkles } from 'lucide-react';
 import { SafeImage } from '../ui';
+import { ImageEnhancerModal } from '../image-enhancer';
 
 interface ProductMediaSectionProps {
   formData: any;
@@ -17,37 +18,58 @@ export function ProductMediaSection({
   isUploadingImage,
   handleImageUpload
 }: ProductMediaSectionProps) {
+  const [editingImageIdx, setEditingImageIdx] = useState<number | null>(null);
+
+  const handleApplyEnhancement = (res: any) => {
+    if (editingImageIdx === null) return;
+    const newUrls = [...(formData.imageUrls || [])];
+    newUrls[editingImageIdx] = res.previewUrl || res.dataUrl;
+    setFormData((curr: any) => ({
+      ...curr,
+      imageUrls: newUrls,
+      imageUrl: newUrls[0] || ''
+    }));
+  };
+
   return (
-    <div className="space-y-8 bg-black/40 p-5 rounded-xl border border-white/5 shadow-md ring-1 ring-white/5 relative overflow-hidden">
+    <div className="space-y-6 bg-black/40 p-5 rounded-xl border border-white/5 shadow-md ring-1 ring-white/5 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
 
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-3">
-          <Camera size={14} className="text-indigo-400" /> GALERIE MÉDIA / ASSETS (MAX 5)
+        <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal ml-1 flex items-center gap-3">
+          <Camera size={14} className="text-indigo-400" /> GALERIE MÉDIA & ASSETS (MAX 5)
         </label>
-        <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">{formData.imageUrls.length} / 5</span>
+        <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">{formData.imageUrls?.length || 0} / 5</span>
       </div>
 
       <div className="flex flex-wrap gap-6">
-        {formData.imageUrls.map((url: string, idx: number) => (
+        {(formData.imageUrls || []).map((url: string, idx: number) => (
           <div key={`product-img-${idx}`} className="relative group w-28 h-28 sm:w-36 sm:h-36 rounded-xl bg-black/60 border border-white/10 overflow-hidden shadow-md transition-all duration-500 hover:border-indigo-500/50 ring-1 ring-white/5">
             <SafeImage 
               src={url} 
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               fallback={<Package size={32} className="text-slate-800" />}
             />
-            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 ">
+            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingImageIdx(idx)}
+                className="p-3 bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-90 shadow-md cursor-pointer"
+                title="DÉPIXÉLISER & VECTORISER (HD)"
+              >
+                <Sparkles size={18} />
+              </button>
               <button
                 type="button"
                 onClick={() => removeImage(idx)}
-                className="p-4 bg-rose-600/20 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-90 shadow-md"
+                className="p-3 bg-rose-600/20 text-rose-500 border border-rose-500/20 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-90 shadow-md cursor-pointer"
                 title="SUPPRIMER IMAGE"
               >
-                <Trash2 size={22} />
+                <Trash2 size={18} />
               </button>
             </div>
             {idx === 0 && (
-              <div className="absolute top-3 left-3 bg-indigo-600 text-white text-[7px] font-black px-2.5 py-1 rounded-lg uppercase tracking-normal shadow-md border border-indigo-400 ring-1 ring-white/20 ">
+              <div className="absolute top-3 left-3 bg-indigo-600 text-white text-[7px] font-black px-2.5 py-1 rounded-lg uppercase tracking-normal shadow-md border border-indigo-400 ring-1 ring-white/20">
                 PRIMARY
               </div>
             )}
@@ -57,16 +79,16 @@ export function ProductMediaSection({
         {isUploadingImage && (
           <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl bg-indigo-600/5 border-2 border-dashed border-indigo-500/30 flex flex-col items-center justify-center animate-pulse text-indigo-400 shadow-inner">
             <RefreshCw size={28} className="animate-spin mb-3" />
-            <span className="text-[8px] font-black uppercase tracking-normal text-center px-4 leading-tight ">ENCRYPTED UPLOAD...</span>
+            <span className="text-[8px] font-black uppercase tracking-normal text-center px-4 leading-tight">OPTIMISATION WEB...</span>
           </div>
         )}
         
-        {formData.imageUrls.length < 5 && !isUploadingImage && (
+        {(formData.imageUrls || []).length < 5 && !isUploadingImage && (
           <label className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500/40 hover:bg-indigo-600/5 transition-all duration-500 text-slate-700 hover:text-indigo-400 group shadow-inner">
             <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all">
               <Plus size={24} strokeWidth={3} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-normal ">AJOUTER</span>
+            <span className="text-[9px] font-black uppercase tracking-normal">AJOUTER</span>
             <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e)} />
           </label>
         )}
@@ -74,32 +96,32 @@ export function ProductMediaSection({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <label className="cursor-pointer group relative overflow-hidden">
-          <div className="flex items-center justify-center w-full gap-4 py-5 px-6 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-[10px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95 ">
-            <Camera size={20} className="group-hover:rotate-12 transition-transform" />
+          <div className="flex items-center justify-center w-full gap-4 py-4 px-6 bg-indigo-600/10 border border-indigo-500/20 rounded-xl text-[10px] font-black text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95">
+            <Camera size={18} className="group-hover:rotate-12 transition-transform" />
             <span>CAPTURE OPTIQUE</span>
           </div>
           <input type="file" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleImageUpload(e)} />
         </label>
         
         <button 
-          type="button"
+          type="button" 
           onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(formData.name)}&tbm=shop`, '_blank')}
-          className="flex items-center justify-center gap-4 py-5 px-6 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-slate-500 hover:bg-white/10 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95  group"
+          className="flex items-center justify-center gap-4 py-4 px-6 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-slate-500 hover:bg-white/10 hover:text-white transition-all uppercase tracking-normal shadow-md active:scale-95 group"
         >
-          <ShoppingCart size={20} className="text-rose-500/60 group-hover:text-rose-500 transition-colors" />
+          <ShoppingCart size={18} className="text-rose-500/60 group-hover:text-rose-500 transition-colors" />
           <span>SOURCE GOOGLE SHOPPING</span>
         </button>
       </div>
       
-      <div className="space-y-4 pt-4 border-t border-white/5">
-        <label className="text-[9px] font-black text-slate-700 uppercase tracking-normal  ml-1 flex items-center gap-2">
+      <div className="space-y-4 pt-3 border-t border-white/5">
+        <label className="text-[9px] font-black text-slate-700 uppercase tracking-normal ml-1 flex items-center gap-2">
            <div className="w-1 h-1 rounded-full bg-slate-700" /> IMPORTATION PAR URL DIRECTE
         </label>
         <div className="flex gap-4">
           <div className="relative flex-1 group">
             <input
               placeholder="HTTPS://ASSETS.NEXUS.CLOUD/IMAGE..."
-              className="w-full py-5 px-6 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white  outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 placeholder:text-slate-800 transition-all shadow-inner group-hover:border-white/20"
+              className="w-full py-4 px-5 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 placeholder:text-slate-800 transition-all shadow-inner group-hover:border-white/20"
               value={formData.imageUrl || ''}
               onChange={e => setFormData({...formData, imageUrl: e.target.value})}
             />
@@ -107,17 +129,31 @@ export function ProductMediaSection({
           <button 
             type="button" 
             onClick={() => {
-              if (formData.imageUrl && !formData.imageUrls.includes(formData.imageUrl) && formData.imageUrls.length < 5) {
-                setFormData({...formData, imageUrls: [...formData.imageUrls, formData.imageUrl], imageUrl: ''});
+              if (formData.imageUrl && !(formData.imageUrls || []).includes(formData.imageUrl) && (formData.imageUrls || []).length < 5) {
+                setFormData({
+                  ...formData, 
+                  imageUrls: [...(formData.imageUrls || []), formData.imageUrl], 
+                  imageUrl: ''
+                });
               }
             }}
             className="px-5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 disabled:opacity-20 transition-all shadow-xs active:scale-90 border border-indigo-400"
-            disabled={!formData.imageUrl || formData.imageUrls.length >= 5}
+            disabled={!formData.imageUrl || (formData.imageUrls || []).length >= 5}
           >
-            <Plus size={24} strokeWidth={4} />
+            <Plus size={22} strokeWidth={3} />
           </button>
         </div>
       </div>
+
+      {editingImageIdx !== null && formData.imageUrls?.[editingImageIdx] && (
+        <ImageEnhancerModal
+          isOpen={true}
+          onClose={() => setEditingImageIdx(null)}
+          imageUrl={formData.imageUrls[editingImageIdx]}
+          onApply={handleApplyEnhancement}
+          title="Dépixéliser la photo du produit (HD)"
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef, useDeferredValue, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useDeferredValue } from 'react';
 import { Product, Category, CompanySettings, Employee, Customer, CartItem, Transaction, Promotion, POSSession, CashShift } from '../../types';
-import { calculateItemPrice, playScanSound, announcePrice, generateUniqueId } from '../../lib/utils';
+import { calculateItemPrice, announcePrice } from '../../lib/utils';
 import { printReceipt } from '../../services/printService';
 import { DEFAULT_PERMISSIONS } from '../../constants';
 import { useCheckoutProcess } from '../../hooks/useCheckoutProcess';
@@ -12,7 +12,9 @@ import { useCheckoutDrafts } from './useCheckoutDrafts';
 import { useCheckoutBarcode } from './useCheckoutBarcode';
 import { useCheckoutShortcuts } from './useCheckoutShortcuts';
 import { useCheckoutSessionAndPromo } from './useCheckoutSessionAndPromo';
-import { useSearchWorker } from '../../hooks/useSearchWorker';
+import { useCheckoutDiscounts } from './useCheckoutDiscounts';
+import { useCheckoutProductsSearch } from './useCheckoutProductsSearch';
+import { useCheckoutCartOperations } from './useCheckoutCartOperations';
 
 interface CheckoutProps {
   products: Product[];
@@ -47,10 +49,10 @@ interface CheckoutProps {
 
 export function useCheckoutLogic(props: CheckoutProps) {
   const {
-    products, cart, setCart, user, profile, promotions, customers, settings, 
-    activeShift, setActiveShift, transactions, selectedCustomer, setSelectedCustomer,
+    products, cart, setCart, user, profile, promotions, settings, 
+    setActiveShift, transactions, selectedCustomer, setSelectedCustomer,
     posSessions, setPosSessions, activeSessionId, setActiveSessionId,
-    setIsProductModalOpen, setEditingProduct, isWholesale, deliveryMethod,
+    isWholesale, deliveryMethod,
     activeStaffId, employees
   } = props;
 
@@ -124,56 +126,29 @@ export function useCheckoutLogic(props: CheckoutProps) {
     setActiveShift, promotions, selectedCustomer, setSelectedCustomer, settings,
   });
 
-  const [globalDiscount, setGlobalDiscount] = useState<{ type: 'percentage' | 'fixed', value: number } | null>(null);
-
   // Détection du mode modification de vente sur la session active
   const activeSession = (posSessions || []).find(s => s && s.id === activeSessionId) || posSessions?.[0];
   const editingTransaction = activeSession?.editingTransaction || null;
 
-  // Reset session-specific local states when switching active session (sauf si un ticket en modification porte une remise)
+  // Sub-hook for line & global discounts management
+  const {
+    globalDiscount, setGlobalDiscount,
+    discountingItemId, setDiscountingItemId,
+    lineDiscountType, setLineDiscountType,
+    lineDiscountValue, setLineDiscountValue,
+    setLineDiscount,
+  } = useCheckoutDiscounts({
+    cart, setCart, editingTransaction, activeSessionId, showSuccess
+  });
+
+  // Reset session-specific local states when switching active session
   useEffect(() => {
     setUseLoyaltyPoints(false);
     setUseBalance(false);
     setIsReturnMode(false);
     setReceivedAmount('');
     setKeepExcessInBalance(false);
-    if (!editingTransaction) {
-      setGlobalDiscount(null);
-    }
   }, [activeSessionId]);
-
-  // Restaurer automatiquement la remise effectuée en caisse lorsqu'on ouvre un ancien panier ("Modifier Panier en Caisse")
-  useEffect(() => {
-    if (editingTransaction) {
-      const explicitDiscount = Number(
-        editingTransaction.discountAmount ??
-        (editingTransaction as any).discount_amount ??
-        0
-      );
-      const rawItems = Array.isArray(editingTransaction.items) ? editingTransaction.items : [];
-      const itemsSubtotal = rawItems.reduce((sum: number, it: any) => {
-        const unitP = Number(calculateItemPrice(it, editingTransaction.isWholesale) ?? it?.price ?? 0);
-        const q = Number(it?.quantity) || 1;
-        return sum + unitP * q;
-      }, 0);
-      const txTotal = Number(editingTransaction.total ?? itemsSubtotal);
-      const pointsAndVoucher = Number(editingTransaction.pointsDiscount || 0) + Number(editingTransaction.voucherDiscount || 0);
-      const implicitDiscount = Math.max(0, Math.round((itemsSubtotal - txTotal - pointsAndVoucher) * 100) / 100);
-      const finalRestoredDiscount = explicitDiscount > 0 ? explicitDiscount : implicitDiscount;
-
-      if (finalRestoredDiscount > 0) {
-        setGlobalDiscount({ type: 'fixed', value: finalRestoredDiscount });
-      } else {
-        setGlobalDiscount(null);
-      }
-    }
-  }, [editingTransaction?.id]);
-
-  useEffect(() => {
-    if (showSuccess) {
-      setGlobalDiscount(null);
-    }
-  }, [showSuccess]);
 
   // Reset payment calculations when customer changes
   useEffect(() => {
@@ -182,7 +157,6 @@ export function useCheckoutLogic(props: CheckoutProps) {
   }, [selectedCustomer]);
 
   useEffect(() => {
-    // 🛡️ SÉCURISÉ : Remplacement de cart.find par un fallback tableau vide
     const safeCart = Array.isArray(cart) ? cart : [];
     if (selectedItemId && !safeCart.find(item => item && (item.id === selectedItemId || item.cartItemId === selectedItemId))) {
       setSelectedItemId(null);
@@ -197,52 +171,22 @@ export function useCheckoutLogic(props: CheckoutProps) {
       .slice(0, 3);
   }, [selectedCustomer, transactions]);
 
-  // 🛡️ MODIFIÉ & SÉCURISÉ : Plus aucun risque de findIndex sur undefined au clic/scan produit
-  const addToCart = useCallback((product: Product, quantity: number = 1, isDistinctScan: boolean = false) => {
-    if (!product) return;
-    if (settings.allowNegativeStock === false && (product.stock || 0) <= 0 && quantity > 0) {
-      toast.error(`Rupture de stock pour ${product.name}. Stock actuel: ${product.stock}`);
-      return;
-    }
-    const newCartItemId = generateUniqueId();
-    setSelectedItemId(product.id);
-    
-    setCart((prev) => {
-      // Barrière absolue : si prev est undefined ou corrompu, on injecte un tableau vide
-      const safePrev = Array.isArray(prev) ? prev : [];
-
-      if (quantity === 0) return safePrev;
-      const existingIdx = safePrev.findIndex(item => item && item.id === product.id);
-      
-      if (existingIdx !== -1 && !isDistinctScan) {
-        const existing = safePrev[existingIdx];
-        const samePolarity = (existing.quantity > 0 && quantity > 0) || (existing.quantity < 0 && quantity < 0);
-        
-        if (samePolarity) {
-          const updated = [...safePrev];
-          const newQty = (existing?.quantity || 0) + quantity;
-          
-          if (settings.allowNegativeStock === false && newQty > (product.stock || 0) && quantity > 0) {
-             toast.error(`Stock insuffisant pour ${product.name}. Stock: ${product.stock}`);
-             return safePrev;
-          }
-          updated[existingIdx] = { ...existing, quantity: newQty };
-          toast.success(`${product.name} mis à jour (${newQty < 0 ? `${newQty} (Retour)` : `+${quantity}`})`);
-          return updated;
-        }
-      }
-      
-      const availableStock = product.stock ?? 0;
-      const allowNegative = settings.allowNegativeStock !== false;
-      const initQty = allowNegative ? quantity : (quantity > 0 ? Math.min(quantity, Math.max(0, availableStock)) : quantity);
-      if (initQty <= 0 && quantity > 0 && !allowNegative) {
-        toast.error(`Stock épuisé pour ${product.name}`);
-        return safePrev;
-      }
-      toast.success(`${product.name} ajouté au panier`);
-      return [...safePrev, { ...product, quantity: initQty, cartItemId: newCartItemId }];
-    });
-  }, [settings.allowNegativeStock, setCart, isReturnMode]);
+  // Operations de panier (ajout, modification, suppression, annulation modif)
+  const {
+    addToCart,
+    setQuantity,
+    setPrice,
+    removeFromCart,
+    handleCancelEditTransaction
+  } = useCheckoutCartOperations({
+    products,
+    setCart,
+    settings,
+    setSelectedItemId,
+    isReturnMode,
+    activeSessionId,
+    setPosSessions
+  });
 
   // Sub-hook for auto-saving and restoring draft carts
   const { hasRestored, setHasRestored } = useCheckoutDrafts({
@@ -268,122 +212,8 @@ export function useCheckoutLogic(props: CheckoutProps) {
     }
   }, [cart, isWholesale, settings.enableVoiceGuidance, settings.currency]);
 
-  // ⚡ Worker de recherche hors thread principal : 0 saccade sur 11 700 articles
-  const { searchProducts } = useSearchWorker(products);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>(() => {
-    const safeProducts = Array.isArray(products) ? products : [];
-    return safeProducts.filter(p => p && p.status === 'active').slice(0, 100);
-  });
-
-  useEffect(() => {
-    const safeProducts = Array.isArray(products) ? products : [];
-    if (!deferredSearch || !deferredSearch.trim()) {
-      setFilteredProducts(safeProducts.filter(p => p && p.status === 'active').slice(0, 100));
-      return;
-    }
-
-    let isMounted = true;
-    searchProducts(deferredSearch, 80).then((matches) => {
-      if (isMounted) {
-        setFilteredProducts(matches || []);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [deferredSearch, products, searchProducts]);
-
-  // 🛡️ SÉCURISÉ : Protection de setQuantity + Focus optionnel
-  const setQuantity = useCallback((cartItemId: string, quantity: number, shouldFocusSearch: boolean = false) => {
-    setCart((prev) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      return safePrev.map(item => {
-        if (item && (item.cartItemId === cartItemId || item.id === cartItemId)) {
-          const safeProducts = Array.isArray(products) ? products : [];
-          const prod = safeProducts.find(p => p && p.id === item.id);
-          const resolved = isNaN(quantity) ? 0 : quantity;
-          const maxStock = prod?.stock ?? 0;
-          return { 
-            ...item,
-            quantity: settings.allowNegativeStock !== false ? resolved : (resolved > 0 ? Math.min(resolved, Math.max(0, maxStock)) : resolved) 
-          };
-        }
-        return item;
-      });
-    });
-  }, [settings.allowNegativeStock, setCart, products]);
-
-  // 🛡️ SÉCURISÉ : Protection de setPrice sans vol de focus
-  const setPrice = useCallback((cartItemId: string, price: number) => {
-    setCart((prev) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      return safePrev.map(item => {
-        if (item && (item.cartItemId === cartItemId || item.id === cartItemId)) return { ...item, overriddenPrice: price };
-        return item;
-      });
-    });
-  }, [setCart]);
-
-  // 🛡️ SÉCURISÉ : Protection de removeFromCart
-  const removeFromCart = useCallback((cartItemId: string) => {
-    setCart((prev) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      return safePrev.filter(item => item && (item.cartItemId !== cartItemId && item.id !== cartItemId));
-    });
-  }, [setCart]);
-
-  const [discountingItemId, setDiscountingItemId] = useState<string | null>(null);
-  const [lineDiscountType, setLineDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  const [lineDiscountValue, setLineDiscountValue] = useState<string>('0');
-
-  useEffect(() => {
-    if (discountingItemId) {
-      const safeCart = Array.isArray(cart) ? cart : [];
-      const item = safeCart.find(i => i && i.cartItemId === discountingItemId);
-      if (item?.lineDiscount) {
-        setLineDiscountType(item.lineDiscount.type);
-        setLineDiscountValue(item.lineDiscount.value.toString());
-      } else {
-        setLineDiscountType('percentage');
-        setLineDiscountValue('0');
-      }
-    }
-  }, [discountingItemId, cart]);
-
-  // 🛡️ SÉCURISÉ : Protection de setLineDiscount
-  const setLineDiscount = useCallback((cartItemId: string, discount: { type: 'percentage' | 'fixed', value: number } | null) => {
-    setCart((prev) => {
-      const safePrev = Array.isArray(prev) ? prev : [];
-      return safePrev.map(item => {
-        if (item && item.cartItemId === cartItemId) return { ...item, lineDiscount: discount || undefined };
-        return item;
-      });
-    });
-  }, [setCart]);
-
-  const handleCancelEditTransaction = useCallback(() => {
-    if (window.confirm("Voulez-vous annuler la modification de ce ticket ? Le panier sera vidé et le ticket initial restera intact.")) {
-      setCart([]);
-      if (typeof setPosSessions === 'function') {
-        setPosSessions((prev: any) => {
-          const safePrev = Array.isArray(prev) ? prev : [];
-          return safePrev.map((s: any) => 
-            s?.id === activeSessionId 
-              ? { 
-                  ...s, 
-                  name: s.name?.includes('(Modif)') ? 'Ticket 1' : s.name,
-                  cart: [], 
-                  selectedCustomer: null,
-                  editingTransaction: null 
-                } 
-              : s
-          );
-        });
-      }
-      toast.info("Modification de vente annulée.");
-    }
-  }, [activeSessionId, setCart, setPosSessions]);
+  // ⚡ Sub-hook Worker de recherche hors thread principal : 0 saccade sur 11 700 articles
+  const { filteredProducts } = useCheckoutProductsSearch({ products, deferredSearch });
 
   // Main calculations sub-hook integration
   const {

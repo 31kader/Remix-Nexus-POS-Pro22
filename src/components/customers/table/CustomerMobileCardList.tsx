@@ -1,0 +1,160 @@
+import React from 'react';
+import { Smartphone, Award, Phone, Mail, Eye, ShoppingCart, MessageSquare, Edit } from 'lucide-react';
+import { Customer, CompanySettings } from '../../../types';
+
+interface CustomerMobileCardListProps {
+  customers: Customer[];
+  settings: CompanySettings;
+  setSelectedCustomerId: (id: string | null) => void;
+  setDirectoryLayout: (layout: 'split' | 'table') => void;
+  handleLaunchSale: (c: Customer) => void;
+  openWhatsApp: (phone: string, type?: 'debt' | 'reminder', customer?: Customer) => void;
+  setEditingCustomer: (c: Customer) => void;
+  setIsModalOpen: (open: boolean) => void;
+}
+
+export function CustomerMobileCardList({
+  customers,
+  settings,
+  setSelectedCustomerId,
+  setDirectoryLayout,
+  handleLaunchSale,
+  openWhatsApp,
+  setEditingCustomer,
+  setIsModalOpen
+}: CustomerMobileCardListProps) {
+  return (
+    <div className="block lg:hidden space-y-3 p-3">
+      {customers.map((cust) => {
+        const balance = Number(cust.balance || 0);
+        return (
+          <div
+            key={cust.id}
+            className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 shadow-sm space-y-3 transition-all"
+          >
+            {/* Header : Avatar, Nom, Badges */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+                  {(cust.name || '?').charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-black text-white text-sm uppercase tracking-wide truncate">
+                    {cust.name || 'Client sans nom'}
+                  </h4>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                    {cust.isAppUser && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[9px] font-black uppercase flex items-center gap-1 border border-indigo-500/30">
+                        <Smartphone size={10} /> App
+                      </span>
+                    )}
+                    {cust.isWholesale && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase border border-purple-500/30">
+                        Gros
+                      </span>
+                    )}
+                    {(cust.loyaltyPoints || 0) >= 500 && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-[9px] font-black uppercase border border-amber-500/30">
+                        VIP
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Points badge */}
+              <div className="flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-xl text-xs font-black uppercase shrink-0">
+                <Award size={13} />
+                <span>{cust.loyaltyPoints || 0} pts</span>
+              </div>
+            </div>
+
+            {/* Contact info */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-mono">
+              {cust.phone ? (
+                <span className="flex items-center gap-1 text-slate-300">
+                  <Phone size={12} className="text-indigo-400" /> {cust.phone}
+                </span>
+              ) : (
+                <span className="text-slate-600 italic">Pas de téléphone</span>
+              )}
+              {cust.email && (
+                <span className="flex items-center gap-1 truncate text-slate-400">
+                  <Mail size={12} className="text-indigo-400" /> {cust.email}
+                </span>
+              )}
+            </div>
+
+            {/* Situation Financière : Solde / Dette & CA */}
+            <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Solde / Dette</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {balance < 0 ? (
+                    <span className="font-mono font-black text-rose-400 text-sm">
+                      -{Math.abs(balance).toFixed(2)} {settings.currency || 'DA'}
+                    </span>
+                  ) : balance > 0 ? (
+                    <span className="font-mono font-black text-emerald-400 text-sm">
+                      +{balance.toFixed(2)} {settings.currency || 'DA'}
+                    </span>
+                  ) : (
+                    <span className="font-mono text-slate-400 text-xs">0.00 {settings.currency || 'DA'}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Volume d'Achat</span>
+                <span className="font-mono font-black text-indigo-300 text-sm mt-0.5 block">
+                  {(Number(cust.totalSpent) || 0).toFixed(2)} {settings.currency || 'DA'}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions tactiles confortables (>= 38x38px) */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCustomerId(cust.id);
+                  setDirectoryLayout('split');
+                }}
+                className="flex-1 min-h-[38px] px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Eye size={15} /> Voir Fiche
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleLaunchSale(cust)}
+                className="min-w-[38px] min-h-[38px] px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-all flex items-center justify-center cursor-pointer"
+                title="Vendre"
+              >
+                <ShoppingCart size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openWhatsApp(cust.phone || '', balance < 0 ? 'debt' : undefined, cust)}
+                className="min-w-[38px] min-h-[38px] px-3 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all flex items-center justify-center cursor-pointer"
+                title="WhatsApp"
+              >
+                <MessageSquare size={16} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setEditingCustomer(cust); setIsModalOpen(true); }}
+                className="min-w-[38px] min-h-[38px] px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition-all flex items-center justify-center cursor-pointer"
+                title="Modifier"
+              >
+                <Edit size={16} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { localDb } from '../../database';
-import { supabase, isSupabaseConfigured, removeChannelByName, safeRemoveChannel, safeSubscribeChannel, realtimeCircuitBreaker } from '../../supabase';
-import { convertKeysToCamel, TABLE_COLUMNS } from '../../lib/db-converters';
+import { supabase, isSupabaseConfigured } from '../../supabase';
+import { convertKeysToCamel } from '../../lib/db-converters';
 import { CashShift, OnlineOrder, CompanySettings } from '../../types';
-import { fetchTableFromSupabase } from './supabaseFetchHelper';
-import { setLocalState, saveStateToStorage, replaceTableState, removeLocalState, dbState } from '../../lib/local-db';
-import { getDeletedRecordIds, markRecordDeleted } from '../../services/LocalDatabase';
+import { setLocalState, saveStateToStorage, replaceTableState, dbState } from '../../lib/local-db';
+import { getDeletedRecordIds } from '../../services/LocalDatabase';
 import { getTerminalId } from '../../services/terminalService';
 import { withNetworkTimeout } from '../../services/networkErrorHandler';
 import { getSyncQueue } from '../../services/SyncService';
+import { setupFastChangingRealtimeSubscription } from './fastChangingRealtime';
 
 interface useFastChangingDataParams {
   loading: boolean;
@@ -42,6 +42,7 @@ export function useFastChangingData({
     if (loading || !userId || userId === 'unauthenticated') return;
     
     let isSubscribed = true;
+    const isSubscribedRef = { current: true };
     const listeners: (() => void)[] = [];
     const settingsCols = '*';
 
@@ -261,129 +262,15 @@ export function useFastChangingData({
     });
 
     // Realtime Supabase pour settings, online_orders et cash_shifts
-    if (isSupabaseConfigured) {
-      removeChannelByName('nexus-fast-realtime');
-      const fastChannel = supabase.channel('nexus-fast-realtime')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'settings' },
-          (payload: any) => {
-            if (!isSubscribed || !payload.new) return;
-            const companyRow = payload.new;
-            if (companyRow.id === 'company' || !companyRow.id) {
-              const jsonFields = ['site_locations', 'role_kpis', 'notifications', 'operational_costs', 'delivery_zones', 'api_keys', 'available_taxes', 'loyalty_tiers', 'role_permissions', 'favorite_category_ids', 'quick_select_groups'];
-              jsonFields.forEach(field => {
-                if (companyRow[field] && typeof companyRow[field] === 'string') {
-                  try { companyRow[field] = JSON.parse(companyRow[field]); } catch (e) {}
-                }
-              });
-              const camelSettings = convertKeysToCamel(companyRow) as CompanySettings;
-              setSettings(camelSettings);
-              setLocalState('settings/company', camelSettings);
-              saveStateToStorage();
-              console.log('[Realtime] ⚙️ Paramètres système mis à jour en direct.');
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'online_orders' },
-          (payload: any) => {
-            if (!isSubscribed) return;
-            if (payload.eventType === 'DELETE') {
-              const deletedId = payload.old?.id;
-              if (deletedId) {
-                markRecordDeleted('online_orders', String(deletedId));
-                removeLocalState(`online_orders/${deletedId}`);
-                saveStateToStorage('online_orders');
-                setOnlineOrders(prev => {
-                  const safe = Array.isArray(prev) ? prev : [];
-                  const updated = safe.filter(o => String(o.id) !== String(deletedId));
-                  idbSet('nexus_online_orders_cache', updated).catch(() => {});
-                  return updated;
-                });
-              }
-            } else if (payload.new && payload.new.id) {
-              const deletedOrderIds = getDeletedRecordIds('online_orders');
-              if (deletedOrderIds.has(String(payload.new.id))) {
-                return;
-              }
-              const rawOrder = payload.new;
-              if (rawOrder.items && typeof rawOrder.items === 'string') {
-                try { rawOrder.items = JSON.parse(rawOrder.items); } catch(e) {}
-              }
-              const camelOrder = convertKeysToCamel(rawOrder) as OnlineOrder;
-              setLocalState(`online_orders/${camelOrder.id}`, camelOrder);
-              saveStateToStorage('online_orders');
-              setOnlineOrders(prev => {
-                const safe = Array.isArray(prev) ? prev : [];
-                const idx = safe.findIndex(o => String(o.id) === String(camelOrder.id));
-                let updated: OnlineOrder[];
-                if (idx >= 0) {
-                  updated = [...safe];
-                  updated[idx] = { ...updated[idx], ...camelOrder };
-                } else {
-                  updated = [camelOrder, ...safe];
-                }
-                idbSet('nexus_online_orders_cache', updated).catch(() => {});
-                return updated;
-              });
-              console.log('[Realtime] 📦 Commande en ligne synchronisée en direct:', camelOrder.id);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'cash_shifts' },
-          (payload: any) => {
-            if (!isSubscribed) return;
-            if (payload.new && payload.new.id) {
-              const camelShift = convertKeysToCamel(payload.new) as CashShift;
-              setShifts(prev => {
-                const safe = Array.isArray(prev) ? prev : [];
-                const idx = safe.findIndex(s => s.id === camelShift.id);
-                let updated: CashShift[];
-                if (idx >= 0) {
-                  updated = [...safe];
-                  updated[idx] = { ...updated[idx], ...camelShift };
-                } else {
-                  updated = [camelShift, ...safe];
-                }
-                updated.sort((a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime());
-                setActiveShift(findActiveShiftForTerminal(updated));
-                idbSet('nexus_cash_shifts_cache', updated).catch(() => {});
-                return updated;
-              });
-            }
-          }
-        );
-
-      const connectFastChannel = () => {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
-        if (realtimeCircuitBreaker.isOpen()) return;
-
-        safeSubscribeChannel(fastChannel, (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            realtimeCircuitBreaker.recordSuccess();
-            console.log('[Realtime] ✅ Canal nexus-fast-realtime (settings, online_orders, shifts) connecté.');
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            realtimeCircuitBreaker.recordFailure('nexus-fast-realtime');
-          }
-        });
-      };
-
-      if (typeof navigator === 'undefined' || navigator.onLine) {
-        if (!realtimeCircuitBreaker.isOpen()) {
-          connectFastChannel();
-        }
-      }
-
-      const handleRetryFast = () => connectFastChannel();
-      window.addEventListener('nexus-realtime-retry', handleRetryFast);
-      listeners.push(() => window.removeEventListener('nexus-realtime-retry', handleRetryFast));
-
-      listeners.push(() => safeRemoveChannel(fastChannel));
-    }
+    setupFastChangingRealtimeSubscription({
+      isSubscribedRef,
+      setSettings,
+      setOnlineOrders,
+      setShifts,
+      setActiveShift,
+      findActiveShift: findActiveShiftForTerminal,
+      listeners
+    });
 
     // Écouteur pour changement de poste / terminal local
     const handleTerminalChanged = () => {
@@ -398,6 +285,7 @@ export function useFastChangingData({
 
     return () => {
       isSubscribed = false;
+      isSubscribedRef.current = false;
       listeners.forEach(unsub => { try { unsub(); } catch(e) {} });
     };
   }, [loading, userId]);

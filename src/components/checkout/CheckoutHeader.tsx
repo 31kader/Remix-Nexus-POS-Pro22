@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, Scan, X, Barcode } from 'lucide-react';
 import { SearchOverlay } from './SearchOverlay';
 import { Product } from '../../types';
+import { LanStatusBadge } from '../lan/LanStatusBadge';
 
 interface Props {
   search: string;
@@ -60,20 +61,7 @@ export const CheckoutHeader: React.FC<Props> = ({
 
   return (
     <div className="px-3 py-2 sm:px-4 sm:py-2.5 border-b border-slate-200/90 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm sticky top-0 z-30 shadow-xs">
-      <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5">
-        {/* TOTAL BANNER — Sobre, harmonieux et reposant pour les yeux */}
-        <div className="w-full sm:w-auto flex-shrink-0 h-11 flex items-center justify-between sm:justify-start px-3.5 sm:px-4 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 rounded-xl shadow-xs">
-          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mr-2 sm:mr-3">
-            TOTAL :
-          </span>
-          <span className="text-xl sm:text-2xl font-black font-mono text-emerald-800 dark:text-emerald-200 tracking-tight">
-            {total.toFixed(2)}
-            <span className="text-xs font-bold text-emerald-600/90 dark:text-emerald-400/90 ml-1.5 font-sans">
-              {settings?.currency || 'DA'}
-            </span>
-          </span>
-        </div>
-
+      <div className="w-full sm:w-auto flex-shrink-0 flex flex-wrap lg:flex-nowrap items-center gap-2 sm:gap-2.5">
         {/* INPUT CODE-BARRES DIRECT (F10) */}
         <div className="hidden sm:block relative group sm:w-52 lg:w-60 flex-shrink-0">
           <Barcode
@@ -183,8 +171,9 @@ export const CheckoutHeader: React.FC<Props> = ({
           />
         </div>
 
-        {/* BOUTON SCANNER OPTIQUE */}
-        <div className="flex items-center shrink-0">
+        {/* BADGE STATUT RÉSEAU HYBRIDE (LAN + CLOUD) & SCANNER */}
+        <div className="flex items-center gap-2 shrink-0">
+          <LanStatusBadge />
           <button
             type="button"
             onClick={() => setIsScannerOpen(true)}

@@ -1,4 +1,4 @@
-export type InventoryTab = 'products' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses';
+export type InventoryTab = 'products' | 'cartons' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses';
 export interface PriceHistoryEntry {
   price: number;
   costPrice: number;

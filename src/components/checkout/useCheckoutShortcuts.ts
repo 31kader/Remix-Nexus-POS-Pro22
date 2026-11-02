@@ -41,6 +41,11 @@ export function useCheckoutShortcuts({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 0. Ne JAMAIS intercepter ni bloquer les caractères normaux tapés au clavier (ex: lettre "F", "f", chiffres...)
+      if (!e.altKey && !e.ctrlKey && !e.metaKey && e.key.length === 1) {
+        return;
+      }
+
       // 1. F2 : VIDER LE PANIER
       if (e.key === 'F2') {
         e.preventDefault();
@@ -161,9 +166,10 @@ export function useCheckoutShortcuts({
       }
 
       // 🚫 TOUT AUTRE RACCOURCI DÉSACTIVÉ :
-      // Bloquer les autres touches F inutiles (F1, F6, F7, F8, F9, F12) pour éviter tout conflit navigateur
-      if (e.key.startsWith('F') && !isNaN(Number(e.key.slice(1)))) {
-        if (e.ctrlKey || e.altKey || (e.shiftKey && e.key === 'F12')) {
+      // Bloquer uniquement les vraies touches de fonction F1-F12 non gérées (F1, F6, F7, F8, F9, F12) pour éviter tout conflit navigateur
+      const isFunctionKey = /^F([1-9]|1[0-2])$/i.test(e.key);
+      if (isFunctionKey) {
+        if (e.ctrlKey || e.altKey || (e.shiftKey && e.key.toUpperCase() === 'F12')) {
           return;
         }
         e.preventDefault();

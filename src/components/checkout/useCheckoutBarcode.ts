@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Product } from '../../types';
 import { playScanSound } from '../../lib/utils';
 import { toast } from 'sonner';
+import { resolveBarcodeOrCarton, getCartonTemplates, CartonTemplate } from '../../services/cartonIntakeService';
 
 interface UseCheckoutBarcodeProps {
   products: Product[];
@@ -19,6 +20,13 @@ export function useCheckoutBarcode({
   const [priceCheckResult, setPriceCheckResult] = useState<Product | null>(null);
   
   const scannerBuffer = useRef<{ text: string, lastTime: number }>({ text: '', lastTime: 0 });
+  const cartonTemplatesRef = useRef<CartonTemplate[]>([]);
+
+  useEffect(() => {
+    getCartonTemplates().then(list => {
+      if (Array.isArray(list)) cartonTemplatesRef.current = list;
+    });
+  }, []);
 
   // Pre-cached O(1) maps of products for 100% exact scan resolution (identical to Inventory scanner)
   const productsCache = useMemo(() => {
@@ -83,14 +91,26 @@ export function useCheckoutBarcode({
       product = productsCache.nameMap.get(cleanBarcode);
     }
 
+    // 4. Recherche par Carton Template (si le client achète un carton entier en caisse)
+    let cartonUnits = 1;
+    if (!product) {
+      const res = resolveBarcodeOrCarton(barcode, products, cartonTemplatesRef.current);
+      if (res?.type === 'carton') {
+        product = res.product;
+        cartonUnits = res.unitsPerCarton || 1;
+      }
+    }
+
     if (product) {
       if (isPriceCheckerOpen) {
         setPriceCheckResult(product);
       } else {
         try {
-          const finalQty = (isReturnMode ? -1 : 1) * quantityMultiplier;
+          const finalQty = (isReturnMode ? -1 : 1) * quantityMultiplier * cartonUnits;
           addToCart(product, finalQty, true);
-          if (quantityMultiplier > 1) {
+          if (cartonUnits > 1) {
+            toast.success(`📦 Carton scanné : ${product.name} (${finalQty} unités)`);
+          } else if (quantityMultiplier > 1) {
             toast.success(`Ajouté : ${quantityMultiplier}x ${product.name}`);
           }
         } catch (error) {

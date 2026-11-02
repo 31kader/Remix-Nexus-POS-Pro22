@@ -3,3 +3,4 @@ export * from './CatalogTopBar';
 export * from './CatalogQueueList';
 export * from './CatalogConfigPanel';
 export * from './CatalogA4Preview';
+export * from './useCatalogPrinterState';

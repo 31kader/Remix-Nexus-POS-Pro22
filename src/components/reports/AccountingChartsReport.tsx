@@ -5,10 +5,11 @@ import {
   BarChart, Bar, Cell, PieChart, Pie, Legend 
 } from 'recharts';
 import { fr } from 'date-fns/locale';
-import { formatSafe, calculateItemPrice } from '../../lib/utils';
+import { formatSafe } from '../../lib/utils';
 import { Card } from '../ui';
-import { Transaction, Product, Expense, CompanySettings, isTopUpTransaction } from '../../types';
-import { useTransactionStore } from '../../store/useTransactionStore';
+import { Transaction, Product, Expense, CompanySettings } from '../../types';
+import { calculateAccountingMetrics } from './accounting/calculateAccountingMetrics';
+import { AccountingKPICards } from './accounting/AccountingKPICards';
 
 interface AccountingChartsReportProps {
   transactions: Transaction[];
@@ -44,146 +45,8 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
   }, [products]);
 
   // 2. Calculs lourds de base : catégorie, employé, top produits, coûts et marges
-  // Découplés de 'period' pour que le toggle mensuel/annuel soit instantané (0ms)
   const baseData = useMemo(() => {
-    const categoryMap: Record<string, number> = {};
-    const employeeMap: Record<string, number> = {};
-    const productMap: Record<string, { name: string, quantity: number, revenue: number }> = {};
-
-    const safeTransactions = Array.isArray(transactions) ? transactions : [];
-    const safeExpenses = Array.isArray(expenses) ? expenses : [];
-
-    const getSafeItems = (t: any): any[] => {
-      if (!t) return [];
-      let items = t.items;
-      if (typeof items === 'string') {
-        try { items = JSON.parse(items); } catch (_) { items = []; }
-      }
-      return Array.isArray(items) ? items : [];
-    };
-
-    safeTransactions.forEach(t => {
-      if (!t || t.status === 'returned' || t.status === 'cancelled' || (t as any).source === 'topup') return;
-      
-      const items = getSafeItems(t);
-      items.forEach(item => {
-        if (!item) return;
-        const cat = item.categoryId || 'Non classé';
-        const qty = Number(item.quantity) || 1;
-        categoryMap[cat] = (categoryMap[cat] || 0) + (calculateItemPrice(item, t.isWholesale) * qty);
-        
-        const prodId = item.id || item.name || 'unknown';
-        if (!productMap[prodId]) {
-          productMap[prodId] = { name: item.name || 'Article inconnu', quantity: 0, revenue: 0 };
-        }
-        productMap[prodId].quantity += qty;
-        productMap[prodId].revenue += (calculateItemPrice(item, t.isWholesale) * qty);
-      });
-
-      const emp = t.employeeName || 'Système';
-      employeeMap[emp] = (employeeMap[emp] || 0) + (Number(t.total) || 0);
-    });
-
-    const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
-    const employeeData = Object.entries(employeeMap).map(([name, value]) => ({ name, value }));
-
-    // Revenue by source
-    const revenueBySource = safeTransactions.reduce((acc, t) => {
-        if (!t || t.status === 'returned' || t.status === 'cancelled' || (t as any).source === 'topup') return acc;
-        const source = t.onlineOrderId ? 'Application' : 'Magasin';
-        acc[source] = (acc[source] || 0) + (Number(t.total) || 0);
-        return acc;
-    }, { Magasin: 0, Application: 0 } as Record<string, number>);
-
-    const productSalesData = Object.values(productMap)
-      .sort((a, b) => b.revenue - a.revenue);
-    const topProducts = productSalesData.slice(0, 10);
-
-    const returns = useTransactionStore.getState().returns || [];
-    const returnsByTxId = new Map<string, number>();
-    const returnedCostByTxId = new Map<string, number>();
-    returns.forEach((r: any) => {
-      if (r?.transactionId) {
-        returnsByTxId.set(r.transactionId, (returnsByTxId.get(r.transactionId) || 0) + (Number(r.totalRefund ?? r.refundAmount) || 0));
-        
-        let returnCost = 0;
-        const rItems = Array.isArray(r.items) ? r.items : (
-          (r.productId || r.product_id) ? [{
-            productId: r.productId || r.product_id,
-            quantity: r.quantity || 1
-          }] : []
-        );
-        rItems.forEach((ri: any) => {
-          const pId = ri.productId || ri.id;
-          const p = (pId ? productsById.get(pId) : null) || (ri.name ? productsByName.get(ri.name.toLowerCase().trim()) : null);
-          const cPrice = Number(ri.costPrice !== undefined ? ri.costPrice : (p?.costPrice || 0));
-          returnCost += cPrice * (Number(ri.quantity) || 1);
-        });
-        returnedCostByTxId.set(r.transactionId, (returnedCostByTxId.get(r.transactionId) || 0) + returnCost);
-      }
-    });
-
-    // 🛡️ P0-BIZ-6 : Déduction précise des retours partiels sur le CA net
-    const totalRevenue = safeTransactions.reduce((sum, t) => {
-      if (!t || t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return sum;
-      const base = Number(t.total) || 0;
-      if (t.status === 'partially_returned') {
-        const refunded = returnsByTxId.get(t.id) || 0;
-        return sum + Math.max(0, base - refunded);
-      }
-      return sum + base;
-    }, 0);
-
-    const totalCost = safeTransactions.reduce((sum, t) => {
-      if (!t || t.status === 'returned' || t.status === 'cancelled' || isTopUpTransaction(t)) return sum;
-      const items = getSafeItems(t);
-      const initialCost = items.reduce((itemSum, item) => {
-        if (!item) return itemSum;
-        const targetId = (item as any).productId || item.id;
-        const cleanName = item.name ? item.name.toLowerCase().trim() : '';
-        const product = (targetId ? productsById.get(targetId) : null) || (cleanName ? productsByName.get(cleanName) : null);
-        const costPrice = (item as any).costPrice !== undefined && (item as any).costPrice > 0 
-          ? Number((item as any).costPrice) 
-          : Number(product?.costPrice || 0);
-        
-        // Add operational costs (packaging, shipping, other)
-        const opCosts = product?.operationalCosts || {};
-        const packaging = opCosts.packaging ?? (t.onlineOrderId ? (settings?.operationalCosts?.basePackaging || 0) : 0);
-        const shipping = opCosts.shipping ?? (t.onlineOrderId ? (settings?.operationalCosts?.baseShipping || 0) : 0);
-        const other = opCosts.other || 0;
-        
-        const totalUnitCost = costPrice + packaging + shipping + other;
-        const qty = Number(item.quantity) || 1;
-        return itemSum + (totalUnitCost * qty);
-      }, 0);
-
-      if (t.status === 'partially_returned') {
-        const returnedCost = returnedCostByTxId.get(t.id) || 0;
-        return sum + Math.max(0, initialCost - returnedCost);
-      }
-      return sum + initialCost;
-    }, 0);
-
-    // 🛡️ P0-BIZ-4 : Exclure les dépenses 'Remboursement / Retour' des charges opérationnelles pour éliminer la double déduction
-    const operationalExpenses = safeExpenses.filter(e => e?.category !== 'Remboursement / Retour');
-    const totalExpenses = operationalExpenses.reduce((sum, e) => sum + (Number(e?.amount) || 0), 0);
-    const grossProfit = totalRevenue - totalCost;
-    const netProfit = grossProfit - totalExpenses;
-    const revenueBySourceData = Object.entries(revenueBySource).map(([name, value]) => ({ name, value }));
-
-    return { 
-      categoryData, 
-      employeeData, 
-      revenueBySource,
-      revenueBySourceData,
-      topProducts, 
-      productSalesData, 
-      totalRevenue, 
-      totalCost, 
-      totalExpenses, 
-      grossProfit, 
-      netProfit 
-    };
+    return calculateAccountingMetrics(transactions, productsById, productsByName, expenses, settings);
   }, [transactions, productsById, productsByName, expenses, settings]);
 
   // 3. Données temporelles : calculées ultra-légèrement uniquement au changement de période
@@ -217,16 +80,18 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
       <div className="flex justify-start mb-6">
         <div id="chart-period-toggle" className="bg-white/5 p-1 rounded-xl border border-white/10 flex items-center shadow-lg">
           <button 
+            type="button"
             onClick={() => setPeriod('monthly')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
               period === 'monthly' ? "bg-white text-indigo-600 shadow-sm" : "text-white/40 hover:text-white"
             }`}
           >
             Vue Mensuelle
           </button>
           <button 
+            type="button"
             onClick={() => setPeriod('yearly')}
-            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-300 cursor-pointer ${
               period === 'yearly' ? "bg-white text-indigo-600 shadow-sm" : "text-white/40 hover:text-white"
             }`}
           >
@@ -235,24 +100,14 @@ export const AccountingChartsReport = React.memo(function AccountingChartsReport
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in duration-500">
-        <Card id="card-charts-revenue" className="p-6 border-l-4 border-l-indigo-500 bg-white/5">
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-2">Chiffre d'Affaires</p>
-          <h4 className="text-2xl font-black text-white">{data.totalRevenue.toFixed(2)} {settings.currency}</h4>
-        </Card>
-        <Card id="card-charts-cost" className="p-6 border-l-4 border-l-rose-500 bg-white/5">
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-2">Coût des Ventes</p>
-          <h4 className="text-2xl font-black text-white">{data.totalCost.toFixed(2)} {settings.currency}</h4>
-        </Card>
-        <Card id="card-charts-expenses" className="p-6 border-l-4 border-l-amber-500 bg-white/5">
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-2">Dépenses Opérationnelles</p>
-          <h4 className="text-2xl font-black text-white">{data.totalExpenses.toFixed(2)} {settings.currency}</h4>
-        </Card>
-        <Card id="card-charts-profit" className="p-6 border-l-4 border-l-emerald-500 bg-white/5">
-          <p className="text-[10px] font-black text-white/20 uppercase tracking-widest mb-2">Bénéfice Net</p>
-          <h4 className="text-2xl font-black text-emerald-400">{data.netProfit.toFixed(2)} {settings.currency}</h4>
-        </Card>
-      </div>
+      {/* Cartes KPI Financières */}
+      <AccountingKPICards
+        totalRevenue={data.totalRevenue}
+        totalCost={data.totalCost}
+        totalExpenses={data.totalExpenses}
+        netProfit={data.netProfit}
+        currency={settings.currency}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
         {/* Sales by Period Chart */}

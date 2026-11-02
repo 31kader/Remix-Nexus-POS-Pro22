@@ -5,6 +5,7 @@ export * from './types/suppliers';
 export * from './types/employees';
 export * from './types/settings';
 export * from './types/database.types';
+export * from './types/lanSync';
 
 export interface ConfirmAction {
   title: string;

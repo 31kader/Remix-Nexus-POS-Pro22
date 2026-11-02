@@ -58,12 +58,14 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(), 
       tailwindcss(),
-      legacy({
-        targets: ['chrome >= 49', 'android >= 7', 'defaults', 'not IE 11'],
-        modernTargets: ['chrome >= 87', 'edge >= 88', 'firefox >= 78', 'safari >= 15'],
-        additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
-        renderModernChunks: true
-      }),
+      ...(mode === 'production' ? [
+        legacy({
+          targets: ['chrome >= 49', 'android >= 7', 'defaults', 'not IE 11'],
+          modernTargets: ['chrome >= 89', 'edge >= 89', 'firefox >= 78', 'safari >= 15'],
+          additionalLegacyPolyfills: ['regenerator-runtime/runtime'],
+          renderModernChunks: true
+        })
+      ] : []),
       VitePWA(pwaConfig)
     ],
     server: {

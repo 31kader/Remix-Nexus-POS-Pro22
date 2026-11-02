@@ -1,6 +1,5 @@
-import React, { useState, useCallback, Suspense, useEffect } from 'react';
-import { Toaster, toast } from 'sonner';
-const CustomerDisplayWindow = React.lazy(() => import('./components/CustomerDisplayWindow').then(m => ({ default: m.CustomerDisplayWindow })));
+import React, { useState, Suspense } from 'react';
+import { toast } from 'sonner';
 
 // Hooks d'initialisation & authentification
 import { useDataFetching } from './hooks/useDataFetching';
@@ -12,69 +11,36 @@ import { useCartSync } from './hooks/useCartSync';
 import { useAuthActions } from './hooks/useAuthActions';
 import { useTranslation } from './translations';
 import { useAppPermissionsAndTheme, useProductStats } from './hooks/useAppPermissionsAndStats';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useAppServiceWorkerAndGuard } from './hooks/useAppServiceWorkerAndGuard';
 
-// Nouveaux hooks extraits
+// Nouveaux hooks & modules extraits
 import { useModalState } from './hooks/useModalState';
 import { useAppHandlers } from './hooks/useAppHandlers';
+import { useAppTabNavigation } from './components/app/useAppTabNavigation';
+import { AppAlternativeModeRenderer } from './components/app/AppAlternativeModeRenderer';
+import { useAppCustomerDisplayState } from './components/app/useAppCustomerDisplayState';
+import { useAppLoginState } from './components/app/useAppLoginState';
+import { useAppStoreSelectors } from './components/app/useAppStoreSelectors';
+import { AppModalsHost } from './components/app/AppModalsHost';
 
 // Stores
 import { useAuthStore } from './store/useAuthStore';
 import { useCoreStore } from './store/useCoreStore';
-import { useTransactionStore } from './store/useTransactionStore';
 import { useCartStore } from './store/useCartStore';
-import { useFinanceStore } from './store/useFinanceStore';
-import { usePeopleStore } from './store/usePeopleStore';
 
 // Types
-import type { Transaction, Customer, Supplier } from './types';
+import type { Transaction, Customer } from './types';
 
 // Utilitaires
 import { playNotificationSound } from './services/notificationService';
-import { localDb } from './services/LocalDatabase';
-
-import { DEFAULT_PERMISSIONS } from './constants';
 
 // Composants UI principaux
 import { SyncIndicator } from './components/SyncIndicator';
-import { UnauthorizedView } from './components/UnauthorizedView';
 import { MainAppContent } from './components/MainAppContent';
 import { TabRenderer } from './components/TabRenderer';
-import { isTabAllowed } from './lib/permissions';
-
-// Modales et login en lazy-loading (Règle GEMINI.md : bundle optimisé)
-const LoginView = React.lazy(() => import('./components/LoginView').then(m => ({ default: m.LoginView })));
-const AppModals = React.lazy(() => import('./components/AppModals').then(m => ({ default: m.AppModals })));
-
-// Modes alternatifs (lazy-loaded pour réduire la taille du bundle initial)
-const SupplierLogin = React.lazy(() => import('./components/SupplierLogin').then(m => ({ default: m.SupplierLogin })));
-const CustomerLogin = React.lazy(() => import('./components/CustomerLogin').then(m => ({ default: m.CustomerLogin })));
-const CameraLogin = React.lazy(() => import('./components/CameraLogin').then(m => ({ default: m.CameraLogin })));
-const SupplierDashboard = React.lazy(() => import('./components/SupplierDashboard').then(m => ({ default: m.SupplierDashboard })));
-const CustomerDashboard = React.lazy(() => import('./components/CustomerDashboard').then(m => ({ default: m.CustomerDashboard })));
-const DeliveryDashboard = React.lazy(() => import('./components/DeliveryDashboard').then(m => ({ default: m.DeliveryDashboard })));
-const ClientPriceScanner = React.lazy(() => import('./components/public-price-checker').then(m => ({ default: m.ClientPriceScanner })));
-const KioskPriceTerminal = React.lazy(() => import('./components/public-price-checker').then(m => ({ default: m.KioskPriceTerminal })));
 
 export default function App() {
-  const [isCustomerDisplay, setIsCustomerDisplay] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.location.hash === '#customer-display' || window.location.pathname.startsWith('/customer-display');
-  });
-
-  useEffect(() => {
-    const checkDisplay = () => {
-      const isDisplay = window.location.hash === '#customer-display' || window.location.pathname.startsWith('/customer-display');
-      setIsCustomerDisplay(isDisplay);
-    };
-    window.addEventListener('hashchange', checkDisplay);
-    window.addEventListener('popstate', checkDisplay);
-    return () => {
-      window.removeEventListener('hashchange', checkDisplay);
-      window.removeEventListener('popstate', checkDisplay);
-    };
-  }, []);
-
+  const { isCustomerDisplay } = useAppCustomerDisplayState();
   const { language, setLanguage, t } = useTranslation();
 
   const {
@@ -83,38 +49,9 @@ export default function App() {
     syncInfo, bgSyncActive, bgPendingChanges,
   } = useAppInitialization();
 
-  // --- Authentification ---
-  const [loginIdentifier, setLoginIdentifier] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
-  const [currentSupplier, setCurrentSupplier] = useState<Supplier | null>(null);
-  const [loading, setLoading] = useState(() => {
-    let cachedOffline: string | null = null;
-    let cachedOnline: string | null = null;
-    try {
-      cachedOffline = sessionStorage.getItem('nexus_active_offline_session');
-      if (!cachedOffline) {
-        cachedOffline = localStorage.getItem('nexus_active_offline_session');
-        if (cachedOffline) {
-          sessionStorage.setItem('nexus_active_offline_session', cachedOffline);
-          localStorage.removeItem('nexus_active_offline_session');
-        }
-      }
-      cachedOnline = sessionStorage.getItem('nexus_active_online_session');
-      if (!cachedOnline) {
-        cachedOnline = localStorage.getItem('nexus_active_online_session');
-        if (cachedOnline) {
-          sessionStorage.setItem('nexus_active_online_session', cachedOnline);
-          localStorage.removeItem('nexus_active_online_session');
-        }
-      }
-    } catch (_) {
-      cachedOffline = null;
-      cachedOnline = null;
-    }
-    return !(cachedOffline || cachedOnline);
-  });
+  // --- Authentification & Sessions ---
+  const loginState = useAppLoginState();
+  const { loading, setLoading, currentCustomer, currentSupplier } = loginState;
 
   const user = useAuthStore(s => s.user);
   const profile = useAuthStore(s => s.profile);
@@ -128,32 +65,10 @@ export default function App() {
   const settings = useCoreStore(s => s.settings);
   const isDataLoading = useCoreStore(s => s.isDataLoading);
 
-  // 🛡️ NEXUS GUARD : Intercepteur global d'erreurs (Traque le bug ".active")
-  useEffect(() => {
-    const handleGlobalError = (event: ErrorEvent) => {
-      if (event.message?.includes("reading 'active'")) {
-        console.error('🚨 [NEXUS GUARD] CRASH .active INTERCEPTÉ ! 🚨');
-        console.error('Ouvre ce lien pour voir le composant coupable 👉', event.error);
-      }
-    };
-    window.addEventListener('error', handleGlobalError);
-    return () => window.removeEventListener('error', handleGlobalError);
-  }, []);
+  // 🛡️ NEXUS GUARD & Service Worker
+  useAppServiceWorkerAndGuard();
 
-  const EMPTY_ARRAY = React.useRef<any[]>([]);
-
-  const transactions = useTransactionStore(s => appMode === 'customer' ? s.transactions : EMPTY_ARRAY.current);
-  const purchaseOrders = useTransactionStore(s => appMode === 'supplier' ? s.purchaseOrders : EMPTY_ARRAY.current);
-  const onlineOrders = useTransactionStore(s => appMode === 'delivery' ? s.onlineOrders : EMPTY_ARRAY.current);
-
-  const isPublicPriceMode = appMode === 'client_scan' || appMode === 'kiosk';
-  const products = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.products : EMPTY_ARRAY.current);
-  const categories = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.categories : EMPTY_ARRAY.current);
-  const brands = useCoreStore(s => (appMode === 'supplier' || isPublicPriceMode) ? s.brands : EMPTY_ARRAY.current);
-  const promotions = useCoreStore(s => isPublicPriceMode ? s.promotions : EMPTY_ARRAY.current);
-
-  const purchases = useFinanceStore(s => appMode === 'supplier' ? s.purchases : EMPTY_ARRAY.current);
-  const supplierPayments = useFinanceStore(s => appMode === 'supplier' ? s.supplierPayments : EMPTY_ARRAY.current);
+  const storeSelectors = useAppStoreSelectors(appMode);
 
   const { handleLogin } = useAuthUser(appMode, setLoading);
   const { handleIdentifierLogin, handleLogout } = useAuthActions(t);
@@ -161,26 +76,12 @@ export default function App() {
   useDataFetching(user, profile, appMode, currentSupplier, currentCustomer, loading, playNotificationSound);
 
   // --- Catégories & Marques ---
-  const {
-    isCategoryModalOpen, setIsCategoryModalOpen,
-    isBrandModalOpen, setIsBrandModalOpen,
-    editingCategory, setEditingCategory,
-    editingBrand, setEditingBrand,
-    newCategoryName, setNewCategoryName,
-    parentCategoryId, setParentCategoryId,
-    categoryImageUrl, setCategoryImageUrl,
-    newBrandName, setNewBrandName,
-    newBrandLogo, setNewBrandLogo,
-    newBrandDesc, setNewBrandDesc,
-    openCategoryModal, openBrandModal,
-    handleSaveCategory, handleDeleteCategory,
-    handleSaveBrand, handleDeleteBrand,
-  } = useCategoryBrand();
+  const cb = useCategoryBrand();
 
   // --- Staff ---
   const {
     isAddUserModalOpen, setIsAddUserModalOpen,
-    activeStaffId, setActiveStaffId,
+    activeStaffId,
     handleAddStaffManual,
   } = useStaffManagement();
 
@@ -197,94 +98,20 @@ export default function App() {
 
   const { syncOrder } = useCartSync(autoSyncOrders);
 
-  // --- PWA Service Worker ---
+  // --- Navigation & Sécurité des Onglets ---
   const {
-    offlineReady: [offlineReady, setOfflineReady],
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(r: any) {
-      if (r) {
-        // Clear any previous interval to prevent duplication on remount
-        if ((window as any).__swUpdateIntervalId) {
-          clearInterval((window as any).__swUpdateIntervalId);
-        }
-        const intervalId = setInterval(() => r.update(), 60 * 60 * 1000);
-        (window as any).__swUpdateIntervalId = intervalId;
-      }
-    },
-    onRegisterError(error: any) {
-      console.warn('SW registration error', error);
-    },
+    activeTab,
+    setActiveTab,
+    isCameraAgent,
+    isVerifiedAdmin
+  } = useAppTabNavigation({
+    profile,
+    canAccess,
+    isOwner,
+    t
   });
 
-  // --- Navigation & Sécurité des Onglets ---
-  const isCameraAgent = (profile?.role as string) === 'camera_agent';
-  const isVerifiedAdmin = isOwner || (profile?.role === 'admin' && canAccess('canAccessSettings'));
-
-  const getInitialTab = useCallback(() => {
-    if (isCameraAgent) return 'camera';
-    const hash = window.location.hash.replace('#', '');
-    if (!hash || hash.includes('=') || hash.includes('&') || hash === 'dashboard' || hash === 'ai_assistant' || hash === 'pos' || hash === 'caisse') return 'checkout';
-    if (!isTabAllowed(hash, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
-      return 'checkout';
-    }
-    return hash;
-  }, [profile, canAccess, isOwner, isCameraAgent, isVerifiedAdmin]);
-
-  const [activeTab, setActiveTabState] = useState(getInitialTab());
-  const setActiveTab = useCallback((tab: string) => {
-    const targetTab = (tab === 'dashboard' || tab === 'ai_assistant' || tab === 'pos' || tab === 'caisse') ? 'checkout' : tab;
-    // 🛡️ Vérification d'autorisation (Défense en profondeur)
-    if (!isTabAllowed(targetTab, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
-      toast.error(t("Accès refusé : vous n'avez pas l'autorisation pour ce module."));
-      window.location.hash = 'checkout';
-      setActiveTabState('checkout');
-      return;
-    }
-    window.location.hash = targetTab;
-    setActiveTabState(targetTab);
-  }, [canAccess, profile, isOwner, isCameraAgent, isVerifiedAdmin, t]);
-
-  // Synchronisation dynamique avec la barre d'adresse pour support multi-fenêtres & multi-onglets
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash && !hash.includes('=') && !hash.includes('&')) {
-        const target = (hash === 'dashboard' || hash === 'ai_assistant' || hash === 'pos' || hash === 'caisse') ? 'checkout' : hash;
-        if (!isTabAllowed(target, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile?.role === 'manager', isCameraAgent })) {
-          setActiveTab('checkout');
-        } else {
-          setActiveTabState(target);
-        }
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [setActiveTab, canAccess, profile, isOwner, isCameraAgent, isVerifiedAdmin]);
-
-  // Écouteur global pour les événements 'change-tab' (ex: encaissement rapide depuis la fiche client)
-  useEffect(() => {
-    const handleTabChange = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      if (customEvent && customEvent.detail) {
-        const tab = customEvent.detail;
-        const targetTab = (tab === 'dashboard' || tab === 'ai_assistant' || tab === 'pos' || tab === 'caisse') ? 'checkout' : tab;
-        setActiveTab(targetTab);
-      }
-    };
-    window.addEventListener('change-tab', handleTabChange);
-    return () => window.removeEventListener('change-tab', handleTabChange);
-  }, [setActiveTab]);
-
-  // Si le profil utilisateur change (connexion d'un employé), forcer le retour à un onglet permis
-  useEffect(() => {
-    if (profile && !isTabAllowed(activeTab, canAccess, { isAdmin: isVerifiedAdmin, isOwner, isManager: profile.role === 'manager', isCameraAgent })) {
-      setActiveTab('checkout');
-    }
-  }, [profile, activeTab, canAccess, isOwner, isCameraAgent, isVerifiedAdmin, setActiveTab]);
-
-  // --- Panier (Sélecteurs d'action ciblés et stables : évite tout re-render de l'App) ---
+  // --- Panier ---
   const loadTransactionToCart = useCartStore(s => s.loadTransactionToCart);
   const setSelectedCustomer = useCartStore(s => s.setSelectedCustomer);
 
@@ -315,6 +142,7 @@ export default function App() {
     handleUpdateProduct,
     handleAdjustStock,
     handleEditProduct,
+    handleMarkAsDelivered,
   } = useAppHandlers(
     deferredPrompt,
     setDeferredPrompt,
@@ -323,192 +151,35 @@ export default function App() {
     setIsProductModalOpen,
   );
 
-  // ─── Rendu conditionnel par mode ───────────────────────────────────────────
-  if (isCustomerDisplay) {
-    return (
-      <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[#05070a]"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>}>
-        <CustomerDisplayWindow />
-      </Suspense>
-    );
-  }
-
-  // ─── Option 1 : Scanner Client Smartphone via QR Code Magasin ──────────────
-  if (appMode === 'client_scan') {
-    if (loading) {
-      return (
-        <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 gap-4">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-emerald-400 font-semibold tracking-wider uppercase">Chargement du catalogue...</p>
-        </div>
-      );
-    }
-    return (
-      <Suspense fallback={
-        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-slate-100">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500" />
-        </div>
-      }>
-        <ClientPriceScanner
-          products={products}
-          settings={settings}
-          categories={categories}
-          brands={brands}
-          promotions={promotions}
-        />
-      </Suspense>
-    );
-  }
-
-  // ─── Option 3 : Borne Tablette Fixe en Rayon / Mode Kiosque 24/7 ────────────
-  if (appMode === 'kiosk') {
-    if (loading) {
-      return (
-        <div className="h-screen w-full flex flex-col items-center justify-center bg-[#07090e] text-slate-100 gap-4">
-          <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Initialisation de la borne...</p>
-        </div>
-      );
-    }
-    return (
-      <Suspense fallback={
-        <div className="h-screen w-full flex items-center justify-center bg-[#07090e] text-slate-100">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500" />
-        </div>
-      }>
-        <KioskPriceTerminal
-          products={products}
-          settings={settings}
-          categories={categories}
-          brands={brands}
-          promotions={promotions}
-          onExit={() => {
-            window.location.search = '';
-            window.location.hash = 'checkout';
-            window.location.reload();
-          }}
-        />
-      </Suspense>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#05070a]">
-        <div className="flex flex-col items-center gap-6">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"   />
-          <p className="text-indigo-400 font-bold uppercase tracking-widest text-[10px]">Initializing Systems...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isUnauthorized && !isOwner) {
-    return <UnauthorizedView user={user} profile={profile} isOwner={isOwner} handleLogout={() => handleLogout(user)}   />;
-  }
-
-  const loadingFallback = (
-    <div className="h-screen w-full flex items-center justify-center bg-[#05070a]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"   />
-    </div>
+  // ─── Rendu conditionnel par mode (Alternatifs) ─────────────────────────────
+  const alternativeView = (
+    <AppAlternativeModeRenderer
+      isCustomerDisplay={isCustomerDisplay}
+      appMode={appMode}
+      setAppMode={setAppMode}
+      loading={loading}
+      user={user}
+      profile={profile}
+      isOwner={isOwner}
+      isUnauthorized={isUnauthorized}
+      handleLogout={handleLogout}
+      loginState={loginState}
+      authStore={{ isLoggingIn, authError, setAuthError, handleIdentifierLogin, handleLogin, setUser, setProfile }}
+      translation={{ language, setLanguage, isLangMenuOpen, setIsLangMenuOpen, t }}
+      storeSelectors={storeSelectors}
+      settings={settings}
+      setActiveTab={setActiveTab}
+      handleCreatePurchaseOrder={handleCreatePurchaseOrder}
+      setIsProductModalOpen={setIsProductModalOpen}
+      setEditingProduct={setEditingProduct}
+      editingProduct={editingProduct}
+      isProductModalOpen={isProductModalOpen}
+      setViewingPurchaseVoucher={setViewingPurchaseVoucher}
+    />
   );
 
-  if (!user && appMode === 'pos') {
-    return (
-      <Suspense fallback={loadingFallback}>
-        <LoginView
-          loginIdentifier={loginIdentifier} setLoginIdentifier={setLoginIdentifier}
-          loginPassword={loginPassword} setLoginPassword={setLoginPassword}
-          showPassword={showPassword} setShowPassword={setShowPassword}
-          isLoggingIn={isLoggingIn} authError={authError} setAuthError={setAuthError}
-          handleIdentifierLogin={handleIdentifierLogin}
-          handleLogin={handleLogin}
-          language={language} setLanguage={setLanguage as any}
-          isLangMenuOpen={isLangMenuOpen} setIsLangMenuOpen={setIsLangMenuOpen}
-          t={t}
-        />
-      </Suspense>
-    );
-  }
-
-  if (appMode === 'customer') {
-    if (!currentCustomer) {
-      return (
-        <Suspense fallback={loadingFallback}>
-          <CustomerLogin onLogin={setCurrentCustomer} />
-        </Suspense>
-      );
-    }
-    return (
-      <Suspense fallback={loadingFallback}>
-        <CustomerDashboard
-          customer={currentCustomer}
-          transactions={transactions}
-          settings={settings}
-          onLogout={() => { setCurrentCustomer(null); handleLogout(user); }}
-        />
-      </Suspense>
-    );
-  }
-
-  if (appMode === 'supplier') {
-    if (!currentSupplier) {
-      return (
-        <Suspense fallback={loadingFallback}>
-          <SupplierLogin onLogin={setCurrentSupplier} />
-        </Suspense>
-      );
-    }
-    return (
-      <Suspense fallback={loadingFallback}>
-        <SupplierDashboard
-          supplier={currentSupplier}
-          onLogout={() => { setCurrentSupplier(null); handleLogout(user); }}
-          products={products}
-          categories={categories}
-          brands={brands}
-          settings={settings}
-          setActiveTab={setActiveTab}
-          handleCreatePurchaseOrder={handleCreatePurchaseOrder}
-          purchaseOrders={purchaseOrders}
-          user={user}
-          setIsProductModalOpen={setIsProductModalOpen}
-          setEditingProduct={setEditingProduct}
-          editingProduct={editingProduct}
-          isProductModalOpen={isProductModalOpen}
-          purchases={purchases}
-          supplierPayments={supplierPayments}
-          setViewingPurchaseVoucher={setViewingPurchaseVoucher}
-        />
-      </Suspense>
-    );
-  }
-
-  if (!user) {
-    if (appMode === 'camera') {
-      return (
-        <Suspense fallback={loadingFallback}>
-          <CameraLogin onLogin={(empProfile) => {
-            setProfile(empProfile);
-            setUser({
-              uid: empProfile.uid,
-              email: empProfile.email,
-              displayName: empProfile.displayName,
-              role: empProfile.role,
-              employeeId: empProfile.employeeId,
-              isOffline: true
-            } as any);
-          }} />
-        </Suspense>
-      );
-    }
-  }
-
-  if (user && appMode === 'delivery') {
-    return (
-      <Suspense fallback={loadingFallback}>
-        <DeliveryDashboard user={user} orders={onlineOrders} settings={settings}   />
-      </Suspense>
-    );
+  if (alternativeView) {
+    return alternativeView;
   }
 
   // ─── Mode POS Principal ────────────────────────────────────────────────────
@@ -518,7 +189,6 @@ export default function App() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500" />
       </div>
     }>
-      {/* 🛡️ NAV-01 : Passer onOpenSyncStudio pour ouvrir directement le studio de synchronisation */}
       <SyncIndicator 
         isOnline={isOnline} 
         syncInfo={syncInfo} 
@@ -568,50 +238,44 @@ export default function App() {
           isOwner={isOwner}
           isAdmin={isVerifiedAdmin}
           isManager={profile?.role === 'manager'}
-          isCameraAgent={profile?.role === 'camera_agent'}
+          isCameraAgent={isCameraAgent}
           onUpdateProduct={handleUpdateProduct}
           onAdjustStock={handleAdjustStock}
           onEditProduct={handleEditProduct}
-          onAddCategory={openCategoryModal} onEditCategory={openCategoryModal}
-          onDeleteCategory={(cat: any) => handleDeleteCategory(cat)}
-          onAddBrand={openBrandModal} onEditBrand={openBrandModal}
-          onDeleteBrand={(brand: any) => handleDeleteBrand(brand)}
+          onAddCategory={cb.openCategoryModal} onEditCategory={cb.openCategoryModal}
+          onDeleteCategory={cb.handleDeleteCategory}
+          onAddBrand={cb.openBrandModal} onEditBrand={cb.openBrandModal}
+          onDeleteBrand={cb.handleDeleteBrand}
           setIsAddUserModalOpen={setIsAddUserModalOpen}
-          onReturn={(t: Transaction) => { setSelectedTransactionForReturn(t); setIsReturnModalOpen(true); }}
-          onMarkAsDelivered={async (t: Transaction) => {
-            const updated = { ...t, status: 'delivered' as const, updatedAt: new Date().toISOString() };
-            await localDb.update(`transactions/${t.id}`, updated);
-            useTransactionStore.getState().setTransactions(prev =>
-              (prev || []).map(tx => tx.id === t.id ? updated : tx)
-            );
-          }}
-          onEdit={(t: Transaction) => { setSelectedTransactionForEdit(t); setIsEditTransactionModalOpen(true); }}
-          onRestore={(t: Transaction) => loadTransactionToCart(t, setActiveTab)}
+          onReturn={(tr: Transaction) => { setSelectedTransactionForReturn(tr); setIsReturnModalOpen(true); }}
+          onMarkAsDelivered={handleMarkAsDelivered}
+          onEdit={(tr: Transaction) => { setSelectedTransactionForEdit(tr); setIsEditTransactionModalOpen(true); }}
+          onRestore={(tr: Transaction) => loadTransactionToCart(tr, setActiveTab)}
           syncOrder={syncOrder} autoSyncOrders={autoSyncOrders} setAutoSyncOrders={setAutoSyncOrders}
           isStandalone={isStandalone} deferredPrompt={deferredPrompt} handleInstallApp={handleInstallApp}
           setViewingPurchaseVoucher={setViewingPurchaseVoucher}
           editingProduct={editingProduct}
           isProductModalOpen={isProductModalOpen}
-          />
+        />
       </MainAppContent>
 
-      <AppModals
+      <AppModalsHost
         isReturnModalOpen={isReturnModalOpen} setIsReturnModalOpen={setIsReturnModalOpen}
         selectedTransactionForReturn={selectedTransactionForReturn} setSelectedTransactionForReturn={setSelectedTransactionForReturn}
         isEditTransactionModalOpen={isEditTransactionModalOpen} setIsEditTransactionModalOpen={setIsEditTransactionModalOpen}
         selectedTransactionForEdit={selectedTransactionForEdit} setSelectedTransactionForEdit={setSelectedTransactionForEdit}
-        isCategoryModalOpen={isCategoryModalOpen} setIsCategoryModalOpen={setIsCategoryModalOpen}
-        editingCategory={editingCategory} setEditingCategory={setEditingCategory}
-        newCategoryName={newCategoryName} setNewCategoryName={setNewCategoryName}
-        parentCategoryId={parentCategoryId} setParentCategoryId={setParentCategoryId}
-        categoryImageUrl={categoryImageUrl} setCategoryImageUrl={setCategoryImageUrl}
-        handleSaveCategory={handleSaveCategory} handleDeleteCategory={handleDeleteCategory}
-        isBrandModalOpen={isBrandModalOpen} setIsBrandModalOpen={setIsBrandModalOpen}
-        editingBrand={editingBrand} setEditingBrand={setEditingBrand}
-        newBrandName={newBrandName} setNewBrandName={setNewBrandName}
-        newBrandLogo={newBrandLogo} setNewBrandLogo={setNewBrandLogo}
-        newBrandDesc={newBrandDesc} setNewBrandDesc={setNewBrandDesc}
-        handleSaveBrand={handleSaveBrand}
+        isCategoryModalOpen={cb.isCategoryModalOpen} setIsCategoryModalOpen={cb.setIsCategoryModalOpen}
+        editingCategory={cb.editingCategory} setEditingCategory={cb.setEditingCategory}
+        newCategoryName={cb.newCategoryName} setNewCategoryName={cb.setNewCategoryName}
+        parentCategoryId={cb.parentCategoryId} setParentCategoryId={cb.setParentCategoryId}
+        categoryImageUrl={cb.categoryImageUrl} setCategoryImageUrl={cb.setCategoryImageUrl}
+        handleSaveCategory={cb.handleSaveCategory} handleDeleteCategory={cb.handleDeleteCategory}
+        isBrandModalOpen={cb.isBrandModalOpen} setIsBrandModalOpen={cb.setIsBrandModalOpen}
+        editingBrand={cb.editingBrand} setEditingBrand={cb.setEditingBrand}
+        newBrandName={cb.newBrandName} setNewBrandName={cb.setNewBrandName}
+        newBrandLogo={cb.newBrandLogo} setNewBrandLogo={cb.setNewBrandLogo}
+        newBrandDesc={cb.newBrandDesc} setNewBrandDesc={cb.setNewBrandDesc}
+        handleSaveBrand={cb.handleSaveBrand}
         isPriceCheckerModalOpen={isPriceCheckerModalOpen} setIsPriceCheckerModalOpen={setIsPriceCheckerModalOpen}
         isStorePosterModalOpen={isStorePosterModalOpen} setIsStorePosterModalOpen={setIsStorePosterModalOpen}
         isPOSCustomerModalOpen={isPOSCustomerModalOpen} setIsPOSCustomerModalOpen={setIsPOSCustomerModalOpen}
@@ -619,16 +283,14 @@ export default function App() {
         isProductModalOpen={isProductModalOpen} setIsProductModalOpen={setIsProductModalOpen}
         editingProduct={editingProduct} setEditingProduct={setEditingProduct} setActiveTab={setActiveTab}
         isAddUserModalOpen={isAddUserModalOpen} setIsAddUserModalOpen={setIsAddUserModalOpen}
-        handleAddStaffManual={(name: string, email: string, role: string, phone?: string, password?: string) =>
-          handleAddStaffManual(name, email, role, phone, password)
-        }
+        handleAddStaffManual={handleAddStaffManual}
         viewingPurchaseVoucher={viewingPurchaseVoucher} setViewingPurchaseVoucher={setViewingPurchaseVoucher}
         isLowStockModalOpen={isLowStockModalOpen} setIsLowStockModalOpen={setIsLowStockModalOpen}
         lowStockProducts={lowStockProducts}
         isExpirationModalOpen={isExpirationModalOpen} setIsExpirationModalOpen={setIsExpirationModalOpen}
         expiringProducts={expiringProducts}
         isStockAdjustmentModalOpen={isStockAdjustmentModalOpen} setIsStockAdjustmentModalOpen={setIsStockAdjustmentModalOpen}
-        />
+      />
     </Suspense>
   );
 }

@@ -3,18 +3,17 @@ import bcrypt from 'bcryptjs';
 import { set as idbSet } from 'idb-keyval';
 import { localDb } from '../services/LocalDatabase';
 import { usePeopleStore } from '../store/usePeopleStore';
-import { useInventoryStore } from '../store/useInventoryStore';
-import { useTransactionStore } from '../store/useTransactionStore';
 import { 
   Supplier, Product, CompanySettings, Category, DamagedRecord 
 } from '../types';
 import { toast } from 'sonner';
 
-// New sub-hooks
+// Sub-hooks
 import { useSupplierSync } from './suppliers/useSupplierSync';
 import { useSupplierPayments } from './suppliers/useSupplierPayments';
 import { useSupplierDamaged } from './suppliers/useSupplierDamaged';
 import { useSupplierReminders } from './suppliers/useSupplierReminders';
+import { useSupplierDraftOrders } from './suppliers/useSupplierDraftOrders';
 
 export interface SuppliersProps {
   suppliers: Supplier[];
@@ -30,7 +29,7 @@ export interface SuppliersProps {
 
 export function useSuppliersLogic(props: SuppliersProps) {
   const { 
-    suppliers, products, purchases, categories, user 
+    suppliers, products, purchases, user 
   } = props;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,11 +41,6 @@ export function useSuppliersLogic(props: SuppliersProps) {
 
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
-
-  // Purchase Order Auto-Draft State
-  const [poDraftItems, setPoDraftItems] = useState<{ productId: string; productName: string; quantity: number; price: number }[]>([]);
-  const [isPODraftOpen, setIsPODraftOpen] = useState(false);
-  const [isSavingPurchaseOrder, setIsSavingPurchaseOrder] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -142,6 +136,17 @@ export function useSuppliersLogic(props: SuppliersProps) {
     handleToggleReminderComplete,
     handleDeleteReminder
   } = useSupplierReminders({ suppliers });
+
+  // Hook 5: Purchase Order Auto-Draft
+  const {
+    poDraftItems,
+    setPoDraftItems,
+    isPODraftOpen,
+    setIsPODraftOpen,
+    isSavingPurchaseOrder,
+    setIsSavingPurchaseOrder,
+    handleSavePurchaseOrderDraft
+  } = useSupplierDraftOrders(viewingDetailsSupplier);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,43 +254,6 @@ export function useSuppliersLogic(props: SuppliersProps) {
     } catch (error: any) {
       console.error("Error deleting supplier:", error);
       toast.error("Erreur de suppression: " + error.message);
-    }
-  };
-
-  const handleSavePurchaseOrderDraft = async () => {
-    if (!viewingDetailsSupplier || poDraftItems.length === 0) return;
-    setIsSavingPurchaseOrder(true);
-    try {
-      const orderNumber = `BC-${Date.now().toString().slice(-6)}`;
-      const total = poDraftItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      
-      const newOrderId = Math.random().toString(36).substring(2, 11);
-      const orderData = {
-        id: newOrderId,
-        supplierId: viewingDetailsSupplier.id,
-        supplierName: viewingDetailsSupplier.name,
-        orderNumber: orderNumber,
-        items: poDraftItems.map(it => ({
-          productId: it.productId,
-          productName: it.productName,
-          quantity: it.quantity,
-          price: it.price
-        })),
-        total,
-        status: 'pending' as const,
-        createdAt: new Date().toISOString()
-      };
-
-      await localDb.insert(`purchaseOrders/${newOrderId}`, orderData);
-      useTransactionStore.getState().setPurchaseOrders(prev => [orderData as any, ...(prev || [])]);
-      toast.success(`Bon de Commande ${orderNumber} enregistré avec succès !`);
-      setIsPODraftOpen(false);
-      setPoDraftItems([]);
-    } catch (error: any) {
-      console.error("Error saving purchase order draft:", error);
-      toast.error("Erreur: " + error.message);
-    } finally {
-      setIsSavingPurchaseOrder(false);
     }
   };
 

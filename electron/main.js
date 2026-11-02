@@ -331,6 +331,15 @@ function createWindow() {
       const isAllowedLocal = allowedOrigins.some(o => {
         try { return new URL(o).origin === target.origin; } catch (_) { return false; }
       });
+      // 🛡️ Si la fenêtre principale tente de naviguer vers un lien Vercel (rappel OAuth Supabase)
+      if (target.hostname.endsWith('vercel.app') || target.hostname === 'remix-nexus-pos-pro.vercel.app') {
+        event.preventDefault();
+        const localTarget = `http://localhost:${SERVER_PORT}${target.pathname === '/' ? '' : target.pathname}${target.search}${target.hash}`;
+        log(`[OAuth MainNav] Redirection de ${navigationUrl} vers ${localTarget}`);
+        mainWindow.loadURL(localTarget);
+        return;
+      }
+
       // Permettre la navigation vers le flux OAuth (Supabase Auth / Google Accounts) si bascule directe
       const isOAuthNav = target.hostname.endsWith('supabase.co') || 
                          target.hostname.endsWith('google.com') || 
@@ -346,7 +355,7 @@ function createWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.includes('/auth/v1/authorize') || url.includes('accounts.google.com') || url.includes('supabase.co/auth')) {
+    if (url.includes('/auth/v1/authorize') || url.includes('accounts.google.com') || url.includes('supabase.co/auth') || url.includes('google.com')) {
       return { 
         action: 'allow',
         overrideBrowserWindowOptions: {
@@ -373,6 +382,27 @@ function createWindow() {
       logError(`[Security] shell.openExternal a bloqué une URL invalide : ${url}`);
     }
     return { action: 'deny' };
+  });
+
+  // 🛡️ ELC-06 : Capture de la popup OAuth et déviation de toute redirection vers Vercel vers le serveur local
+  mainWindow.webContents.on('did-create-window', (childWindow) => {
+    log('[OAuth] Fenêtre popup enfant créée');
+    const handleChildRedirect = (event, targetUrl) => {
+      try {
+        const parsed = new URL(targetUrl);
+        if (parsed.hostname.endsWith('vercel.app') || parsed.hostname === 'remix-nexus-pos-pro.vercel.app') {
+          event.preventDefault();
+          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
+          log(`[OAuth ChildWindow] Interception et déviation de ${targetUrl} vers : ${localTarget}`);
+          childWindow.loadURL(localTarget);
+        }
+      } catch (err) {
+        logError('[OAuth ChildWindow] Erreur analyse redirection', err);
+      }
+    };
+
+    childWindow.webContents.on('will-redirect', handleChildRedirect);
+    childWindow.webContents.on('will-navigate', handleChildRedirect);
   });
 
   mainWindow.on('closed', () => {
@@ -443,6 +473,31 @@ app.whenReady().then(async () => {
   } catch (cacheErr) {
     logError('Erreur lors du nettoyage du cache de mise à jour', cacheErr);
   }
+
+  // 🛡️ ELC-05 : Interception globale des retours OAuth vers Vercel pour empêcher le 404 DEPLOYMENT_NOT_FOUND
+  session.defaultSession.webRequest.onBeforeRequest(
+    { urls: ['*://*.vercel.app/*', '*://remix-nexus-pos-pro.vercel.app/*'] },
+    (details, callback) => {
+      try {
+        const parsed = new URL(details.url);
+        // Rediriger tout rappel Supabase OAuth (paramètres code, error, ou racine) vers le serveur local
+        const isAuthCallback = parsed.search.includes('code=') ||
+                               parsed.search.includes('error=') ||
+                               parsed.search.includes('error_description=') ||
+                               parsed.pathname === '/' ||
+                               parsed.pathname === '';
+        if (isAuthCallback) {
+          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname || '/'}${parsed.search}`;
+          log(`[OAuth WebRequest] Interception Vercel 404 -> Redirection transparente vers : ${localTarget}`);
+          callback({ redirectURL: localTarget });
+          return;
+        }
+      } catch (e) {
+        logError('[OAuth WebRequest] Erreur analyse redirection', e);
+      }
+      callback({});
+    }
+  );
 
   // Intercepter et autoriser les en-têtes CORS uniquement pour Supabase Cloud et origines locales
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -651,6 +706,43 @@ ipcMain.handle('print-raw-escpos', async (event, bytes) => {
     return { success: true };
   } catch (error) {
     logError('Erreur envoi flux brut ESC/POS', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler IPC pour la sauvegarde automatique quotidienne avec rotation sur 7 jours
+ipcMain.handle('save-daily-backup', async (event, { filename, content, date }) => {
+  try {
+    const documentsPath = app.getPath('documents');
+    const backupDir = path.join(documentsPath, 'NexusPOS_Backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    const safeFilename = path.basename(filename || `NexusPOS_AutoBackup_${date || Date.now()}.json`);
+    const filePath = path.join(backupDir, safeFilename);
+    fs.writeFileSync(filePath, content, 'utf-8');
+    log(`[AutoBackup] Sauvegarde quotidienne écrite: ${filePath}`);
+
+    // Nettoyage automatique : conserver strictement les 7 fichiers les plus récents
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('NexusPOS_AutoBackup_') && f.endsWith('.json'))
+      .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+      .sort((a, b) => b.time - a.time);
+
+    if (files.length > 7) {
+      files.slice(7).forEach(file => {
+        try {
+          fs.unlinkSync(path.join(backupDir, file.name));
+          log(`[AutoBackup] Fichier ancien purgé (rotation 7j): ${file.name}`);
+        } catch (e) {
+          logError(`[AutoBackup] Impossible de purger ${file.name}`, e);
+        }
+      });
+    }
+
+    return { success: true, path: filePath };
+  } catch (error) {
+    logError('[AutoBackup] Échec écriture sauvegarde', error);
     return { success: false, error: error.message };
   }
 });

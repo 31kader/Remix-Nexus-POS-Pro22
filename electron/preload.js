@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sqliteExecute: (sql, params) => ipcRenderer.invoke('sqlite-execute', sql, params),
   sqliteQuery: (sql, params) => ipcRenderer.invoke('sqlite-query', sql, params),
   sqliteBatch: (queries) => ipcRenderer.invoke('sqlite-batch', queries),
+  saveDailyBackup: (payload) => ipcRenderer.invoke('save-daily-backup', payload),
 });

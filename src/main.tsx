@@ -6,6 +6,9 @@ import { initSentry } from './lib/sentry';
 
 // 🛡️ Initialisation précoce du monitoring Sentry (actif si VITE_SENTRY_DSN est configuré)
 initSentry();
+import { diagnosticService } from './services/DiagnosticLogService';
+// 🛡️ Initialisation du journal des diagnostics pour capturer les erreurs réseau/console
+diagnosticService.init();
 import { SocketProvider } from './context/SocketContext.tsx';
 import { LanguageProvider } from './translations.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';

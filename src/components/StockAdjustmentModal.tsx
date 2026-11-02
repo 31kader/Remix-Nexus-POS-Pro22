@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Package, AlignLeft } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../supabase';
-import { convertKeysToSnake } from '../lib/db-converters';
-import { enqueueStockAdjustment } from '../services/SyncService';
-import { applyStockAdjustment } from '../services/stockService';
-import { localDb } from '../services/LocalDatabase';
 import { Product, CompanySettings } from '../types';
 import { normalizeBatches } from '../types/products';
-import { Button, Modal } from './ui';
-import { toast } from 'sonner';
-import { sanitizeProductForSupabase, cn } from '../lib/utils';
-import { useCoreStore } from '../store/useCoreStore';
-import { useInventoryStore } from '../store/useInventoryStore';
+import { Modal } from './ui';
+import { cn } from '../lib/utils';
+import { useStockAdjustmentSubmit } from './stock-adjustment/useStockAdjustmentSubmit';
+import { StockAdjustmentBatchList } from './stock-adjustment/StockAdjustmentBatchList';
 
 export function StockAdjustmentModal({ 
   isOpen, onClose, product, user, settings 
@@ -21,7 +15,6 @@ export function StockAdjustmentModal({
   const [newStock, setNewStock] = useState<number | ''>('');
   const [localBatches, setLocalBatches] = useState<any[]>([]);
   const [reason, setReason] = useState('Ajustement manuel');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isLoss, setIsLoss] = useState(false);
 
   const isLossCheckboxVisible = product && newStock !== '' && (newStock as number) < (product.stock || 0);
@@ -73,164 +66,18 @@ export function StockAdjustmentModal({
     }
   }, [isLossCheckboxVisible]);
 
+  const { isProcessing, handleSubmit } = useStockAdjustmentSubmit({
+    product,
+    user,
+    settings,
+    newStock,
+    localBatches,
+    reason,
+    isLoss,
+    onClose
+  });
+
   if (!product) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newStock === '' || newStock === (product.stock || 0)) return;
-    if (!product.id || product.id === 'undefined') {
-      toast.error("Impossible de modifier le stock : ID du produit manquant.");
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const currentStock = Number(product.stock || 0);
-      const targetStock = Number(newStock);
-      const delta = targetStock - currentStock;
-      const isLossRecord = delta < 0 && isLoss;
-      
-      let earliestDate = product.expirationDate;
-      let primaryBatch = product.batchNumber;
-      if (product.useMultiExpiry && localBatches.length > 0) {
-        const sorted = [...localBatches].sort((a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime());
-        earliestDate = sorted[0].expirationDate;
-        primaryBatch = sorted[0].batchNumber;
-      }
-
-      const safeUserId = user?.uid || user?.id || 'system';
-      const safeUserName = user?.displayName || user?.name || 'Inconnu';
-
-      // Clé d'idempotence unique et déterministe (identique entre Direct-Write et Offline Queue)
-      const adjustmentId = `adj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
-
-      // ⚡ EXÉCUTION ATOMIQUE & IDEMPOTENTE VIA LE SERVICE UNIFIÉ (T5)
-      const result = await applyStockAdjustment({
-        productId: product.id,
-        value: targetStock,
-        mode: 'set',
-        adjustmentId,
-        reason: reason || (delta < 0 ? 'Ajustement négatif' : 'Ajustement positif'),
-        userId: safeUserId,
-        userName: safeUserName,
-        isLoss: isLossRecord
-      });
-
-      const returnedStock = result.newStock;
-      const actualDelta = returnedStock - currentStock;
-      const nowIso = new Date().toISOString();
-
-      // Métadonnées produit complémentaires (lots, dates de péremption, pertes)
-      const normalizedExistingBatches = normalizeBatches(product.batches);
-      const updatedProduct: Product = {
-        ...product,
-        stock: returnedStock,
-        batches: product.useMultiExpiry 
-          ? (localBatches.length > 0 ? localBatches : undefined)
-          : (normalizedExistingBatches.length > 0 ? normalizedExistingBatches : undefined),
-        expirationDate: earliestDate,
-        batchNumber: primaryBatch,
-        damagedStock: isLossRecord ? (product.damagedStock || 0) + Math.abs(actualDelta) : (product.damagedStock || 0),
-        updatedAt: nowIso
-      };
-
-      // Persister localement dans LocalDatabase et useCoreStore (sans ré-enfiler stock qui est géré par applyStockAdjustment)
-      await (localDb.updateLocalOnly ?? localDb.update)(`products/${product.id}`, updatedProduct);
-      useCoreStore.getState().setProducts(prev =>
-        (prev || []).map(p => p.id === product.id ? updatedProduct : p)
-      );
-
-      // Mettre à jour les métadonnées produit dans Supabase (hors colonne stock déjà traitée par le RPC)
-      if (result.appliedDirectly && isSupabaseConfigured) {
-        try {
-          await supabase.from('products').update({
-            damaged_stock: updatedProduct.damagedStock,
-            batches: updatedProduct.batches || null,
-            expiration_date: updatedProduct.expirationDate || null,
-            batch_number: updatedProduct.batchNumber || null
-          }).eq('id', product.id);
-        } catch (syncErr) {
-          console.warn("[StockAdjustmentModal] Warning updating product metadata on Supabase:", syncErr);
-        }
-      } else {
-        await localDb.update(`products/${product.id}`, {
-          damagedStock: updatedProduct.damagedStock,
-          batches: updatedProduct.batches || null,
-          expirationDate: updatedProduct.expirationDate || null,
-          batchNumber: updatedProduct.batchNumber || null,
-          updatedAt: nowIso
-        });
-      }
-
-      // Enregistrement d'audit dans l'historique local avec le même adjustmentId
-      const adjustmentData = {
-        id: adjustmentId,
-        productId: product.id,
-        productName: product.name,
-        oldQuantity: currentStock,
-        newQuantity: returnedStock,
-        adjustment: actualDelta,
-        quantity: actualDelta,
-        type: actualDelta > 0 ? 'found' : 'damage',
-        reason: reason,
-        userId: safeUserId,
-        userName: safeUserName,
-        date: nowIso,
-        timestamp: nowIso,
-        isLoss: isLossRecord
-      };
-
-      // Enregistrement d'audit dans l'historique local avec le même adjustmentId (local-only car applyStockAdjustment enfile déjà la synchronisation)
-      await localDb.insertLocalOnly(`stock_adjustments/${adjustmentId}`, adjustmentData);
-
-      // ⚡ Synchronisation temps réel avec useInventoryStore (Rapport des Pertes & Historique)
-      useInventoryStore.getState().setStockAdjustments(prev => [adjustmentData as any, ...(prev || [])]);
-
-      if (isLossRecord) {
-        const damId = `dam_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
-        const damRecord = {
-          id: damId,
-          productId: product.id,
-          productName: product.name,
-          quantity: Math.abs(actualDelta),
-          reason: reason || "Perte/casse via ajustement",
-          date: nowIso,
-          userId: safeUserId,
-          userName: safeUserName,
-          claimStatus: 'to_claim' as const,
-          costPrice: product.costPrice || 0
-        };
-        if (result.appliedDirectly) {
-          try {
-            await supabase.from('damaged_items').insert(convertKeysToSnake(damRecord));
-          } catch (damErr) {
-            console.warn("[StockAdjustmentModal] Warning inserting damaged item on Supabase:", damErr);
-          }
-          await localDb.insertLocalOnly(`damaged_items/${damId}`, damRecord);
-        } else {
-          await localDb.insert(`damaged_items/${damId}`, damRecord);
-        }
-        useInventoryStore.getState().setDamagedItems(prev => [damRecord as any, ...(prev || [])]);
-      }
-
-      // ⚡ Mise à jour du cache persistant IndexedDB
-      try {
-        const { get: getIDB, set: setIDB } = await import('idb-keyval');
-        const cached = (await getIDB<any[]>('nexus_stock_adjustments_cache')) || [];
-        await setIDB('nexus_stock_adjustments_cache', [adjustmentData, ...cached]);
-      } catch (_) {}
-
-      window.dispatchEvent(new CustomEvent('stock-adjustment-created', { detail: adjustmentData }));
-      toast.success(isLossRecord ? "Perte déclarée et synchronisée avec le rapport des pertes !" : "Stock ajusté avec succès !");
-
-      onClose();
-    } catch (error: any) {
-      console.error("Error adjusting stock:", error);
-      toast.error("Erreur lors de l'ajustement: " + error.message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   return (
     <Modal
@@ -249,10 +96,10 @@ export function StockAdjustmentModal({
               <Package className="text-indigo-400/60" size={32} />
             </div>
             <div>
-              <h4 className="text-xl font-black text-white uppercase tracking-tighter  leading-none">{product.name}</h4>
+              <h4 className="text-xl font-black text-white uppercase tracking-tighter leading-none">{product.name}</h4>
               <div className="flex items-center gap-3 mt-2">
                  <div className="bg-black/40 px-2 py-0.5 rounded-lg border border-white/5 shadow-inner">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-normal ">ACTUEL: <span className="text-indigo-400">{product.stock || 0} {product.unit || 'UNITÉS'}</span></p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-normal">ACTUEL: <span className="text-indigo-400">{product.stock || 0} {product.unit || 'UNITÉS'}</span></p>
                  </div>
               </div>
             </div>
@@ -261,9 +108,9 @@ export function StockAdjustmentModal({
 
         <div className="space-y-10">
           <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-3">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal ml-1 flex items-center gap-3">
                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-xs animate-pulse" />
-               NOUVEAU COMPTAGE RÉEL {product.useMultiExpiry && <span className="text-indigo-400 lowercase ">(AUTO-SUM)</span>}
+               NOUVEAU COMPTAGE RÉEL {product.useMultiExpiry && <span className="text-indigo-400 lowercase">(AUTO-SUM)</span>}
             </label>
             <div className="relative group">
               <input 
@@ -275,50 +122,25 @@ export function StockAdjustmentModal({
                 onChange={e => setNewStock(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0.00"
                 className={cn(
-                  "w-full p-5 bg-black/40 border rounded-xl text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner  font-mono tracking-tighter",
+                  "w-full p-5 bg-black/40 border rounded-xl text-5xl font-black text-white focus:outline-none focus:ring-8 transition-all text-center shadow-inner font-mono tracking-tighter",
                   product.useMultiExpiry
                     ? "opacity-40 border-indigo-500/20 text-indigo-400 cursor-not-allowed bg-indigo-600/5 ring-1 ring-indigo-500/20"
                     : "border-white/10 group-hover:border-white/20 focus:ring-indigo-500/5 focus:border-indigo-500/40"
                 )}
               />
-              <div className="absolute right-10 top-1/2 -translate-y-1/2 text-[11px] text-slate-700 font-black uppercase tracking-normal pointer-events-none group-focus-within:text-indigo-500/50 transition-colors ">{product.unit || 'PCS'}</div>
+              <div className="absolute right-10 top-1/2 -translate-y-1/2 text-[11px] text-slate-700 font-black uppercase tracking-normal pointer-events-none group-focus-within:text-indigo-500/50 transition-colors">{product.unit || 'PCS'}</div>
             </div>
           </div>
 
-          {product.useMultiExpiry && localBatches && localBatches.length > 0 && (
-            <div className="space-y-5 bg-white/[0.02] border border-white/5 p-6 rounded-xl ring-1 ring-white/5 shadow-md">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-normal ">
-                  DÉTAIL DES STOCKS PAR LOTS (DLC)
-                </span>
-              </div>
-              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-3 custom-scrollbar">
-                {localBatches.map((batch, index) => (
-                  <div key={batch.id || index} className="flex items-center justify-between gap-4 bg-black/40 p-5 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all group/item shadow-inner">
-                    <div className="flex-1">
-                      <span className="font-mono text-xs font-black text-indigo-400 block tracking-widest uppercase ">{batch.batchNumber}</span>
-                      <span className="text-[10px] text-slate-500 font-black uppercase tracking-normal mt-1 block  opacity-60">
-                        EXP: {new Date(batch.expirationDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="w-28 relative group/inp">
-                      <input 
-                        type="number"
-                        step="0.01"
-                        value={batch.stock}
-                        onChange={e => handleLocalBatchStockChange(index, e.target.value)}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl py-3 px-3 text-center text-sm font-black font-mono text-emerald-400 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/40 transition-all  shadow-inner"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {product.useMultiExpiry && (
+            <StockAdjustmentBatchList
+              localBatches={localBatches}
+              onBatchStockChange={handleLocalBatchStockChange}
+            />
           )}
 
           <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal  ml-1 flex items-center gap-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-normal ml-1 flex items-center gap-2">
               <AlignLeft size={12} /> JUSTIFICATION DE L'OPÉRATION
             </label>
             <textarea 
@@ -326,7 +148,7 @@ export function StockAdjustmentModal({
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="NOTES D'INVENTAIRE..."
-              className="w-full p-6 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-800 uppercase  tracking-widest"
+              className="w-full p-6 bg-black/40 border border-white/10 rounded-xl text-xs font-black text-white outline-none focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500/40 transition-all shadow-inner placeholder:text-slate-800 uppercase tracking-widest"
             />
           </div>
 
@@ -342,8 +164,8 @@ export function StockAdjustmentModal({
                 />
               </div>
               <label htmlFor="check-loss" className="flex-1 cursor-pointer select-none">
-                <p className="text-[10px] font-black text-rose-500 uppercase tracking-normal  leading-none">RÉPERTORIER COMME PERTE SÈCHE</p>
-                <p className="text-[10px] text-slate-500 mt-2 font-medium leading-relaxed  opacity-80 uppercase tracking-widest">Activer pour imputer cet écart négatif au rapport des rebuts et déduire la valeur du profit brut.</p>
+                <p className="text-[10px] font-black text-rose-500 uppercase tracking-normal leading-none">RÉPERTORIER COMME PERTE SÈCHE</p>
+                <p className="text-[10px] text-slate-500 mt-2 font-medium leading-relaxed opacity-80 uppercase tracking-widest">Activer pour imputer cet écart négatif au rapport des rebuts et déduire la valeur du profit brut.</p>
               </label>
             </div>
           )}

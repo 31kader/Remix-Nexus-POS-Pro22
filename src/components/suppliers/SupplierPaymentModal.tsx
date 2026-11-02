@@ -15,6 +15,24 @@ interface SupplierPaymentModalProps {
   isProcessingPayment: boolean;
 }
 
+function toDatetimeLocal(val?: string): string {
+  if (!val) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    return `${val}T12:00`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(val)) {
+    return val.slice(0, 16);
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+  } catch (_) {}
+  return '';
+}
+
 export function SupplierPaymentModal({
   isOpen,
   onClose,
@@ -91,7 +109,7 @@ export function SupplierPaymentModal({
           <input 
             type="datetime-local" 
             className="w-full p-2.5 bg-black/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm" 
-            value={paymentData.date ? paymentData.date.slice(0, 16) : ''} 
+            value={toDatetimeLocal(paymentData.date)} 
             onChange={(e) => {
               const val = e.target.value;
               let dateIso = new Date().toISOString();

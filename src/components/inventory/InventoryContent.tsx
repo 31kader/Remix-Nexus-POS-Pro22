@@ -11,6 +11,7 @@ const CatalogPrinter = lazy(() => import('../CatalogPrinter').then(m => ({ defau
 const MarketingPosters = lazy(() => import('../MarketingPosters').then(m => ({ default: m.MarketingPosters })));
 const LossesReport = lazy(() => import('../reports/LossesReport').then(m => ({ default: m.LossesReport })));
 const SupplierSyncManager = lazy(() => import('../SupplierSyncManager').then(m => ({ default: m.SupplierSyncManager })));
+const MobileCartonReception = lazy(() => import('../mobile/MobileCartonReception').then(m => ({ default: m.MobileCartonReception })));
 
 interface InventoryContentProps {
   inventoryTab: InventoryTab;
@@ -71,6 +72,17 @@ export const InventoryContent: React.FC<InventoryContentProps> = ({
       <Suspense fallback={null}>
         {inventoryTab === 'products' ? (
           <InventoryProductsTab {...productTabProps} />
+        ) : inventoryTab === 'cartons' ? (
+          <div className="space-y-4">
+            <MobileCartonReception
+              products={products}
+              suppliers={allSuppliers}
+              onBackToPos={() => setInventoryTab('products')}
+              currentUserId={user?.uid}
+              currentUserName={user?.displayName || 'Agent Dépôt'}
+              isStandalone={false}
+            />
+          </div>
         ) : inventoryTab === 'history' ? (
           <StockHistory adjustments={stockAdjustments} products={products} user={user} />
         ) : inventoryTab === 'labels' ? (

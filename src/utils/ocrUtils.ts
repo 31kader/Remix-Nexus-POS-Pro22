@@ -1,4 +1,26 @@
 import { Product } from '../types';
+import { preprocessImageForOcr } from './ocr/ocrImagePreprocessing';
+import {
+  normalizeTextForOcr,
+  getLevenshteinDistance,
+  areWordsSimilar,
+  isFuzzyNameMatch
+} from './ocr/ocrTextMatching';
+import {
+  parseSmartAlgerianNumber,
+  cleanAndExtractOcrNumbers
+} from './ocr/algerianNumberParsing';
+
+// Ré-exportations pour compatibilité totale
+export {
+  preprocessImageForOcr,
+  normalizeTextForOcr,
+  getLevenshteinDistance,
+  areWordsSimilar,
+  isFuzzyNameMatch,
+  parseSmartAlgerianNumber,
+  cleanAndExtractOcrNumbers
+};
 
 /**
  * Intelligently determines quantity and unit purchase price for a matched product,
@@ -146,248 +168,3 @@ export const reconcileOcrLine = (
 
   return { qty, price };
 };
-
-// Normalizer to remove accents, punctuation and lowercase words
-export const normalizeTextForOcr = (str: string): string => {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/['’°+/#&-\[\]_:]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-};
-
-export const getLevenshteinDistance = (s1: string, s2: string): number => {
-  const len1 = s1.length;
-  const len2 = s2.length;
-  const matrix = Array.from({ length: len1 + 1 }, () => Array(len2 + 1).fill(0));
-
-  for (let i = 0; i <= len1; i++) matrix[i][0] = i;
-  for (let j = 0; j <= len2; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= len1; i++) {
-    for (let j = 1; j <= len2; j++) {
-      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      matrix[i][j] = Math.min(
-        matrix[i - 1][j] + 1,
-        matrix[i][j - 1] + 1,
-        matrix[i - 1][j - 1] + cost
-      );
-    }
-  }
-  return matrix[len1][len2];
-};
-
-export const areWordsSimilar = (w1: string, w2: string): boolean => {
-  if (w1 === w2) return true;
-  if (Math.abs(w1.length - w2.length) > 2) return false;
-  
-  const dist = getLevenshteinDistance(w1, w2);
-  if (w1.length <= 4) return dist <= 1;
-  if (w1.length <= 7) return dist <= 1;
-  return dist <= 2;
-};
-
-export const isFuzzyNameMatch = (productName: string, lineText: string): boolean => {
-  const normProg = normalizeTextForOcr(productName);
-  const normLine = normalizeTextForOcr(lineText);
-  
-  if (normProg.length < 3) return false;
-  
-  // Exact substring match is always valid
-  if (normLine.includes(normProg)) return true;
-  
-  const progWords = normProg.split(" ").filter(w => w.length >= 3);
-  const lineWords = normLine.split(" ").filter(w => w.length >= 2);
-  
-  if (progWords.length === 0) return false;
-  
-  // STRICT RULE: Single-word product names CANNOT fuzzy match.
-  // They are too short and too likely to collide with random OCR text.
-  // They can only match via exact barcode/SKU (handled elsewhere).
-  if (progWords.length <= 1) return false;
-  
-  let matchedCount = 0;
-  for (const pW of progWords) {
-    const hasSimilar = lineWords.some(lW => {
-      if (lW.includes(pW) || pW.includes(lW)) return true;
-      return areWordsSimilar(pW, lW);
-    });
-    
-    if (hasSimilar) {
-      matchedCount++;
-    }
-  }
-  
-  // Require at least 2 words to match AND 90%+ ratio
-  if (matchedCount < 2) return false;
-  
-  const matchRatio = matchedCount / progWords.length;
-  return matchRatio >= 0.90;
-};
-
-export const preprocessImageForOcr = (file: File): Promise<string | File> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(file);
-          return;
-        }
-
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 1800;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const imgData = ctx.getImageData(0, 0, width, height);
-        const data = imgData.data;
-
-        let minLuma = 255;
-        let maxLuma = 0;
-        const lumaArray = new Uint8Array(data.length / 4);
-
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const luma = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-          lumaArray[i / 4] = luma;
-          if (luma < minLuma) minLuma = luma;
-          if (luma > maxLuma) maxLuma = luma;
-        }
-
-        const range = maxLuma - minLuma || 1;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const idx = i / 4;
-          const origLuma = lumaArray[idx];
-          // Gentle contrast stretch preserving anti-aliasing and font gradients
-          let stretched = Math.round(((origLuma - minLuma) / range) * 255);
-          if (stretched < 40) stretched = 0;
-          else if (stretched > 220) stretched = 255;
-
-          data[i] = stretched;
-          data[i + 1] = stretched;
-          data[i + 2] = stretched;
-        }
-
-        ctx.putImageData(imgData, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => resolve(file);
-      img.src = event.target?.result as string;
-    };
-    reader.onerror = () => resolve(file);
-    reader.readAsDataURL(file);
-  });
-};
-
-/**
- * Convertit intelligemment un nombre issu d'une facture algérienne / française / OCR / IA
- * en gérant correctement les séparateurs de milliers (ex: "1.200,00", "1.500", "1 250,50", "2,400.00")
- * et les décimales (ex: "325,00" -> 325, "45,50" -> 45.5).
- */
-export const parseSmartAlgerianNumber = (raw: string | number | undefined | null): number => {
-  if (raw === undefined || raw === null) return 0;
-  if (typeof raw === 'number') {
-    return isNaN(raw) ? 0 : raw;
-  }
-
-  let s = String(raw)
-    .replace(/[\u00A0\u202F]/g, ' ')
-    .replace(/(DA|DZD|DT|EUR|USD|TTC|HT|€|\$|%)/gi, '')
-    .trim();
-
-  if (!s) return 0;
-
-  // Fusionner les espaces séparateurs de milliers : "1 200,00" -> "1200,00", "12 500" -> "12500"
-  s = s.replace(/(\d)\s+(?=\d{3}(?:\b|[.,]))/g, '$1');
-  s = s.replace(/\s+/g, '');
-
-  const hasDot = s.includes('.');
-  const hasComma = s.includes(',');
-
-  if (hasDot && hasComma) {
-    const lastDot = s.lastIndexOf('.');
-    const lastComma = s.lastIndexOf(',');
-    if (lastComma > lastDot) {
-      // Format Européen / Algérien : "1.200,50" ou "12.500,00"
-      s = s.replace(/\./g, '').replace(',', '.');
-    } else {
-      // Format Anglo-Saxon : "1,200.50"
-      s = s.replace(/,/g, '');
-    }
-  } else if (hasComma) {
-    // Ex: "1,500" (milliers) vs "325,00" ou "45,5" (décimales)
-    if (/^\d{1,3}(,\d{3})+$/.test(s)) {
-      s = s.replace(/,/g, '');
-    } else {
-      const parts = s.split(',');
-      if (parts.length > 2) {
-        const dec = parts.pop();
-        s = parts.join('') + '.' + dec;
-      } else {
-        s = s.replace(',', '.');
-      }
-    }
-  } else if (hasDot) {
-    // Ex: "1.200" ou "15.000" sur facture algérienne = 1200 DA / 15000 DA (séparateur de milliers)
-    if (/^\d{1,3}(\.\d{3})+$/.test(s)) {
-      s = s.replace(/\./g, '');
-    } else if ((s.match(/\./g) || []).length > 1) {
-      const parts = s.split('.');
-      const dec = parts.pop();
-      s = parts.join('') + '.' + dec;
-    }
-  }
-
-  const parsed = parseFloat(s);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
-export const cleanAndExtractOcrNumbers = (lineText: string): number[] => {
-  let cleaned = lineText.replace(/[\u00A0\u202F]/g, ' ');
-  
-  cleaned = cleaned.replace(/(\d)[oO]/g, '$10');
-  cleaned = cleaned.replace(/[oO](\d)/g, '0$1');
-  
-  cleaned = cleaned.replace(/(\d)[lIi]/g, '$11');
-  cleaned = cleaned.replace(/[lIi](\d)/g, '1$1');
-  
-  // Fusionner d'abord les formats milliers avec point/virgule/espace (ex: 1.200,00 ou 1 200,00 ou 1.500)
-  cleaned = cleaned.replace(/\b(\d{1,3})[.\s](\d{3})[,.](\d{2})\b/g, '$1$2.$3');
-  cleaned = cleaned.replace(/\b(\d{1,3}),(\d{3})\.(\d{2})\b/g, '$1$2.$3');
-  cleaned = cleaned.replace(/\b(\d{1,3})\.(\d{3})\b/g, '$1$2');
-  cleaned = cleaned.replace(/\b(\d+)\s*[,.·/\-|]\s*(\d{2})\b/g, '$1.$2');
-  
-  cleaned = cleaned.replace(/(\d+)\s*[xX*]\s*(\d+(?:[.,]\d+)?)/g, '$1 $2');
-
-  cleaned = cleaned.replace(/(\d)\s+(\d{3}(?:[.,]\d+)?)\b/g, '$1$2');
-  
-  const numberMatches = cleaned.match(/\b\d+(?:[.,]\d+)?\b/g) || [];
-  
-  return numberMatches
-    .map(n => parseSmartAlgerianNumber(n))
-    .filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
-};
-

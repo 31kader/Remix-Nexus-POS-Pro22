@@ -1,8 +1,10 @@
 import React from 'react';
-import { Package, Edit2, RefreshCw, Printer, Copy, History as HistoryIcon, Trash2, Check, Star, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Package, Check, Star, AlertTriangle, TrendingUp, Maximize2 } from 'lucide-react';
 import { Product, CompanySettings } from '../../types';
 import { cn } from '../../lib/utils';
 import { SafeImage } from '../ui';
+import { InventoryProductCardMobile } from './InventoryProductCardMobile';
+import { InventoryProductCardActions } from './InventoryProductCardActions';
 
 interface InventoryProductCardProps {
   product: Product;
@@ -19,6 +21,7 @@ interface InventoryProductCardProps {
   settings: CompanySettings;
   isDeleting: boolean;
   isExtremeMargin: { isMax: boolean; isMin: boolean };
+  onZoomImage?: (url: string) => void;
 }
 
 export const InventoryProductCard = React.memo(({
@@ -35,7 +38,8 @@ export const InventoryProductCard = React.memo(({
   onCopy,
   settings,
   isDeleting,
-  isExtremeMargin
+  isExtremeMargin,
+  onZoomImage
 }: InventoryProductCardProps) => {
   const margin = (product.price || 0) - (product.costPrice || 0);
   const marginPercent = product.costPrice && product.costPrice > 0 ? Math.round((margin / product.costPrice) * 100) : 0;
@@ -60,83 +64,21 @@ export const InventoryProductCard = React.memo(({
         isDeleting && "opacity-40 pointer-events-none grayscale"
       )}
     >
-      {/* 📱 DISPOSITION MOBILE (< sm) : Format compact horizontal ultra-optimisé */}
-      <div className="flex sm:hidden items-center gap-2.5">
-        {/* Vignette & Case à cocher */}
-        <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
-          <div className="w-14 h-14 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center">
-            {imgSource ? (
-              <SafeImage src={imgSource} alt={product.name} className="w-full h-full object-contain p-0.5" />
-            ) : (
-              <Package size={22} className="text-slate-400 dark:text-slate-500" />
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => onToggleSelect(product.id || '')}
-            className={cn(
-              "absolute -top-1.5 -left-1.5 w-5 h-5 rounded-md border flex items-center justify-center shadow-xs transition-all cursor-pointer",
-              isSelected 
-                ? "bg-indigo-600 border-indigo-500 text-white" 
-                : "border-slate-300 dark:border-slate-700 bg-white/95 dark:bg-slate-800 text-transparent"
-            )}
-            title={isSelected ? "Désélectionner" : "Sélectionner"}
-          >
-            <Check size={11} strokeWidth={3} className={isSelected ? "opacity-100" : "opacity-0"} />
-          </button>
-        </div>
-
-        {/* Détails du Produit */}
-        <div className="min-w-0 flex-1">
-          <h4 className="font-bold text-slate-900 dark:text-white text-xs truncate leading-tight">
-            {product.name}
-          </h4>
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 flex-wrap">
-            <span className="font-mono">{product.sku || 'N/A'}</span>
-            <span>•</span>
-            <span className={cn(
-              "font-bold px-1.5 py-0.2 rounded text-[9px] border",
-              isOutOfStock 
-                ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20"
-                : isLowStock
-                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-            )}>
-              {isOutOfStock ? 'Rupture' : `Stock: ${product.stock ?? 0}`}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1.5 mt-1 font-mono">
-            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-              {(product.price || 0).toFixed(2)} {settings.currency}
-            </span>
-            {margin > 0 && (
-              <span className="text-[9px] text-emerald-700/80 dark:text-emerald-400/80 font-bold">
-                +{margin.toFixed(0)} ({marginPercent}%)
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Actions rapides mobiles */}
-        <div className="flex flex-col gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => onOpenAdjustment(product)}
-            className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center border border-slate-200 dark:border-slate-700 active:scale-90 transition-all cursor-pointer"
-            title="Ajuster le stock"
-          >
-            <RefreshCw size={12} />
-          </button>
-          <button
-            type="button"
-            onClick={() => onEdit(product)}
-            className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 flex items-center justify-center border border-slate-200 dark:border-slate-700 active:scale-90 transition-all cursor-pointer"
-            title="Modifier le produit"
-          >
-            <Edit2 size={12} />
-          </button>
-        </div>
-      </div>
+      {/* 📱 DISPOSITION MOBILE (< sm) */}
+      <InventoryProductCardMobile
+        product={product}
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
+        onEdit={onEdit}
+        onOpenAdjustment={onOpenAdjustment}
+        settings={settings}
+        imgSource={imgSource}
+        margin={margin}
+        marginPercent={marginPercent}
+        isOutOfStock={isOutOfStock}
+        isLowStock={isLowStock}
+        onZoomImage={onZoomImage}
+      />
 
       {/* 💻 DISPOSITION DESKTOP (>= sm) : Carte Complète Haute Définition */}
       <div className="hidden sm:flex flex-col justify-between h-full">
@@ -196,13 +138,34 @@ export const InventoryProductCard = React.memo(({
         </div>
 
         {/* Product Image / Thumbnail with gentle hover zoom */}
-        <div className="relative aspect-square w-full rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 overflow-hidden mb-3.5 flex items-center justify-center group-hover:border-slate-300 dark:group-hover:border-slate-700/80 transition-colors">
+        <div 
+          onClick={(e) => {
+            if (imgSource && onZoomImage) {
+              e.stopPropagation();
+              onZoomImage(imgSource);
+            }
+          }}
+          className={cn(
+            "relative aspect-square w-full rounded-xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 overflow-hidden mb-3.5 flex items-center justify-center group-hover:border-slate-300 dark:group-hover:border-slate-700/80 transition-colors group/thumb",
+            imgSource && onZoomImage && "cursor-zoom-in"
+          )}
+          title={imgSource ? "Cliquer pour agrandir l'image" : undefined}
+        >
           {imgSource ? (
-            <SafeImage 
-              src={imgSource} 
-              alt={product.name} 
-              className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-300" 
-            />
+            <>
+              <SafeImage 
+                src={imgSource} 
+                alt={product.name} 
+                className="w-full h-full object-contain p-1.5 group-hover/thumb:scale-105 transition-transform duration-300" 
+              />
+              {onZoomImage && (
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                  <div className="p-2 rounded-full bg-black/60 text-white backdrop-blur-xs shadow-md transform scale-90 group-hover/thumb:scale-100 transition-transform">
+                    <Maximize2 size={16} />
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-1">
               <Package size={36} strokeWidth={1.5} />
@@ -264,53 +227,14 @@ export const InventoryProductCard = React.memo(({
         </div>
 
         {/* Bottom Action Buttons */}
-        <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/60 flex items-center justify-between gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            onClick={() => onOpenAdjustment(product)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-100 hover:bg-indigo-600 text-slate-700 hover:text-white dark:bg-slate-800 dark:hover:bg-indigo-600 dark:text-slate-300 dark:hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-200 dark:border-slate-700/50 hover:border-indigo-500 cursor-pointer shadow-xs active:scale-95"
-            title="Ajuster le stock"
-          >
-            <RefreshCw size={13} />
-            <span>Ajuster</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onPrintLabel(product)}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white rounded-xl transition-all border border-slate-200 dark:border-slate-700/50 cursor-pointer shadow-xs active:scale-95"
-            title="Imprimer l'étiquette"
-          >
-            <Printer size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onCopy(product)}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white rounded-xl transition-all border border-slate-200 dark:border-slate-700/50 cursor-pointer shadow-xs active:scale-95"
-            title="Dupliquer l'article"
-          >
-            <Copy size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onViewHistory(product)}
-            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-white rounded-xl transition-all border border-slate-200 dark:border-slate-700/50 cursor-pointer shadow-xs active:scale-95"
-            title="Historique des ventes et achats"
-          >
-            <HistoryIcon size={14} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(product.id || null)}
-            className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white dark:bg-rose-500/10 dark:hover:bg-rose-600 dark:text-rose-400 dark:hover:text-white rounded-xl transition-all border border-rose-200 dark:border-rose-500/20 hover:border-rose-500 cursor-pointer shadow-xs active:scale-95"
-            title="Supprimer l'article"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
+        <InventoryProductCardActions
+          product={product}
+          onOpenAdjustment={onOpenAdjustment}
+          onPrintLabel={onPrintLabel}
+          onCopy={onCopy}
+          onViewHistory={onViewHistory}
+          onDelete={onDelete}
+        />
       </div>
     </div>
   );

@@ -109,7 +109,7 @@ export const BottomBar = ({
   }, [canAccess, isAdmin, isOwner, isManager]);
 
   return (
-    <nav className="shrink-0 w-full bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-around px-1 z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+    <nav className="shrink-0 w-full bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-around px-1 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] z-40 pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
       {navItems.map(item => (
         <BottomNavItem
           key={item.id}

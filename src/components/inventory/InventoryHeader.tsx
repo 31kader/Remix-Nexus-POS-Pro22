@@ -1,11 +1,11 @@
 import React from 'react';
 import { Package, History, Tag, RefreshCw, Trash2, Plus, FileSpreadsheet, Upload, Boxes, TrendingUp, AlertCircle, AlertTriangle, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Product, CompanySettings } from '../../types';
+import { Product, CompanySettings, InventoryTab } from '../../types';
 
 interface InventoryHeaderProps {
-  inventoryTab: 'products' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses';
-  setInventoryTab: (tab: 'products' | 'history' | 'labels' | 'catalog' | 'sync' | 'losses') => void;
+  inventoryTab: InventoryTab;
+  setInventoryTab: (tab: InventoryTab) => void;
   products: Product[];
   settings: CompanySettings;
   onAddProduct: () => void;
@@ -31,6 +31,7 @@ export const InventoryHeader: React.FC<InventoryHeaderProps> = ({
 
   const tabs = [
     { id: 'products', label: 'Articles & Stock', icon: Package },
+    { id: 'cartons', label: 'Inventaire Cartons', icon: Boxes },
     { id: 'history', label: 'Historique', icon: History },
     { id: 'labels', label: 'Étiquettes', icon: Tag },
     { id: 'catalog', label: 'Catalogue', icon: FileText },

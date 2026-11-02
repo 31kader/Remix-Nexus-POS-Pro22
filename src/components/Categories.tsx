@@ -1,23 +1,10 @@
 import React, { useRef, useState, useMemo } from 'react';
-import {
-  FolderTree,
-  ChevronRight,
-  ChevronDown,
-  Plus,
-  Edit2,
-  Trash2,
-  Download,
-  Upload,
-  Search,
-  Package,
-  FolderOpen
-} from 'lucide-react';
+import { FolderTree, Plus, Download, Upload, Search } from 'lucide-react';
 import { Category, Product } from '../types';
-import { cn, exportToCSV } from '../lib/utils';
-import { Button, Card, SafeImage } from './ui';
-import Papa from 'papaparse';
+import { Button } from './ui';
 import { toast } from 'sonner';
-import { localDb } from '../services/LocalDatabase';
+import { CategoryTreeItem } from './categories/CategoryTreeItem';
+import { exportCategoriesToCsv, importCategoriesFromCsv } from './categories/categoriesCsvService';
 
 interface CategoriesProps {
   categories: Category[];
@@ -33,9 +20,6 @@ export function Categories({ categories, products = [], onEdit, onDelete, onAdd 
   const [importSummary, setImportSummary] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({});
-
-  const getSubcategories = (parentId: string) =>
-    categories.filter((c: any) => c.parentId === parentId);
 
   // Comptage des produits par catégorie (directs + sous-catégories)
   const productCounts = useMemo(() => {
@@ -81,216 +65,28 @@ export function Categories({ categories, products = [], onEdit, onDelete, onAdd 
   };
 
   const handleExport = () => {
-    const dataToExport = categories.map((cat) => {
-      const parent = categories.find((c) => c.id === cat.parentId);
-      return {
-        id: cat.id,
-        Nom: cat.name,
-        Niveau: cat.level || 0,
-        Parent_Id: cat.parentId || '',
-        Parent_Nom: parent ? parent.name : '',
-        Nb_Produits: productCounts.totalMap[cat.id] || 0
-      };
-    });
-    exportToCSV(dataToExport, 'categories_export');
+    exportCategoriesToCsv(categories, productCounts.totalMap);
   };
 
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsImporting(true);
     setImportSummary(null);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results: any) => {
-        try {
-          const data = results.data as any[];
-          let successCount = 0;
-          let failCount = 0;
-
-          for (const row of data) {
-            const nom = row['Nom']?.trim();
-            if (!nom) {
-              failCount++;
-              continue;
-            }
-
-            const parentId = row['Parent_Id']?.trim();
-            const parentNom = row['Parent_Nom']?.trim();
-
-            const existing = categories.find(
-              (c) => (c.name || '').toLowerCase() === nom.toLowerCase()
-            );
-            if (existing) {
-              failCount++;
-              continue;
-            }
-
-            let resolvedParentId = parentId || null;
-            if (!resolvedParentId && parentNom) {
-              const pData = categories.find(
-                (c) => (c.name || '').toLowerCase() === parentNom.toLowerCase()
-              );
-              if (pData) {
-                resolvedParentId = pData.id;
-              }
-            }
-
-            const newId = Math.random().toString(36).substring(2, 10);
-            try {
-              await localDb.insert(`categories/${newId}`, {
-                id: newId,
-                name: nom,
-                parentId: resolvedParentId || undefined
-              });
-              successCount++;
-            } catch (err) {
-              failCount++;
-            }
-          }
-
-          setImportSummary(
-            successCount +
-              ' catégorie(s) importée(s) avec succès. ' +
-              (failCount > 0 ? failCount + ' ignorée(s) (doublons ou erreurs).' : '')
-          );
-        } catch (error) {
-          console.error("Erreur d'importation:", error);
-          toast.error("Une erreur s'est produite lors de l'importation.");
-        } finally {
-          setIsImporting(false);
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        }
-      },
-      error: (error: any) => {
-        setIsImporting(false);
-        toast.error('Erreur de lecture du fichier CSV: ' + error.message);
+    try {
+      const res = await importCategoriesFromCsv(file, categories);
+      setImportSummary(res.message);
+    } catch (error: any) {
+      console.error("Erreur d'importation:", error);
+      toast.error("Erreur lors de l'importation: " + (error?.message || error));
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-    });
-  };
-
-  const renderCategory = (category: any, level: number = 0) => {
-    const isSearching = searchQuery.trim().length > 0;
-    const subcategories = isSearching ? [] : getSubcategories(category.id);
-    const isCollapsed = Boolean(collapsedIds[category.id]);
-    const totalProd = productCounts.totalMap[category.id] || 0;
-    const parentCat = category.parentId
-      ? categories.find((c) => c.id === category.parentId)
-      : null;
-
-    return (
-      <div key={category.id} className="space-y-2">
-        <Card
-          className={cn(
-            'p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all border border-slate-200 dark:border-zinc-800 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 bg-slate-50/70 dark:bg-zinc-800/50',
-            level > 0 && 'ml-4 sm:ml-8 border-l-4 border-l-indigo-500 dark:border-l-indigo-400'
-          )}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            {subcategories.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => toggleCollapse(category.id)}
-                className="p-1.5 rounded-lg text-slate-500 dark:text-zinc-400 hover:bg-slate-200/70 dark:hover:bg-zinc-700/70 transition-colors shrink-0 cursor-pointer"
-                title={isCollapsed ? 'Déplier les sous-catégories' : 'Replier les sous-catégories'}
-              >
-                {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-              </button>
-            ) : (
-              <div className="w-7 shrink-0 hidden sm:block" />
-            )}
-
-            {category.imageUrl ? (
-              <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
-                <SafeImage
-                  src={category.imageUrl}
-                  alt={category.name}
-                  className="w-full h-full object-cover"
-                  fallback={<FolderTree size={22} className="text-indigo-600 dark:text-indigo-400" />}
-                />
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border',
-                  level === 0
-                    ? 'bg-indigo-600/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
-                    : 'bg-emerald-600/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                )}
-              >
-                {level === 0 ? <FolderTree size={20} /> : <FolderOpen size={18} />}
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-sm sm:text-base truncate">
-                  {category.name}
-                </h4>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-500/30">
-                  <Package size={11} />
-                  {totalProd} produit{totalProd > 1 ? 's' : ''}
-                </span>
-                {subcategories.length > 0 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-200/80 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">
-                    {subcategories.length} sous-catégorie{subcategories.length > 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-
-              <p className="text-xs font-medium text-slate-500 dark:text-zinc-400 mt-0.5">
-                {parentCat
-                  ? `Sous-catégorie de : ${parentCat.name}`
-                  : subcategories.length > 0
-                  ? `Rayon principal contenant ${subcategories.length} sous-rayon(s)`
-                  : 'Rayon principal'}
-              </p>
-            </div>
-          </div>
-
-          {/* Boutons d'action toujours visibles (compatibles écran tactile POS & souris) */}
-          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-            <button
-              type="button"
-              onClick={() => onAdd(category.id)}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-600 hover:text-white border border-emerald-500/20 rounded-lg transition-colors cursor-pointer"
-              title="Ajouter une sous-catégorie"
-            >
-              <Plus size={14} />
-              <span className="hidden md:inline">Sous-catégorie</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onEdit(category)}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-600 hover:text-white border border-indigo-500/20 rounded-lg transition-colors cursor-pointer"
-              title="Modifier la catégorie"
-            >
-              <Edit2 size={14} />
-              <span className="hidden md:inline">Modifier</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(category)}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/20 rounded-lg transition-colors cursor-pointer"
-              title="Supprimer la catégorie"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </Card>
-
-        {subcategories.length > 0 && !isCollapsed && (
-          <div className="space-y-2 mt-2">
-            {subcategories.map((sub: any) => renderCategory(sub, level + 1))}
-          </div>
-        )}
-      </div>
-    );
+    }
   };
 
   return (
@@ -386,7 +182,20 @@ export function Categories({ categories, products = [], onEdit, onDelete, onAdd 
 
       {/* Liste hiérarchique des catégories */}
       <div className="space-y-3">
-        {filteredRootCategories.map((category: any) => renderCategory(category))}
+        {filteredRootCategories.map((category: any) => (
+          <CategoryTreeItem
+            key={category.id}
+            category={category}
+            categories={categories}
+            totalMap={productCounts.totalMap}
+            collapsedIds={collapsedIds}
+            toggleCollapse={toggleCollapse}
+            searchQuery={searchQuery}
+            onAdd={onAdd}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))}
 
         {filteredRootCategories.length === 0 && (
           <div className="p-8 text-center text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/40 rounded-xl border border-dashed border-slate-300 dark:border-zinc-700 space-y-3">

@@ -27,7 +27,8 @@ export const TABLE_NAME_MAPPINGS: Record<string, string> = {
   'cashierAlerts': 'cashier_alerts',
   'externalDeliveryRequests': 'external_delivery_requests',
   'shortageItems': 'shortage_items',
-  'customReplenishmentLists': 'custom_replenishment_lists'
+  'customReplenishmentLists': 'custom_replenishment_lists',
+  'cartonTemplates': 'carton_templates'
 };
 
 // Convert camelCase keys to snake_case for Supabase PostgreSQL
@@ -203,7 +204,13 @@ export const TABLE_COLUMNS: Record<string, string[]> = {
     'tags', 'expiration_date', 'batch_number', 'location', 'show_in_pos', 
     'damaged_stock', 'created_at', 'updated_at',
     'use_multi_expiry', 'batches', 'auto_unpack', 'units_per_parent', 'parent_id', 'is_quick_select',
-    'price_history'
+    'price_history', 'carton_photo_url'
+  ],
+  carton_templates: [
+    'id', 'product_id', 'product_name', 'units_per_carton', 'carton_cost_price',
+    'unit_cost_price', 'carton_photo_url', 'barcode', 'product_barcode',
+    'dhash', 'color_signature', 'usage_count', 'updated_at', 'created_at',
+    'retail_price', 'wholesale_price', 'sku'
   ],
   customers: [
     'id', 'name', 'phone', 'email', 'loyalty_points', 'balance', 'loyalty_card_number', 
@@ -439,6 +446,10 @@ export function preparePayload(table: string, id: string, data: any) {
     if (cached) {
       combined = { ...cached, ...data };
     }
+  }
+  if (table === 'carton_templates' || table === 'cartonTemplates') {
+    if (combined.dHash && !combined.dhash) combined.dhash = combined.dHash;
+    if (combined.d_hash && !combined.dhash) combined.dhash = combined.d_hash;
   }
   // Map total to totalAmount for purchases/purchase_orders to align with Supabase schema
   if ((table === 'purchases' || table === 'purchase_orders') && combined.total !== undefined && combined.totalAmount === undefined) {

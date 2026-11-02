@@ -1,15 +1,13 @@
 import { supabase, isSupabaseConfigured } from '../supabase';
-import { OnlineOrder, Customer, Employee, CompanySettings, Transaction } from '../types';
-import { generateUniqueId } from '../lib/utils';
+import { OnlineOrder, Customer, Employee, CompanySettings } from '../types';
 import { localDb } from '../services/LocalDatabase';
-import { enqueueSync, enqueueStockAdjustment, enqueueCustomerBalanceAdjustment, sanitizePayloadForSupabase } from '../services/SyncService';
-import { destockOrder, restockOrder, toSupabaseOrderId } from '../services/orderStockService';
+import { enqueueSync } from '../services/SyncService';
+import { destockOrder, restockOrder } from '../services/orderStockService';
 import { useTransactionStore } from '../store/useTransactionStore';
-import { useCoreStore } from '../store/useCoreStore';
-import { usePeopleStore } from '../store/usePeopleStore';
-import { convertKeysToCamel } from '../lib/db-converters';
 import { set as idbSet } from 'idb-keyval';
 import { toast } from 'sonner';
+import { executeAssignOrderToEmployee, executeAssignPickerToOrder } from './orders/orderStaffAssignment';
+import { executeBulkUpdateOrderStatus } from './orders/orderBulkOperations';
 
 interface UseOrderActionsParams {
   orders: OnlineOrder[];
@@ -21,7 +19,6 @@ interface UseOrderActionsParams {
 }
 
 // Helper: Supabase online_orders uses BIGSERIAL (int8) for ID
-// Ensure we pass the correct type for .eq('id', ...)
 function toSupabaseId(id: any): number | string {
   const n = Number(id);
   return (!isNaN(n) && n > 0) ? n : id;
@@ -165,7 +162,7 @@ export function useOrderActions({
           return;
         }
 
-        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB (updateLocalOnly évite un doublon d'upsert dans SyncService)
+        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB
         useTransactionStore.getState().setOnlineOrders(prev => 
           (Array.isArray(prev) ? prev : []).map(o => {
             const matchesId = String(o.id) === String(orderId);
@@ -215,172 +212,21 @@ export function useOrderActions({
   };
 
   const bulkUpdateOrderStatus = async (targetOrders: OnlineOrder[], newStatus: OnlineOrder['status']) => {
-    if (!targetOrders || targetOrders.length === 0) return;
-    
-    // Si les commandes sont annulées en lot, déclencher le rollback de leurs recettes et du stock
-    if (newStatus === 'cancelled') {
-      for (const o of targetOrders) {
-        await rollbackCancelledOrderTransactions(o);
-      }
-    }
-
-    // 📦 OPTION 1 : Si les commandes passent en confirmé/actif en lot, décrémenter le stock immédiatement
-    const activeDestockStatuses = ['confirmed', 'paid', 'processing', 'shipped', 'delivered'];
-    if (activeDestockStatuses.includes(newStatus)) {
-      for (const o of targetOrders) {
-        if (!o.syncedToPos) {
-          await decrementStockForOrder(o);
-        }
-      }
-    }
-
-    const dbIds = targetOrders.map(o => toSupabaseId(o.id));
-    const targetExtIds = targetOrders.map(o => o.externalOrderId).filter(Boolean) as string[];
-    const targetIdsSet = new Set(targetOrders.map(o => String(o.id)));
-
-    if (isSupabaseConfigured) {
-      try {
-        const { error } = await supabase
-          .from('online_orders')
-          .update({ status: newStatus })
-          .in('id', dbIds);
-
-        if (targetExtIds.length > 0) {
-          await supabase
-            .from('online_orders')
-            .update({ status: newStatus })
-            .in('external_order_id', targetExtIds);
-        }
-
-        if (error) {
-          toast.error(`Erreur Supabase lot: ${error.message}`);
-          return;
-        }
-      } catch (e: any) {
-        console.warn('[Bulk Order Status Catch - Queued Offline]', e);
-        targetOrders.forEach(o => {
-          enqueueSync('online_orders', String(o.id), 'UPSERT', {
-            id: toSupabaseId(o.id),
-            status: newStatus,
-            ...(o.externalOrderId ? { external_order_id: o.externalOrderId } : {})
-          });
-        });
-        toast.info(`Lot mis à jour hors-ligne (${targetOrders.length} commandes en attente de synchro).`);
-      }
-    }
-
-    // Mettre à jour Zustand et IndexedDB
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).map(o => {
-        const matchesId = targetIdsSet.has(String(o.id));
-        const matchesExt = o.externalOrderId && targetExtIds.includes(o.externalOrderId);
-        return (matchesId || matchesExt) ? { ...o, status: newStatus } : o;
-      })
+    return await executeBulkUpdateOrderStatus(
+      targetOrders,
+      newStatus,
+      statusLabels,
+      rollbackCancelledOrderTransactions,
+      decrementStockForOrder
     );
-
-    for (const o of targetOrders) {
-      await localDb.update(`onlineOrders/${o.id}`, { status: newStatus });
-    }
-
-    const currentList = useTransactionStore.getState().onlineOrders;
-    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-    toast.success(`${targetOrders.length} commande(s) passée(s) en « ${statusLabels[newStatus] || newStatus} » ✅`);
   };
 
   const assignOrderToEmployee = async (order: OnlineOrder, employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    const empName = employee?.name || 'Inconnu';
-    const orderId = order.id;
-    const dbId = toSupabaseId(orderId);
-
-    // 1. SUPABASE-FIRST: Update Supabase
-    if (isSupabaseConfigured) {
-      try {
-        const { error } = await supabase
-          .from('online_orders')
-          .update({ 
-            assigned_employee_id: employeeId,
-            assigned_employee_name: empName
-          })
-          .eq('id', dbId);
-
-        if (error) {
-          console.error('[Supabase Assign Delivery Error]', error);
-          toast.error(`Erreur Supabase: ${error.message}`);
-          return;
-        }
-      } catch (e: any) {
-        toast.error(`Erreur Supabase: ${e?.message}`);
-        return;
-      }
-    }
-
-    // 2. SYNC LOCAL
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { 
-        ...o, 
-        assignedEmployeeId: employeeId, 
-        assignedEmployeeName: empName 
-      } : o)
-    );
-
-    await localDb.update(`onlineOrders/${orderId}`, {
-      assignedEmployeeId: employeeId,
-      assignedEmployeeName: empName
-    });
-
-    const currentList = useTransactionStore.getState().onlineOrders;
-    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-
-    toast.success(`Livreur assigné sur Supabase ✅ : ${empName}`);
+    return await executeAssignOrderToEmployee(order, employeeId, employees);
   };
 
   const assignPickerToOrder = async (order: OnlineOrder, pickerId: string) => {
-    const picker = employees.find(e => e.id === pickerId);
-    const pickerName = picker?.name || 'Inconnu';
-    const orderId = order.id;
-    const dbId = toSupabaseId(orderId);
-
-    // 1. SUPABASE-FIRST: Update Supabase
-    if (isSupabaseConfigured) {
-      try {
-        const { error } = await supabase
-          .from('online_orders')
-          .update({ 
-            assigned_picker_id: pickerId,
-            assigned_picker_name: pickerName
-          })
-          .eq('id', dbId);
-
-        if (error) {
-          console.error('[Supabase Assign Picker Error]', error);
-          toast.error(`Erreur Supabase: ${error.message}`);
-          return;
-        }
-      } catch (e: any) {
-        toast.error(`Erreur Supabase: ${e?.message}`);
-        return;
-      }
-    }
-
-    // 2. SYNC LOCAL
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { 
-        ...o, 
-        assignedPickerId: pickerId, 
-        assignedPickerName: pickerName 
-      } : o)
-    );
-
-    await localDb.update(`onlineOrders/${orderId}`, {
-      assignedPickerId: pickerId,
-      assignedPickerName: pickerName
-    });
-
-    const currentList = useTransactionStore.getState().onlineOrders;
-    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-
-    toast.success(`Préparateur assigné sur Supabase ✅ : ${pickerName}`);
+    return await executeAssignPickerToOrder(order, pickerId, employees);
   };
 
   return {

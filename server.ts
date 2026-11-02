@@ -165,7 +165,7 @@ async function startServer() {
       res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()');
       res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: https://*.supabase.co https://images.unsplash.com https://*.openfoodfacts.org; connect-src 'self' blob: data: capacitor: https: wss: https://*.supabase.co wss://*.supabase.co https://world.openfoodfacts.org https://*.openfoodfacts.org https://openfoodfacts.org https://generativelanguage.googleapis.com https://api.groq.com https://openrouter.ai https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io ws://localhost:* http://localhost:* http://127.0.0.1:* ws://127.0.0.1:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
       );
       if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
         res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
@@ -219,7 +219,7 @@ async function startServer() {
 
     // API routes
     app.get("/api/health", (req, res) => {
-      res.json({ status: "ok", version: "1.2.58", pid: process.pid });
+      res.json({ status: "ok", version: "1.2.59", pid: process.pid });
     });
 
     app.get("/api/network-ip", (req, res) => {
@@ -363,6 +363,47 @@ async function startServer() {
         io.emit('customer-display:barcode', { barcode: barcode.trim() });
       }
       res.json({ success: true });
+    });
+
+    // 🟢 État et terminaux connectés au Hub Réseau Local (LAN Multi-Caisses)
+    const activeLanTerminals = new Map<string, {
+      socketId: string;
+      terminalId: string;
+      terminalName: string;
+      role: string;
+      ip: string;
+      connectedAt: string;
+      lastSeen: string;
+      isOnline: boolean;
+    }>();
+
+    app.get("/api/lan/status", (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+      res.json({
+        status: "ok",
+        isHub: true,
+        port: PORT,
+        terminalsCount: activeLanTerminals.size,
+        terminals: Array.from(activeLanTerminals.values()),
+        serverTime: new Date().toISOString()
+      });
+    });
+
+    app.get("/api/lan/terminals", (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache, no-store');
+      res.json({
+        count: activeLanTerminals.size,
+        terminals: Array.from(activeLanTerminals.values())
+      });
+    });
+
+    app.post("/api/lan/sync", requirePosLanAuth, (req, res) => {
+      const message = req.body;
+      if (message && message.id && message.action) {
+        io.emit('lan:sync', message);
+        return res.json({ success: true, relayed: true });
+      }
+      res.status(400).json({ error: "Message de synchronisation LAN invalide" });
     });
 
     // Custom Rate Limiter Middleware
@@ -794,8 +835,55 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
         }
       });
 
+      // 🟢 Réseau Local Multi-Caisses : Enregistrement d'un terminal (Maître ou Secondaire)
+      socket.on("lan:register", (data) => {
+        if (!isAuthorizedSocket && data?.lanToken !== EXPECTED_LAN_TOKEN) return;
+        const terminalId = typeof data?.terminalId === 'string' ? data.terminalId.trim().toUpperCase() : 'UNKNOWN';
+        const terminalName = typeof data?.terminalName === 'string' ? data.terminalName.trim() : `Caisse ${terminalId}`;
+        const role = typeof data?.role === 'string' ? data.role : 'SECONDARY';
+        const clientIp = socket.handshake.address || '';
+
+        activeLanTerminals.set(socket.id, {
+          socketId: socket.id,
+          terminalId,
+          terminalName,
+          role,
+          ip: clientIp,
+          connectedAt: new Date().toISOString(),
+          lastSeen: new Date().toISOString(),
+          isOnline: true
+        });
+
+        // Informer immédiatement tous les postes de la liste à jour
+        io.emit("lan:terminals-update", Array.from(activeLanTerminals.values()));
+      });
+
+      // 🟢 Relais ultra-rapide des actions de synchronisation entre postes de caisse
+      socket.on("lan:sync", (message) => {
+        if (!isAuthorizedSocket && message?.lanToken !== EXPECTED_LAN_TOKEN) return;
+        if (message && message.id && message.action) {
+          const terminal = activeLanTerminals.get(socket.id);
+          if (terminal) {
+            terminal.lastSeen = new Date().toISOString();
+          }
+          // Diffusion immédiate à toutes les autres caisses connectées
+          socket.broadcast.emit("lan:sync", message);
+        }
+      });
+
+      // 🟢 Mesure de latence LAN en direct (Ping / Pong)
+      socket.on("lan:ping", (data) => {
+        socket.emit("lan:pong", {
+          timestamp: data?.timestamp || Date.now(),
+          serverTime: Date.now()
+        });
+      });
+
       socket.on("disconnect", () => {
-        // Déconnexion propre
+        if (activeLanTerminals.has(socket.id)) {
+          activeLanTerminals.delete(socket.id);
+          io.emit("lan:terminals-update", Array.from(activeLanTerminals.values()));
+        }
       });
     });
 
@@ -838,7 +926,7 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 
     // 📦 Route de téléchargement direct du fichier APK Android depuis le PC en Wi-Fi ou redirection GitHub
     app.get('/download/apk', (req, res) => {
-      const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-1.2.58.apk';
+      const GITHUB_APK_FALLBACK = process.env.APK_DOWNLOAD_URL || process.env.VITE_APK_URL || 'https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-1.2.59.apk';
       const releaseDirs = [
         path.join(process.cwd(), 'release'),
         path.join(_dirname, '..', 'release'),

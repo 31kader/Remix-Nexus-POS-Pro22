@@ -66,17 +66,8 @@ export const CartItemRow = memo(({
       )}
       onClick={() => onSelect(item.id)}
     >
-      {/* 1. Numéro & Désignation Produit */}
+      {/* 1. Désignation Produit (sans badge numéro pour maximiser l'espace) */}
       <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-        <div className={cn(
-          "w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex-shrink-0 flex items-center justify-center border text-[10px] font-black font-mono shadow-xs",
-          item.quantity < 0
-            ? "bg-rose-100 dark:bg-rose-900/50 border-rose-300 dark:border-rose-500/40 text-rose-600 dark:text-rose-400"
-            : "bg-slate-100 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 text-indigo-600 dark:text-indigo-400"
-        )}>
-          #{idx + 1}
-        </div>
-
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h5 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate uppercase leading-tight">
@@ -204,7 +195,7 @@ export const CartItemRow = memo(({
                 const { quantity, overriddenPrice, lineDiscount, productName, cartItemId, ...product } = item as any;
                 onOpenProductModal(product as Product);
               }}
-              className="min-w-[38px] min-h-[38px] hidden md:flex items-center justify-center rounded-lg text-slate-500 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-transparent hover:border-amber-500/20 active:scale-90 cursor-pointer"
+              className="min-w-[38px] min-h-[38px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-amber-500/10 hover:text-amber-400 transition-all border border-transparent hover:border-amber-500/20 active:scale-90 cursor-pointer"
               title="DÉTAILS PRODUIT"
             >
               <Edit2 size={15} />

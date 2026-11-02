@@ -2,17 +2,10 @@ import React, { useState } from 'react';
 import {
   Sparkles,
   RefreshCw,
-  Package,
-  DollarSign,
-  Layers,
-  Image as ImageIcon,
-  LayoutGrid,
-  TrendingUp,
-  History
+  Package
 } from 'lucide-react';
 import { Product, Category, CompanySettings, Brand } from '../types';
 import { Modal, Button } from './ui';
-import { SafeImage } from './ui/SafeImage';
 import { BarcodeScanner } from './BarcodeScanner';
 import { ProductMultiExpirySection } from './product/ProductMultiExpirySection';
 import { ProductAdvancedOptions } from './product/ProductAdvancedOptions';
@@ -21,6 +14,8 @@ import { ProductBasicInfoSection } from './product/ProductBasicInfoSection';
 import { ProductPricingSection } from './product/ProductPricingSection';
 import { ProductStockSection } from './product/ProductStockSection';
 import { ProductMediaSection } from './product/ProductMediaSection';
+import { ProductFormHeaderBanner } from './product/ProductFormHeaderBanner';
+import { ProductFormTabNav, FicheTab } from './product/ProductFormTabNav';
 import { useProductFormLogic } from '../hooks/useProductFormLogic';
 import { cn } from '../lib/utils';
 
@@ -38,7 +33,6 @@ interface ProductFormModalProps {
   setActiveTab?: (tab: string) => void;
 }
 
-type FicheTab = 'all' | 'identity' | 'pricing' | 'stock' | 'media';
 
 export function ProductFormModal(props: ProductFormModalProps) {
   const {
@@ -128,127 +122,24 @@ export function ProductFormModal(props: ProductFormModalProps) {
           className="flex flex-col h-full bg-slate-50 dark:bg-zinc-950 relative"
         >
           {/* BANDEAU RÉSUMÉ EN DIRECT DE LA FICHE ARTICLE */}
-          <div className="bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-5 py-3.5 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center overflow-hidden shrink-0">
-                {formData.imageUrl ? (
-                  <SafeImage src={formData.imageUrl} alt={formData.name || ''} className="w-full h-full object-contain" />
-                ) : (
-                  <Package size={20} className="text-indigo-500" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-black text-slate-900 dark:text-white truncate">
-                  {formData.name || 'Nouvel Article (Saisissez la désignation)'}
-                </p>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-zinc-400">
-                  SKU: <span className="font-mono">{formData.sku || 'Auto'}</span> • Code-barres:{' '}
-                  <span className="font-mono">{formData.barcode || 'Non défini'}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* 4 Indicateurs Clés en Direct (Achat, Détail, Marge, Stock) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
-              <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
-                <span className="block text-[9px] font-black uppercase text-slate-400">Prix Achat</span>
-                <span className="text-xs font-black text-slate-800 dark:text-white">
-                  {costPrice.toFixed(2)} {currency}
-                </span>
-              </div>
-
-              <div className="px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                <span className="block text-[9px] font-black uppercase text-indigo-500">Prix Vente Détail</span>
-                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
-                  {retailPrice.toFixed(2)} {currency}
-                </span>
-              </div>
-
-              <div
-                className={cn(
-                  'px-3 py-1.5 rounded-xl border',
-                  netMarginDA > 0
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
-                )}
-              >
-                <span className="block text-[9px] font-black uppercase">Marge Nette</span>
-                <span className="text-xs font-black">
-                  {netMarginDA >= 0 ? '+' : ''}
-                  {netMarginDA.toFixed(0)} {currency} ({marginPercent.toFixed(0)}%)
-                </span>
-              </div>
-
-              <div
-                className={cn(
-                  'px-3 py-1.5 rounded-xl border',
-                  currentStock > 0
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400'
-                )}
-              >
-                <span className="block text-[9px] font-black uppercase">Stock Actuel</span>
-                <span className="text-xs font-black">
-                  {currentStock} {formData.unit || 'u.'} {wholesalePrice > 0 ? `• Gros: ${wholesalePrice} ${currency}` : ''}
-                </span>
-              </div>
-            </div>
-          </div>
+          <ProductFormHeaderBanner
+            formData={formData}
+            currency={currency}
+            costPrice={costPrice}
+            retailPrice={retailPrice}
+            wholesalePrice={wholesalePrice}
+            currentStock={currentStock}
+            netMarginDA={netMarginDA}
+            marginPercent={marginPercent}
+          />
 
           {/* BARRE D'ONGLETS DE RÉORGANISATION DE LA FICHE */}
-          <div className="bg-slate-100/80 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 px-5 py-2.5 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'all', label: '👁️ Vue Complète Structurée', icon: LayoutGrid },
-                { id: 'identity', label: '1. Identification & Rayon', icon: Package },
-                { id: 'pricing', label: '2. Tarifs, Gros & Marges', icon: DollarSign },
-                { id: 'stock', label: '3. Stock, Emplacement & Lots', icon: Layers },
-                { id: 'media', label: '4. Photos, IA & Avancé', icon: ImageIcon },
-              ].map(tab => {
-                const Icon = tab.icon;
-                const isActive = activeFicheTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveFicheTab(tab.id as FicheTab)}
-                    className={cn(
-                      'px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border',
-                      isActive
-                        ? 'bg-indigo-600 text-white border-indigo-500 shadow-xs'
-                        : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-200 dark:border-zinc-700 hover:border-indigo-400'
-                    )}
-                  >
-                    <Icon size={14} />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {(setIsPurchaseHistoryModalOpen || setIsSalesHistoryModalOpen) && (
-              <div className="flex items-center gap-2">
-                {setIsPurchaseHistoryModalOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setIsPurchaseHistoryModalOpen(true)}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-[11px] font-bold text-slate-700 dark:text-zinc-300 hover:border-indigo-500 flex items-center gap-1 cursor-pointer"
-                  >
-                    <History size={12} className="text-indigo-500" /> Achats
-                  </button>
-                )}
-                {setIsSalesHistoryModalOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setIsSalesHistoryModalOpen(true)}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-[11px] font-bold text-slate-700 dark:text-zinc-300 hover:border-emerald-500 flex items-center gap-1 cursor-pointer"
-                  >
-                    <TrendingUp size={12} className="text-emerald-500" /> Ventes
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <ProductFormTabNav
+            activeFicheTab={activeFicheTab}
+            setActiveFicheTab={setActiveFicheTab}
+            setIsPurchaseHistoryModalOpen={setIsPurchaseHistoryModalOpen}
+            setIsSalesHistoryModalOpen={setIsSalesHistoryModalOpen}
+          />
 
           {/* CORPS DE LA FICHE RÉORGANISÉ EN CARTES PROPRES */}
           <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 pb-24">

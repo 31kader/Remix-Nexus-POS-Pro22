@@ -1,47 +1,17 @@
-import React, { useState, useMemo, useRef, useEffect, useDeferredValue } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Package, Search, Plus, Trash2, ShoppingBag, 
-  Upload, RefreshCw, Brain, Camera, ShoppingCart, 
-  Wallet, Clock, CheckCircle2, AlertCircle, FileText, 
-  Edit, Printer, X, Sparkles, XCircle, Eye, ClipboardList
-} from 'lucide-react';
+import React from 'react';
 import { 
   Product, Supplier, InvoicePattern, Purchase, 
   PurchaseOrder, CompanySettings, SupplierPayment, Category 
 } from '../types';
-import { 
-  cn, generateUniqueId, formatProductStock, logAction, formatSafe
-} from '../lib/utils';
-import { convertKeysToSnake, enqueueStockAdjustment, localDb } from '../database';
-import { supabase } from '../supabase';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { BarcodeScanner } from './BarcodeScanner';
-import { UpdatePricesView } from './UpdatePricesView';
-import { Modal, Button, Card, ConfirmDialog, SafeImage } from './ui';
-import { scanInvoice } from '../services/geminiService';
-import { toast } from 'sonner';
-import { 
-  extractQtyAndPrice, 
-  reconcileOcrLine, 
-  normalizeTextForOcr, 
-  getLevenshteinDistance, 
-  areWordsSimilar, 
-  isFuzzyNameMatch, 
-  preprocessImageForOcr, 
-  cleanAndExtractOcrNumbers 
-} from '../utils/ocrUtils';
 import { SubTabPurchasesHistory } from './smart-purchase/SubTabPurchasesHistory';
 import { SubTabDebts } from './smart-purchase/SubTabDebts';
 import { SubTabNewPurchase } from './smart-purchase/SubTabNewPurchase';
 import { SubTabShortages } from './smart-purchase/SubTabShortages';
 import { useSmartPurchaseLogic } from './smart-purchase/useSmartPurchaseLogic';
 import { SmartPurchaseModals } from './smart-purchase/SmartPurchaseModals';
-import { usePurchaseCart, PurchaseCartItem } from '../hooks/usePurchaseCart';
-import { useShortageStore } from '../store/useShortageStore';
-
-// Removed module-level AI initialization
+import { SmartPurchaseStepViews } from './smart-purchase/SmartPurchaseStepViews';
+import { SmartPurchaseHeaderNav } from './smart-purchase/SmartPurchaseHeaderNav';
+import { toast } from 'sonner';
 
 interface SmartPurchaseProps {
   products: Product[];
@@ -105,7 +75,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
     paymentData, setPaymentData,
     isQuickSupplierModalOpen, setIsQuickSupplierModalOpen,
     quickSupplierData, setQuickSupplierData,
-    filteredProducts, filteredPurchases,
+    filteredProducts, filteredPurchases, cartonTemplates,
     fileInputRef, searchInputRef, quantityInputRefs,
     linkDraftToProduct,
     openQuickCreateModal,
@@ -123,122 +93,39 @@ export function SmartPurchase(props: SmartPurchaseProps) {
     handleDeletePurchase
   } = useSmartPurchaseLogic(props);
 
-  const { products, suppliers, patterns, purchases, purchaseOrders, settings, user, categories, supplierPayments, setIsProductModalOpen, setEditingProduct, isProductModalOpen, editingProduct, setViewingPurchaseVoucher } = props;
-  const shortageCount = useShortageStore(s => s.items.length);
+  const { 
+    products, suppliers, patterns, purchases, purchaseOrders, 
+    settings, user, categories, supplierPayments, 
+    setIsProductModalOpen, setEditingProduct, isProductModalOpen, 
+    editingProduct, setViewingPurchaseVoucher 
+  } = props;
 
-  if (step === 'updatePrices') {
-    if (!lastPurchaseItems || lastPurchaseItems.length === 0 || !lastPurchaseItems.some(i => i.productId)) {
-      return (
-        <Card className="p-6 text-center space-y-6 industrial-card">
-          <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
-            <CheckCircle2 size={48} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tight">Achat enregistré !</h2>
-            <p className="text-industrial-500 mt-2 font-mono text-sm uppercase">Le stock a été mis à jour avec succès.</p>
-          </div>
-          <Button onClick={() => { resetForm(); setStep('upload'); setFile(null); setExtractedData(null); }} className="mx-auto industrial-button-primary">
-            Nouvel achat
-          </Button>
-        </Card>
-      );
-    }
-
+  if (step === 'updatePrices' || step === 'confirm') {
     return (
-      <div className="relative">
-        <div className="blur-[3px] pointer-events-none select-none transition-all duration-500">
-          <Card className="p-6 text-center space-y-6 industrial-card">
-            <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
-              <CheckCircle2 size={48} />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tight">Achat enregistré !</h2>
-              <p className="text-industrial-500 mt-2 font-mono text-sm uppercase">Le stock a été mis à jour avec succès.</p>
-            </div>
-            <Button disabled className="mx-auto industrial-button-primary opacity-40">
-              Nouvel achat
-            </Button>
-          </Card>
-        </div>
-        <UpdatePricesView 
-          items={lastPurchaseItems} 
-          onComplete={() => setStep('confirm')} 
-          settings={settings} 
-          products={products} 
-        />
-      </div>
-    );
-  }
-
-  if (step === 'confirm') {
-    return (
-      <Card className="p-6 text-center space-y-6 industrial-card">
-        <div className="w-24 h-24 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
-          <CheckCircle2 size={48} />
-        </div>
-        <div>
-          <h2 className="text-3xl font-black text-white uppercase tracking-tight">Achat enregistré !</h2>
-          <p className="text-industrial-500 mt-2 font-mono text-sm uppercase">Le stock a été mis à jour avec succès.</p>
-        </div>
-        <Button onClick={() => { resetForm(); setStep('upload'); setFile(null); setExtractedData(null); }} className="mx-auto industrial-button-primary">
-          Nouvel achat
-        </Button>
-      </Card>
+      <SmartPurchaseStepViews
+        step={step}
+        lastPurchaseItems={lastPurchaseItems}
+        settings={settings}
+        products={products}
+        onReset={() => {
+          resetForm();
+          setStep('upload');
+          setFile(null);
+          setExtractedData(null);
+        }}
+        onCompleteUpdatePrices={() => setStep('confirm')}
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-black text-white tracking-tight uppercase">Approvisionnements</h3>
-          <p className="text-sm text-industrial-500 uppercase tracking-widest text-[10px]">Gestion des réceptions de marchandises et factures fournisseurs.</p>
-        </div>
-        <div className="flex bg-industrial-900 p-1 rounded-xl border border-industrial-800 overflow-x-auto shadow-inner">
-          <button 
-            onClick={() => { resetForm(); setActiveSubTab('new'); }}
-            className={cn(
-              "px-6 py-2 rounded-lg text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-widest",
-              activeSubTab === 'new' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-300"
-            )}
-          >
-            {editingPurchaseId ? "Modifier Réception" : "Nouvelle Réception"}
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('purchases')}
-            className={cn(
-              "px-6 py-2 rounded-lg text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-widest border border-transparent",
-              activeSubTab === 'purchases' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-300"
-            )}
-          >
-            Historique & Suivi
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('debts')}
-            className={cn(
-              "px-6 py-2 rounded-lg text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-widest border border-transparent",
-              activeSubTab === 'debts' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-300"
-            )}
-          >
-            Dettes & Versements
-          </button>
-          <button 
-            onClick={() => setActiveSubTab('shortages')}
-            className={cn(
-              "px-6 py-2 rounded-lg text-[10px] font-black transition-all whitespace-nowrap uppercase tracking-widest border border-transparent flex items-center gap-1.5",
-              activeSubTab === 'shortages' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-industrial-500 hover:text-industrial-300"
-            )}
-          >
-            <ClipboardList size={13} />
-            <span>Cahier des Manques</span>
-            {shortageCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-indigo-400/20 text-indigo-300 text-[9px] rounded-full font-mono font-bold">
-                {shortageCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+      <SmartPurchaseHeaderNav
+        activeSubTab={activeSubTab}
+        setActiveSubTab={setActiveSubTab}
+        editingPurchaseId={editingPurchaseId}
+        onResetNew={resetForm}
+      />
 
       {activeSubTab === 'new' ? (
         <SubTabNewPurchase 
@@ -267,6 +154,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
           setSearch={setSearch}
           setIsPurchaseScannerOpen={setIsPurchaseScannerOpen}
           filteredProducts={filteredProducts}
+          cartonTemplates={cartonTemplates}
           addToCart={addToCart}
           settings={settings}
           selectedSupplierId={selectedSupplierId}
@@ -362,7 +250,7 @@ export function SmartPurchase(props: SmartPurchaseProps) {
                 name: item.name,
                 quantity: item.quantityNeeded,
                 costPrice: item.costPrice,
-                taxRate: 19
+                taxRate: 0
               });
             }
             if (targetSupplierId) {

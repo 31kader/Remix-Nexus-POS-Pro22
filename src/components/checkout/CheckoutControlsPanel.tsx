@@ -16,7 +16,7 @@ export const CheckoutControlsPanel: React.FC<any> = ({
   onClose
 }) => {
   return (
-    <div id="checkout-panel" className="w-full lg:w-96 shrink-0 flex flex-col bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
+    <div id="checkout-panel" className="w-full lg:w-80 xl:w-84 shrink-0 flex flex-col bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-xl z-10 transition-all relative overflow-y-auto h-full max-h-full no-scrollbar">
       {onClose && (
         <div className="hidden lg:flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 select-none">
           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Panneau Caisse</span>

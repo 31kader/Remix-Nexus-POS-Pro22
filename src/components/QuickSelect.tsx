@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Star, Search, Plus, X, Trash2, FolderHeart, Edit3 } from 'lucide-react';
+import { Star, Search, Plus, X, FolderHeart, Edit3 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { SafeImage } from './ui/SafeImage';
 import { useQuickSelect } from '../hooks/quick-select/useQuickSelect';
 import { ProductPicker } from './quick-select/ProductPicker';
+import { QuickSelectProductCard } from './quick-select/QuickSelectProductCard';
+import { QuickSelectCategoryModal } from './quick-select/QuickSelectCategoryModal';
 import { Product } from '../types';
-import { Modal, Button } from './ui';
 import { useCoreStore } from '../store/useCoreStore';
 import { localDb } from '../database';
 import { toast } from 'sonner';
@@ -259,69 +259,14 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
           ) : (
             <div className="grid grid-cols-3 gap-2 w-full">
               {filteredProducts.map((product) => (
-                <div
+                <QuickSelectProductCard
                   key={product.id}
-                  onClick={() => {
-                    if (isEditMode) {
-                      toggleFavorite(product);
-                    } else {
-                      onAddProduct(product);
-                    }
-                  }}
-                  className={cn(
-                    "group relative bg-slate-900 border rounded-xl transition-all cursor-pointer overflow-hidden aspect-square shadow-xs hover:shadow-md hover:-translate-y-0.5 select-none",
-                    isEditMode 
-                      ? "border-rose-400 dark:border-rose-600 ring-2 ring-rose-500/30" 
-                      : "border-slate-200 dark:border-slate-700 hover:border-amber-500"
-                  )}
-                  title={`${product.name} — ${product.price.toLocaleString()} ${currency}`}
-                >
-                  {/* Image en plein format (100% de la surface du bloc) */}
-                  <div className="absolute inset-0 bg-slate-100 dark:bg-slate-950 flex items-center justify-center overflow-hidden">
-                    <SafeImage 
-                      src={product.imageUrl} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
-                    />
-                  </div>
-
-                  {/* Superposition dégradée avec nom article et prix */}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-6 pb-1.5 px-1.5 flex flex-col justify-end pointer-events-none">
-                    <p className="text-[10px] font-black text-white leading-tight uppercase truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                      {product.name}
-                    </p>
-                    <div className="flex items-center justify-between gap-1 mt-0.5">
-                      <span className="text-[10px] font-black font-mono text-amber-400 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] truncate">
-                        {product.price.toLocaleString()} {currency}
-                      </span>
-                      {product.stock !== undefined && (
-                        <span className={cn(
-                          "text-[8px] font-black px-1 py-0.5 rounded font-mono shrink-0 drop-shadow-sm",
-                          product.stock <= 0 
-                            ? "bg-rose-600 text-white" 
-                            : "bg-black/60 text-slate-200 border border-white/20 backdrop-blur-xs"
-                        )}>
-                          {product.stock}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Croix de suppression : VISIBLE UNIQUEMENT EN MODE ÉDITION */}
-                  {isEditMode && (
-                    <button 
-                      type="button"
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        toggleFavorite(product); 
-                      }} 
-                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center transition-all hover:bg-rose-700 hover:scale-110 shadow-md z-10 cursor-pointer animate-in zoom-in-75 duration-150"
-                      title="Retirer des favoris"
-                    >
-                      <X size={13} strokeWidth={3} />
-                    </button>
-                  )}
-                </div>
+                  product={product}
+                  currency={currency}
+                  isEditMode={isEditMode}
+                  onSelect={onAddProduct}
+                  onToggleFavorite={toggleFavorite}
+                />
               ))}
             </div>
           )}
@@ -342,54 +287,15 @@ export const QuickSelect: React.FC<QuickSelectProps> = ({ onAddProduct, currency
         }}
       />
 
-      <Modal 
-        isOpen={showCategorySettings} 
-        onClose={() => setShowCategorySettings(false)} 
-        title="Gérer les Catégories Favorites"
-      >
-        <div className="space-y-6">
-          <p className="text-xs text-slate-500 dark:text-slate-400">Créez vos propres catégories favorites personnalisées pour y organiser vos articles.</p>
-          
-          {/* Create Group Form */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Nom de la nouvelle catégorie..."
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-amber-500/30 transition-all outline-none"
-            />
-            <Button onClick={handleCreateGroup} className="shrink-0 text-xs px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white">
-              Créer
-            </Button>
-          </div>
-
-          <div className="max-h-[250px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-            {(settings.quickSelectGroups || []).length > 0 ? (
-              (settings.quickSelectGroups || []).map((group) => (
-                <div
-                  key={group.id}
-                  className="w-full flex items-center justify-between p-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm"
-                >
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">{group.name}</span>
-                  <button
-                    onClick={() => handleDeleteGroup(group.id)}
-                    className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                    title="Supprimer la catégorie"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Aucune catégorie créée.</div>
-            )}
-          </div>
-          <Button onClick={() => setShowCategorySettings(false)} variant="secondary" className="w-full">
-            Fermer
-          </Button>
-        </div>
-      </Modal>
+      <QuickSelectCategoryModal
+        isOpen={showCategorySettings}
+        onClose={() => setShowCategorySettings(false)}
+        quickSelectGroups={settings.quickSelectGroups || []}
+        newGroupName={newGroupName}
+        setNewGroupName={setNewGroupName}
+        handleCreateGroup={handleCreateGroup}
+        handleDeleteGroup={handleDeleteGroup}
+      />
     </div>
   );
 };

@@ -20,6 +20,7 @@ interface InventoryProductRowProps {
   settings: CompanySettings;
   isDeleting: boolean;
   isExtremeMargin: { isMax: boolean; isMin: boolean };
+  onZoomImage?: (url: string) => void;
 }
 
 export const InventoryProductRow = React.memo(({
@@ -37,7 +38,8 @@ export const InventoryProductRow = React.memo(({
   onCopy,
   settings,
   isDeleting,
-  isExtremeMargin
+  isExtremeMargin,
+  onZoomImage
 }: InventoryProductRowProps) => {
   const margin = (product.price || 0) - (product.costPrice || 0);
   const isOutOfStock = (product.stock || 0) <= 0;
@@ -94,7 +96,19 @@ export const InventoryProductRow = React.memo(({
             )}
           </div>
 
-          <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 overflow-hidden flex-shrink-0 flex items-center justify-center">
+          <div 
+            onClick={(e) => {
+              if (imgSource && onZoomImage) {
+                e.stopPropagation();
+                onZoomImage(imgSource);
+              }
+            }}
+            className={cn(
+              "w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 overflow-hidden flex-shrink-0 flex items-center justify-center transition-transform",
+              imgSource && onZoomImage && "cursor-zoom-in hover:scale-105 active:scale-95"
+            )}
+            title={imgSource ? "Cliquer pour agrandir l'image" : undefined}
+          >
             {imgSource ? (
               <SafeImage src={imgSource} alt={product.name} className="w-full h-full object-contain p-0.5" />
             ) : (

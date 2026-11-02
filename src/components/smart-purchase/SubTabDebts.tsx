@@ -71,7 +71,7 @@ export function SubTabDebts({
                             amount: Number(s.balance) || 0,
                             method: 'cash',
                             note: 'Règlement solde',
-                            date: format(new Date(), 'yyyy-MM-dd')
+                            date: new Date().toISOString()
                           });
                           setIsPaymentModalOpen(true);
                         }}

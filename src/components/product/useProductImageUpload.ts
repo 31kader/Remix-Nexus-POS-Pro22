@@ -109,6 +109,51 @@ export function useProductImageUpload({
   return {
     isUploadingImage,
     handleImageUpload,
-    removeImage
+    removeImage,
+    applyOptimizedImageBlob: async (blob: Blob, index: number = 0) => {
+      setIsUploadingImage(true);
+      try {
+        const oldUrl = formData.imageUrls?.[index];
+        if (oldUrl && typeof oldUrl === 'string' && oldUrl.includes('supabase.co/storage/')) {
+          deleteImageFromStorageByUrl(oldUrl).catch(() => {});
+        }
+
+        const publicUrl = await uploadImageBlobToStorage(blob, 'products', 'image/webp');
+        if (publicUrl) {
+          const newUrls = [...(formData.imageUrls || [])];
+          if (newUrls.length > index) {
+            newUrls[index] = publicUrl;
+          } else {
+            newUrls.push(publicUrl);
+          }
+          setFormData((curr: any) => ({
+            ...curr,
+            imageUrls: newUrls,
+            imageUrl: newUrls[0] || ''
+          }));
+        } else {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = String(reader.result || '');
+            const newUrls = [...(formData.imageUrls || [])];
+            if (newUrls.length > index) {
+              newUrls[index] = result;
+            } else {
+              newUrls.push(result);
+            }
+            setFormData((curr: any) => ({
+              ...curr,
+              imageUrls: newUrls,
+              imageUrl: newUrls[0] || ''
+            }));
+          };
+          reader.readAsDataURL(blob);
+        }
+      } catch (err) {
+        console.warn('[useProductImageUpload] Erreur application studio blob:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
   };
 }

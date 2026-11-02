@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { onBackgroundSyncStatus } from '../services/SyncService';
 import { notifyNetworkIssue, notifyNetworkRestored } from '../services/networkErrorHandler';
+import { lanSyncService } from '../services/lanSyncService';
 
 export type AppMode = 
   | 'pos' 
@@ -47,11 +48,13 @@ export function useAppInitialization() {
         const lower = m.toLowerCase();
         if (lower === 'client_scan' || lower === 'scan' || lower === 'client-scan') return 'client_scan';
         if (lower === 'kiosk' || lower === 'borne' || lower === 'price_checker') return 'kiosk';
+        if (lower === 'carton' || lower === 'reception' || lower === 'carton_reception' || lower === 'carton-reception') return 'carton_reception';
         return m as AppMode;
       }
       const hash = window.location.hash.toLowerCase();
       if (hash.includes('client_scan') || hash === '#scan' || hash.includes('client-scan')) return 'client_scan';
       if (hash.includes('kiosk') || hash.includes('borne') || hash.includes('price_checker')) return 'kiosk';
+      if (hash.includes('carton') || hash.includes('reception') || hash.includes('carton-reception')) return 'carton_reception';
       if (hash.startsWith('#portal-customer') || hash.startsWith('#customer-portal')) return 'customer';
       if (hash.startsWith('#portal-supplier') || hash.startsWith('#supplier-portal')) return 'supplier';
     }
@@ -75,6 +78,7 @@ export function useAppInitialization() {
   });
 
   useEffect(() => {
+    lanSyncService.initialize();
     const handleResize = () => setIsMobile(checkIsMobile());
     const handleOnline = () => {
       setIsOnline(true);

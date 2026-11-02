@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { TransactionFilters } from './transactions/TransactionFilters';
 import { TransactionTable } from './transactions/TransactionTable';
 import { useTransactionHistoryLogic, TransactionHistoryProps } from '../hooks/useTransactionHistoryLogic';
+import { useCoreStore } from '../store/useCoreStore';
+import { usePeopleStore } from '../store/usePeopleStore';
 
 export function TransactionHistory(props: TransactionHistoryProps) {
   const { transactions, onReturn, onMarkAsDelivered, onEdit, onRestore, settings, canAccess, profile } = props;
@@ -60,6 +62,152 @@ export function TransactionHistory(props: TransactionHistoryProps) {
     handlePrintList,
     loadOlderTransactions
   } = useTransactionHistoryLogic(props);
+
+  const products = useCoreStore(s => s.products);
+  const customers = usePeopleStore(s => s.customers);
+  const employees = usePeopleStore(s => s.employees);
+
+  const productsMap = useMemo(() => {
+    const map = new Map<string, Product>();
+    (products || []).forEach(p => { if (p?.id) map.set(p.id, p); });
+    return map;
+  }, [products]);
+
+  const customersMap = useMemo(() => {
+    const map = new Map<string, Customer>();
+    (customers || []).forEach(c => { if (c?.id) map.set(c.id, c); });
+    return map;
+  }, [customers]);
+
+  const employeesMap = useMemo(() => {
+    const map = new Map<string, Employee>();
+    (employees || []).forEach(e => { if (e?.id) map.set(e.id, e); });
+    return map;
+  }, [employees]);
+
+  const handleExportSalesExcel = () => {
+    const rows: any[] = [];
+    filteredTransactions.forEach(tx => {
+      const items = Array.isArray(tx.items) && tx.items.length > 0 ? tx.items : null;
+      const txDate = formatSafe(tx.timestamp, 'yyyy-MM-dd HH:mm');
+      const txNum = tx.id ? `#${String(tx.id).slice(-8).toUpperCase()}` : '—';
+      const custName = tx.customerName || (tx.customerId ? customersMap.get(tx.customerId)?.name : 'Client standard') || 'Client standard';
+      const cashier = (tx as any).userName || (tx as any).employeeName || (tx.userId ? employeesMap.get(tx.userId)?.name : 'Caissier') || 'Caissier';
+      const payMethod = tx.paymentMethod === 'cash' ? 'Espèces' 
+                      : tx.paymentMethod === 'card' ? 'Carte bancaire' 
+                      : tx.paymentMethod === 'balance' ? 'Solde Client' 
+                      : tx.paymentMethod === 'debt' ? 'À crédit (Dette)' 
+                      : tx.paymentMethod || 'Espèces';
+
+      if (items) {
+        items.forEach(item => {
+          const prodId = (item as any).productId || item.id;
+          const prod = prodId ? productsMap.get(prodId) : null;
+          const barcode = item.barcode || prod?.barcode || (prod as any)?.barcodes?.[0] || 'SANS-CODE';
+          const productName = item.name || item.productName || prod?.name || 'Article sans nom';
+          const qty = item.quantity || 1;
+          const unitPrice = item.overriddenPrice ?? item.price ?? 0;
+          const discountStr = item.lineDiscount ? (item.lineDiscount.type === 'percentage' ? `${item.lineDiscount.value}%` : `${item.lineDiscount.value} DA`) : '0';
+          const lineTotal = unitPrice * qty;
+
+          rows.push({
+            'Date & Heure': txDate,
+            'N° Ticket': txNum,
+            'Code-barres': barcode,
+            'Nom de l\'article': productName,
+            'Quantité': qty,
+            'Prix Unitaire (DA)': formatPrice(unitPrice),
+            'Remise': discountStr,
+            'Total Ligne (DA)': formatPrice(lineTotal),
+            'Mode Paiement': payMethod,
+            'Client': custName,
+            'Caissier': cashier,
+            'Statut': tx.status || 'complété'
+          });
+        });
+      } else {
+        rows.push({
+          'Date & Heure': txDate,
+          'N° Ticket': txNum,
+          'Code-barres': '—',
+          'Nom de l\'article': 'Vente directe (sans détail)',
+          'Quantité': 1,
+          'Prix Unitaire (DA)': formatPrice(tx.total || 0),
+          'Remise': '0',
+          'Total Ligne (DA)': formatPrice(tx.total || 0),
+          'Mode Paiement': payMethod,
+          'Client': custName,
+          'Caissier': cashier,
+          'Statut': tx.status || 'complété'
+        });
+      }
+    });
+
+    const fileName = `ventes_articles_${format(new Date(), 'yyyyMMdd_HHmm')}`;
+    exportToExcel(rows, fileName);
+  };
+
+  const handleExportSalesCSV = () => {
+    const rows: any[] = [];
+    filteredTransactions.forEach(tx => {
+      const items = Array.isArray(tx.items) && tx.items.length > 0 ? tx.items : null;
+      const txDate = formatSafe(tx.timestamp, 'yyyy-MM-dd HH:mm');
+      const txNum = tx.id ? `#${String(tx.id).slice(-8).toUpperCase()}` : '—';
+      const custName = tx.customerName || (tx.customerId ? customersMap.get(tx.customerId)?.name : 'Client standard') || 'Client standard';
+      const cashier = (tx as any).userName || (tx as any).employeeName || (tx.userId ? employeesMap.get(tx.userId)?.name : 'Caissier') || 'Caissier';
+      const payMethod = tx.paymentMethod === 'cash' ? 'Espèces' 
+                      : tx.paymentMethod === 'card' ? 'Carte bancaire' 
+                      : tx.paymentMethod === 'balance' ? 'Solde Client' 
+                      : tx.paymentMethod === 'debt' ? 'À crédit (Dette)' 
+                      : tx.paymentMethod || 'Espèces';
+
+      if (items) {
+        items.forEach(item => {
+          const prodId = (item as any).productId || item.id;
+          const prod = prodId ? productsMap.get(prodId) : null;
+          const barcode = item.barcode || prod?.barcode || (prod as any)?.barcodes?.[0] || 'SANS-CODE';
+          const productName = item.name || item.productName || prod?.name || 'Article sans nom';
+          const qty = item.quantity || 1;
+          const unitPrice = item.overriddenPrice ?? item.price ?? 0;
+          const discountStr = item.lineDiscount ? (item.lineDiscount.type === 'percentage' ? `${item.lineDiscount.value}%` : `${item.lineDiscount.value} DA`) : '0';
+          const lineTotal = unitPrice * qty;
+
+          rows.push({
+            date: txDate,
+            ticket: txNum,
+            code_barre: barcode,
+            nom_article: productName,
+            quantite: qty,
+            prix_unitaire: unitPrice,
+            remise: discountStr,
+            total_ligne: lineTotal,
+            mode_paiement: payMethod,
+            client: custName,
+            caissier: cashier,
+            statut: tx.status || 'complété'
+          });
+        });
+      } else {
+        rows.push({
+          date: txDate,
+          ticket: txNum,
+          code_barre: '—',
+          nom_article: 'Vente directe (sans détail)',
+          quantite: 1,
+          prix_unitaire: tx.total || 0,
+          remise: '0',
+          total_ligne: tx.total || 0,
+          mode_paiement: payMethod,
+          client: custName,
+          caissier: cashier,
+          statut: tx.status || 'complété'
+        });
+      }
+    });
+
+    const fileName = `ventes_articles_${format(new Date(), 'yyyyMMdd_HHmm')}`;
+    exportToCSV(rows, fileName);
+  };
   
   return (
     <div className="space-y-6">
@@ -73,10 +221,10 @@ export function TransactionHistory(props: TransactionHistoryProps) {
             <Printer size={18} /> Rapport
           </Button>
           <div className="h-6 w-px bg-slate-800 mx-1" />
-          <Button variant="secondary" onClick={() => exportToExcel(filteredTransactions, 'transactions')} className="flex items-center gap-2 bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20">
+          <Button variant="secondary" onClick={handleExportSalesExcel} className="flex items-center gap-2 bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20" title="Exporter le détail des ventes avec code-barres et désignation de chaque article">
             <FileSpreadsheet size={18} /> Excel
           </Button>
-          <Button variant="secondary" onClick={() => exportToCSV(filteredTransactions, 'transactions')} className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20">
+          <Button variant="secondary" onClick={handleExportSalesCSV} className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20" title="Exporter au format CSV avec code-barres et désignation">
             <Database size={18} /> CSV
           </Button>
         </div>

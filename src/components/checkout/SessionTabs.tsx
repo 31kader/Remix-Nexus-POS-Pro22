@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction, MouseEvent } from 'react';
-import { Plus, ShoppingCart, X, RotateCcw, Star, CreditCard, Tv, Edit3 } from 'lucide-react';
+import { Plus, ShoppingCart, X, RotateCcw, Star, CreditCard, Tv, Edit3, Menu } from 'lucide-react';
 import { POSSession } from '../../types';
 import { cn, formatPrice } from '../../lib/utils';
 
@@ -33,14 +33,32 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
   setShowQuickSelect,
   showControlsPanel = true,
   setShowControlsPanel,
-  onOpenCustomerDisplay
+  onOpenCustomerDisplay,
+  total,
+  currency = 'DA'
 }) => {
   const safeSessions = Array.isArray(posSessions) && posSessions.length > 0
     ? posSessions
     : [{ id: activeSessionId || 'default', name: 'Ticket 1', cart: [], selectedCustomer: null }];
 
+  const currentSession = safeSessions.find(s => s.id === activeSessionId) || safeSessions[0];
+  const calculatedActiveTotal = Array.isArray(currentSession?.cart)
+    ? currentSession.cart.reduce((sum, item) => sum + ((item.overriddenPrice ?? item.price ?? 0) * (item.quantity || 1)), 0)
+    : 0;
+  const displayTotal = total !== undefined ? total : calculatedActiveTotal;
+
   return (
-    <div className="bg-white dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800/80 px-4 py-2 flex items-center justify-between gap-3 z-40 shadow-sm">
+    <div className="bg-white dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800/80 px-3 py-1.5 sm:px-4 sm:py-2 flex items-center justify-between gap-2.5 z-40 shadow-xs">
+      {/* Bouton Toggle Menu / Sidebar */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent('nexus-cycle-sidebar'))}
+        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shrink-0 cursor-pointer"
+        title="Ouvrir / Fermer le menu latéral"
+      >
+        <Menu size={17} />
+      </button>
+
       {/* Sessions / Cart Tabs list */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1">
         {safeSessions.map((session, index) => {

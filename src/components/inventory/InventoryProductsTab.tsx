@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Package, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, ChevronUp, ChevronDown, CheckCircle2, AlertOctagon, AlertTriangle, Percent, RotateCcw, RefreshCw } from 'lucide-react';
-import { set as idbSet } from 'idb-keyval';
+import React, { useState } from 'react';
+import { Package, Loader2, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { useCoreStore } from '../../store/useCoreStore';
@@ -10,10 +9,12 @@ import { DuplicateSKUAlert } from './DuplicateSKUAlert';
 import { InventoryActionBar } from './InventoryActionBar';
 import { BulkPricingStudioModal } from './BulkPricingStudioModal';
 import { BarcodeScanner } from '../BarcodeScanner';
-import { Modal, Button, SafeImage } from '../ui';
 import { InventoryProductCard } from './InventoryProductCard';
 import { InventoryProductRow } from './InventoryProductRow';
-import { supabase, isSupabaseConfigured } from '../../supabase';
+import { InventoryPaginationBar } from './InventoryPaginationBar';
+import { ResetStockModal } from './modals/ResetStockModal';
+import { InventoryStockStatsHeader } from './InventoryStockStatsHeader';
+import { InventoryPriceCheckerDialog } from './InventoryPriceCheckerDialog';
 
 export function InventoryProductsTab(props: any) {
   const isDataLoading = useCoreStore(s => s.isDataLoading);
@@ -51,8 +52,6 @@ export function InventoryProductsTab(props: any) {
   const lowStockCount = React.useMemo(() => products.filter((p: any) => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= (p.minStock || 5)).length, [products]);
 
   const [isResetStockModalOpen, setIsResetStockModalOpen] = useState(false);
-  const [resetStockConfirmInput, setResetStockConfirmInput] = useState('');
-  const [isResettingStock, setIsResettingStock] = useState(false);
 
   const handleOpenResetStockModal = () => {
     const authUser = useAuthStore.getState().user;
@@ -62,31 +61,7 @@ export function InventoryProductsTab(props: any) {
       toast.error("Action de remise à zéro de masse réservée exclusivement à l'administrateur.");
       return;
     }
-    setResetStockConfirmInput('');
     setIsResetStockModalOpen(true);
-  };
-
-  const handleConfirmResetStock = async () => {
-    if (resetStockConfirmInput.trim().toUpperCase() !== 'ZERO') {
-      toast.error("Veuillez taper exactement 'ZERO' pour confirmer.");
-      return;
-    }
-    setIsResettingStock(true);
-    try {
-      const nowIso = new Date().toISOString();
-      const zeroed = products.map((p: any) => ({ ...p, stock: 0, updatedAt: nowIso }));
-      useCoreStore.getState().setProducts(zeroed);
-      await idbSet('nexus_products_cache', zeroed).catch(() => {});
-      if (isSupabaseConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
-        await supabase.from('products').update({ stock: 0, updated_at: nowIso }).neq('stock', 0);
-      }
-      toast.success(`Quantité mise à 0 sur tous les ${products.length} articles !`);
-      setIsResetStockModalOpen(false);
-    } catch (err: any) {
-      toast.error("Erreur lors de la remise à zéro des stocks : " + (err.message || err));
-    } finally {
-      setIsResettingStock(false);
-    }
   };
 
   const renderSortHeader = (label: string, sortKey: string, align: 'left' | 'right' = 'right', widthClass: string = '') => {
@@ -127,110 +102,18 @@ export function InventoryProductsTab(props: any) {
       />
 
       {/* Barre de Boutons Rapides : En Stock / En Rupture + Studio Prix Gros & En Ligne (%) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 sm:p-3 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto">
-          <button
-            type="button"
-            onClick={() => setStockLevelFilter && setStockLevelFilter('all')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95",
-              stockLevelFilter === 'all'
-                ? "bg-indigo-600 text-white border-indigo-500 shadow-xs"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
-            )}
-          >
-            <Package size={13} />
-            <span>Tous</span>
-            <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-mono", stockLevelFilter === 'all' ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300")}>
-              {products.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'in' ? 'all' : 'in')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95",
-              stockLevelFilter === 'in'
-                ? "bg-emerald-600 text-white border-emerald-500 shadow-xs"
-                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
-            )}
-          >
-            <CheckCircle2 size={13} />
-            <span>En Stock</span>
-            <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-mono", stockLevelFilter === 'in' ? "bg-white/20 text-white" : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300")}>
-              {inStockCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'out' ? 'all' : 'out')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95",
-              stockLevelFilter === 'out'
-                ? "bg-rose-600 text-white border-rose-500 shadow-xs"
-                : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25 hover:bg-rose-500/20"
-            )}
-          >
-            <AlertOctagon size={13} />
-            <span>En Rupture</span>
-            <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-mono", stockLevelFilter === 'out' ? "bg-white/20 text-white" : "bg-rose-500/20 text-rose-700 dark:text-rose-300")}>
-              {outOfStockCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStockLevelFilter && setStockLevelFilter(stockLevelFilter === 'low' ? 'all' : 'low')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer shrink-0 active:scale-95",
-              stockLevelFilter === 'low'
-                ? "bg-amber-600 text-white border-amber-500 shadow-xs"
-                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25 hover:bg-amber-500/20"
-            )}
-          >
-            <AlertTriangle size={13} />
-            <span>Stock Faible</span>
-            <span className={cn("px-1.5 py-0.2 rounded text-[10px] font-mono", stockLevelFilter === 'low' ? "bg-white/20 text-white" : "bg-amber-500/20 text-amber-700 dark:text-amber-300")}>
-              {lowStockCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Boutons d'actions globales sur les Prix Gros/En Ligne (%), Synchro Cloud et Remise à 0 du Stock */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full sm:w-auto justify-start sm:justify-end">
-          <button
-            type="button"
-            onClick={handleForceSyncFromCloud}
-            disabled={isForceSyncing}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25 text-xs font-bold transition-all active:scale-95 cursor-pointer disabled:opacity-50 shrink-0"
-            title="Recharger et synchroniser tous les produits et stocks réels depuis Supabase"
-          >
-            <RefreshCw size={12} className={cn(isForceSyncing && "animate-spin")} />
-            <span>{isForceSyncing ? "Synchro..." : "Synchro Cloud"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsPricingStudioOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-black uppercase tracking-wider shadow-xs transition-all active:scale-95 cursor-pointer shrink-0"
-          >
-            <Percent size={13} />
-            <span>Prix Gros & En Ligne (%)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenResetStockModal}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-            title="Remettre la quantité (stock) de tous les articles à 0"
-          >
-            <RotateCcw size={12} />
-            <span>Stock = 0</span>
-          </button>
-        </div>
-      </div>
+      <InventoryStockStatsHeader
+        totalCount={products.length}
+        inStockCount={inStockCount}
+        outOfStockCount={outOfStockCount}
+        lowStockCount={lowStockCount}
+        stockLevelFilter={stockLevelFilter}
+        setStockLevelFilter={setStockLevelFilter}
+        isForceSyncing={isForceSyncing}
+        onForceSyncFromCloud={handleForceSyncFromCloud}
+        onOpenPricingStudio={() => setIsPricingStudioOpen(true)}
+        onOpenResetStockModal={handleOpenResetStockModal}
+      />
 
       {/* Studio de Réglage Global des Prix de Gros & En Ligne (%) */}
       <BulkPricingStudioModal
@@ -269,65 +152,16 @@ export function InventoryProductsTab(props: any) {
       )}
 
       {/* Price Checker Result Modal */}
-      {priceCheckResult && (
-        <Modal 
-          isOpen={!!priceCheckResult} 
-          onClose={() => { setPriceCheckResult(null); setIsPriceCheckerOpen(false); }} 
-          title="Vérificateur de Prix"
-        >
-          <div className="space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
-              <div className="w-16 h-16 bg-slate-200 dark:bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
-                {priceCheckResult.imageUrl ? (
-                  <SafeImage 
-                    src={priceCheckResult.imageUrl} 
-                    alt={priceCheckResult.name} 
-                    className="w-full h-full object-cover" 
-                    fallback={<Package className="text-slate-400 dark:text-slate-500" size={28} />}
-                  />
-                ) : (
-                  <Package className="text-slate-400 dark:text-slate-500" size={28} />
-                )}
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-base">{priceCheckResult.name}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">SKU: {priceCheckResult.sku || 'N/A'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl text-center shadow-sm">
-                <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold block">Prix Final</span>
-                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                  {priceCheckResult.price.toFixed(2)} <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{settings.currency}</span>
-                </span>
-              </div>
-              <div className="p-4 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl text-center shadow-sm">
-                <span className="text-xs text-indigo-700 dark:text-indigo-400 font-bold block">Stock Disponible</span>
-                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                  {priceCheckResult.trackStock ? priceCheckResult.stock : '∞'}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => { setEditingProduct(priceCheckResult); setPriceCheckResult(null); setIsProductModalOpen(true); }} 
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                Modifier
-              </Button>
-              <Button 
-                onClick={() => { setPriceCheckResult(null); setIsPriceCheckerOpen(false); }} 
-                variant="secondary" 
-                className="flex-1"
-              >
-                Fermer
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <InventoryPriceCheckerDialog
+        priceCheckResult={priceCheckResult}
+        onClose={() => { setPriceCheckResult(null); setIsPriceCheckerOpen(false); }}
+        onEditProduct={(p) => {
+          setEditingProduct(p);
+          setPriceCheckResult(null);
+          setIsProductModalOpen(true);
+        }}
+        currency={settings.currency}
+      />
 
       {/* Main Content Area */}
       <div className="min-h-[500px]">
@@ -374,6 +208,7 @@ export function InventoryProductsTab(props: any) {
                   isMax: marginExtremes?.maxId === product.id,
                   isMin: marginExtremes?.minId === product.id
                 }}
+                onZoomImage={props.onZoomImage}
               />
             ))}
           </div>
@@ -417,6 +252,7 @@ export function InventoryProductsTab(props: any) {
                   isMax: marginExtremes?.maxId === product.id,
                   isMin: marginExtremes?.minId === product.id
                 }}
+                onZoomImage={props.onZoomImage}
               />
             ))}
           </div>
@@ -424,87 +260,19 @@ export function InventoryProductsTab(props: any) {
       </div>
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4 p-4 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Page <strong className="text-slate-900 dark:text-white">{currentPage}</strong> sur <strong className="text-slate-900 dark:text-white">{totalPages}</strong> ({sortedProducts.length} articles)
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage <= 1}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer border border-slate-200 dark:border-slate-700/60 shadow-sm"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer border border-slate-200 dark:border-slate-700/60 shadow-sm"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      <InventoryPaginationBar
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={sortedProducts.length}
+        onPageChange={setCurrentPage}
+      />
 
       {/* Modal Sécurisée de Remise à Zéro des Stocks */}
-      <Modal
+      <ResetStockModal
         isOpen={isResetStockModalOpen}
-        onClose={() => !isResettingStock && setIsResetStockModalOpen(false)}
-        title="⚠️ Remise à zéro totale du stock"
-        maxWidth="max-w-md"
-      >
-        <div className="space-y-4 p-2 text-slate-800 dark:text-slate-200">
-          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start gap-3">
-            <AlertOctagon className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" size={20} />
-            <div className="text-xs space-y-1">
-              <p className="font-bold text-rose-700 dark:text-rose-300">
-                Action critique & irréversible
-              </p>
-              <p className="text-rose-600/90 dark:text-rose-400/90">
-                Cette action va remettre le stock de l'ensemble des <strong>{products.length} articles</strong> du catalogue à <strong>0</strong> (sur le terminal local et sur Supabase Cloud).
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">
-              Pour confirmer, tapez le mot <span className="text-rose-600 dark:text-rose-400 font-mono font-black">ZERO</span> ci-dessous :
-            </label>
-            <input
-              type="text"
-              value={resetStockConfirmInput}
-              onChange={(e) => setResetStockConfirmInput(e.target.value)}
-              placeholder="Tapez ZERO"
-              disabled={isResettingStock}
-              autoFocus
-              className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-sm font-mono font-bold text-center uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-rose-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={isResettingStock}
-              onClick={() => setIsResetStockModalOpen(false)}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              disabled={resetStockConfirmInput.trim().toUpperCase() !== 'ZERO' || isResettingStock}
-              onClick={handleConfirmResetStock}
-              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-black"
-            >
-              {isResettingStock ? <Loader2 size={16} className="animate-spin" /> : "Remettre à 0"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onClose={() => setIsResetStockModalOpen(false)}
+        products={products}
+      />
     </div>
   );
 }

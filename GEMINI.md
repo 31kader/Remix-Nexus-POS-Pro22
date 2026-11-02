@@ -9,7 +9,7 @@
 ## Conventions de Code
 - Devise : **DA** (Dinars Algériens), code ISO : `DZD`
 - Taux TVA par défaut : **19%** (Algérie)
-- Version actuelle : **v1.2.58**
+- Version actuelle : **v1.2.70**
 - Tous les emails/UIDs sensibles sont dans `.env` (jamais hardcodés)
 - Les PINs utilisent **bcrypt** (`$2a$` / `$2b$`)
 - La session utilisateur est en **sessionStorage** (pas localStorage)
@@ -56,4 +56,19 @@
 - **Sauvegarde incrémentale obligatoire** : Lors de tout audit, test E2E ou mission `/teamwork-preview`, chaque étape ou module analysé DOIT être immédiatement enregistré sur disque dans un fichier Markdown persistant (ex: `SIMULATION_ADMIN_A_Z_RAPPORT.md`) avant de passer à l'étape suivante.
 - **Reprise sur incident** : En cas de coupure Internet ou de redémarrage serveur, toujours lire le fichier de rapport incrémental existant et reprendre exactement à la dernière étape non cochée sans recommencer depuis zéro.
 - **Vérification Supabase de bout en bout** : Toute simulation Admin de A à Z doit vérifier la correspondance exacte entre le store local (`IndexedDB` / `SyncService`), `TABLE_COLUMNS` (`src/lib/db-converters.ts`) et le schéma/API réel du projet Supabase (`unlwfvldqxfccgrrgbwf`).
+
+## Règle Anti-God Files & Plafonds de Fichiers (Tolérance Zéro)
+- **Plafond strict de 500 lignes** : Aucun fichier applicatif source dans `src/` ne doit dépasser **500 lignes** de code sous aucun prétexte.
+- **Standard d'excellence cible (< 350 lignes)** : Tout nouveau fichier, refactorisation ou ajout de fonctionnalité doit viser une taille inférieure à 350 lignes en appliquant strictement le principe de responsabilité unique (Single Responsibility Principle).
+- **Découpage modulaire systématique** :
+  - Logique métier, state et calculs ➔ Custom Hooks dédiés (`use[Feature]Logic.ts`)
+  - Affichage / Vues / Onglets ➔ Sous-composants spécialisés (`[Feature]Tab.tsx`, `[Feature]Card.tsx`)
+  - Modales & Tiroirs ➔ Modales isolées avec `React.lazy()` (`[Feature]Modal.tsx`)
+  - Fonctions pures & calculs ➔ Fichiers utilitaires (`[feature]Helpers.ts`)
+- **Sanctuaires prescrits inviolables (3 exceptions uniques tolérées)** :
+  - `src/lib/db-converters.ts` (mapping Supabase / DB)
+  - `src/lib/supabase/sql/diagnosticQueries.ts` (requêtes SQL brutes de diagnostic)
+  - `src/types/database.types.ts` (types générés automatiquement par Supabase CLI)
+- **Garde-fou CI obligatoire** : Le test automatisé `tests/anti-god-files-guard.test.ts` doit s'exécuter dans la suite de tests et interdire formellement tout fichier dépassant ce plafond.
+
 

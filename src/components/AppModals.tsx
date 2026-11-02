@@ -1,23 +1,4 @@
 import React, { Suspense, lazy } from 'react';
-import { Printer } from 'lucide-react';
-import { printPurchaseVoucher } from '../services/printService';
-import { fr } from 'date-fns/locale';
-import { formatSafe, safeGetItems } from '../lib/utils';
-import { Button, Modal, SafeImage } from './ui';
-
-const ReturnModal = lazy(() => import('./ReturnModal').then(m => ({ default: m.ReturnModal })));
-const EditTransactionModal = lazy(() => import('./EditTransactionModal').then(m => ({ default: m.EditTransactionModal })));
-const CategoryModal = lazy(() => import('./CategoryModal').then(m => ({ default: m.CategoryModal })));
-const BrandModal = lazy(() => import('./BrandModal').then(m => ({ default: m.BrandModal })));
-const PriceCheckerModal = lazy(() => import('./PriceCheckerModal').then(m => ({ default: m.PriceCheckerModal })));
-const PrintStorePosterModal = lazy(() => import('./public-price-checker').then(m => ({ default: m.PrintStorePosterModal })));
-const POSCustomerModal = lazy(() => import('./POSCustomerModal').then(m => ({ default: m.POSCustomerModal })));
-const ProductFormModal = lazy(() => import('./ProductFormModal').then(m => ({ default: m.ProductFormModal })));
-const AddStaffModal = lazy(() => import('./AddStaffModal').then(m => ({ default: m.AddStaffModal })));
-const LowStockModal = lazy(() => import('./LowStockModal').then(m => ({ default: m.LowStockModal })));
-const ExpirationModal = lazy(() => import('./ExpirationModal').then(m => ({ default: m.ExpirationModal })));
-const StockAdjustmentModal = lazy(() => import('./StockAdjustmentModal').then(m => ({ default: m.StockAdjustmentModal })));
-
 import { useAuthStore } from '../store/useAuthStore';
 import { useCoreStore } from '../store/useCoreStore';
 import { useTransactionStore } from '../store/useTransactionStore';
@@ -26,6 +7,19 @@ import {
   Transaction, Product, Customer, CompanySettings, Category, Brand, 
   UserProfile, Purchase, ProductReturn 
 } from '../types';
+import { PurchaseVoucherViewerModal } from './modals/PurchaseVoucherViewerModal';
+import { AppTaxonomyModals } from './modals/AppTaxonomyModals';
+
+const ReturnModal = lazy(() => import('./ReturnModal').then(m => ({ default: m.ReturnModal })));
+const EditTransactionModal = lazy(() => import('./EditTransactionModal').then(m => ({ default: m.EditTransactionModal })));
+const PriceCheckerModal = lazy(() => import('./PriceCheckerModal').then(m => ({ default: m.PriceCheckerModal })));
+const PrintStorePosterModal = lazy(() => import('./public-price-checker').then(m => ({ default: m.PrintStorePosterModal })));
+const POSCustomerModal = lazy(() => import('./POSCustomerModal').then(m => ({ default: m.POSCustomerModal })));
+const ProductFormModal = lazy(() => import('./ProductFormModal').then(m => ({ default: m.ProductFormModal })));
+const AddStaffModal = lazy(() => import('./AddStaffModal').then(m => ({ default: m.AddStaffModal })));
+const LowStockModal = lazy(() => import('./LowStockModal').then(m => ({ default: m.LowStockModal })));
+const ExpirationModal = lazy(() => import('./ExpirationModal').then(m => ({ default: m.ExpirationModal })));
+const StockAdjustmentModal = lazy(() => import('./StockAdjustmentModal').then(m => ({ default: m.StockAdjustmentModal })));
 
 interface AppModalsProps {
   isReturnModalOpen: boolean;
@@ -135,7 +129,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             customers={p.customers}
             settings={p.settings}
             allReturns={p.returns}
-            />
+          />
         </Suspense>
       )}
 
@@ -147,59 +141,37 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             transaction={p.selectedTransactionForEdit}
             products={p.products}
             settings={p.settings}
-            />
+          />
         </Suspense>
       )}
 
-      {p.isCategoryModalOpen && (
-        <Suspense fallback={null}>
-          <CategoryModal 
-            isOpen={p.isCategoryModalOpen} 
-            onClose={() => {
-              p.setIsCategoryModalOpen(false);
-              p.setEditingCategory(null);
-              p.setNewCategoryName('');
-              p.setParentCategoryId('');
-              p.setCategoryImageUrl('');
-            }}
-            onSave={p.handleSaveCategory}
-            onDelete={() => {
-              if (p.editingCategory) p.handleDeleteCategory(p.editingCategory);
-            }}
-            name={p.newCategoryName}
-            setName={p.setNewCategoryName}
-            parentId={p.parentCategoryId}
-            setParentId={p.setParentCategoryId}
-            imageUrl={p.categoryImageUrl}
-            setImageUrl={p.setCategoryImageUrl}
-            categories={p.categories}
-            editingCategory={p.editingCategory}
-            />
-        </Suspense>
-      )}
-
-      {p.isBrandModalOpen && (
-        <Suspense fallback={null}>
-          <BrandModal
-            isOpen={p.isBrandModalOpen}
-            onClose={() => {
-              p.setIsBrandModalOpen(false);
-              p.setEditingBrand(null);
-              p.setNewBrandName('');
-              p.setNewBrandLogo('');
-              p.setNewBrandDesc('');
-            }}
-            onSave={p.handleSaveBrand}
-            name={p.newBrandName}
-            setName={p.setNewBrandName}
-            logo={p.newBrandLogo}
-            setLogo={p.setNewBrandLogo}
-            description={p.newBrandDesc}
-            setDescription={p.setNewBrandDesc}
-            editingBrand={p.editingBrand}
-            />
-        </Suspense>
-      )}
+      <AppTaxonomyModals
+        isCategoryModalOpen={p.isCategoryModalOpen}
+        setIsCategoryModalOpen={p.setIsCategoryModalOpen}
+        editingCategory={p.editingCategory}
+        setEditingCategory={p.setEditingCategory}
+        newCategoryName={p.newCategoryName}
+        setNewCategoryName={p.setNewCategoryName}
+        parentCategoryId={p.parentCategoryId}
+        setParentCategoryId={p.setParentCategoryId}
+        categoryImageUrl={p.categoryImageUrl}
+        setCategoryImageUrl={p.setCategoryImageUrl}
+        handleSaveCategory={p.handleSaveCategory}
+        handleDeleteCategory={p.handleDeleteCategory}
+        categories={p.categories}
+        isBrandModalOpen={p.isBrandModalOpen}
+        setIsBrandModalOpen={p.setIsBrandModalOpen}
+        editingBrand={p.editingBrand}
+        setEditingBrand={p.setEditingBrand}
+        newBrandName={p.newBrandName}
+        setNewBrandName={p.setNewBrandName}
+        newBrandLogo={p.newBrandLogo}
+        setNewBrandLogo={p.setNewBrandLogo}
+        newBrandDesc={p.newBrandDesc}
+        setNewBrandDesc={p.setNewBrandDesc}
+        handleSaveBrand={p.handleSaveBrand}
+        brands={p.brands}
+      />
 
       {p.isPriceCheckerModalOpen && (
         <Suspense fallback={null}>
@@ -210,7 +182,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             settings={p.settings}
             categories={p.categories}
             brands={p.brands}
-            />
+          />
         </Suspense>
       )}
 
@@ -230,7 +202,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isPOSCustomerModalOpen}
             onClose={() => p.setIsPOSCustomerModalOpen(false)}
             onCreated={p.handlePOSCustomerCreated}
-            />
+          />
         </Suspense>
       )}
       
@@ -246,7 +218,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             user={p.user}
             brands={p.brands}
             setActiveTab={p.setActiveTab}
-            />
+          />
         </Suspense>
       )}
 
@@ -256,117 +228,15 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isAddUserModalOpen} 
             onClose={() => p.setIsAddUserModalOpen(false)} 
             onSave={p.handleAddStaffManual} 
-            />
+          />
         </Suspense>
       )}
 
-      {p.viewingPurchaseVoucher && (() => {
-        const v: any = p.viewingPurchaseVoucher;
-        let scannedPhotoUrl = v.invoiceImageUrl || '';
-        if (!scannedPhotoUrl && Array.isArray(v.documents) && v.documents.length > 0) {
-          scannedPhotoUrl = v.documents.find((d: any) => d?.url)?.url || '';
-        }
-        if (!scannedPhotoUrl) {
-          try {
-            const rawCache = localStorage.getItem('nexus_scanned_vouchers_v1');
-            if (rawCache) {
-              const parsed = JSON.parse(rawCache);
-              scannedPhotoUrl = (v.id && parsed[v.id]) || (v.invoiceNumber && parsed[v.invoiceNumber]) || '';
-            }
-          } catch (_) {}
-        }
-
-        return (
-          <Modal 
-            isOpen={!!p.viewingPurchaseVoucher} 
-            onClose={() => p.setViewingPurchaseVoucher(null)} 
-            title={`Bon de Réception - ${v.invoiceNumber || String(v.id || "").slice(-6).toUpperCase()}`}
-            maxWidth="max-w-3xl"
-          >
-            <div className="space-y-5 print:p-0 text-left">
-              <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-4">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Fournisseur</p>
-                  <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase">{v.supplierName || 'Fournisseur Standard'}</h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{formatSafe(v.date, "dd MMMM yyyy 'à' HH:mm", { locale: fr })}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">N° Document</p>
-                  <p className="text-base font-mono font-black text-indigo-600 dark:text-indigo-400">{v.invoiceNumber || 'REC-' + String(v.id || "").slice(-6).toUpperCase()}</p>
-                  <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${v.status === 'completed' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'}`}>
-                    {v.status === 'completed' ? 'Réceptionné' : 'En attente'}
-                  </span>
-                </div>
-              </div>
-
-              {scannedPhotoUrl && (
-                <div className="p-3 bg-amber-500/5 border border-amber-500/25 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                      📸 Photo Originale du Bon d'Achat Scanné
-                    </span>
-                    <a
-                      href={scannedPhotoUrl}
-                      download={`Bon_${v.invoiceNumber || v.id}.jpg`}
-                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-                    >
-                      Télécharger la photo
-                    </a>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-950 p-2 text-center">
-                    <SafeImage
-                      src={scannedPhotoUrl}
-                      alt="Photo du bon d'achat"
-                      className="max-w-full h-auto mx-auto rounded"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                      <th className="p-3 text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase">Article</th>
-                      <th className="p-3 text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase text-center">Qté</th>
-                      <th className="p-3 text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase text-right">Prix Achat</th>
-                      <th className="p-3 text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                    {safeGetItems(v).map((item: any, idx: number) => (
-                      <tr key={`purchase-item-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                        <td className="p-3">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white uppercase">{item.name || item.productName}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">Réf: {item.productId ? String(item.productId).slice(-6).toUpperCase() : 'CATALOG'}</p>
-                        </td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 text-center font-black">{item.quantity}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 text-right font-mono">{Number(item.costPrice ?? item.price ?? 0).toFixed(2)} {p.settings?.currency}</td>
-                        <td className="p-3 text-xs font-black text-slate-900 dark:text-white text-right font-mono">{(Number(item.quantity || 0) * Number(item.costPrice ?? item.price ?? 0)).toFixed(2)} {p.settings?.currency}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-slate-50 dark:bg-slate-900 font-bold border-t border-slate-200 dark:border-slate-800">
-                    <tr>
-                      <td colSpan={3} className="p-3.5 text-right text-slate-600 dark:text-slate-400 uppercase text-xs font-black">Total Général</td>
-                      <td className="p-3.5 text-right text-base text-indigo-600 dark:text-indigo-400 font-black font-mono">{Number(v.total ?? v.totalAmount ?? 0).toFixed(2)} {p.settings?.currency}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <Button onClick={() => printPurchaseVoucher(v, p.settings)} variant="secondary" className="flex-1 gap-2">
-                  <Printer size={16} /> Imprimer le Bon
-                </Button>
-                <Button onClick={() => p.setViewingPurchaseVoucher(null)} className="flex-1">
-                  Fermer
-                </Button>
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
+      <PurchaseVoucherViewerModal
+        voucher={p.viewingPurchaseVoucher}
+        onClose={() => p.setViewingPurchaseVoucher(null)}
+        settings={p.settings}
+      />
 
       {p.isLowStockModalOpen && (
         <Suspense fallback={null}>
@@ -375,7 +245,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             onClose={() => p.setIsLowStockModalOpen(false)}
             products={p.lowStockProducts}
             settings={p.settings}
-            />
+          />
         </Suspense>
       )}
 
@@ -385,7 +255,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             isOpen={p.isExpirationModalOpen}
             onClose={() => p.setIsExpirationModalOpen(false)}
             products={p.expiringProducts}
-            />
+          />
         </Suspense>
       )}
 
@@ -397,7 +267,7 @@ export const AppModals: React.FC<Omit<AppModalsProps, 'user' | 'products' | 'set
             product={p.editingProduct}
             user={p.user}
             settings={p.settings}
-            />
+          />
         </Suspense>
       )}
     </>

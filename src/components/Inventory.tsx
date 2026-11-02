@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useDeferredValue } from 'react';
-import { printLabels } from '../services/printService';
 import { Product, InventoryTab } from '../types';
 import { useTranslation } from '../translations';
-import { exportToExcel } from '../lib/utils';
-import { toast } from 'sonner';
 
 import { InventoryContent } from './inventory/InventoryContent';
 import { useInventoryBarcodeScanner } from './inventory/useInventoryBarcodeScanner';
@@ -12,6 +9,8 @@ import { useInventoryData } from '../hooks/useInventoryData';
 import { useProductImport } from '../hooks/useProductImport';
 import { useInventoryActions } from '../hooks/useInventoryActions';
 import { useInventoryMetrics } from '../hooks/useInventoryMetrics';
+import { useInventoryExportAndPrint } from './inventory/hooks/useInventoryExportAndPrint';
+import { useInventoryCategoryExpansion } from './inventory/hooks/useInventoryCategoryExpansion';
 
 interface ConfirmAction {
   title: string;
@@ -37,7 +36,7 @@ export interface InventoryProps {
 }
 
 export function Inventory(props: InventoryProps) {
-  const isQuickSelectMode = false; const setIsQuickSelectMode = (v: boolean) => {};
+  const isQuickSelectMode = false; const setIsQuickSelectMode = (_v: boolean) => {};
   
   const products = useCoreStore(s => s.products);
   const categories = useCoreStore(s => s.categories);
@@ -52,7 +51,7 @@ export function Inventory(props: InventoryProps) {
   const allSuppliers = usePeopleStore(s => s.suppliers);
 
   const { 
-    onPosSelect, 
+    onPosSelect: _onPosSelect, 
     setActiveTab,
     setIsProductModalOpen,
     setEditingProduct,
@@ -60,61 +59,49 @@ export function Inventory(props: InventoryProps) {
     isProductModalOpen,
     setViewingPurchaseVoucher
   } = props;
-const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
     window.addEventListener('resize', checkMobile);
-return () => window.removeEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isBulkImageModalOpen, setIsBulkImageModalOpen] = useState(false);
-  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
   const [selectedProductForAdjustment, setSelectedProductForAdjustment] = useState<Product | null>(null);
   const [selectedProductForLabel, setSelectedProductForLabel] = useState<Product | null>(null);
-  const [inventoryTab, setInventoryTab] = useState<InventoryTab>('products');
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [inventoryTab, setInventoryTab] = useState<InventoryTab>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('carton')) return 'cartons';
+    }
+    return 'products';
+  });
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('carton')) setInventoryTab('cartons');
+    };
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
   const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [stockLevelFilter, setStockLevelFilter] = useState<'all' | 'low' | 'out' | 'in'>('all');
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
-  const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
+  const [dateRange, _setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [selectedSupplier, _setSelectedSupplier] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'grouped'>('grid');
   const { isScannerOpen, setIsScannerOpen, handleBarcodeScan } = useInventoryBarcodeScanner(products, setEditingProduct, setIsProductModalOpen, setSearch);
-  const [isBarcodeGenOpen, setIsBarcodeGenOpen] = useState(false);
   const [isPurchaseHistoryModalOpen, setIsPurchaseHistoryModalOpen] = useState(false);
   const [isSalesHistoryModalOpen, setIsSalesHistoryModalOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'discontinued'>('all');
+  const [selectedBrand, _setSelectedBrand] = useState<string>('all');
+  const [statusFilter, _setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'discontinued'>('all');
 
-  const preExpandedCategories = React.useMemo(() => {
-    if (!selectedCategories || selectedCategories.length === 0) return [];
-    const childMap = new Map<string, string[]>();
-    for (let i = 0; i < categories.length; i++) {
-      const c = categories[i];
-      if (c.parentId) {
-        const list = childMap.get(c.parentId) || [];
-        list.push(c.id);
-        childMap.set(c.parentId, list);
-      }
-    }
-    const all = new Set<string>();
-    const collect = (cid: string) => {
-      if (all.has(cid)) return;
-      all.add(cid);
-      const children = childMap.get(cid);
-      if (children) {
-        for (let i = 0; i < children.length; i++) collect(children[i]);
-      }
-    };
-    for (let i = 0; i < selectedCategories.length; i++) {
-      collect(selectedCategories[i]);
-    }
-    return Array.from(all);
-  }, [selectedCategories, categories]);
+  const preExpandedCategories = useInventoryCategoryExpansion(selectedCategories, categories);
 
   const {
     sortedProducts,
@@ -122,11 +109,8 @@ return () => window.removeEventListener('resize', checkMobile);
     totalPages,
     currentPage,
     setCurrentPage,
-    pageSize,
-    setPageSize,
     requestSort,
     sortConfig,
-    totalResults
   } = useInventoryData({
     products,
     categories,
@@ -152,7 +136,6 @@ return () => window.removeEventListener('resize', checkMobile);
   const [importPreviewData, setImportPreviewData] = useState<any[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [mapping, setMapping] = useState<Record<string, string>>({});
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [isMassDeleteConfirmOpen, setIsMassDeleteConfirmOpen] = useState(false);
@@ -160,16 +143,6 @@ return () => window.removeEventListener('resize', checkMobile);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-
-  const toggleSelectAll = React.useCallback(() => {
-    setSelectedProductIds(prev => {
-      if (prev.length === paginatedProducts.length) {
-        return [];
-      } else {
-        return paginatedProducts.map(p => p.id);
-      }
-    });
-  }, [paginatedProducts]);
 
   const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
 
@@ -187,9 +160,6 @@ return () => window.removeEventListener('resize', checkMobile);
     duplicateSKUGroups,
     productsBySupplier,
     marginExtremes,
-    categoryProductCounts,
-    expandedSelectedCategories,
-    productSuppliers
   } = useInventoryMetrics(products, paginatedProducts, sortedProducts, categories, selectedCategories);
 
   const {
@@ -217,6 +187,7 @@ return () => window.removeEventListener('resize', checkMobile);
     setSelectedProductIds,
     setIsMassDeleteConfirmOpen
   });
+
   useEffect(() => {
     setSelectedProductIds([]);
   }, [inventoryTab, currentPage, deferredSearch, selectedCategories]);
@@ -225,21 +196,15 @@ return () => window.removeEventListener('resize', checkMobile);
   useEffect(() => {
     setCurrentPage(1);
   }, [deferredSearch, selectedCategories, selectedSupplier, selectedBrand, statusFilter, stockLevelFilter, dateRange]);
+
   const {
     handleDelete,
     confirmDelete,
     handleCSVImport,
-    handleCSVExport
   } = useInventoryHandlers({
     products, user, settings, setIsProcessing, setActiveTab,
     setProductToDelete, setIsDeleteConfirmOpen, setCsvHeaders, setImportPreviewData, setIsImportModalOpen, productToDelete
   });
-
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-    );
-  };
 
   const { isProcessing: isImportProcessing, importProgress, importErrors, executeImport } = useProductImport({
     products,
@@ -248,64 +213,12 @@ return () => window.removeEventListener('resize', checkMobile);
     setIsImportModalOpen
   });
 
-
-  const handlePrintLabel = (product: Product) => {
-    const savedPrinterType = (() => {
-      try {
-        const val = localStorage.getItem('nexus_label_printer_type');
-        if (val === 'dedicated_label_printer' || val === 'receipt_printer') return val;
-      } catch (_) {}
-      return 'dedicated_label_printer';
-    })();
-    printLabels([product], { ...settings, labelPrinterType: savedPrinterType } as any);
-  };
-
-  const printQuickLabel = (product: Product) => {
-    const savedPrinterType = (() => {
-      try {
-        const val = localStorage.getItem('nexus_label_printer_type');
-        if (val === 'dedicated_label_printer' || val === 'receipt_printer') return val;
-      } catch (_) {}
-      return 'dedicated_label_printer';
-    })();
-    printLabels([product], { ...settings, labelPrinterType: savedPrinterType } as any);
-  };
-
-  const handleExportExcel = async () => {
-    try {
-      if (!products || products.length === 0) {
-        toast.error("Aucun produit à exporter.");
-        return;
-      }
-      
-      const exportData = products.map((p: Product) => {
-        const cat = categories.find(c => c.id === p.categoryId);
-        const brand = brands.find(b => b.id === p.brandId);
-        return {
-          'ID': p.id,
-          'Désignation': p.name || '',
-          'Code-barres': p.barcode || '',
-          'SKU': p.sku || '',
-          'Prix Vente (DA)': Number(p.price) || 0,
-          'Prix Achat (DA)': Number(p.costPrice) || 0,
-          'Stock': Number(p.stock) || 0,
-          'Stock Min': Number(p.minStock) || 0,
-          'Catégorie': cat?.name || p.categoryId || '',
-          'Marque': brand?.name || p.brandId || '',
-          'Fournisseur': p.supplier || '',
-          'Unité': p.unit || 'pcs',
-          'Statut': p.status || 'active',
-          'Date Expiration': p.expirationDate || ''
-        };
-      });
-
-      await exportToExcel(exportData, `catalogue_produits_${new Date().toISOString().slice(0, 10)}`);
-      toast.success(`${products.length} produit(s) exporté(s) en Excel avec succès !`);
-    } catch (err: any) {
-      console.error("Export error:", err);
-      toast.error("Erreur lors de l'export: " + err.message);
-    }
-  };
+  const { printQuickLabel, handleExportExcel } = useInventoryExportAndPrint({
+    products,
+    categories,
+    brands,
+    settings
+  });
 
   const productTabProps = {
     products, duplicateSKUGroups, setIsDuplicateModalOpen, handleAutoResolveAll,
@@ -323,6 +236,7 @@ return () => window.removeEventListener('resize', checkMobile);
     isMassDeleting, marginExtremes, requestSort, sortConfig, showMarginExtremes,
     setShowMarginExtremes, currentPage, setCurrentPage, totalPages, productsBySupplier,
     stockLevelFilter, setStockLevelFilter,
+    onZoomImage: (url: string) => setEnlargedImage(url),
     onExportExcel: handleExportExcel
   };
 
@@ -344,9 +258,7 @@ return () => window.removeEventListener('resize', checkMobile);
     setIsPurchaseHistoryModalOpen, editingProduct, setActiveTab,
     isSalesHistoryModalOpen, setIsSalesHistoryModalOpen, isProductModalOpen,
     isDeleteConfirmOpen, setIsDeleteConfirmOpen, setProductToDelete, confirmDelete,
-    isProductHistoryModalOpen, setIsProductHistoryModalOpen, viewingHistoryProduct,
-    setViewingHistoryProduct, setViewingPurchaseVoucher, handleBulkPrintLabels,
-    handleBulkDelete
+    viewingHistoryProduct, setViewingHistoryProduct, setViewingPurchaseVoucher, handleBulkPrintLabels
   };
 
   return (

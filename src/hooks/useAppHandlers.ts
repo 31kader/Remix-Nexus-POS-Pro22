@@ -3,7 +3,8 @@ import { toast } from 'sonner';
 import { localDb } from '../services/LocalDatabase';
 import { handleDatabaseError, OperationType } from '../lib/db-compat';
 import { useCoreStore } from '../store/useCoreStore';
-import type { PurchaseOrder, Product } from '../types';
+import { useTransactionStore } from '../store/useTransactionStore';
+import type { PurchaseOrder, Product, Transaction } from '../types';
 
 /**
  * Centralise les handlers d'actions de l'application principale.
@@ -84,11 +85,23 @@ export function useAppHandlers(
     setIsProductModalOpen(true);
   }, [setEditingProduct, setIsProductModalOpen]);
 
+  /**
+   * Marque une commande comme livrée dans la base locale et le store
+   */
+  const handleMarkAsDelivered = useCallback(async (tr: Transaction) => {
+    const updated = { ...tr, status: 'delivered' as const, updatedAt: new Date().toISOString() };
+    await localDb.update(`transactions/${tr.id}`, updated);
+    useTransactionStore.getState().setTransactions(prev =>
+      (prev || []).map(tx => tx.id === tr.id ? updated : tx)
+    );
+  }, []);
+
   return {
     handleInstallApp,
     handleCreatePurchaseOrder,
     handleUpdateProduct,
     handleAdjustStock,
     handleEditProduct,
+    handleMarkAsDelivered,
   };
 }

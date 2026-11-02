@@ -104,7 +104,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
       amount: Math.max(0, Number(supplier.balance) || 0),
       method: 'cash',
       note: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString()
     });
     setIsPaymentModalOpen(true);
   };

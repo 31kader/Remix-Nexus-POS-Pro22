@@ -1,11 +1,10 @@
 import { useState, useRef } from 'react';
 import { toast } from 'sonner';
-import { generateUniqueId, logAction } from '../../lib/utils';
-import { scanInvoice, getStoredAiVisionKey, structureOcrTextWithGroq } from '../../services/geminiService';
-import { matchProductInCatalog, parseRawInvoiceText } from './invoiceParser';
+import { scanInvoice, getStoredAiVisionKey } from '../../services/geminiService';
 import { parseImportedFile } from './importFileParser';
-import { preprocessImageForOcr, parseSmartAlgerianNumber } from '../../utils/ocrUtils';
 import { Product, Supplier, InvoicePattern, PurchaseCartItem } from '../../types';
+import { applyExtractedInvoiceService } from './applyExtractedInvoiceService';
+import { runLocalImageOcrService } from './runLocalImageOcrService';
 
 interface UseSmartPurchaseScannerProps {
   products: Product[];
@@ -91,199 +90,43 @@ export function useSmartPurchaseScanner({
   };
 
   const applyExtractedInvoice = (results: any, imageOverrideUrl?: string) => {
-    const finalScannedImage = imageOverrideUrl || scannedImageUrl || results?.scannedImageUrl || '';
-    setExtractedData({ ...results, scannedImageUrl: finalScannedImage });
-    setDetectedOcrType(results.isPosScreenshot ? 'pos' : 'standard');
-
-    if (results.supplierName && !selectedSupplierId) {
-      const matchedSupplier = suppliers.find(s =>
-        Boolean(s?.name && s.name.toLowerCase().includes((results.supplierName || '').toLowerCase()))
-      );
-      if (matchedSupplier) {
-        setSelectedSupplierId(matchedSupplier.id);
-      }
-    }
-
-    if (results.invoiceNumber && !invoiceNumber) {
-      setInvoiceNumber(results.invoiceNumber);
-    }
-
-    if (results.date || results.receptionDate) {
-      const dateStr = results.date || results.receptionDate;
-      const parsedDate = new Date(dateStr);
-      if (!isNaN(parsedDate.getTime())) {
-        setReceptionDate(dateStr.split('T')[0]);
-      }
-    }
-
-    if (results.previousBalance !== undefined && results.previousBalance !== null) {
-      toast.info(`Ancien solde détecté : ${results.previousBalance} DA`, { icon: '💰' });
-    }
-
-    if (results.items && Array.isArray(results.items)) {
-      let mappedCount = 0;
-      let unmappedCount = 0;
-
-      // Récupérer aussi les patterns enregistrés en base (invoice_patterns) pour ce fournisseur
-      const supplierPatterns = (patterns || []).filter(p => !selectedSupplierId || (p as any).supplierId === selectedSupplierId || (p as any).supplier_id === selectedSupplierId);
-      const patternMappings: Record<string, string> = {};
-      supplierPatterns.forEach(pat => {
-        const mappings = (pat as any).itemMappings || (pat as any).item_mappings;
-        if (mappings && typeof mappings === 'object') {
-          Object.entries(mappings).forEach(([k, v]) => {
-            if (k && v) patternMappings[k.trim().toLowerCase()] = String(v);
-          });
-        }
-      });
-
-      const newItems: PurchaseCartItem[] = results.items
-        .map((item: any) => {
-          const cleanQty = Math.max(1, parseSmartAlgerianNumber(item.qty ?? item.quantity ?? 1) || 1);
-          const rawPrice = parseSmartAlgerianNumber(item.price);
-          const rawTotal = parseSmartAlgerianNumber(item.total);
-          const cleanDiscount = parseSmartAlgerianNumber(item.discount);
-          const cleanPrice = rawPrice > 0 ? rawPrice : (rawTotal > 0 && cleanQty > 0 ? Math.round((rawTotal / cleanQty) * 100) / 100 : 0);
-
-          const rawNameKey = String(item.name || '').trim().toLowerCase();
-          const patternProductId = patternMappings[rawNameKey];
-
-          const matchedProduct = item.productId
-            ? products.find(p => p.id === item.productId)
-            : patternProductId
-              ? products.find(p => p.id === patternProductId)
-              : matchProductInCatalog(
-                  {
-                    name: item.name || '',
-                    barcode: item.barcode || item.code || '',
-                    sku: item.sku || ''
-                  },
-                  products
-                );
-
-          if (matchedProduct) {
-            mappedCount++;
-            return {
-              lineId: generateUniqueId(),
-              productId: matchedProduct.id,
-              productName: matchedProduct.name,
-              quantity: cleanQty,
-              costPrice: cleanPrice > 0 ? cleanPrice : matchedProduct.costPrice || matchedProduct.price || 0,
-              taxRate: matchedProduct.taxRate || 0,
-              discount: cleanDiscount,
-              imageUrl: matchedProduct.imageUrl,
-              isDraft: false
-            };
-          }
-
-          unmappedCount++;
-
-          return {
-            lineId: generateUniqueId(),
-            productId: '',
-            productName: item.name || 'Article Importé',
-            quantity: cleanQty,
-            costPrice: cleanPrice > 0 ? cleanPrice : 0,
-            taxRate: 19,
-            discount: cleanDiscount,
-            isDraft: true
-          };
-        })
-        .filter((item: any): item is PurchaseCartItem => item !== null && !!item.productName);
-
-      setCart(newItems);
-
-      if (mappedCount > 0 && unmappedCount > 0) {
-        toast.success(`${mappedCount} articles reconnus dans le catalogue, ${unmappedCount} nouveaux à créer.`);
-      } else if (mappedCount > 0) {
-        toast.success(`${mappedCount} articles reconnus automatiquement parmi vos ${products.length} produits !`);
-      } else if (unmappedCount > 0) {
-        toast.info(`${unmappedCount} articles extraits (prêts à être associés ou ajoutés au catalogue).`);
-      }
-    }
-
-    setMode('manual');
-    logAction(
-      user?.uid || user?.id || 'system',
-      user?.displayName || 'Utilisateur',
-      'File Import',
-      'SmartPurchase',
-      `Import réussi`
-    );
+    applyExtractedInvoiceService({
+      results,
+      imageOverrideUrl,
+      scannedImageUrl,
+      suppliers,
+      products,
+      patterns,
+      selectedSupplierId,
+      invoiceNumber,
+      user,
+      setExtractedData,
+      setDetectedOcrType,
+      setSelectedSupplierId,
+      setInvoiceNumber,
+      setReceptionDate,
+      setCart,
+      setMode
+    });
   };
 
   /**
    * ═══ OCR Local 100% Hors-Ligne (Tesseract.js + Matching Catalogue 11 177 produits) ═══
    */
   const runLocalImageOcr = async (imageFile: File) => {
-    setIsOfflineScanning(true);
-    setOfflineScanProgress('Prétraitement de la photo (contraste & netteté)...');
-    setError(null);
-
-    try {
-      const compactImg = await createCompactInvoiceImage(imageFile);
-      if (compactImg) setScannedImageUrl(compactImg);
-
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Impossible de lire la photo.'));
-        reader.readAsDataURL(imageFile);
-      });
-
-      let processedImageUrl: File | string = dataUrl;
-      try {
-        processedImageUrl = await preprocessImageForOcr(imageFile);
-      } catch {
-        // fallback to original dataUrl if canvas preprocessing fails
-      }
-
-      setOfflineScanProgress('Initialisation du moteur OCR Local (Français + Chiffres)...');
-      const Tesseract = await import('tesseract.js');
-      const result = await Tesseract.recognize(processedImageUrl, 'fra+eng', {
-        logger: (m: any) => {
-          if (m?.status === 'recognizing text' && typeof m.progress === 'number') {
-            setOfflineScanProgress(`Lecture OCR Locale de la facture : ${Math.round(m.progress * 100)}%`);
-          }
-        }
-      });
-
-      const extractedText = result?.data?.text || '';
-      setRawOcrText(extractedText);
-
-      if (!extractedText.trim()) {
-        throw new Error("Aucun texte lisible n'a pu être détecté sur cette photo.");
-      }
-
-      setOfflineScanProgress(`Structuration intelligente des lignes avec Groq IA & Catalogue (${products.length} produits)...`);
-      let parsedInvoice = parseRawInvoiceText(extractedText, suppliers, products);
-
-      const storedKey = getStoredAiVisionKey();
-      if (storedKey.startsWith('gsk_')) {
-        try {
-          const groqStructured = await structureOcrTextWithGroq(extractedText, storedKey);
-          if (groqStructured && Array.isArray(groqStructured.items) && groqStructured.items.length > 0) {
-            parsedInvoice = groqStructured;
-          }
-        } catch (groqErr) {
-          console.warn('Groq structuring fallback to local parser:', groqErr);
-        }
-      }
-
-      if (!parsedInvoice.items || parsedInvoice.items.length === 0) {
-        setIsOcrInspectorOpen(true);
-        throw new Error(
-          "Le texte a été lu mais aucune ligne article structurée (Désignation + Quantité + Prix) n'a été isolée."
-        );
-      }
-
-      applyExtractedInvoice(parsedInvoice, compactImg);
-      toast.success(
-        `Photo analysée (${storedKey.startsWith('gsk_') ? 'OCR + Groq IA' : 'OCR Local'}) : ${parsedInvoice.items.length} ligne(s) extraite(s) !`,
-        { icon: '📸' }
-      );
-    } finally {
-      setIsOfflineScanning(false);
-    }
+    await runLocalImageOcrService({
+      imageFile,
+      suppliers,
+      products,
+      createCompactInvoiceImage,
+      setScannedImageUrl,
+      setIsOfflineScanning,
+      setOfflineScanProgress,
+      setError,
+      setRawOcrText,
+      setIsOcrInspectorOpen,
+      applyExtractedInvoice
+    });
   };
 
   // ═══ Import CSV / Excel / PDF / Photo OCR Local ═══

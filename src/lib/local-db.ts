@@ -1,22 +1,12 @@
-export function cleanupLegacyStorage() {
-  if (typeof localStorage === 'undefined') return;
-  try {
-    const legacyKeys = [
-      'nexus_supabase_emulator_db',
-      'sync_queue',
-      'nexus_local_db_cache',
-      'nexus_offline_sync_backup',
-      'nexus_old_cache'
-    ];
-    legacyKeys.forEach(k => {
-      try {
-        localStorage.removeItem(k);
-      } catch (_) {}
-    });
-  } catch (_) {}
-}
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { encryptLocalData, decryptLocalData } from './security';
+import { TABLE_NAME_MAPPINGS } from './db-converters';
+import { cleanupLegacyStorage } from './local-db/legacyStorageCleaner';
+import { partitionOldTransactions, getArchivedTransactionsFromStorage } from './local-db/partitionTransactions';
+import { queryLocalStateHelper, QueryOptions } from './local-db/queryLocalState';
+
+export { cleanupLegacyStorage, partitionOldTransactions, getArchivedTransactionsFromStorage };
+export type { QueryOptions };
 
 export type ObserverCallback = (snapshot: { exists: () => boolean, val: () => any }) => void;
 
@@ -159,8 +149,6 @@ export function triggerObservers(path: string) {
   }
 }
 
-import { TABLE_NAME_MAPPINGS } from './db-converters';
-
 export function normalizePath(path: string): string {
   if (!path) return '';
   const clean = path.replace(/^\/+|\/+$/g, '');
@@ -292,7 +280,7 @@ export async function loadInitialState() {
         dbState[t] = await restoreTableState(t, loaded[i]);
       }
       // Partitionner les anciennes transactions pour alléger la RAM
-      partitionOldTransactions().catch(() => {});
+      partitionOldTransactions(dbState).catch(() => {});
       Object.keys(dbState).forEach(triggerObservers);
     } else {
       const stored = await getIDB('nexus_supabase_emulator_db_v2');
@@ -301,7 +289,7 @@ export async function loadInitialState() {
         const tables = Object.keys(dbState);
         await Promise.all(tables.map(t => persistTableState(t)));
         await setIDB('nexus_db_split_v1', true);
-        partitionOldTransactions().catch(() => {});
+        partitionOldTransactions(dbState).catch(() => {});
         Object.keys(dbState).forEach(triggerObservers);
       } else {
         const legacy = localStorage.getItem('nexus_supabase_emulator_db');
@@ -311,7 +299,7 @@ export async function loadInitialState() {
           await Promise.all(tables.map(t => persistTableState(t)));
           await setIDB('nexus_db_split_v1', true);
           localStorage.removeItem('nexus_supabase_emulator_db');
-          partitionOldTransactions().catch(() => {});
+          partitionOldTransactions(dbState).catch(() => {});
           Object.keys(dbState).forEach(triggerObservers);
         }
       }
@@ -321,97 +309,7 @@ export async function loadInitialState() {
   }
 }
 
-/**
- * ⚡ OPTIMISATION MÉMOIRE : Décharge les transactions >90 jours de la RAM vers un stockage IndexedDB archivé
- */
-let isPartitioning = false;
-
-export async function partitionOldTransactions() {
-  if (isPartitioning) return;
-  isPartitioning = true;
-  try {
-    const rawTxs = dbState['transactions'];
-    if (!rawTxs || typeof rawTxs !== 'object') return;
-    
-    const txList = Object.values(rawTxs);
-    if (txList.length < 200) return;
-
-    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-    const activeTxs: Record<string, any> = {};
-    const archiveTxs: Record<string, any> = (await getIDB('nexus_archived_transactions')) || {};
-    let movedCount = 0;
-
-    for (const tx of txList) {
-      if (!tx || !tx.id) continue;
-      const txTime = new Date(tx.timestamp || tx.created_at || tx.date || 0).getTime();
-      if (txTime > 0 && txTime < ninetyDaysAgo) {
-        archiveTxs[tx.id] = tx;
-        movedCount++;
-      } else {
-        activeTxs[tx.id] = tx;
-      }
-    }
-
-    if (movedCount > 0) {
-      dbState['transactions'] = activeTxs;
-      await setIDB('nexus_archived_transactions', archiveTxs);
-      await setIDB('nexus_db_transactions', activeTxs);
-      console.log(`[MemoryOptimizer] ${movedCount} transaction(s) anciennes (>90j) déchargées de la RAM vers le stockage archive.`);
-    }
-  } catch (err) {
-    console.warn('[MemoryOptimizer] Erreur partitionnement des transactions:', err);
-  } finally {
-    isPartitioning = false;
-  }
-}
-
-/**
- * 🔍 Récupère à la demande les transactions archivées depuis IndexedDB
- */
-export async function getArchivedTransactionsFromStorage(): Promise<any[]> {
-  try {
-    const archived = await getIDB<Record<string, any>>('nexus_archived_transactions');
-    return archived ? Object.values(archived) : [];
-  } catch {
-    return [];
-  }
-}
-
-export interface QueryOptions {
-  limit?: number;
-  offset?: number;
-  orderBy?: string;
-  orderDirection?: 'asc' | 'desc';
-  filter?: (item: any) => boolean;
-}
-
 export function queryLocalState(path: string, options: QueryOptions = {}) {
   const { table } = parsePath(path);
-  if (!table || !dbState[table]) return [];
-
-  let results = Object.values(dbState[table]);
-
-  if (options.filter) {
-    results = results.filter(options.filter);
-  }
-
-  if (options.orderBy) {
-    results.sort((a: any, b: any) => {
-      const valA = a[options.orderBy!];
-      const valB = b[options.orderBy!];
-      if (valA < valB) return options.orderDirection === 'desc' ? 1 : -1;
-      if (valA > valB) return options.orderDirection === 'desc' ? -1 : 1;
-      return 0;
-    });
-  }
-
-  if (options.offset !== undefined) {
-    results = results.slice(options.offset);
-  }
-
-  if (options.limit !== undefined) {
-    results = results.slice(0, options.limit);
-  }
-
-  return results;
+  return queryLocalStateHelper(dbState, table, options);
 }
