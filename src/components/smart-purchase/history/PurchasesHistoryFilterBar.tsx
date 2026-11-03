@@ -14,6 +14,7 @@ import {
 import { Button } from '../../ui';
 import { Purchase, Supplier, CompanySettings } from '../../../types';
 import { printHistory } from '../../../services/printService';
+import { handleDeletePurchaseDb } from '../purchaseDbOperations';
 import { 
   PurchasePaymentStatusFilter, 
   PurchaseReceiptStatusFilter, 
@@ -178,7 +179,6 @@ export const PurchasesHistoryFilterBar = memo(function PurchasesHistoryFilterBar
             <Button
               onClick={async () => {
                 if (!window.confirm(`Voulez-vous vraiment supprimer ces ${filteredPurchases.length} bon(s) d'achat et réajuster automatiquement les stocks correspondants ?`)) return;
-                const { handleDeletePurchaseDb } = await import('../purchaseDbOperations');
                 for (const p of filteredPurchases) {
                   await handleDeletePurchaseDb({
                     purchaseId: p.id,

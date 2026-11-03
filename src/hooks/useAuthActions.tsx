@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import bcrypt from 'bcryptjs';
 import { useAuthStore } from '../store/useAuthStore';
 import { getSecureItem, setSecureItem, removeSecureItem } from '../lib/security';
+import { checkIsOwner } from '../config/ownerConfig';
 
 export function useAuthActions(
   t: (key: string) => string
@@ -129,7 +130,6 @@ export function useAuthActions(
       
       if (userCredential.user) {
         try {
-          const { checkIsOwner } = await import('../config/ownerConfig');
           const bcryptHash = bcrypt.hashSync(cleanPassword, 10);
           const userSnap = await localDb.get(`users/${userCredential.user.uid}`);
           const userData = userSnap.exists() ? userSnap.val() : null;

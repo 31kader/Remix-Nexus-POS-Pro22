@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from './ui';
 import { motion, AnimatePresence } from 'motion/react';
+import { APP_CONFIG } from '../config/appConfig';
 import { cn } from '../lib/utils';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { captureSentryException } from '../lib/sentry';
@@ -139,7 +140,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
 
-            <p className="text-[8px] font-black text-white/5 uppercase tracking-normal">Nexus POS Pro v1.2.59 Safety Layer</p>
+            <p className="text-[8px] font-black text-white/5 uppercase tracking-normal">Nexus POS Pro v{APP_CONFIG.version} Safety Layer</p>
           </div>
         </div>
       );
