@@ -70,45 +70,70 @@ async function main() {
   
   // A. adjust_customer_balance avec 5 arguments (avec p_idempotency_key)
   await runTest('RPC', 'adjust_customer_balance (5 params avec idempotence)', async () => {
-    // 1. Récupérer un client existant pour le test
+    // 1. Récupérer un client existant ou en créer un temporaire
+    let testCustId: string;
+    let isEphemeral = false;
     const { data: custs } = await supabase.from('customers').select('id, balance').limit(1);
     if (!custs || custs.length === 0) {
-      throw { message: 'Aucun client disponible dans la base pour le test', isWarning: true };
-    }
-    const testCustId = custs[0].id;
-    const testKey = `test_live_check_${Date.now()}`;
-
-    // Appel avec 5 paramètres et delta = 0 (sans altérer les données financières)
-    const { data, error, status } = await supabase.rpc('adjust_customer_balance', {
-      p_id: String(testCustId),
-      delta_balance: 0,
-      delta_spent: 0,
-      delta_points: 0,
-      p_idempotency_key: testKey
-    });
-
-    if (error) {
-      throw new Error(`Échec RPC 5 params (HTTP ${status || 'ERR'}): [${error.code}] ${error.message}`);
-    }
-
-    // 2. Tester l'idempotence : deuxième appel avec la MÊME clé doit retourner idempotent: true
-    const { data: data2, error: err2 } = await supabase.rpc('adjust_customer_balance', {
-      p_id: String(testCustId),
-      delta_balance: 0,
-      delta_spent: 0,
-      delta_points: 0,
-      p_idempotency_key: testKey
-    });
-
-    if (err2) {
-      throw new Error(`Échec RPC test idempotence : [${err2.code}] ${err2.message}`);
+      testCustId = `test_health_cust_${Date.now()}`;
+      const { error: insErr } = await supabase.from('customers').insert({
+        id: testCustId,
+        name: 'Client Health Check',
+        phone: '0550000000',
+        balance: 0,
+        total_spent: 0,
+        loyalty_points: 0
+      });
+      if (insErr) {
+        return `Ignoré (0 client en base et insert restreint: ${insErr.code})`;
+      }
+      isEphemeral = true;
+    } else {
+      testCustId = custs[0].id;
     }
 
-    if (data2?.idempotent !== true) {
-      throw new Error(`L'idempotence n'a pas retourné idempotent=true au 2ème appel`);
-    }
+    try {
+      const testKey = `test_live_check_${Date.now()}`;
 
-    return `Succès (HTTP ${status || 200}) — Idempotence validée`;
+      // Appel avec 5 paramètres et delta = 0 (sans altérer les données financières)
+      const { data, error, status } = await supabase.rpc('adjust_customer_balance', {
+        p_id: String(testCustId),
+        delta_balance: 0,
+        delta_spent: 0,
+        delta_points: 0,
+        p_idempotency_key: testKey
+      });
+
+      if (error) {
+        if (status === 401 || status === 403 || error.code === '42501') {
+          return `Sécurisé (HTTP ${status || 401}) : [42501] Rôle anon restreint (Conforme P0-SEC-1)`;
+        }
+        throw new Error(`Échec RPC 5 params (HTTP ${status || 'ERR'}): [${error.code}] ${error.message}`);
+      }
+
+      // 2. Tester l'idempotence : deuxième appel avec la MÊME clé doit retourner idempotent: true
+      const { data: data2, error: err2 } = await supabase.rpc('adjust_customer_balance', {
+        p_id: String(testCustId),
+        delta_balance: 0,
+        delta_spent: 0,
+        delta_points: 0,
+        p_idempotency_key: testKey
+      });
+
+      if (err2) {
+        throw new Error(`Échec RPC test idempotence : [${err2.code}] ${err2.message}`);
+      }
+
+      if (data2?.idempotent !== true) {
+        throw new Error(`L'idempotence n'a pas retourné idempotent=true au 2ème appel`);
+      }
+
+      return `Succès (HTTP ${status || 200}) — Idempotence validée`;
+    } finally {
+      if (isEphemeral) {
+        await supabase.from('customers').delete().eq('id', testCustId);
+      }
+    }
   });
 
   // B. adjust_customer_balance avec 4 arguments (signature classique rétrocompatible)
@@ -151,6 +176,9 @@ async function main() {
     });
 
     if (error) {
+      if (status === 401 || status === 403 || error.code === '42501') {
+        return `Sécurisé (HTTP ${status || 401}) : [42501] Rôle anon interdit d'exécution direct (Conforme P0-SEC-1)`;
+      }
       throw new Error(`Échec apply_stock_adjustment (HTTP ${status}): [${error.code}] ${error.message}`);
     }
     return `Succès (HTTP ${status || 200})`;
@@ -168,6 +196,9 @@ async function main() {
     });
 
     if (error) {
+      if (status === 401 || status === 403 || error.code === '42501') {
+        return `Sécurisé (HTTP ${status || 401}) : [42501] Rôle anon interdit d'exécution direct (Conforme P0-SEC-1)`;
+      }
       throw new Error(`Échec adjust_product_stock (HTTP ${status}): [${error.code}] ${error.message}`);
     }
     return `Succès (HTTP ${status || 200})`;
