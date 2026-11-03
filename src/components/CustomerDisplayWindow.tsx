@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Sparkles, CheckCircle2, ShieldCheck, QrCode, Smartphone } from 'lucide-react';
 import { useCoreStore } from '../store/useCoreStore';
 import { useCustomerDisplaySync } from './customer-display/useCustomerDisplaySync';
 import { CustomerDisplayHeader } from './customer-display/CustomerDisplayHeader';
@@ -156,6 +156,18 @@ export const CustomerDisplayWindow: React.FC = () => {
                 <div>
                   <p className="font-black text-emerald-300 text-sm uppercase tracking-wide">Paiement Validé</p>
                   <p className="text-xs text-slate-300 mt-0.5">Merci de votre visite et à très bientôt !</p>
+                </div>
+              </div>
+            )}
+
+            {!displayState.isPaid && (displayState.total || 0) > 0 && (
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                  <Smartphone size={16} />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-white">Règlement Espèces / Mobile</p>
+                  <p className="text-[10px] text-slate-400">Présentez votre monnaie ou scannez au comptoir</p>
                 </div>
               </div>
             )}

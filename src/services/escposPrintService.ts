@@ -112,6 +112,38 @@ export class EscPosBuilder {
     return this;
   }
 
+  barcode(code: string): this {
+    const cleanCode = code.replace(/[^0-9A-Za-z]/g, '');
+    if (!cleanCode) return this;
+    this.buffer.push(0x1d, 0x68, 60); // GS h 60 (Hauteur)
+    this.buffer.push(0x1d, 0x77, 2);  // GS w 2 (Largeur)
+    this.buffer.push(0x1d, 0x48, 2);  // GS H 2 (HRI sous le code)
+    this.buffer.push(0x1d, 0x6b, 0x04); // GS k 4 (Code 39)
+    for (let i = 0; i < cleanCode.length; i++) {
+      this.buffer.push(cleanCode.charCodeAt(i) & 0xff);
+    }
+    this.buffer.push(0x00);
+    return this;
+  }
+
+  qrCode(data: string, moduleSize: number = 5): this {
+    const cleanData = this.sanitizeText(data);
+    const dataLen = cleanData.length;
+    if (dataLen === 0) return this;
+    const pL = (dataLen + 3) & 0xff;
+    const pH = ((dataLen + 3) >> 8) & 0xff;
+
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // Modèle 2
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, Math.max(1, Math.min(16, moduleSize)));
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31); // Correction M
+    this.buffer.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30); // Store data
+    for (let i = 0; i < dataLen; i++) {
+      this.buffer.push(cleanData.charCodeAt(i) & 0xff);
+    }
+    this.buffer.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30); // Print QR
+    return this;
+  }
+
   getBytes(): Uint8Array {
     return new Uint8Array(this.buffer);
   }
@@ -238,4 +270,77 @@ export async function printDirectRawEscPos(bytes: Uint8Array): Promise<boolean> 
   }
 
   return false;
+}
+
+/**
+ * 🌐 Envoie le flux d'octets bruts ESC/POS vers une imprimante thermique IP locale (Port 9100)
+ */
+export async function printViaNetworkEscPos(
+  bytes: Uint8Array,
+  host: string,
+  port: number = 9100
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('nexus_lan_token') || 'nexus-pos-lan-v1')
+      : 'nexus-pos-lan-v1';
+
+    const response = await fetch('/api/hardware/print-escpos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-nexus-lan-token': token
+      },
+      body: JSON.stringify({
+        ip: host,
+        port,
+        bytes: Array.from(bytes)
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      return { success: false, message: data.error || `Erreur d'impression (${response.status})` };
+    }
+    return { success: true, message: data.message || 'Ticket imprimé avec succès sur le réseau' };
+  } catch (err: any) {
+    return { success: false, message: `Impossible de contacter le serveur d'impression : ${err?.message || 'Erreur réseau'}` };
+  }
+}
+
+/**
+ * 🎯 Routeur matériel universel pour impression directe ESC/POS
+ */
+export async function sendEscPosToPrinter(
+  bytes: Uint8Array,
+  config?: { mode?: 'network' | 'usb' | 'system'; ip?: string; port?: number }
+): Promise<{ success: boolean; message: string }> {
+  const mode = config?.mode || 'system';
+
+  // 1. Mode Réseau Local IP
+  if (mode === 'network' && config?.ip) {
+    return printViaNetworkEscPos(bytes, config.ip, config.port || 9100);
+  }
+
+  // 2. Mode USB Direct (WebSerial / WebUSB)
+  if (mode === 'usb') {
+    const ok = await printDirectRawEscPos(bytes);
+    if (ok) {
+      return { success: true, message: 'Ticket imprimé avec succès via port USB' };
+    }
+    return { success: false, message: 'Aucun périphérique USB / Port série accessible' };
+  }
+
+  // 3. Mode Système ou Fallback Electron
+  const electronAPI = typeof window !== 'undefined' ? (window as any).electronAPI : undefined;
+  if (electronAPI?.printEscPos) {
+    try {
+      const res = await electronAPI.printEscPos(Array.from(bytes));
+      if (res && res.success) {
+        return { success: true, message: 'Ticket imprimé via le spooler natif' };
+      }
+    } catch (_) {}
+  }
+
+  return { success: false, message: 'Mode impression système actif (utiliser la boîte de dialogue)' };
 }

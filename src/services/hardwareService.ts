@@ -8,6 +8,8 @@
  */
 
 
+import { sendEscPosToPrinter } from './escposPrintService';
+
 // Codes ESC/POS standard d'impulsion pour tiroir-caisse
 export const ESCPOS_DRAWER_PIN2 = [0x1B, 0x70, 0x00, 0x19, 0xFA]; // ESC p 0 25 250 (Broche 2 standard)
 export const ESCPOS_DRAWER_PIN5 = [0x1B, 0x70, 0x01, 0x19, 0xFA]; // ESC p 1 25 250 (Broche 5)
@@ -127,4 +129,101 @@ export async function triggerCashDrawer(options?: { force?: boolean; silent?: bo
  */
 export async function testCashDrawer(): Promise<{ success: boolean; message: string }> {
   return triggerCashDrawer({ force: true });
+}
+
+/**
+ * 🖨️ Configuration de l'imprimante thermique physique
+ */
+export interface PrinterHardwareConfig {
+  mode: 'system' | 'network' | 'usb';
+  networkIp: string;
+  networkPort: number;
+  autoCut: boolean;
+  openDrawerOnCash: boolean;
+}
+
+const PRINTER_CONFIG_STORAGE_KEY = 'nexus_printer_hardware_config';
+
+const DEFAULT_PRINTER_CONFIG: PrinterHardwareConfig = {
+  mode: 'system',
+  networkIp: '192.168.1.200',
+  networkPort: 9100,
+  autoCut: true,
+  openDrawerOnCash: true
+};
+
+export function getPrinterHardwareConfig(): PrinterHardwareConfig {
+  if (typeof window === 'undefined') return DEFAULT_PRINTER_CONFIG;
+  try {
+    const raw = localStorage.getItem(PRINTER_CONFIG_STORAGE_KEY);
+    if (!raw) return DEFAULT_PRINTER_CONFIG;
+    const parsed = JSON.parse(raw);
+    return {
+      mode: parsed.mode || DEFAULT_PRINTER_CONFIG.mode,
+      networkIp: parsed.networkIp || DEFAULT_PRINTER_CONFIG.networkIp,
+      networkPort: Number(parsed.networkPort) || DEFAULT_PRINTER_CONFIG.networkPort,
+      autoCut: parsed.autoCut !== false,
+      openDrawerOnCash: parsed.openDrawerOnCash !== false
+    };
+  } catch {
+    return DEFAULT_PRINTER_CONFIG;
+  }
+}
+
+export function savePrinterHardwareConfig(updates: Partial<PrinterHardwareConfig>): PrinterHardwareConfig {
+  const current = getPrinterHardwareConfig();
+  const next: PrinterHardwareConfig = { ...current, ...updates };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(PRINTER_CONFIG_STORAGE_KEY, JSON.stringify(next));
+    } catch (err) {
+      console.warn('[HardwareService] Erreur sauvegarde config imprimante:', err);
+    }
+  }
+  return next;
+}
+
+/**
+ * 🔍 Teste la connectivité réseau avec l'imprimante IP (Ping TCP 9100)
+ */
+export async function testNetworkPrinterConnection(
+  ip: string,
+  port: number = 9100
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('nexus_lan_token') || 'nexus-pos-lan-v1')
+      : 'nexus-pos-lan-v1';
+
+    const res = await fetch('/api/hardware/test-connection', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-nexus-lan-token': token
+      },
+      body: JSON.stringify({ ip, port })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, message: data.error || `Échec du test de liaison (${res.status})` };
+    }
+    return { success: true, message: data.message || `Imprimante connectée (${ip}:${port})` };
+  } catch (err: any) {
+    return { success: false, message: `Serveur inaccessible : ${err?.message || 'Erreur réseau'}` };
+  }
+}
+
+/**
+ * ⚡ Imprime un ticket directement selon la configuration matérielle active
+ */
+export async function printDirectTicket(
+  bytes: Uint8Array
+): Promise<{ success: boolean; message: string }> {
+  const config = getPrinterHardwareConfig();
+  return sendEscPosToPrinter(bytes, {
+    mode: config.mode,
+    ip: config.networkIp,
+    port: config.networkPort
+  });
 }

@@ -3,6 +3,7 @@ import { Printer, QrCode, FileText, Sparkles, Image, Monitor, Play, Check, Save 
 import { CompanySettings } from '../../types';
 import { getTerminalId, getTerminalName, setTerminalInfo } from '../../services/terminalService';
 import { isAutoDrawerEnabled, setAutoDrawerEnabled, testCashDrawer } from '../../services/hardwareService';
+import { DirectPrinterConfigCard } from './hardware/DirectPrinterConfigCard';
 import { toast } from 'sonner';
 
 interface SectionProps {
@@ -85,6 +86,9 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
           </div>
         </div>
       </div>
+
+      {/* 🖨️ Pilote Direct ESC/POS Réseau & USB */}
+      <DirectPrinterConfigCard settings={formData} />
 
       {/* 🖨️ Configuration Principale du Ticket */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

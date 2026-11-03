@@ -48,7 +48,8 @@ describe('📦 Sauvegarde Automatique Quotidienne & Rotation 7 Jours', () => {
     expect(res.info?.productCount).toBe(2);
     expect(res.info?.txCount).toBe(1);
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     expect(localStorage.getItem(STORAGE_LAST_BACKUP_DATE_KEY)).toBe(todayStr);
 
     const savedInfo = getLastAutoBackupInfo();

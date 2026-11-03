@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import os from 'os';
+import net from 'net';
 
 // Load local .env from various possible locations (dev, packaged, or next to exe)
 const envPaths = [
@@ -404,6 +405,140 @@ async function startServer() {
         return res.json({ success: true, relayed: true });
       }
       res.status(400).json({ error: "Message de synchronisation LAN invalide" });
+    });
+
+    // 🖨️ Endpoints Matériel Caisse & Impression Directe ESC/POS (Réseau TCP 9100)
+    app.post("/api/hardware/test-connection", requirePosLanAuth, (req, res) => {
+      const { ip, port = 9100 } = req.body || {};
+      const targetPort = Number(port) || 9100;
+
+      if (!ip || typeof ip !== 'string' || !/^([a-zA-Z0-9.-]+)$/.test(ip.trim())) {
+        return res.status(400).json({ success: false, error: "Adresse IP ou nom d'hôte invalide." });
+      }
+      if (targetPort < 1 || targetPort > 65535) {
+        return res.status(400).json({ success: false, error: "Port TCP invalide (doit être entre 1 et 65535)." });
+      }
+
+      const socket = new net.Socket();
+      let finished = false;
+
+      const cleanup = () => {
+        if (!finished) {
+          finished = true;
+          socket.removeAllListeners();
+          socket.destroy();
+        }
+      };
+
+      socket.setTimeout(2500);
+
+      socket.on('connect', () => {
+        cleanup();
+        res.json({
+          success: true,
+          message: `Connexion établie avec l'imprimante réseau (${ip.trim()}:${targetPort})`,
+          host: ip.trim(),
+          port: targetPort
+        });
+      });
+
+      socket.on('timeout', () => {
+        cleanup();
+        res.status(504).json({
+          success: false,
+          error: `Délai d'attente dépassé (2500ms) pour joindre l'imprimante (${ip.trim()}:${targetPort}). Vérifiez qu'elle est allumée et connectée au même réseau.`
+        });
+      });
+
+      socket.on('error', (err) => {
+        cleanup();
+        res.status(502).json({
+          success: false,
+          error: `Échec de connexion à l'imprimante (${ip.trim()}:${targetPort}) : ${err.message}`
+        });
+      });
+
+      socket.connect(targetPort, ip.trim());
+    });
+
+    app.post("/api/hardware/print-escpos", requirePosLanAuth, (req, res) => {
+      const { ip, port = 9100, bytes } = req.body || {};
+      const targetPort = Number(port) || 9100;
+
+      if (!ip || typeof ip !== 'string' || !/^([a-zA-Z0-9.-]+)$/.test(ip.trim())) {
+        return res.status(400).json({ success: false, error: "Adresse IP ou nom d'hôte invalide." });
+      }
+      if (targetPort < 1 || targetPort > 65535) {
+        return res.status(400).json({ success: false, error: "Port TCP invalide." });
+      }
+      if (!bytes || (!Array.isArray(bytes) && typeof bytes !== 'string')) {
+        return res.status(400).json({ success: false, error: "Flux d'octets ESC/POS manquant ou format incorrect." });
+      }
+
+      let buffer: Buffer;
+      try {
+        if (typeof bytes === 'string') {
+          buffer = Buffer.from(bytes, 'base64');
+        } else {
+          buffer = Buffer.from(bytes);
+        }
+      } catch (err: any) {
+        return res.status(400).json({ success: false, error: `Erreur décodage octets : ${err?.message}` });
+      }
+
+      if (buffer.length === 0 || buffer.length > 2 * 1024 * 1024) {
+        return res.status(400).json({ success: false, error: "Taille du flux d'impression invalide (max 2 Mo)." });
+      }
+
+      const socket = new net.Socket();
+      let finished = false;
+
+      const cleanup = () => {
+        if (!finished) {
+          finished = true;
+          socket.removeAllListeners();
+          socket.destroy();
+        }
+      };
+
+      socket.setTimeout(3500);
+
+      socket.on('connect', () => {
+        socket.write(buffer, (err) => {
+          if (err) {
+            cleanup();
+            return res.status(500).json({ success: false, error: `Erreur d'écriture sur l'imprimante : ${err.message}` });
+          }
+          socket.end(() => {
+            cleanup();
+            res.json({
+              success: true,
+              message: "Données ESC/POS transmises avec succès à l'imprimante thermique",
+              bytesSent: buffer.length,
+              host: ip.trim(),
+              port: targetPort
+            });
+          });
+        });
+      });
+
+      socket.on('timeout', () => {
+        cleanup();
+        res.status(504).json({
+          success: false,
+          error: `Délai d'attente dépassé lors de l'impression vers (${ip.trim()}:${targetPort}).`
+        });
+      });
+
+      socket.on('error', (err) => {
+        cleanup();
+        res.status(502).json({
+          success: false,
+          error: `Erreur de communication imprimante (${ip.trim()}:${targetPort}) : ${err.message}`
+        });
+      });
+
+      socket.connect(targetPort, ip.trim());
     });
 
     // Custom Rate Limiter Middleware
