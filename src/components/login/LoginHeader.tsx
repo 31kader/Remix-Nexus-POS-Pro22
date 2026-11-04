@@ -63,14 +63,14 @@ export const LoginHeader: React.FC<LoginHeaderProps> = ({
 
       {/* Brand Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-indigo-600 shadow-md shadow-indigo-600/30 text-white mb-1">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-700 to-indigo-500 shadow-lg shadow-indigo-600/30 text-white mb-1">
           <ShoppingCart size={26} strokeWidth={2.5} />
         </div>
         <h1 className="text-2xl font-black tracking-tight text-white">
           NEXUS <span className="text-indigo-400">POS PRO</span>
         </h1>
         <p className="text-xs text-zinc-400">
-          {t("Accès sécurisé au terminal de caisse")}
+          {t("Application Mère • Terminal Caisse & Gestion")}
         </p>
       </div>
     </>
