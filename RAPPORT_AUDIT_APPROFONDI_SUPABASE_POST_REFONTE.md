@@ -102,3 +102,19 @@ Il ne manque désormais **aucun test**. Les 5 niveaux de vérification requis po
 4. **Garde-Fou Architectural (< 500 lignes anti-god files)**
 5. **Tests Fonctionnels & E2E (99 suites, 744 tests, 0 échec)**
 sont tous **au vert absolu**.
+
+---
+
+## 10. Packaging & Installables de Production (Option 1)
+- **Mise en exploitation directe :** Désactivée (arrêt du process de preview Vite sur le port 4173).
+- **Génération de l'icône de distribution :** `build/icon.ico` créé avec succès (370 Ko, multi-résolutions).
+- **Installateur Windows Desktop (NSIS x64) :**
+  - **Fichier généré :** `release/NexusPOSPro-1.2.71-Setup.exe` (133 388 841 octets / ~127 Mo).
+  - **Lien standard :** `release/NexusPOSPro-Setup.exe` mis à jour vers la v1.2.71.
+  - **Architecture :** Offline-first avec bundle Node.js/Electron, base locale SQLite `better-sqlite3` déballée (asarUnpack) et intégration PWA.
+- **Application Android (Capacitor) :**
+  - **Fichier généré :** `release/NexusPOSPro-1.2.71.apk` (17 259 689 octets / ~16.5 Mo).
+  - **Lien standard :** `release/NexusPOSPro.apk` mis à jour vers la v1.2.71.
+  - **Compilation :** Gradle 186 tâches exécutées avec succès (Build Debug signé pour déploiement direct/sideload).
+
+
