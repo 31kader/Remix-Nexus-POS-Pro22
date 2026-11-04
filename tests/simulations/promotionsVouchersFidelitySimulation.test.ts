@@ -14,7 +14,7 @@ import {
 } from './promotionsVouchersFidelitySimulationHelpers';
 
 describe('🎯 SIMULATION MOTEUR PROMOTIONNEL, VOUCHERS, FIDÉLITÉ & DÉDUCTION MIXTE', () => {
-  const reportPath = path.resolve(process.cwd(), 'SIMULATION_PROMOTIONS_VOUCHERS_FIDELITE_RAPPORT.md');
+  const reportPath = path.resolve(process.cwd(), 'docs/simulations/SIMULATION_PROMOTIONS_VOUCHERS_FIDELITE_RAPPORT.md');
 
   let products: Record<string, CatalogProduct>;
   let promotions: Record<string, PromotionRule>;

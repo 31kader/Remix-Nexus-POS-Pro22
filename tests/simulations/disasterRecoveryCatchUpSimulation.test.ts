@@ -18,7 +18,7 @@ import {
 } from './disasterRecoverySimulationHelpers';
 
 describe('🔄 SIMULATION PLAN DE CONTINUITÉ D\'ACTIVITÉ (DISASTER RECOVERY & CATCH-UP)', () => {
-  const reportPath = path.resolve('SIMULATION_DISASTER_RECOVERY_RESTAURATION_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_DISASTER_RECOVERY_RESTAURATION_RAPPORT.md');
   let realProducts: RealProductFixture[] = [];
 
   let state: LocalStoreState;

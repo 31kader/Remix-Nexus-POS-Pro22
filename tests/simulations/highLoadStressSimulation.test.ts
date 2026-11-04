@@ -18,7 +18,7 @@ interface RealProductFixture {
 
 describe('⚡ SIMULATION HAUTE CHARGE : 100 Commandes en Ligne + 50 Ventes Comptoir + Approvisionnement en 10 min', () => {
   let realProducts: RealProductFixture[] = [];
-  const reportPath = path.resolve('SIMULATION_HAUTE_CHARGE_100_COMMANDES_50_VENTES_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_HAUTE_CHARGE_100_COMMANDES_50_VENTES_RAPPORT.md');
 
   // État initial de stock simulé
   const initialStockMap = new Map<string, number>();

@@ -8,6 +8,7 @@ export interface Customer {
   loyaltyCardNumber?: string;
   totalSpent: number;
   lastVisit?: string;
+  lastPurchaseDate?: string;
   notes?: string;
   isAppUser?: boolean;
   password?: string;
@@ -29,6 +30,7 @@ export interface Customer {
   loyalty_points?: number;
   total_spent?: number;
   last_visit?: string;
+  last_purchase_date?: string | null;
   join_date?: string;
   deltaBalance?: number;
   deltaSpent?: number;

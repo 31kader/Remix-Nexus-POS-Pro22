@@ -17,7 +17,7 @@ import {
 } from './supplyChainSimulationHelpers';
 
 describe('🚛 SIMULATION APPROVISIONNEMENTS FOURNISSEURS, BL, CARTONS & DETTES', () => {
-  const reportPath = path.resolve('SIMULATION_APPROVISIONNEMENTS_BL_DETTES_FOURNISSEURS_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_APPROVISIONNEMENTS_BL_DETTES_FOURNISSEURS_RAPPORT.md');
   let realProducts: RealProductFixture[] = [];
 
   let suppliers: SimulatedSupplier[] = [];

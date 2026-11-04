@@ -36,8 +36,8 @@ describe('Composants Récents de la Fiche Client Redessinée (Velvet Obsidian)',
     mapsUrl: 'https://maps.google.com/?q=36.7538,3.0588',
     isAppUser: true,
     cashierNotes: [
-      '2026-11-01 10:00: Versement de 5000 DA par chèque',
-      '2026-10-15 14:30: Client régulier très sérieux'
+      { note: 'Versement de 5000 DA par chèque', timestamp: '2026-11-01 10:00', author: 'Caisse 1' },
+      { note: 'Client régulier très sérieux', timestamp: '2026-10-15 14:30', author: 'Admin' }
     ]
   };
 

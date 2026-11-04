@@ -13,7 +13,7 @@ import {
 
 describe('📡 SIMULATION CONCURRENTE MULTI-CAISSES RÉSEAU LOCAL (LAN Sync P2P)', () => {
   let realProducts: RealProductFixture[] = [];
-  const reportPath = path.resolve('SIMULATION_MULTI_CAISSES_LAN_P2P_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_MULTI_CAISSES_LAN_P2P_RAPPORT.md');
 
   // Les 3 terminaux interconnectés
   let termMaster: SimulatedTerminalNode;

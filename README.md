@@ -1,8 +1,9 @@
-# 🛒 Nexus POS Pro (v1.2.70)
+# 🛒 Nexus POS Pro (v1.2.71)
 
-Système de Point de Vente (POS) moderne, ultra-performant et **offline-first**, conçu pour les commerces de détail et supermarchés. Adapté aux normes comptables et commerciales algériennes (Devise **DA**, TVA **19%**).
+Système de Point de Vente (POS) moderne, ultra-performant et **offline-first**, conçu pour les commerces de détail et supermarchés. Adapté aux normes comptables et commerciales algériennes (Devise **DA**, TVA paramétrable `0%` par défaut).
 
-![Tests](https://img.shields.io/badge/Tests-616%2F616%20Passing-success)
+![Tests](https://img.shields.io/badge/Tests-744%2F744%20Passing-success)
+![Suites](https://img.shields.io/badge/Suites-99%2F99%20Passing-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-Strict%200%20errors-blue)
 ![React](https://img.shields.io/badge/React-19-cyan)
 ![Vite](https://img.shields.io/badge/Vite-6-purple)
@@ -110,12 +111,14 @@ npm run build
 ## 📁 Organisation du Projet
 
 ```text
-├── src/
+├── docs/                   # Documentation complète classée (audits, simulations, guides)
+│   ├── audits/             # 26 rapports d'audit, sécurité CWE, Lighthouse et certifications
+│   ├── simulations/        # 15 rapports de simulation haute charge, P2P et reprise sur sinistre
+│   ├── guides/             # Cahier des charges, guides de migration Supabase et stockage
+│   └── INDEX.md            # Sommaire et cartographie détaillée de toute la documentation
+├── src/                    # Code source de l'application
 │   ├── components/         # Composants UI modulaires, écrans métier et modals lazy-loadés
-│   │   ├── catalog-printer/# Studio d'impression catalogue A4 découpé en sous-modules
-│   │   ├── customers/tabs/ # Sous-onglets modulaires de la fiche client
-│   │   └── ui/             # Composants génériques et SafeImage (cache WebP IndexedDB)
-│   ├── config/             # Configuration globale (devise DA, TVA 19%, credentials owner)
+│   ├── config/             # Configuration globale (devise DA, settings, credentials owner)
 │   ├── hooks/              # Custom React hooks métier (.ts) et logique de synchronisation
 │   ├── lib/                # Convertisseurs de schémas (db-converters), sécurité, helpers
 │   ├── services/           # Services clés (SyncService, LocalDatabase, AuthService)
@@ -123,18 +126,26 @@ npm run build
 │   ├── types/              # Schémas de types TypeScript stricts (database.types.ts, sales, etc.)
 │   ├── supabase.ts         # Client Supabase typé createClient<Database>()
 │   └── App.tsx             # Composant racine avec gestion des permissions et thèmes
-├── tests/                  # 41 suites de tests automatisés (302 tests passants Vitest)
+├── tests/                  # 99 suites de tests automatisés (744 tests passants Vitest)
+│   └── simulations/        # 11 suites de simulation avancées (rapports écrits dans docs/simulations/)
+├── supabase/               # Infrastructure Supabase
+│   ├── migrations/         # Migrations SQL versionnées, fonctions RPC atomiques & RLS
+│   └── setup/              # Scripts SQL d'installation et de configuration de magasin
 ├── electron/               # Configuration et scripts du client Desktop
 ├── server.ts               # Serveur Express local (Vite HMR en dev, passerelle d'impression en prod)
-├── supabase/migrations/    # Migrations SQL versionnées, fonctions RPC atomiques & RLS
-└── REMEDIATION_PHASE1_PHASE2_RAPPORT.md # Rapport officiel complet d'audit et remédiation
+├── vite.config.ts          # Configuration du bundler Vite
+├── vitest.config.ts        # Configuration du framework de test Vitest
+├── capacitor.config.ts     # Configuration de l'application mobile Capacitor Android
+└── GEMINI.md               # Règles impératives de développement et architecture
 ```
 
 ---
 
 ## 📄 Documentation & Rapports
-* **Rapport de Remédiation Phase 1 & 2** : `REMEDIATION_PHASE1_PHASE2_RAPPORT.md`
-* **Rapport d'Audit 360° Tech Lead** : `AUDIT_DEV_SENIOR_RAPPORT.md`
+Pour consulter la documentation complète, référez-vous à [**docs/INDEX.md**](docs/INDEX.md) :
+* **Audits & Sécurité** : `docs/audits/` (Audit Supabase Post-Refonte, Pentest 14 CWE, Audit 360)
+* **Simulations Haute Charge** : `docs/simulations/` (100 commandes/50 ventes, coupure réseau, clôture Z)
+* **Spécifications & Guides** : `docs/guides/` (Cahier des charges, migration Supabase, optimisation stockage)
 * **Règles & Conventions Métier** : `GEMINI.md`
 
 ---

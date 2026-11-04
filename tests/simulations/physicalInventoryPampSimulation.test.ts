@@ -12,7 +12,7 @@ import {
 
 describe('📋 SIMULATION INVENTAIRE PHYSIQUE GÉNÉRAL & VALORISATION COMPTABLE PAMP', () => {
   let realProducts: RealProductFixture[] = [];
-  const reportPath = path.resolve('SIMULATION_INVENTAIRE_PHYSIQUE_PAMP_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_INVENTAIRE_PHYSIQUE_PAMP_RAPPORT.md');
 
   // Suivi rigoureux des stocks et de la valorisation
   const initialStockMap = new Map<string, number>();

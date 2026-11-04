@@ -14,7 +14,7 @@ import {
 } from './massReturnsSimulationHelpers';
 
 describe('📦 SIMULATION RETOURS PRODUITS MASSIFS, AVARIES & RÉGULARISATIONS FISCALES', () => {
-  const reportPath = path.resolve('SIMULATION_RETOURS_AVARIES_FISCALITE_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_RETOURS_AVARIES_FISCALITE_RAPPORT.md');
   let realProducts: RealProductFixture[] = [];
   const initialStockMap = new Map<string, number>();
   const currentStockMap = new Map<string, number>();

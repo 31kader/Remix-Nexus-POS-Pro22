@@ -16,7 +16,7 @@ import {
 } from './cashShiftZReportSimulationHelpers';
 
 describe('🧾 SIMULATION CLÔTURE DE CAISSE (RAPPORT Z), COUPURES & ÉCARTS', () => {
-  const reportPath = path.resolve('SIMULATION_RAPPORT_Z_GESTION_CAISSE_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_RAPPORT_Z_GESTION_CAISSE_RAPPORT.md');
 
   let activeShift: SimulatedCashShift;
   let initialDenominations: BanknoteDenominations;

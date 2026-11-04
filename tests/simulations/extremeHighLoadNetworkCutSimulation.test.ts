@@ -14,7 +14,7 @@ import {
 
 describe('⚡ SIMULATION HAUTE CHARGE EXTRÊME & COUPURE RÉSEAU (200 Commandes Web + 100 Ventes Caisse)', () => {
   let realProducts: RealProductFixture[] = [];
-  const reportPath = path.resolve('SIMULATION_HAUTE_CHARGE_EXTREME_COUPURE_RESEAU_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_HAUTE_CHARGE_EXTREME_COUPURE_RESEAU_RAPPORT.md');
 
   // Suivi rigoureux des stocks
   const initialStockMap = new Map<string, number>();

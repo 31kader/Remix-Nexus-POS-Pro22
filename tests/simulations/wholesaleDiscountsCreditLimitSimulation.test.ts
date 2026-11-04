@@ -17,7 +17,7 @@ import {
 } from './wholesaleDiscountsSimulationHelpers';
 
 describe('💼 SIMULATION GROS / DÉTAIL, PALIERS DE VOLUME & ENCOURS CLIENTS B2B', () => {
-  const reportPath = path.resolve('SIMULATION_GROS_DETAIL_ENCOURS_TOPUP_RAPPORT.md');
+  const reportPath = path.resolve('docs/simulations/SIMULATION_GROS_DETAIL_ENCOURS_TOPUP_RAPPORT.md');
   let realProducts: RealProductFixture[] = [];
   let customers: SimulatedB2BCustomer[] = [];
   let products: WholesaleProductFixture[] = [];
