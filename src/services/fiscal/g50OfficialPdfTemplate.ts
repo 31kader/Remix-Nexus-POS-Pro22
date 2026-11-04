@@ -1,4 +1,5 @@
 import { G50MonthlySummary } from './g50ExportService';
+import { escapeHtml } from '../../lib/utils';
 
 export interface CompanyFiscalData {
   companyName: string;
@@ -74,16 +75,16 @@ export class G50OfficialPdfTemplate {
         <div class="grid-2">
           <div class="info-block">
             <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Identification du Contribuable</div>
-            <div style="font-size: 13px; font-weight: bold; margin-top: 2px;">${fiscalData.companyName}</div>
-            <div style="margin-top: 4px;"><strong>NIF :</strong> ${fiscalData.nif || 'Non renseigné'}</div>
-            <div><strong>NIS :</strong> ${fiscalData.nis || 'Non renseigné'}</div>
-            <div><strong>RC :</strong> ${fiscalData.rc || 'Non renseigné'} | <strong>AI :</strong> ${fiscalData.ai || 'Non renseigné'}</div>
+            <div style="font-size: 13px; font-weight: bold; margin-top: 2px;">${escapeHtml(fiscalData.companyName)}</div>
+            <div style="margin-top: 4px;"><strong>NIF :</strong> ${escapeHtml(fiscalData.nif || 'Non renseigné')}</div>
+            <div><strong>NIS :</strong> ${escapeHtml(fiscalData.nis || 'Non renseigné')}</div>
+            <div><strong>RC :</strong> ${escapeHtml(fiscalData.rc || 'Non renseigné')} | <strong>AI :</strong> ${escapeHtml(fiscalData.ai || 'Non renseigné')}</div>
           </div>
           <div class="info-block">
             <div style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase;">Structure Fiscale de Rattachement</div>
-            <div style="margin-top: 4px;"><strong>Wilaya :</strong> ${fiscalData.wilaya || 'Alger'}</div>
-            <div><strong>Inspection :</strong> ${fiscalData.taxInspection || 'Inspection des Impôts'}</div>
-            <div><strong>Recette des Impôts :</strong> ${fiscalData.taxReceiptOffice || 'Recette Centrale'}</div>
+            <div style="margin-top: 4px;"><strong>Wilaya :</strong> ${escapeHtml(fiscalData.wilaya || 'Alger')}</div>
+            <div><strong>Inspection :</strong> ${escapeHtml(fiscalData.taxInspection || 'Inspection des Impôts')}</div>
+            <div><strong>Recette des Impôts :</strong> ${escapeHtml(fiscalData.taxReceiptOffice || 'Recette Centrale')}</div>
           </div>
         </div>
 

@@ -6,6 +6,7 @@
 
 import { Transaction, CompanySettings, Customer } from '../../types';
 import { computeTaxBreakdown, numberToWordsAlgerianDZD } from './algerianTaxCalculations';
+import { escapeHtml } from '../../lib/utils';
 
 export interface FiscalInvoiceMetadata {
   nif?: string;
@@ -45,7 +46,7 @@ export function generateAlgerianFiscalInvoiceHtml(
     return `
       <tr>
         <td style="text-align:center; padding: 6px; border-bottom: 1px solid #e2e8f0;">${idx + 1}</td>
-        <td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">${item.name || 'Article'}</td>
+        <td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">${escapeHtml(item.name || 'Article')}</td>
         <td style="text-align:center; padding: 6px; border-bottom: 1px solid #e2e8f0;">${qty}</td>
         <td style="text-align:right; padding: 6px; border-bottom: 1px solid #e2e8f0;">${(lineHT / qty).toFixed(2)}</td>
         <td style="text-align:center; padding: 6px; border-bottom: 1px solid #e2e8f0;">${rate}%</td>
@@ -59,7 +60,7 @@ export function generateAlgerianFiscalInvoiceHtml(
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Facture ${invoiceNumber}</title>
+  <title>Facture ${escapeHtml(invoiceNumber)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 0; padding: 25px; color: #1e293b; font-size: 13px; }
     .header-table { width: 100%; margin-bottom: 25px; }
@@ -79,24 +80,24 @@ export function generateAlgerianFiscalInvoiceHtml(
   <table class="header-table">
     <tr>
       <td style="width: 55%; vertical-align: top;">
-        <div class="company-title">${settings.name || 'NEXUS COMMERCE'}</div>
-        <div>${settings.address || 'Alger, Algérie'}</div>
-        <div>Tél: ${settings.phone || 'Non renseigné'}</div>
+        <div class="company-title">${escapeHtml(settings.name || 'NEXUS COMMERCE')}</div>
+        <div>${escapeHtml(settings.address || 'Alger, Algérie')}</div>
+        <div>Tél: ${escapeHtml(settings.phone || 'Non renseigné')}</div>
         <div class="fiscal-box">
-          <div><strong>NIF :</strong> ${fiscalMeta?.nif || settings.taxNumber || '000000000000000'}</div>
-          <div><strong>NIS :</strong> ${fiscalMeta?.nis || '0000000000'} | <strong>RC :</strong> ${fiscalMeta?.rc || '16/00-0000000'}</div>
-          <div><strong>Article d'Imposition (AI) :</strong> ${fiscalMeta?.ai || '16000000000'}</div>
+          <div><strong>NIF :</strong> ${escapeHtml(fiscalMeta?.nif || settings.taxNumber || '000000000000000')}</div>
+          <div><strong>NIS :</strong> ${escapeHtml(fiscalMeta?.nis || '0000000000')} | <strong>RC :</strong> ${escapeHtml(fiscalMeta?.rc || '16/00-0000000')}</div>
+          <div><strong>Article d'Imposition (AI) :</strong> ${escapeHtml(fiscalMeta?.ai || '16000000000')}</div>
         </div>
       </td>
       <td style="width: 45%; vertical-align: top; text-align: right;">
         <div style="font-size: 18px; font-weight: 900; color: #4f46e5;">FACTURE COMMERCIALE</div>
-        <div style="font-size: 13px; font-weight: bold; margin: 4px 0;">N° : ${invoiceNumber}</div>
+        <div style="font-size: 13px; font-weight: bold; margin: 4px 0;">N° : ${escapeHtml(invoiceNumber)}</div>
         <div>Date d'émission : ${dateStr}</div>
         <div style="margin-top: 15px; padding: 10px; border: 1px dashed #94a3b8; border-radius: 8px; text-align: left; background: #ffffff;">
           <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold;">Client :</div>
-          <div style="font-weight: bold; font-size: 13px;">${customer?.name || transaction.customerName || 'Client Comptoir'}</div>
-          ${customer?.phone ? `<div>Tél : ${customer.phone}</div>` : ''}
-          ${customer?.address ? `<div>Adresse : ${customer.address}</div>` : ''}
+          <div style="font-weight: bold; font-size: 13px;">${escapeHtml(customer?.name || transaction.customerName || 'Client Comptoir')}</div>
+          ${customer?.phone ? `<div>Tél : ${escapeHtml(customer.phone)}</div>` : ''}
+          ${customer?.address ? `<div>Adresse : ${escapeHtml(customer.address)}</div>` : ''}
         </div>
       </td>
     </tr>

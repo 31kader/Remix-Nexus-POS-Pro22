@@ -1,4 +1,5 @@
 import { Customer, Transaction } from '../../types';
+import { escapeHtml } from '../../lib/utils';
 
 export interface CustomerDebtSummary {
   customer: Customer;
@@ -60,7 +61,7 @@ export class CustomerDebtStatementService {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Relevé de Compte - ${customer.name}</title>
+        <title>Relevé de Compte - ${escapeHtml(customer.name)}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 30px; color: #1e293b; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; }
@@ -72,7 +73,7 @@ export class CustomerDebtStatementService {
       <body>
         <div class="header">
           <div>
-            <h2 style="margin: 0; color: #0f172a;">${storeName}</h2>
+            <h2 style="margin: 0; color: #0f172a;">${escapeHtml(storeName)}</h2>
             <p style="margin: 4px 0; color: #64748b;">SERVICE SUIVI CLIENTS & CRÉDITS (CARNET KHEDDAM)</p>
           </div>
           <div style="text-align: right;">
@@ -83,8 +84,8 @@ export class CustomerDebtStatementService {
 
         <div style="margin-top: 20px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px;">
           <h4 style="margin: 0 0 8px 0; color: #0f172a;">Informations Client</h4>
-          <p style="margin: 2px 0;"><strong>Nom / Raison Sociale :</strong> ${customer.name}</p>
-          <p style="margin: 2px 0;"><strong>Téléphone :</strong> ${customer.phone || 'Non renseigné'}</p>
+          <p style="margin: 2px 0;"><strong>Nom / Raison Sociale :</strong> ${escapeHtml(customer.name)}</p>
+          <p style="margin: 2px 0;"><strong>Téléphone :</strong> ${escapeHtml(customer.phone || 'Non renseigné')}</p>
           <p style="margin: 2px 0;"><strong>Crédit Max Autorisé :</strong> ${(customer.creditLimit || customer.credit_limit || 0).toFixed(2)} DA</p>
         </div>
 

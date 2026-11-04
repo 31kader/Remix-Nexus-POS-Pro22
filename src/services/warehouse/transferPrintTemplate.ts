@@ -1,4 +1,5 @@
 import { StockTransfer } from '../../types/warehouseTypes';
+import { escapeHtml } from '../../lib/utils';
 
 export class TransferPrintTemplate {
   static generateA4Html(transfer: StockTransfer, storeName: string = 'NEXUS DISTRIBUTION'): string {
@@ -7,14 +8,14 @@ export class TransferPrintTemplate {
         (it, idx) => `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 8px; text-align: center;">${idx + 1}</td>
-          <td style="padding: 8px; font-family: monospace;">${it.barcode || '-'}</td>
-          <td style="padding: 8px; font-weight: bold;">${it.productName}</td>
+          <td style="padding: 8px; font-family: monospace;">${escapeHtml(it.barcode || '-')}</td>
+          <td style="padding: 8px; font-weight: bold;">${escapeHtml(it.productName)}</td>
           <td style="padding: 8px; text-align: right; font-weight: bold;">${it.quantitySent}</td>
           <td style="padding: 8px; text-align: right;">${it.quantityReceived || 0}</td>
           <td style="padding: 8px; text-align: right; color: ${it.quantitySent !== it.quantityReceived && transfer.status !== 'in_transit' ? '#e11d48' : '#64748b'};">
             ${it.quantityReceived - it.quantitySent}
           </td>
-          <td style="padding: 8px; font-size: 11px; color: #64748b;">${it.discrepancyReason || '-'}</td>
+          <td style="padding: 8px; font-size: 11px; color: #64748b;">${escapeHtml(it.discrepancyReason || '-')}</td>
         </tr>
       `
       )
@@ -34,7 +35,7 @@ export class TransferPrintTemplate {
       <html>
       <head>
         <meta charset="utf-8">
-        <title>Bon de Transfert ${transfer.transferNumber}</title>
+        <title>Bon de Transfert ${escapeHtml(transfer.transferNumber)}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 25px; color: #1e293b; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 15px; }
@@ -48,12 +49,12 @@ export class TransferPrintTemplate {
       <body>
         <div class="header">
           <div>
-            <h2 style="margin: 0; color: #0f172a;">${storeName}</h2>
+            <h2 style="margin: 0; color: #0f172a;">${escapeHtml(storeName)}</h2>
             <p style="margin: 4px 0; color: #64748b;">RÉSEAU DE DISTRIBUTION & LOGISTIQUE</p>
           </div>
           <div style="text-align: right;">
             <h3 style="margin: 0; color: #2563eb;">BON DE TRANSFERT INTER-DÉPÔTS</h3>
-            <p style="margin: 4px 0; font-weight: bold; font-family: monospace; font-size: 16px;">${transfer.transferNumber}</p>
+            <p style="margin: 4px 0; font-weight: bold; font-family: monospace; font-size: 16px;">${escapeHtml(transfer.transferNumber)}</p>
             <div style="margin-top: 5px;">${statusBadge}</div>
           </div>
         </div>
@@ -61,20 +62,20 @@ export class TransferPrintTemplate {
         <div style="display: flex; gap: 15px; margin-top: 15px;">
           <div class="box" style="flex: 1;">
             <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Dépôt Expéditeur (Source)</div>
-            <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">${transfer.sourceWarehouseName}</div>
-            <div style="font-size: 12px; color: #475569; margin-top: 2px;">Expédié par : ${transfer.dispatchedBy || '-'}</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">${escapeHtml(transfer.sourceWarehouseName)}</div>
+            <div style="font-size: 12px; color: #475569; margin-top: 2px;">Expédié par : ${escapeHtml(transfer.dispatchedBy || '-')}</div>
             <div style="font-size: 12px; color: #475569;">Date : ${new Date(transfer.dispatchedAt || transfer.createdAt).toLocaleString('fr-DZ')}</div>
           </div>
           <div class="box" style="flex: 1;">
             <div style="font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase;">Dépôt Destinataire (Cible)</div>
-            <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">${transfer.destinationWarehouseName}</div>
-            <div style="font-size: 12px; color: #475569; margin-top: 2px;">Réceptionné par : ${transfer.receivedBy || 'En attente'}</div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">${escapeHtml(transfer.destinationWarehouseName)}</div>
+            <div style="font-size: 12px; color: #475569; margin-top: 2px;">Réceptionné par : ${escapeHtml(transfer.receivedBy || 'En attente')}</div>
             <div style="font-size: 12px; color: #475569;">Date réception : ${transfer.receivedAt ? new Date(transfer.receivedAt).toLocaleString('fr-DZ') : '-'}</div>
           </div>
         </div>
 
         <div style="margin-top: 10px; font-size: 12px; color: #475569;">
-          <strong>Chauffeur / Transporteur :</strong> ${transfer.carrierName || 'Interne'} | <strong>Notes :</strong> ${transfer.notes || 'N/A'}
+          <strong>Chauffeur / Transporteur :</strong> ${escapeHtml(transfer.carrierName || 'Interne')} | <strong>Notes :</strong> ${escapeHtml(transfer.notes || 'N/A')}
         </div>
 
         <table>
