@@ -42,6 +42,8 @@
 
 ---
 
+---
+
 ## 📊 Synthèse Finale Officielle de la Campagne Promotionnelle
 
 ### 1. Volumes & Transactions de la Campagne (40 Ventes)
