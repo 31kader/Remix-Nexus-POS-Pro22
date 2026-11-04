@@ -8,7 +8,7 @@ interface UseCheckoutShortcutsProps {
   searchRef: RefObject<HTMLInputElement | null>;
   setSelectedItemId?: (id: string | null) => void;
   quantityInputRefs?: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
-  handleCheckout: (method: 'cash' | 'card' | 'balance', shouldPrint?: boolean) => void;
+  handleCheckout: (method: 'cash' | 'card' | 'balance' | 'transfer', shouldPrint?: boolean) => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
   addNewSession?: () => void;
   onReprintLastTicket?: () => void;

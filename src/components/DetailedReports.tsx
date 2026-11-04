@@ -7,7 +7,8 @@ import {
   Award,
   Wallet,
   Boxes,
-  AlertTriangle
+  AlertTriangle,
+  Landmark
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ const CashflowReport = lazy(() => import('./reports/CashflowReport').then(m => (
 const StockValueReport = lazy(() => import('./reports/StockValueReport').then(m => ({ default: m.StockValueReport })));
 const LossesReport = lazy(() => import('./reports/LossesReport').then(m => ({ default: m.LossesReport })));
 const GroupedSalesAndBasketsReport = lazy(() => import('./reports/GroupedSalesAndBasketsReport').then(m => ({ default: m.GroupedSalesAndBasketsReport })));
+const G50TaxReportTab = lazy(() => import('./reports/G50TaxReportTab').then(m => ({ default: m.G50TaxReportTab })));
 
 const reportFallback = (
   <div className="flex flex-col items-center justify-center min-h-[350px] p-5 space-y-3 bg-zinc-900/40 border border-zinc-800/80 rounded-xl">
@@ -63,7 +65,7 @@ export const DetailedReports = memo(function DetailedReports({
   setEditingProduct,
   setIsProductModalOpen
 }: DetailedReportsProps) {
-  const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'baskets' | 'fidelity_stats' | 'cashflow' | 'stock_value' | 'losses'>('charts');
+  const [reportsTab, setReportsTab] = useState<'charts' | 'profits' | 'baskets' | 'fidelity_stats' | 'cashflow' | 'stock_value' | 'losses' | 'g50'>('charts');
   const [marketingFilterDate, setMarketingFilterDate] = useState<'today' | 'yesterday' | 'week' | 'month' | 'year' | 'all'>('all');
 
   const exportAccountingCSV = () => {
@@ -143,7 +145,8 @@ export const DetailedReports = memo(function DetailedReports({
     { id: 'cashflow', label: "Trésorerie & Flux", icon: Wallet },
     { id: 'fidelity_stats', label: "Fidélité Clients", icon: Award },
     { id: 'stock_value', label: "Valeur Stock", icon: Boxes },
-    { id: 'losses', label: "Pertes & Rebuts", icon: AlertTriangle, danger: true }
+    { id: 'losses', label: "Pertes & Rebuts", icon: AlertTriangle, danger: true },
+    { id: 'g50', label: "Déclaration G50", icon: Landmark }
   ];
 
   return (
@@ -258,6 +261,8 @@ export const DetailedReports = memo(function DetailedReports({
               }
             }}
           />
+        ) : reportsTab === 'g50' ? (
+          <G50TaxReportTab />
         ) : (
           <LossesReport 
             stockAdjustments={stockAdjustments}

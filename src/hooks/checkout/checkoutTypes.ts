@@ -31,4 +31,4 @@ export interface UseCheckoutProcessParams {
   onClearEditingTransaction?: () => void;
 }
 
-export type CheckoutPaymentMethod = 'cash' | 'card' | 'balance';
+export type CheckoutPaymentMethod = 'cash' | 'card' | 'balance' | 'transfer';

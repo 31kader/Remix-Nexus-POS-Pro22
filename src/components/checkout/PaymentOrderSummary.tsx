@@ -26,7 +26,7 @@ interface PaymentOrderSummaryProps {
   currency: string;
   cart: CartItem[];
   selectedCustomer: Customer | null;
-  handleCheckout: (method: 'cash' | 'card' | 'balance', shouldPrint?: boolean) => void;
+  handleCheckout: (method: 'cash' | 'card' | 'balance' | 'transfer', shouldPrint?: boolean) => void;
   isProcessing: boolean;
   setIsDeliveryModalOpen: (v: boolean) => void;
   settings: CompanySettings;

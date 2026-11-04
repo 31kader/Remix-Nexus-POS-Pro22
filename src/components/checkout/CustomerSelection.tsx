@@ -19,7 +19,7 @@ interface CustomerSelectionProps {
   setReceivedAmount: (s: string) => void;
   keepExcessInBalance: boolean;
   setKeepExcessInBalance: (v: boolean) => void;
-  handleCheckout: (method: 'cash' | 'card' | 'balance', shouldPrint?: boolean) => void;
+  handleCheckout: (method: 'cash' | 'card' | 'balance' | 'transfer', shouldPrint?: boolean) => void;
   addCustomerNote: (note: string) => void;
   setIsPOSCustomerModalOpen: (v: boolean) => void;
 }

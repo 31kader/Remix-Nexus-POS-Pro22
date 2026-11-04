@@ -1,5 +1,7 @@
 import React, { memo } from 'react';
-import { Trash2, Minus, Plus, Edit2, Tag } from 'lucide-react';
+import { Trash2, Minus, Plus, Edit2, Tag, Scale } from 'lucide-react';
+import { scaleDriver } from '../../services/hardware/scaleDriverService';
+import { toast } from 'sonner';
 import { CartItem, Product, CompanySettings, RolePermissions } from '../../types';
 import { cn } from '../../lib/utils';
 import { QuantityInput } from './QuantityInput';
@@ -154,6 +156,25 @@ export const CartItemRow = memo(({
             setQuantity={onSetQuantity} 
             ref={inputRef}
           />
+          {(item.unit === 'kg' || item.unit === 'g' || scaleDriver.isConnected()) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const current = scaleDriver.getCurrentWeight();
+                if (current && current.weight > 0) {
+                  onSetQuantity(item.cartItemId || item.id, current.weight, false);
+                  toast.success(`Poids balance injecté : ${current.weight.toFixed(3)} kg`);
+                } else {
+                  toast.warning("Aucun poids détecté sur la balance");
+                }
+              }}
+              className="w-8 h-8 flex items-center justify-center text-cyan-400 hover:bg-cyan-500/20 rounded-lg transition-all"
+              title="Peser sur la balance (Injecter le poids)"
+            >
+              <Scale size={13} />
+            </button>
+          )}
 
           <button 
             type="button"

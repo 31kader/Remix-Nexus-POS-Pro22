@@ -10,7 +10,7 @@ export interface BuildTransactionParams {
   isEditing: boolean;
   editingTransaction?: Transaction | null;
   safeCart: CartItem[];
-  method: 'cash' | 'card' | 'balance';
+  method: 'cash' | 'card' | 'balance' | 'transfer';
   receivedAmount: string;
   total: number;
   discountAmount: number;

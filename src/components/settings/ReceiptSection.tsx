@@ -4,6 +4,8 @@ import { CompanySettings } from '../../types';
 import { getTerminalId, getTerminalName, setTerminalInfo } from '../../services/terminalService';
 import { isAutoDrawerEnabled, setAutoDrawerEnabled, testCashDrawer } from '../../services/hardwareService';
 import { DirectPrinterConfigCard } from './hardware/DirectPrinterConfigCard';
+import { ScaleConfigCard } from './hardware/ScaleConfigCard';
+import { AlgerianFiscalConfigCard } from './fiscal/AlgerianFiscalConfigCard';
 import { toast } from 'sonner';
 
 interface SectionProps {
@@ -89,6 +91,12 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
 
       {/* 🖨️ Pilote Direct ESC/POS Réseau & USB */}
       <DirectPrinterConfigCard settings={formData} />
+
+      {/* ⚖️ Balance Électronique de Comptoir */}
+      <ScaleConfigCard />
+
+      {/* 🇩🇿 Mentions Fiscales Algériennes & BaridiMob */}
+      <AlgerianFiscalConfigCard formData={formData} setFormData={setFormData} />
 
       {/* 🖨️ Configuration Principale du Ticket */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
