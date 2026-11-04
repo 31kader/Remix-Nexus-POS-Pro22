@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Menu, Smartphone, Sun, Moon } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+// Modales
 import { PinLockModal } from './PinLockModal';
 import { IOSInstallModal } from './IOSInstallModal';
-import { 
-  Menu, AlertTriangle, Calendar, LogOut, LogIn, Sun, Moon,
-  Cloud, CloudOff, RefreshCw, Smartphone
-} from 'lucide-react';
-import { cn } from '../lib/utils';
-import { onBackgroundSyncStatus, flushSyncQueueImmediate } from '../services/SyncService';
+
+// Sous-composants d'en-tête Pro
 import { LanStatusBadge } from './lan/LanStatusBadge';
 import { HeaderLanguageMenu } from './header/HeaderLanguageMenu';
 import { HeaderThemeMenu } from './header/HeaderThemeMenu';
-import { getTabTitle } from './header/headerTabTitles';
 import { HeaderHardwareActions } from './header/HeaderHardwareActions';
+import { HeaderWarehouseBadge } from './header/HeaderWarehouseBadge';
+import { HeaderAlertBadges } from './header/HeaderAlertBadges';
+import { HeaderSyncStatusBadge } from './header/HeaderSyncStatusBadge';
+import { HeaderClockInOutButton } from './header/HeaderClockInOutButton';
+import { getTabTitle } from './header/headerTabTitles';
 
 interface AppHeaderProps {
   isMobile: boolean;
@@ -53,7 +57,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   isMobileOverlayOpen = false,
   setIsMobileOverlayOpen,
   sidebarMode = 'open',
-  setSidebarMode: _setSidebarMode,
   cycleSidebarMode,
   activeTab,
   setActiveTab,
@@ -72,69 +75,56 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   setTheme,
   isThemeMenuOpen,
   setIsThemeMenuOpen,
-  activeStaffId: _activeStaffId,
-  employees: _employees,
   profile,
   user,
   canAccess,
-  t: _t,
   toast,
   deferredPrompt,
-  handleInstallApp
+  handleInstallApp,
 }) => {
-  const hasInventoryAccess = canAccess ? canAccess('canAccessInventory') : (profile?.role === 'admin' || profile?.role === 'manager');
-  const [isPinLockOpen, setIsPinLockOpen] = React.useState(() => {
+  const hasInventoryAccess = canAccess
+    ? canAccess('canAccessInventory')
+    : profile?.role === 'admin' || profile?.role === 'manager';
+
+  const [isPinLockOpen, setIsPinLockOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('nexus_pos_pin_locked') === 'true';
     }
     return false;
   });
-  const [isIOSInstallModalOpen, setIsIOSInstallModalOpen] = React.useState(false);
-  const [syncStatus, setSyncStatus] = React.useState<{ isSyncing: boolean; pendingCount: number }>({ isSyncing: false, pendingCount: 0 });
-  const [isOnline, setIsOnline] = React.useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-  React.useEffect(() => {
-    const unsub = onBackgroundSyncStatus(status => {
-      setSyncStatus(prev => (prev.isSyncing === status.isSyncing && prev.pendingCount === status.pendingCount) ? prev : status);
-    });
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      unsub();
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const [isIOSInstallModalOpen, setIsIOSInstallModalOpen] = useState(false);
 
   const handleLockPin = () => {
     sessionStorage.setItem('nexus_pos_pin_locked', 'true');
     setIsPinLockOpen(true);
   };
 
+  const handleToggleMenu = () => {
+    if (isMobile) {
+      setIsMobileOverlayOpen(!isMobileOverlayOpen);
+    } else if (cycleSidebarMode) {
+      cycleSidebarMode();
+    }
+  };
+
   return (
-    <header className="min-h-12 sm:h-14 pt-[env(safe-area-inset-top,0px)] border-b pl-[max(env(safe-area-inset-left,0px),10px)] pr-[max(env(safe-area-inset-right,0px),10px)] sm:px-6 flex items-center justify-between flex-shrink-0 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 sticky top-0 z-[60]">
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <button 
+    <header className="min-h-12 sm:h-14 pt-[env(safe-area-inset-top,0px)] border-b pl-[max(env(safe-area-inset-left,0px),10px)] pr-[max(env(safe-area-inset-right,0px),10px)] sm:px-5 flex items-center justify-between flex-shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md border-slate-200/80 dark:border-zinc-800/80 sticky top-0 z-[60] select-none">
+      {/* 1. Zone Gauche : Burger + Titre de Vue + Magasin Actuel + Alertes */}
+      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        <button
           type="button"
-          onClick={() => {
-            if (isMobile) {
-              setIsMobileOverlayOpen(!isMobileOverlayOpen);
-            } else if (cycleSidebarMode) {
-              cycleSidebarMode();
-            }
-          }}
+          onClick={handleToggleMenu}
           className={cn(
-            "p-2 border rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5",
-            (isMobile ? isMobileOverlayOpen : (!isMobile && sidebarMode === 'closed'))
+            "p-2 border rounded-xl transition-all shrink-0 cursor-pointer flex items-center gap-1.5 shadow-2xs",
+            (isMobile ? isMobileOverlayOpen : !isMobile && sidebarMode === 'closed')
               ? "bg-indigo-600 text-white border-indigo-500 shadow-sm hover:bg-indigo-500"
-              : "bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700"
+              : "bg-slate-100 dark:bg-zinc-850 border-slate-200 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-200 hover:bg-slate-200 dark:hover:bg-zinc-750"
           )}
           title={
             isMobile
-              ? (isMobileOverlayOpen ? "Fermer le menu" : "Ouvrir le menu")
-              : (sidebarMode === 'closed' ? "Ouvrir le menu latéral" : "Fermer le menu latéral")
+              ? isMobileOverlayOpen ? "Fermer le menu" : "Ouvrir le menu"
+              : sidebarMode === 'closed' ? "Ouvrir le menu latéral" : "Fermer le menu latéral"
           }
           aria-label="Basculer le menu latéral"
         >
@@ -143,114 +133,46 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <span className="text-[10px] font-black uppercase tracking-wider pr-0.5">Menu</span>
           )}
         </button>
-        <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white truncate max-w-[130px] sm:max-w-none">
+
+        <h2 className="text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-zinc-100 truncate max-w-[120px] sm:max-w-none">
           {getTabTitle(activeTab, isMobile)}
         </h2>
 
-        {hasInventoryAccess && lowStockProducts.length > 0 && (
-          <button 
-            type="button"
-            onClick={() => setIsLowStockModalOpen(true)}
-            className="relative p-1.5 sm:p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all shrink-0 cursor-pointer"
-            title="Alertes de stock bas"
-          >
-            <div className="relative">
-              <AlertTriangle size={20} className="animate-pulse" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white dark:border-zinc-900">
-                {lowStockProducts.length > 99 ? '99+' : lowStockProducts.length}
-              </span>
-            </div>
-          </button>
-        )}
+        {/* Sélecteur de magasin actif BLT */}
+        <HeaderWarehouseBadge />
 
-        {hasInventoryAccess && expiringProducts.length > 0 && (
-          <button 
-            type="button"
-            onClick={() => setIsExpirationModalOpen(true)}
-            className="relative p-1.5 sm:p-2 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all shrink-0 cursor-pointer"
-            title="Alertes de péremption (DLC)"
-          >
-            <Calendar size={20} />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border border-white dark:border-zinc-900">
-              {expiringProducts.length > 99 ? '99+' : expiringProducts.length}
-            </span>
-          </button>
-        )}
+        {/* Badges d'alertes Stocks & DLC */}
+        <HeaderAlertBadges
+          hasInventoryAccess={hasInventoryAccess}
+          lowStockProducts={lowStockProducts}
+          expiringProducts={expiringProducts}
+          onOpenLowStockModal={() => setIsLowStockModalOpen(true)}
+          onOpenExpirationModal={() => setIsExpirationModalOpen(true)}
+        />
 
-        {currentEmployee && (
-          <button 
-            type="button"
-            onClick={handleClockInOut}
-            className={cn(
-              "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer",
-              isClockedIn 
-                ? "bg-rose-100 text-rose-700 hover:bg-rose-200" 
-                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-            )}
-          >
-            {isClockedIn ? <LogOut size={16} /> : <LogIn size={16} />}
-            <span className="hidden md:inline">{isClockedIn ? 'Fin de service' : 'Début de service'}</span>
-          </button>
-        )}
+        {/* Pointage employé */}
+        <HeaderClockInOutButton
+          currentEmployee={currentEmployee}
+          isClockedIn={isClockedIn}
+          onClockInOut={handleClockInOut}
+        />
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      {/* 2. Zone Droite : Outils, Connectivité Hybride, Langue, Thème */}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Bouton Installation iPhone / Android */}
         <button
           type="button"
           onClick={() => setIsIOSInstallModalOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
+          className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shadow-2xs"
           title="Installer Nexus POS Pro sur iPhone (iOS) ou Smartphone Android"
         >
-          <Smartphone size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="hidden sm:inline">iPhone / Mobile</span>
+          <Smartphone size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <span className="hidden md:inline">iPhone / Mobile</span>
         </button>
 
-        {/* Badge État de Synchronisation Temps Réel */}
-        <button
-          type="button"
-          onClick={() => {
-            if (syncStatus.pendingCount > 0) {
-              flushSyncQueueImmediate();
-              toast.info("Envoi immédiat des modifications locales vers le Cloud...");
-            } else {
-              window.dispatchEvent(new CustomEvent('force-full-sync'));
-              toast.info("Actualisation complète du catalogue depuis Supabase...");
-            }
-          }}
-          className={cn(
-            "flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all cursor-pointer border shadow-xs",
-            !isOnline
-              ? "bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20"
-              : (syncStatus.isSyncing || syncStatus.pendingCount > 0)
-                ? "bg-blue-500/15 border-blue-500/40 text-blue-500 hover:bg-blue-500/25 animate-pulse"
-                : "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
-          )}
-          title={
-            !isOnline 
-              ? "Mode Hors-Ligne (IndexedDB actif)" 
-              : syncStatus.pendingCount > 0 
-                ? `${syncStatus.pendingCount} modification(s) en cours d'envoi` 
-                : "Synchronisation Cloud active et à jour"
-          }
-        >
-          {!isOnline ? (
-            <>
-              <CloudOff size={14} className="text-amber-500" />
-              <span className="hidden md:inline">Hors-Ligne</span>
-            </>
-          ) : (syncStatus.isSyncing || syncStatus.pendingCount > 0) ? (
-            <>
-              <RefreshCw size={14} className="animate-spin text-blue-500" />
-              <span>{syncStatus.pendingCount}</span>
-            </>
-          ) : (
-            <>
-              <Cloud size={14} className="text-emerald-500" />
-              <span className="hidden md:inline">Synchro</span>
-            </>
-          )}
-        </button>
+        {/* Badge État de Synchronisation Cloud */}
+        <HeaderSyncStatusBadge toast={toast} />
 
         {/* Badge Réseau Hybride (LAN Câble / Wi-Fi & Cloud Supabase) */}
         <LanStatusBadge onOpenSettings={() => setActiveTab && setActiveTab('settings')} />
@@ -271,20 +193,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           toast={toast}
         />
 
-        {/* Quick Light/Dark Mode Switch */}
+        {/* Bascule Rapide Sombre/Clair */}
         <button
           type="button"
-          onClick={() => {
-            const nextTheme = theme === 'light' ? 'dark' : 'light';
-            setTheme(nextTheme);
-          }}
-          className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-amber-500 dark:text-indigo-400 transition-all shadow-xs flex items-center justify-center cursor-pointer"
-          title={theme === 'light' ? 'Passer en Mode Sombre (Onyx)' : 'Passer en Mode Clair (Albâtre)'}
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-850 border border-slate-200 dark:border-zinc-700/80 text-amber-500 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-zinc-750 transition-all shadow-2xs flex items-center justify-center cursor-pointer"
+          title={theme === 'light' ? 'Passer en Mode Sombre' : 'Passer en Mode Clair'}
+          aria-label="Basculer thème sombre/clair"
         >
-          {theme === 'light' ? <Moon size={16} className="text-indigo-600" /> : <Sun size={16} className="text-amber-400" />}
+          {theme === 'light' ? <Moon size={15} className="text-indigo-600" /> : <Sun size={15} className="text-amber-400" />}
         </button>
 
-        {/* Sélecteur Multi-Thèmes (PC/Tablette uniquement) */}
+        {/* Sélecteur Multi-Thèmes */}
         <HeaderThemeMenu
           theme={theme}
           setTheme={setTheme}
@@ -294,16 +214,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       </div>
 
-      <PinLockModal 
-        isOpen={isPinLockOpen} 
+      {/* Modales de verrouillage et d'installation */}
+      <PinLockModal
+        isOpen={isPinLockOpen}
         onUnlock={() => {
           sessionStorage.removeItem('nexus_pos_pin_locked');
           setIsPinLockOpen(false);
-        }} 
-        expectedPin={currentEmployee?.pin || currentEmployee?.passwordHash || (currentEmployee as any)?.password_hash || profile?.pin || profile?.passwordHash || profile?.password_hash}
+        }}
+        expectedPin={
+          currentEmployee?.pin ||
+          currentEmployee?.passwordHash ||
+          (currentEmployee as any)?.password_hash ||
+          profile?.pin ||
+          profile?.passwordHash ||
+          profile?.password_hash
+        }
         currentEmployeeName={currentEmployee?.name || profile?.displayName || 'Caissier'}
         currentEmployeeEmail={currentEmployee?.email || profile?.email || user?.email || undefined}
       />
+
       <IOSInstallModal
         isOpen={isIOSInstallModalOpen}
         onClose={() => setIsIOSInstallModalOpen(false)}
