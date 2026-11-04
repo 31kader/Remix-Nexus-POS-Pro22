@@ -198,10 +198,10 @@ export const Customers = memo(function Customers(props: CustomersProps) {
           setIsModalOpen={setIsModalOpen}
         />
       ) : (
-        <div className="flex-1 flex flex-col md:flex-row gap-5 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row gap-3 overflow-hidden">
           {/* Panneau de gauche (liste) : masqué sur mobile si un client est sélectionné */}
           <div className={cn(
-            "w-full md:w-1/3 flex flex-col gap-3 bg-white/5 p-4 sm:p-5 rounded-xl shadow-xs/5 border border-white/5 h-full overflow-hidden transition-all duration-300",
+            "w-full md:w-1/3 flex flex-col gap-3 bg-white dark:bg-zinc-900/60 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 shadow-2xs h-full overflow-hidden transition-all duration-200",
             selectedCustomerId ? "hidden md:flex" : "flex",
             isDetailExpanded && "md:hidden"
           )}>
@@ -245,7 +245,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
 
           {/* Panneau de droite (détail) */}
           <div className={cn(
-            "bg-workspace rounded-xl shadow-xs/5 border border-white/5 flex flex-col overflow-hidden transition-all duration-300",
+            "bg-white dark:bg-zinc-900/90 rounded-2xl border border-slate-200/80 dark:border-zinc-800/80 shadow-2xs flex flex-col overflow-hidden transition-all duration-200",
             selectedCustomerId ? "flex flex-1 w-full h-full md:w-2/3 md:flex-initial" : "hidden md:flex md:w-2/3 md:h-full",
             isDetailExpanded && "md:w-full"
           )}>
@@ -253,10 +253,10 @@ export const Customers = memo(function Customers(props: CustomersProps) {
               <button
                 type="button"
                 onClick={() => setSelectedCustomerId(null)}
-                className="md:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 transition-all flex items-center gap-1.5 text-xs font-black uppercase shadow-xs min-h-[38px] m-2 self-start"
+                className="md:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center gap-1.5 text-xs font-bold shadow-2xs min-h-[38px] m-2 self-start cursor-pointer"
                 title="Retour à la liste"
               >
-                <ArrowLeft className="w-5 h-5 text-indigo-400" />
+                <ArrowLeft className="w-4 h-4 text-indigo-500" />
                 <span>Retour à la liste</span>
               </button>
             )}

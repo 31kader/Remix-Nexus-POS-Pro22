@@ -167,10 +167,10 @@ export const CustomerTableView: React.FC<CustomerTableViewProps> = ({
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Volume d'Achat</span>
-                        <span className="font-mono font-black text-indigo-300 text-sm mt-0.5 block">
-                          {(Number(cust.totalSpent) || 0).toFixed(2)} {settings.currency || 'DA'}
+                      <div className="text-right font-financial">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block font-sans">Volume d'Achats</span>
+                        <span className="font-financial font-black text-indigo-400 text-sm mt-0.5 block tabular-nums">
+                          {(Number(cust.totalSpent) || 0).toFixed(0)} <span className="font-sans text-[10px]">{settings.currency || 'DA'}</span>
                         </span>
                       </div>
                     </div>
