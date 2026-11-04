@@ -17,7 +17,7 @@ import { useAppServiceWorkerAndGuard } from './hooks/useAppServiceWorkerAndGuard
 import { useModalState } from './hooks/useModalState';
 import { useAppHandlers } from './hooks/useAppHandlers';
 import { useAppTabNavigation } from './components/app/useAppTabNavigation';
-import { AppAlternativeModeRenderer } from './components/app/AppAlternativeModeRenderer';
+import { AppAlternativeModeRenderer, isAlternativeModeActive } from './components/app/AppAlternativeModeRenderer';
 import { useAppCustomerDisplayState } from './components/app/useAppCustomerDisplayState';
 import { useAppLoginState } from './components/app/useAppLoginState';
 import { useAppStoreSelectors } from './components/app/useAppStoreSelectors';
@@ -152,34 +152,39 @@ export default function App() {
   );
 
   // ─── Rendu conditionnel par mode (Alternatifs) ─────────────────────────────
-  const alternativeView = (
-    <AppAlternativeModeRenderer
-      isCustomerDisplay={isCustomerDisplay}
-      appMode={appMode}
-      setAppMode={setAppMode}
-      loading={loading}
-      user={user}
-      profile={profile}
-      isOwner={isOwner}
-      isUnauthorized={isUnauthorized}
-      handleLogout={handleLogout}
-      loginState={loginState}
-      authStore={{ isLoggingIn, authError, setAuthError, handleIdentifierLogin, handleLogin, setUser, setProfile }}
-      translation={{ language, setLanguage, isLangMenuOpen, setIsLangMenuOpen, t }}
-      storeSelectors={storeSelectors}
-      settings={settings}
-      setActiveTab={setActiveTab}
-      handleCreatePurchaseOrder={handleCreatePurchaseOrder}
-      setIsProductModalOpen={setIsProductModalOpen}
-      setEditingProduct={setEditingProduct}
-      editingProduct={editingProduct}
-      isProductModalOpen={isProductModalOpen}
-      setViewingPurchaseVoucher={setViewingPurchaseVoucher}
-    />
-  );
-
-  if (alternativeView) {
-    return alternativeView;
+  if (isAlternativeModeActive({
+    isCustomerDisplay,
+    appMode,
+    loading,
+    isUnauthorized,
+    isOwner,
+    user,
+  })) {
+    return (
+      <AppAlternativeModeRenderer
+        isCustomerDisplay={isCustomerDisplay}
+        appMode={appMode}
+        setAppMode={setAppMode}
+        loading={loading}
+        user={user}
+        profile={profile}
+        isOwner={isOwner}
+        isUnauthorized={isUnauthorized}
+        handleLogout={handleLogout}
+        loginState={loginState}
+        authStore={{ isLoggingIn, authError, setAuthError, handleIdentifierLogin, handleLogin, setUser, setProfile }}
+        translation={{ language, setLanguage, isLangMenuOpen, setIsLangMenuOpen, t }}
+        storeSelectors={storeSelectors}
+        settings={settings}
+        setActiveTab={setActiveTab}
+        handleCreatePurchaseOrder={handleCreatePurchaseOrder}
+        setIsProductModalOpen={setIsProductModalOpen}
+        setEditingProduct={setEditingProduct}
+        editingProduct={editingProduct}
+        isProductModalOpen={isProductModalOpen}
+        setViewingPurchaseVoucher={setViewingPurchaseVoucher}
+      />
+    );
   }
 
   // ─── Mode POS Principal ────────────────────────────────────────────────────

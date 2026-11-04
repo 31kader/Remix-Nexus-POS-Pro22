@@ -25,6 +25,36 @@ interface AppAlternativeModeRendererProps {
   setViewingPurchaseVoucher: (p: any) => void;
 }
 
+export function isAlternativeModeActive({
+  isCustomerDisplay,
+  appMode,
+  loading,
+  isUnauthorized,
+  isOwner,
+  user
+}: {
+  isCustomerDisplay: boolean;
+  appMode: string;
+  loading: boolean;
+  isUnauthorized: boolean;
+  isOwner: boolean;
+  user: any;
+}): boolean {
+  return (
+    isCustomerDisplay ||
+    appMode === 'client_scan' ||
+    appMode === 'kiosk' ||
+    loading ||
+    (isUnauthorized && !isOwner) ||
+    (!user && appMode === 'pos') ||
+    appMode === 'customer' ||
+    appMode === 'supplier' ||
+    (!user && appMode === 'camera') ||
+    (Boolean(user) && appMode === 'delivery') ||
+    appMode === 'carton_reception'
+  );
+}
+
 export const AppAlternativeModeRenderer: React.FC<AppAlternativeModeRendererProps> = ({
   isCustomerDisplay,
   appMode,
