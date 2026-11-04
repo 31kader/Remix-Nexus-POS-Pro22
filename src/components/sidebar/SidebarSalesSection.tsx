@@ -21,7 +21,7 @@ export interface SidebarSalesSectionProps {
   pendingOrdersCount: number;
   setIsPriceCheckerModalOpen: (open: boolean) => void;
   setIsStorePosterModalOpen?: (open: boolean) => void;
-  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void) => React.ReactNode;
+  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void, colorDot?: string) => React.ReactNode;
 }
 
 export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
@@ -42,7 +42,7 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
 }) => {
   return (
     <div className="space-y-1">
-      {renderSectionHeader(t("Ventes"), isVentesOpen, setIsVentesOpen)}
+      {renderSectionHeader(t("Ventes & Caisse"), isVentesOpen, setIsVentesOpen, "bg-emerald-500")}
       <AnimatePresence initial={false}>
         {(isVentesOpen || isCollapsed) && (
           <motion.div 
@@ -53,9 +53,10 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
           >
             <NavItem 
               href="#checkout" 
-              icon={<ShoppingCart size={20} />} 
+              icon={<ShoppingCart size={18} />} 
               label={t("Caisse")} 
               active={activeTab === 'checkout'} 
+              shortcutKey="F1"
               onClick={() => { 
                 setActiveTab('checkout'); 
                 setIsMobileOverlayOpen(false); 
@@ -66,7 +67,7 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             {canAccess('canAccessOnlineOrders') && (
               <NavItem 
                 href="#orders" 
-                icon={<ShoppingBag size={20} />} 
+                icon={<ShoppingBag size={18} />} 
                 label={t("Commandes")} 
                 active={activeTab === 'orders'} 
                 onClick={() => { setActiveTab('orders'); setIsMobileOverlayOpen(false); }} 
@@ -78,8 +79,8 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             {canAccess('canAccessCustomers') && (
               <NavItem 
                 href="#customers" 
-                icon={<Users size={20} />} 
-                label={t("Clients")} 
+                icon={<Users size={18} />} 
+                label={t("Clients & Dettes")} 
                 active={activeTab === 'customers'} 
                 onClick={() => { setActiveTab('customers'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -88,9 +89,10 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             {canAccess('canAccessSales') && (
               <NavItem 
                 href="#transactions" 
-                icon={<History size={20} />} 
+                icon={<History size={18} />} 
                 label={t("Transactions")} 
                 active={activeTab === 'transactions'} 
+                shortcutKey="F4"
                 onClick={() => { setActiveTab('transactions'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
               />
@@ -98,8 +100,8 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             {canAccess('canAccessReturns') && (
               <NavItem 
                 href="#returns" 
-                icon={<RotateCcw size={20} />} 
-                label={t("Retours")} 
+                icon={<RotateCcw size={18} />} 
+                label={t("Retours & Avoirs")} 
                 active={activeTab === 'returns'} 
                 onClick={() => { setActiveTab('returns'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -108,7 +110,7 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             {canAccess('canAccessPromotions') && (
               <NavItem 
                 href="#promotions" 
-                icon={<Tag size={20} />} 
+                icon={<Tag size={18} />} 
                 label={t("Promotions")} 
                 active={activeTab === 'promotions'} 
                 onClick={() => { setActiveTab('promotions'); setIsMobileOverlayOpen(false); }} 
@@ -116,15 +118,15 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
               />
             )}
             <NavItem 
-              icon={<Eye size={20} />} 
-              label={t("Vérificateur")} 
+              icon={<Eye size={18} />} 
+              label={t("Vérificateur Prix")} 
               active={false} 
               onClick={() => { setIsPriceCheckerModalOpen(true); setIsMobileOverlayOpen(false); }} 
               collapsed={isCollapsed} 
             />
             <NavItem 
               href="/?mode=kiosk" 
-              icon={<Monitor size={20} />} 
+              icon={<Monitor size={18} />} 
               label={t("Borne Kiosque")} 
               active={false} 
               onClick={() => { window.open('/?mode=kiosk', '_blank'); setIsMobileOverlayOpen(false); }} 
@@ -132,7 +134,7 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
             />
             {setIsStorePosterModalOpen && (
               <NavItem 
-                icon={<QrCode size={20} />} 
+                icon={<QrCode size={18} />} 
                 label={t("Affiche QR Client")} 
                 active={false} 
                 onClick={() => { setIsStorePosterModalOpen(true); setIsMobileOverlayOpen(false); }} 

@@ -16,7 +16,7 @@ export interface SidebarManagementSectionProps {
   setActiveTab: (tab: string) => void;
   setIsMobileOverlayOpen: (open: boolean) => void;
   canAccess: (perm: keyof RolePermissions) => boolean;
-  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void) => React.ReactNode;
+  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void, colorDot?: string) => React.ReactNode;
 }
 
 export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> = ({
@@ -32,7 +32,7 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
 }) => {
   return (
     <div className="space-y-1">
-      {renderSectionHeader(t("Gestion"), isGestionOpen, setIsGestionOpen)}
+      {renderSectionHeader(t("Logistique & Stocks"), isGestionOpen, setIsGestionOpen, "bg-indigo-500")}
       <AnimatePresence initial={false}>
         {(isGestionOpen || isCollapsed) && (
           <motion.div 
@@ -44,16 +44,17 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#inventory" 
-                icon={<Package size={20} />} 
-                label={t("Inventaire")} 
+                icon={<Package size={18} />} 
+                label={t("Inventaire & Stock")} 
                 active={activeTab === 'inventory'} 
+                shortcutKey="F2"
                 onClick={() => { setActiveTab('inventory'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
               />
             )}
             <NavItem 
               href="#carton_reception" 
-              icon={<Boxes size={20} className="text-amber-400" />} 
+              icon={<Boxes size={18} className="text-amber-400" />} 
               label={t("Réception Cartons")} 
               active={activeTab === 'carton_reception' || activeTab === 'cartons'} 
               onClick={() => { setActiveTab('carton_reception'); setIsMobileOverlayOpen(false); }} 
@@ -64,8 +65,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#grns" 
-                icon={<FileCheck size={20} />} 
-                label={t("Bons de Réception (BR)")} 
+                icon={<FileCheck size={18} />} 
+                label={t("Bons Réception (BR)")} 
                 active={activeTab === 'grns' || activeTab === 'grn'} 
                 onClick={() => { setActiveTab('grns'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -74,7 +75,7 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#audit" 
-                icon={<ClipboardCheck size={20} />} 
+                icon={<ClipboardCheck size={18} />} 
                 label={t("Inventaire Physique")} 
                 active={activeTab === 'audit' || activeTab === 'inventory_audit'} 
                 onClick={() => { setActiveTab('audit'); setIsMobileOverlayOpen(false); }} 
@@ -84,7 +85,7 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#stock_transfers" 
-                icon={<Truck size={20} className="text-indigo-400" />} 
+                icon={<Truck size={18} className="text-indigo-400" />} 
                 label={t("Transferts Inter-Dépôts")} 
                 active={activeTab === 'stock_transfers' || activeTab === 'transfers'} 
                 onClick={() => { setActiveTab('stock_transfers'); setIsMobileOverlayOpen(false); }} 
@@ -94,8 +95,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#expiry" 
-                icon={<CalendarClock size={20} />} 
-                label={t("Suivi Péremption")} 
+                icon={<CalendarClock size={18} />} 
+                label={t("Suivi Périmés (DLC)")} 
                 active={activeTab === 'expiry'} 
                 onClick={() => { setActiveTab('expiry'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -104,8 +105,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#inventory_settings" 
-                icon={<FolderTree size={20} />} 
-                label={t("Classifications")} 
+                icon={<FolderTree size={18} />} 
+                label={t("Rayons & Catégories")} 
                 active={activeTab === 'inventory_settings'} 
                 onClick={() => { setActiveTab('inventory_settings'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -114,8 +115,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessVouchers') && (
               <NavItem 
                 href="#vouchers" 
-                icon={<Tag size={20} />} 
-                label={t("Cartes Cadeaux & Bons")} 
+                icon={<Tag size={18} />} 
+                label={t("Bons & Cartes Cadeaux")} 
                 active={activeTab === 'vouchers'} 
                 onClick={() => { setActiveTab('vouchers'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -124,7 +125,7 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessSuppliers') && (
               <NavItem 
                 href="#suppliers" 
-                icon={<Truck size={20} />} 
+                icon={<Truck size={18} />} 
                 label={t("Fournisseurs")} 
                 active={activeTab === 'suppliers'} 
                 onClick={() => { setActiveTab('suppliers'); setIsMobileOverlayOpen(false); }} 
@@ -134,8 +135,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessPurchases') && (
               <NavItem 
                 href="#purchases" 
-                icon={<ShoppingBag size={20} />} 
-                label={t("Achats")} 
+                icon={<ShoppingBag size={18} />} 
+                label={t("Bons de Commande")} 
                 active={activeTab === 'purchases'} 
                 onClick={() => { setActiveTab('purchases'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -144,8 +145,8 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             {canAccess('canAccessExpenses') && (
               <NavItem 
                 href="#expenses" 
-                icon={<TrendingDown size={20} />} 
-                label={t("Dépenses")} 
+                icon={<TrendingDown size={18} />} 
+                label={t("Dépenses & Charges")} 
                 active={activeTab === 'expenses'} 
                 onClick={() => { setActiveTab('expenses'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 

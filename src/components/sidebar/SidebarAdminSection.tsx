@@ -21,7 +21,7 @@ export interface SidebarAdminSectionProps {
   isManager: boolean;
   isCameraAgent: boolean;
   settings: CompanySettings;
-  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void) => React.ReactNode;
+  renderSectionHeader: (title: string, isOpen: boolean, setIsOpen: (v: boolean) => void, colorDot?: string) => React.ReactNode;
 }
 
 export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
@@ -41,7 +41,7 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
 }) => {
   return (
     <div className="space-y-1">
-      {renderSectionHeader(t("Administration"), isAdminOpen, setIsAdminOpen)}
+      {renderSectionHeader(t("Finance & Administration"), isAdminOpen, setIsAdminOpen, "bg-amber-500")}
       <AnimatePresence initial={false}>
         {(isAdminOpen || isCollapsed) && (
           <motion.div 
@@ -53,8 +53,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessAnalytics') && (
               <NavItem 
                 href="#reports" 
-                icon={<FileText size={20} />} 
-                label={t("Rapports")} 
+                icon={<FileText size={18} />} 
+                label={t("Rapports & G50")} 
                 active={activeTab === 'reports'} 
                 onClick={() => { setActiveTab('reports'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -63,9 +63,10 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessShifts') && (
               <NavItem 
                 href="#shifts" 
-                icon={<Wallet size={20} />} 
-                label={t("Clôture")} 
+                icon={<Wallet size={18} />} 
+                label={t("Clôture & Rapport Z")} 
                 active={activeTab === 'shifts'} 
+                shortcutKey="F9"
                 onClick={() => { setActiveTab('shifts'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
               />
@@ -73,7 +74,7 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessEmployees') && (
               <NavItem 
                 href="#employees" 
-                icon={<UserCog size={20} />} 
+                icon={<UserCog size={18} />} 
                 label={t("Personnel & Accès")} 
                 active={activeTab === 'employees'} 
                 onClick={() => { setActiveTab('employees'); setIsMobileOverlayOpen(false); }} 
@@ -83,8 +84,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessEmployees') && (
               <NavItem 
                 href="#team" 
-                icon={<UserCheck size={20} />} 
-                label={t("Planning & Équipe")} 
+                icon={<UserCheck size={18} />} 
+                label={t("Planning & Pointage")} 
                 active={activeTab === 'team'} 
                 onClick={() => { setActiveTab('team'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -93,8 +94,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#marketing" 
-                icon={<ImageIcon size={20} />} 
-                label={t("Affiches & Posters")} 
+                icon={<ImageIcon size={18} />} 
+                label={t("Affiches & PLV")} 
                 active={activeTab === 'marketing' || activeTab === 'posters'} 
                 onClick={() => { setActiveTab('marketing'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -103,8 +104,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessInventory') && (
               <NavItem 
                 href="#catalog_printer" 
-                icon={<Printer size={20} />} 
-                label={t("Impression Catalogue")} 
+                icon={<Printer size={18} />} 
+                label={t("Étiqueteuse & Codes")} 
                 active={activeTab === 'catalog_printer' || activeTab === 'labels'} 
                 onClick={() => { setActiveTab('catalog_printer'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -113,8 +114,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessAuditLogs') && (
               <NavItem 
                 href="#audit_logs" 
-                icon={<ShieldCheck size={20} />} 
-                label={t("Audit")} 
+                icon={<ShieldCheck size={18} />} 
+                label={t("Journal d'Audit")} 
                 active={activeTab === 'audit_logs'} 
                 onClick={() => { setActiveTab('audit_logs'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -123,8 +124,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {(isCameraAgent || isAdmin || isManager) && settings.enableCameraPortal !== false && (
               <NavItem 
                 href="#camera" 
-                icon={<Camera size={20} />} 
-                label={t("Audit Caméra")} 
+                icon={<Camera size={18} />} 
+                label={t("Surveillance Caméra")} 
                 active={activeTab === 'camera'} 
                 onClick={() => { setActiveTab('camera'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -133,7 +134,7 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessSettings') && (
               <NavItem 
                 href="#settings" 
-                icon={<SettingsIcon size={20} />} 
+                icon={<SettingsIcon size={18} />} 
                 label={t("Paramètres")} 
                 active={activeTab === 'settings'} 
                 onClick={() => { setActiveTab('settings'); setIsMobileOverlayOpen(false); }} 
@@ -143,8 +144,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {isAdmin && (settings as any)?.hideSyncStudioInSidebar !== true && (
               <NavItem 
                 href="#sync_studio" 
-                icon={<Activity size={20} />} 
-                label="Studio de Synchro" 
+                icon={<Activity size={18} />} 
+                label="Studio Synchro" 
                 active={activeTab === 'sync_studio' || activeTab === 'sync'} 
                 onClick={() => { setActiveTab('sync_studio'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -153,8 +154,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             {canAccess('canAccessSettings') && (
               <NavItem 
                 href="#archives" 
-                icon={<Database size={20} />} 
-                label={t("Clôture de Mois")} 
+                icon={<Database size={18} />} 
+                label={t("Archivage Mensuel")} 
                 active={activeTab === 'archives'} 
                 onClick={() => { setActiveTab('archives'); setIsMobileOverlayOpen(false); }} 
                 collapsed={isCollapsed} 
@@ -162,8 +163,8 @@ export const SidebarAdminSection: React.FC<SidebarAdminSectionProps> = ({
             )}
             <NavItem 
               href="#help" 
-              icon={<HelpCircle size={20} />} 
-              label={t("Confidentialité & Aide")} 
+              icon={<HelpCircle size={18} />} 
+              label={t("Aide & Raccourcis")} 
               active={activeTab === 'help'} 
               onClick={() => { setActiveTab('help'); setIsMobileOverlayOpen(false); }} 
               collapsed={isCollapsed} 
