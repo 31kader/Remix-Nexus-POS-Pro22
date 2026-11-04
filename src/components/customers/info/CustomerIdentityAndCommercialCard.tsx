@@ -17,14 +17,16 @@ import {
 
 export interface CustomerIdentityAndCommercialCardProps {
   selectedCustomer: Customer;
-  settings: CompanySettings;
+  settings?: CompanySettings;
+  onOpenStatement?: () => void;
 }
 
 export function CustomerIdentityAndCommercialCard({
   selectedCustomer,
-  settings
+  settings,
+  onOpenStatement
 }: CustomerIdentityAndCommercialCardProps) {
-  const currency = settings.currency || 'DA';
+  const currency = settings?.currency || 'DA';
   const balance = Number(selectedCustomer.balance) || 0;
   const gps = hasCustomerGps(selectedCustomer) ? getCustomerGpsCoordinates(selectedCustomer) : null;
 

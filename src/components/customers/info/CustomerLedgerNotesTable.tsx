@@ -9,19 +9,21 @@ import { parseNoteFinancialInfo } from './customerInfoTypes';
 
 export interface CustomerLedgerNotesTableProps {
   selectedCustomer: Customer;
-  settings: CompanySettings;
+  settings?: CompanySettings;
+  onAddNote?: (note: string) => void | Promise<void>;
 }
 
 export function CustomerLedgerNotesTable({
   selectedCustomer,
-  settings
+  settings,
+  onAddNote
 }: CustomerLedgerNotesTableProps) {
   const [quickNoteInput, setQuickNoteInput] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteFilter, setNoteFilter] = useState<'all' | 'versement' | 'retrait' | 'memo'>('all');
   const [noteSearch, setNoteSearch] = useState<string>('');
 
-  const currency = settings.currency || 'DA';
+  const currency = settings?.currency || 'DA';
 
   const handleAddNoteSubmit = async () => {
     const trimmed = quickNoteInput.trim();
@@ -44,6 +46,9 @@ export function CustomerLedgerNotesTable({
         prev.map(c => c.id === selectedCustomer.id ? updatedCustomer : c)
       );
       await localDb.update(`customers/${selectedCustomer.id}`, updatedCustomer);
+      if (onAddNote) {
+        await onAddNote(trimmed);
+      }
       setQuickNoteInput('');
       toast.success("Note ajoutée à la fiche client !");
     } catch (err: any) {

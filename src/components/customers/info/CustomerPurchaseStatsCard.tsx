@@ -12,14 +12,14 @@ export interface CustomerPurchaseStatsCardProps {
     netTotal: number;
     returnsCount: number;
   };
-  settings: CompanySettings;
+  settings?: CompanySettings;
 }
 
 export function CustomerPurchaseStatsCard({
   historyStats,
   settings
 }: CustomerPurchaseStatsCardProps) {
-  const currency = settings.currency || 'DA';
+  const currency = settings?.currency || 'DA';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 select-none font-financial">
