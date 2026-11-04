@@ -124,11 +124,11 @@ export function CustomerTableRow({
       </td>
 
       {/* Solde / Dette Column */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      <td className="py-3.5 px-4 whitespace-nowrap font-financial">
         {balance < 0 ? (
           <div className="flex items-center gap-2">
-            <span className="font-mono font-black text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2.5 py-1 rounded-lg">
-              Dette : {Math.abs(balance).toLocaleString()} {settings.currency || 'DA'}
+            <span className="font-financial font-black text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2.5 py-1 rounded-lg tabular-nums">
+              Dette : {Math.abs(balance).toLocaleString()} <span className="font-sans text-[10px]">{settings.currency || 'DA'}</span>
             </span>
             <button
               type="button"
@@ -146,12 +146,12 @@ export function CustomerTableRow({
             </button>
           </div>
         ) : balance > 0 ? (
-          <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg">
-            Solde : +{balance.toLocaleString()} {settings.currency || 'DA'}
+          <span className="font-financial font-black text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-lg tabular-nums">
+            Solde : +{balance.toLocaleString()} <span className="font-sans text-[10px]">{settings.currency || 'DA'}</span>
           </span>
         ) : (
-          <span className="text-slate-400 dark:text-zinc-500 font-mono font-bold text-xs bg-slate-100 dark:bg-zinc-850 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-zinc-800">
-            0 {settings.currency || 'DA'}
+          <span className="text-slate-400 dark:text-zinc-500 font-financial font-bold text-xs bg-slate-100 dark:bg-zinc-850 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-zinc-800 tabular-nums">
+            0 <span className="font-sans text-[10px]">{settings.currency || 'DA'}</span>
           </span>
         )}
       </td>

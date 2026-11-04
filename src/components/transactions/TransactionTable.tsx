@@ -243,10 +243,10 @@ export const TransactionTable: React.FC<Props> = ({
                       )}
                     </td>
                     <td className={cn(
-                      "w-1/6 p-4 font-bold truncate",
-                      isCancelled ? "text-slate-400 dark:text-zinc-500 line-through" : "text-slate-900 dark:text-white"
+                      "w-1/6 p-4 font-financial font-black text-sm truncate tabular-nums",
+                      isCancelled ? "text-slate-400 dark:text-zinc-500 line-through" : "text-emerald-600 dark:text-emerald-400"
                     )}>
-                      {Number(t.total || 0).toFixed(2)} {settings?.currency || 'DA'}
+                      {Number(t.total || 0).toFixed(2)} <span className="text-[10px] text-slate-500 font-sans">{settings?.currency || 'DA'}</span>
                     </td>
                     <td className="w-1/6 p-4 text-right flex items-center justify-end gap-2 pr-6">
                       {canAccess('canAccessReturns') && !isReturned && !isCancelled && (

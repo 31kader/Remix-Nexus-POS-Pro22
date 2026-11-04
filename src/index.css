@@ -816,3 +816,20 @@ html.light table tbody td {
 .btn-touch-action:active {
   transform: scale(0.97);
 }
+
+.table-row-dense {
+  height: 44px !important;
+  transition: background-color 0.12s ease;
+}
+
+.table-row-dense td {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+  vertical-align: middle;
+}
+
+.card-pro-dense {
+  background-color: var(--color-industrial-900, #0a0c12);
+  border: 1px solid rgba(39, 39, 42, 0.8);
+  border-radius: 0.75rem;
+}

@@ -127,17 +127,17 @@ export const InventoryProductRow = React.memo(({
             </div>
 
             {/* Prix & Marge sur Smartphone (< md) */}
-            <div className="flex md:hidden items-center gap-2 mt-1.5 flex-wrap text-xs font-mono">
-              <span className="font-black text-emerald-600 dark:text-emerald-400">
+            <div className="flex md:hidden items-center gap-2 mt-1.5 flex-wrap text-xs font-financial">
+              <span className="font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {(product.price || 0).toFixed(2)} {settings.currency || 'DA'}
               </span>
               <span className={cn(
-                "text-[10px] font-bold px-1.5 py-0.2 rounded-md border",
+                "text-[10px] font-bold px-1.5 py-0.2 rounded-md border tabular-nums",
                 margin > 0 
                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" 
                   : margin < 0 
                     ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" 
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                    : "bg-slate-100 dark:bg-zinc-800 text-slate-500 border-slate-200 dark:border-zinc-700"
               )}>
                 Marge: {margin > 0 ? `+${margin.toFixed(0)}` : margin.toFixed(0)}
               </span>
@@ -146,43 +146,43 @@ export const InventoryProductRow = React.memo(({
         </div>
 
         {/* Center: Prices & Margin */}
-        <div className="hidden md:flex items-center gap-6 text-right">
-          <div className="flex flex-col items-end min-w-[80px]">
-            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase">Achat</span>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              {(product.costPrice || 0).toFixed(2)} <span className="text-[9px] text-slate-500">{settings.currency}</span>
+        <div className="hidden md:flex items-center gap-5 text-right font-financial">
+          <div className="flex flex-col items-end min-w-[78px]">
+            <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider font-sans">Achat</span>
+            <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 tabular-nums">
+              {(product.costPrice || 0).toFixed(2)} <span className="text-[9px] text-slate-400 font-sans">{settings.currency || 'DA'}</span>
             </span>
           </div>
 
-          <div className="flex flex-col items-end min-w-[90px]">
-            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase">Vente</span>
-            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-              {(product.price || 0).toFixed(2)} <span className="text-[9px] text-slate-500 dark:text-slate-400">{settings.currency}</span>
+          <div className="flex flex-col items-end min-w-[88px]">
+            <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider font-sans">Vente</span>
+            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {(product.price || 0).toFixed(2)} <span className="text-[9px] text-slate-400 font-sans">{settings.currency || 'DA'}</span>
             </span>
           </div>
 
-          <div className="flex flex-col items-end min-w-[70px]">
-            <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase">Marge</span>
-            <span className={cn("text-xs font-black", margin > 0 ? "text-emerald-600 dark:text-emerald-400" : margin < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400")}>
+          <div className="flex flex-col items-end min-w-[68px]">
+            <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider font-sans">Marge</span>
+            <span className={cn("text-xs font-black tabular-nums", margin > 0 ? "text-emerald-600 dark:text-emerald-400" : margin < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400")}>
               {margin > 0 ? `+${margin.toFixed(2)}` : margin.toFixed(2)}
             </span>
           </div>
         </div>
 
         {/* Right: Stock Status */}
-        <div className="min-w-[85px] text-right">
-          <span className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase block">Stock</span>
+        <div className="min-w-[85px] text-right font-financial">
+          <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider font-sans block">Stock</span>
           {isOutOfStock ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-extrabold">
-              {product.stock ?? 0} {product.unit || 'pcs'}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs font-extrabold tabular-nums">
+              {product.stock ?? 0} <span className="text-[9px] ml-0.5 font-sans">{product.unit || 'pcs'}</span>
             </span>
           ) : isLowStock ? (
-            <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-extrabold">
-              {product.stock} {product.unit || 'pcs'}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/25 text-amber-700 dark:text-amber-400 text-xs font-extrabold tabular-nums">
+              {product.stock} <span className="text-[9px] ml-0.5 font-sans">{product.unit || 'pcs'}</span>
             </span>
           ) : (
-            <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-extrabold">
-              {product.stock} {product.unit || 'pcs'}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs font-extrabold tabular-nums">
+              {product.stock} <span className="text-[9px] ml-0.5 font-sans">{product.unit || 'pcs'}</span>
             </span>
           )}
         </div>
