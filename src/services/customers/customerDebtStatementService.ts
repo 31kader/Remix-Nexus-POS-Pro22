@@ -47,7 +47,7 @@ export class CustomerDebtStatementService {
         (t, idx) => `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 8px; text-align: center;">${idx + 1}</td>
-          <td style="padding: 8px;">${new Date(t.date || t.created_at || Date.now()).toLocaleDateString('fr-DZ')}</td>
+          <td style="padding: 8px;">${new Date((t as any).date || t.timestamp || t.created_at || Date.now()).toLocaleDateString('fr-DZ')}</td>
           <td style="padding: 8px; font-family: monospace;">#${t.id.slice(-8).toUpperCase()}</td>
           <td style="padding: 8px;">${t.items ? t.items.length : 0} article(s)</td>
           <td style="padding: 8px; text-align: right; font-weight: bold;">${(t.total || 0).toFixed(2)} DA</td>
@@ -86,7 +86,7 @@ export class CustomerDebtStatementService {
           <h4 style="margin: 0 0 8px 0; color: #0f172a;">Informations Client</h4>
           <p style="margin: 2px 0;"><strong>Nom / Raison Sociale :</strong> ${escapeHtml(customer.name)}</p>
           <p style="margin: 2px 0;"><strong>Téléphone :</strong> ${escapeHtml(customer.phone || 'Non renseigné')}</p>
-          <p style="margin: 2px 0;"><strong>Crédit Max Autorisé :</strong> ${(customer.creditLimit || customer.credit_limit || 0).toFixed(2)} DA</p>
+          <p style="margin: 2px 0;"><strong>Crédit Max Autorisé :</strong> ${(customer.creditLimit || (customer as any).credit_limit || 0).toFixed(2)} DA</p>
         </div>
 
         <div class="balance-card">

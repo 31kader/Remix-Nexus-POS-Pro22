@@ -80,7 +80,7 @@ export const CustomerDebtStatementModal: React.FC<Props> = ({
             <div className="text-right">
               <span className="text-[10px] text-slate-400 block">Plafond Autorisé</span>
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {(customer.creditLimit || customer.credit_limit || 0).toFixed(2)} DA
+                {(customer.creditLimit || (customer as any).credit_limit || 0).toFixed(2)} DA
               </span>
             </div>
           </div>
@@ -99,7 +99,7 @@ export const CustomerDebtStatementModal: React.FC<Props> = ({
                       <tr key={t.id} className="dark:text-slate-200">
                         <td className="p-2.5 font-mono text-[11px]">#{t.id.slice(-8).toUpperCase()}</td>
                         <td className="p-2.5 text-slate-500">
-                          {new Date(t.date || t.created_at || Date.now()).toLocaleDateString('fr-DZ')}
+                          {new Date((t as any).date || t.timestamp || t.created_at || Date.now()).toLocaleDateString('fr-DZ')}
                         </td>
                         <td className="p-2.5 text-right font-bold text-slate-900 dark:text-white">
                           {(t.total || 0).toFixed(2)} DA

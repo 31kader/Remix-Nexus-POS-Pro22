@@ -24,10 +24,22 @@ export class G50OfficialPdfTemplate {
       'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ];
-    const periodLabel = `${monthNames[summary.month - 1] || summary.month} ${summary.year}`;
+    const monthVal = summary.month || summary.periodMonth || 1;
+    const yearVal = summary.year || summary.periodYear || new Date().getFullYear();
+    const periodLabel = `${monthNames[monthVal - 1] || monthVal} ${yearVal}`;
 
-    const tvaNet = summary.tvaNetToPay;
+    const tvaNet = summary.tvaNetToPay ?? summary.tvaNetteDue ?? 0;
     const isCredit = tvaNet < 0;
+    const salesNormalRateHt = summary.salesNormalRateHt ?? summary.baseImposable19 ?? 0;
+    const tvaNormalRate = summary.tvaNormalRate ?? summary.tvaCollectee19 ?? 0;
+    const salesReducedRateHt = summary.salesReducedRateHt ?? summary.baseImposable9 ?? 0;
+    const tvaReducedRate = summary.tvaReducedRate ?? summary.tvaCollectee9 ?? 0;
+    const salesExemptHt = summary.salesExemptHt ?? summary.baseExoneree ?? 0;
+    const totalSalesHt = summary.totalSalesHt ?? summary.totalVenteHT ?? 0;
+    const totalTvaCollected = summary.totalTvaCollected ?? summary.totalTvaCollectee ?? 0;
+    const purchasesNormalRateHt = summary.purchasesNormalRateHt ?? 0;
+    const totalTvaDeductible = summary.totalTvaDeductible ?? summary.tvaDeductibleAchats ?? 0;
+    const totalStampDuty = summary.totalStampDuty ?? summary.droitsTimbrePerçus ?? 0;
 
     return `
       <!DOCTYPE html>
@@ -104,27 +116,27 @@ export class G50OfficialPdfTemplate {
           <tbody>
             <tr>
               <td>Opérations imposables au taux normal</td>
-              <td class="text-right">${summary.salesNormalRateHt.toFixed(2)}</td>
+              <td class="text-right">${salesNormalRateHt.toFixed(2)}</td>
               <td class="text-right">19 %</td>
-              <td class="text-right font-bold">${summary.tvaNormalRate.toFixed(2)}</td>
+              <td class="text-right font-bold">${tvaNormalRate.toFixed(2)}</td>
             </tr>
             <tr>
               <td>Opérations imposables au taux réduit</td>
-              <td class="text-right">${summary.salesReducedRateHt.toFixed(2)}</td>
+              <td class="text-right">${salesReducedRateHt.toFixed(2)}</td>
               <td class="text-right">9 %</td>
-              <td class="text-right font-bold">${summary.tvaReducedRate.toFixed(2)}</td>
+              <td class="text-right font-bold">${tvaReducedRate.toFixed(2)}</td>
             </tr>
             <tr>
               <td>Ventes exonérées ou franchise de taxe</td>
-              <td class="text-right">${summary.salesExemptHt.toFixed(2)}</td>
+              <td class="text-right">${salesExemptHt.toFixed(2)}</td>
               <td class="text-right">0 %</td>
               <td class="text-right">0.00</td>
             </tr>
             <tr class="total-row">
               <td>TOTAL DU CHIFFRE D'AFFAIRES & TVA BRUTE</td>
-              <td class="text-right font-bold">${summary.totalSalesHt.toFixed(2)}</td>
+              <td class="text-right font-bold">${totalSalesHt.toFixed(2)}</td>
               <td></td>
-              <td class="text-right font-bold" style="color: #0284c7;">${summary.totalTvaCollected.toFixed(2)}</td>
+              <td class="text-right font-bold" style="color: #0284c7;">${totalTvaCollected.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -144,13 +156,13 @@ export class G50OfficialPdfTemplate {
           <tbody>
             <tr>
               <td>TVA déductible sur achats de marchandises et biens</td>
-              <td class="text-right">${summary.purchasesNormalRateHt.toFixed(2)}</td>
-              <td class="text-right font-bold">${summary.totalTvaDeductible.toFixed(2)}</td>
+              <td class="text-right">${purchasesNormalRateHt.toFixed(2)}</td>
+              <td class="text-right font-bold">${totalTvaDeductible.toFixed(2)}</td>
             </tr>
             <tr class="total-row">
               <td>TOTAL TVA DÉDUCTIBLE DU MOIS</td>
               <td></td>
-              <td class="text-right font-bold" style="color: #16a34a;">${summary.totalTvaDeductible.toFixed(2)}</td>
+              <td class="text-right font-bold" style="color: #16a34a;">${totalTvaDeductible.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -165,7 +177,7 @@ export class G50OfficialPdfTemplate {
           <tbody>
             <tr>
               <td>Droits de timbre fiscaux perçus au cours du mois</td>
-              <td class="text-right font-bold" style="width: 140px;">${summary.totalStampDuty.toFixed(2)} DA</td>
+              <td class="text-right font-bold" style="width: 140px;">${totalStampDuty.toFixed(2)} DA</td>
             </tr>
           </tbody>
         </table>
@@ -178,7 +190,7 @@ export class G50OfficialPdfTemplate {
                 ${isCredit ? 'CRÉDIT DE TVA À REPORTER SUR LE MOIS SUIVANT :' : 'MONTANT NET DE TVA À ACQUITTER AU TRÉSOR :'}
               </div>
               <div style="font-size: 10px; color: #64748b; margin-top: 2px;">
-                (TVA Collectée : ${summary.totalTvaCollected.toFixed(2)} DA - TVA Déductible : ${summary.totalTvaDeductible.toFixed(2)} DA)
+                (TVA Collectée : ${totalTvaCollected.toFixed(2)} DA - TVA Déductible : ${totalTvaDeductible.toFixed(2)} DA)
               </div>
             </div>
             <div style="font-size: 20px; font-weight: 900; color: ${isCredit ? '#1d4ed8' : '#047857'};">

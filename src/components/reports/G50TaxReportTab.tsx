@@ -35,12 +35,13 @@ export const G50TaxReportTab: React.FC = () => {
   };
 
   const handlePrint = () => {
+    const anySettings = (settings || {}) as any;
     const html = G50OfficialPdfTemplate.generateOfficialG50Html(summary, {
-      companyName: settings.storeName || 'SARL NEXUS DISTRIBUTION',
-      nif: settings.nif || settings.fiscalNumber || '',
-      nis: settings.nis || '',
-      rc: settings.rc || '',
-      ai: settings.ai || ''
+      companyName: settings.name || anySettings.storeName || 'SARL NEXUS DISTRIBUTION',
+      nif: settings.taxNumber || anySettings.nif || anySettings.fiscalNumber || '',
+      nis: anySettings.nis || '',
+      rc: anySettings.rc || '',
+      ai: anySettings.ai || ''
     });
     const win = window.open('', '_blank');
     if (win) {

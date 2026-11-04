@@ -20,7 +20,7 @@ export class ScfExportService {
     for (const tx of transactions) {
       if (tx.status !== 'completed' || tx.total <= 0) continue;
 
-      const dateStr = new Date(tx.date || (tx as any).created_at || Date.now())
+      const dateStr = new Date((tx as any).date || tx.timestamp || (tx as any).created_at || Date.now())
         .toISOString()
         .split('T')[0];
       const piece = tx.id.slice(-8).toUpperCase();

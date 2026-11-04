@@ -73,7 +73,7 @@ export function usePriceCheckerCamera({
           codeReader.decodeFromVideoDevice(
             null,
             videoElement,
-            (result) => {
+            (result: any) => {
               if (result) {
                 const decodedText = result.getText();
                 const now = Date.now();

@@ -22,6 +22,24 @@ export interface G50MonthlySummary {
   tvaDeductibleAchats: number;
   tvaNetteDue: number;
   transactionCount: number;
+
+  // Aliases compatibles avec les templates et exports officiels
+  month?: number;
+  year?: number;
+  salesNormalRateHt?: number;
+  tvaNormalRate?: number;
+  salesReducedRateHt?: number;
+  tvaReducedRate?: number;
+  salesExemptHt?: number;
+  totalSalesHt?: number;
+  totalTvaCollected?: number;
+  purchasesNormalRateHt?: number;
+  totalTvaDeductible?: number;
+  totalStampDuty?: number;
+  tvaNetToPay?: number;
+  totalTvaDue?: number;
+  totalAchatHT?: number;
+  tvaDeductible?: number;
 }
 
 export function computeG50SummaryForPeriod(
@@ -83,21 +101,42 @@ export function computeG50SummaryForPeriod(
   const totalTvaCollectee = Math.round((tvaCollectee19 + tvaCollectee9) * 100) / 100;
   const tvaNetteDue = Math.max(0, Math.round((totalTvaCollectee - tvaDeductibleAchats) * 100) / 100);
 
+  const purchasesNormalRateHt = Math.max(0, Math.round((totalPurchasesTTC - tvaDeductibleAchats) * 100) / 100);
+  const totalStampDuty = Math.round(droitsTimbrePerçus * 100) / 100;
+
   return {
     periodMonth: month,
     periodYear: year,
+    month,
+    year,
     totalSalesTTC: Math.round(totalSalesTTC * 100) / 100,
     baseImposable19: Math.round(baseImposable19 * 100) / 100,
     tvaCollectee19: Math.round(tvaCollectee19 * 100) / 100,
     baseImposable9: Math.round(baseImposable9 * 100) / 100,
     tvaCollectee9: Math.round(tvaCollectee9 * 100) / 100,
     baseExoneree: Math.round(baseExoneree * 100) / 100,
-    droitsTimbrePerçus: Math.round(droitsTimbrePerçus * 100) / 100,
+    droitsTimbrePerçus: totalStampDuty,
     totalVenteHT,
     totalTvaCollectee,
     tvaDeductibleAchats,
     tvaNetteDue,
-    transactionCount: filteredSales.length
+    transactionCount: filteredSales.length,
+
+    // Aliases
+    salesNormalRateHt: Math.round(baseImposable19 * 100) / 100,
+    tvaNormalRate: Math.round(tvaCollectee19 * 100) / 100,
+    salesReducedRateHt: Math.round(baseImposable9 * 100) / 100,
+    tvaReducedRate: Math.round(tvaCollectee9 * 100) / 100,
+    salesExemptHt: Math.round(baseExoneree * 100) / 100,
+    totalSalesHt: totalVenteHT,
+    totalTvaCollected: totalTvaCollectee,
+    purchasesNormalRateHt,
+    totalTvaDeductible: tvaDeductibleAchats,
+    totalStampDuty,
+    tvaNetToPay: totalTvaCollectee - tvaDeductibleAchats,
+    totalTvaDue: totalTvaCollectee,
+    totalAchatHT: purchasesNormalRateHt,
+    tvaDeductible: tvaDeductibleAchats
   };
 }
 

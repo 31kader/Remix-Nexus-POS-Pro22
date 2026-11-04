@@ -7,6 +7,8 @@ describe('Vague 3 : Passerelles Comptables (PC Compta / DLG) & G50 PDF Officiel'
   const mockG50Summary: G50MonthlySummary = {
     year: 2026,
     month: 11,
+    periodYear: 2026,
+    periodMonth: 11,
     transactionCount: 45,
     salesNormalRateHt: 500000,
     tvaNormalRate: 95000,
@@ -15,8 +17,10 @@ describe('Vague 3 : Passerelles Comptables (PC Compta / DLG) & G50 PDF Officiel'
     salesExemptHt: 20000,
     totalSalesHt: 620000,
     totalTvaCollected: 104000,
+    totalTvaCollectee: 104000,
     purchasesNormalRateHt: 300000,
     totalTvaDeductible: 57000,
+    tvaDeductibleAchats: 57000,
     totalStampDuty: 1450,
     totalSalesTTC: 725450,
     tvaNetToPay: 47000, // 104000 - 57000 = 47000

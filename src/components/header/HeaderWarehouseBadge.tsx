@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Building2, ChevronDown, Check, Store } from 'lucide-react';
 import { WarehouseStorage } from '../../services/warehouse/warehouseStorage';
-import type { Warehouse } from '../../types';
+import type { Warehouse } from '../../types/warehouseTypes';
 import { cn } from '../../lib/utils';
 
 interface HeaderWarehouseBadgeProps {
