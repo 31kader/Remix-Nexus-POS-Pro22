@@ -242,15 +242,15 @@ export function CustomerIdentityAndCommercialCard({
                   <td className="py-2.5 px-3.5">
                     {(Number(selectedCustomer.balance) || 0) < 0 ? (
                       <span className="font-mono font-black text-xs text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-md">
-                        Dette : {Math.abs(Number(selectedCustomer.balance) || 0).toFixed(2)} ${currency}
+                        Dette : {Math.abs(Number(selectedCustomer.balance) || 0).toFixed(2)} {currency}
                       </span>
                     ) : (Number(selectedCustomer.balance) || 0) > 0 ? (
                       <span className="font-mono font-black text-xs text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                        Solde : +{Number(selectedCustomer.balance || 0).toFixed(2)} ${currency}
+                        Solde : +{Number(selectedCustomer.balance || 0).toFixed(2)} {currency}
                       </span>
                     ) : (
                       <span className="font-bold text-slate-300 bg-slate-800 border border-slate-700 px-2 py-0.5 rounded-md text-xs">
-                        À jour (0.00 ${currency})
+                        À jour (0.00 {currency})
                       </span>
                     )}
                   </td>
