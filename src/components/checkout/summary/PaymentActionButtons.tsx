@@ -29,7 +29,8 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
         <button 
           type="button"
           className={cn(
-            "flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2.5 rounded-xl text-xs",
+            "btn-touch-action flex items-center justify-between border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2.5 rounded-xl text-xs",
+            "font-financial",
             editingTransaction
               ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300 hover:bg-amber-100"
               : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/50 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
@@ -50,7 +51,8 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
         <button 
           type="button"
           className={cn(
-            "flex items-center justify-center gap-1.5 border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2.5 rounded-xl text-xs",
+            "btn-touch-action flex items-center justify-center gap-1.5 border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2.5 rounded-xl text-xs",
+            "font-financial",
             editingTransaction
               ? "bg-amber-100/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300"
               : "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
@@ -66,7 +68,8 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
         <button 
           type="button"
           className={cn(
-            "flex items-center justify-center gap-1.5 border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2 rounded-xl text-xs",
+            "btn-touch-action flex items-center justify-center gap-1.5 border transition-all font-black uppercase shadow-sm group active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 px-2 rounded-xl text-xs",
+            "font-financial",
             "bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-600/40 text-amber-800 dark:text-amber-300 hover:bg-amber-500 hover:text-white hover:border-amber-500"
           )}
           onClick={() => setIsBaridiOpen(true)}
@@ -81,7 +84,7 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
       <button 
         type="button"
         className={cn(
-          "w-full text-white font-black uppercase transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm tracking-wider",
+          "btn-touch-action font-financial w-full text-white font-black uppercase transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none py-3 sm:py-3.5 rounded-xl text-xs sm:text-sm tracking-wider",
           editingTransaction
             ? "bg-amber-600 hover:bg-amber-700"
             : total < 0

@@ -38,7 +38,7 @@ export const CheckoutTotalBanner = memo(function CheckoutTotalBanner({
           <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-400">
             TOTAL :
           </span>
-          <span className="text-2xl sm:text-4xl lg:text-5xl font-black font-mono text-emerald-300 tracking-tight tabular-nums drop-shadow-[0_0_12px_rgba(16,185,129,0.35)]">
+          <span className="text-2xl sm:text-4xl lg:text-5xl font-black font-mono font-financial text-emerald-300 tracking-tight tabular-nums drop-shadow-[0_0_12px_rgba(16,185,129,0.35)]">
             {displayTotal.toFixed(2)}
           </span>
           <span className="text-xs sm:text-base font-black font-sans text-emerald-400">

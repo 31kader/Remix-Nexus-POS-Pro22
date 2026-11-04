@@ -3,6 +3,7 @@ import { Search, Scan, X, Barcode } from 'lucide-react';
 import { SearchOverlay } from './SearchOverlay';
 import { Product } from '../../types';
 import { LanStatusBadge } from '../lan/LanStatusBadge';
+import { HardwareStatusDock } from '../hardware/HardwareStatusDock';
 
 interface Props {
   search: string;
@@ -173,6 +174,7 @@ export const CheckoutHeader: React.FC<Props> = ({
 
         {/* BADGE STATUT RÉSEAU HYBRIDE (LAN + CLOUD) & SCANNER */}
         <div className="flex items-center gap-2 shrink-0">
+          <HardwareStatusDock className="hidden xl:flex" />
           <LanStatusBadge />
           <button
             type="button"

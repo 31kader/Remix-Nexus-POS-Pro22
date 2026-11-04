@@ -79,7 +79,7 @@ export const OrderTotalsDisplay: React.FC<OrderTotalsDisplayProps> = ({
             ) : null
           )}
           <span className={cn(
-            "flex items-baseline justify-end gap-1 font-mono tabular-nums leading-none",
+            "flex items-baseline justify-end gap-1 font-mono font-financial tabular-nums leading-none",
             total < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
           )}>
             <span className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight">

@@ -778,3 +778,41 @@ html.light table tbody td {
   }
 }
 
+
+/* ==========================================================================
+   FIGMA SPEC : INDUSTRIAL PRO RETAIL TOKENS & ALIGNEMENT FINANCIER DZD
+   ========================================================================== */
+.font-financial {
+  font-family: ui-monospace, SFMono-Regular, "Roboto Mono", Consolas, monospace !important;
+  font-feature-settings: "tnum" 1, "zero" 1 !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+.pill-hardware {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-touch-action {
+  min-height: 44px;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.btn-touch-action:active {
+  transform: scale(0.97);
+}

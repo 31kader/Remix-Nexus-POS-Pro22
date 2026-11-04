@@ -90,6 +90,7 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       sourcemap: false,
       minify: 'esbuild',
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         external: ['@capacitor-community/sqlite'],
         output: {

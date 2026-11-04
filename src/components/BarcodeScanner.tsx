@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
 import { Button } from './ui';
 import { X, Camera, CameraOff, Zap, ZapOff, CheckCircle2 } from 'lucide-react';
 
@@ -117,7 +116,9 @@ export function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
           } catch (err) {}
         }
 
-        // 2. Fallback ZXing
+        // 2. Fallback ZXing (chargement dynamique asynchrone)
+        const { BrowserMultiFormatReader } = await import('@zxing/library');
+        if (!isMounted) return;
         codeReader = new BrowserMultiFormatReader();
         
         if (typeof codeReader.decodeFromVideoElement === 'function') {
