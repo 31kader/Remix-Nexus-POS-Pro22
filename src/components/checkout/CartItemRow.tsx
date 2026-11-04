@@ -120,7 +120,7 @@ export const CartItemRow = memo(({
               }
             }}
             className={cn(
-              "w-14 p-0 text-right text-xs font-black bg-transparent border-b border-dashed outline-none transition-all font-mono",
+              "w-14 p-0 text-right text-xs font-black bg-transparent border-b border-dashed outline-none transition-all font-mono font-financial tabular-nums",
               item.lineDiscount 
                 ? "text-amber-600 dark:text-amber-400 border-amber-500/40" 
                 : "text-slate-700 dark:text-zinc-300 border-slate-300 dark:border-white/10 focus:border-indigo-500"
@@ -196,7 +196,7 @@ export const CartItemRow = memo(({
         {/* Prix Total de la Ligne */}
         <div className="text-right min-w-[70px] sm:min-w-[90px] border-l border-slate-200 dark:border-white/10 pl-2 sm:pl-3">
           <span className={cn(
-            "text-xs sm:text-base font-black font-mono tracking-tight leading-tight block tabular-nums",
+            "text-xs sm:text-base font-black font-mono font-financial tracking-tight leading-tight block tabular-nums",
             item.quantity < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-400"
           )}>
             {lineTotal.toFixed(2)}

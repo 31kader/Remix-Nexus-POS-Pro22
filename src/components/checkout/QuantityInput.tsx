@@ -165,7 +165,7 @@ export const QuantityInput = React.forwardRef<HTMLInputElement, QuantityInputPro
           (e.target as HTMLInputElement).select();
         }}
         onMouseDown={(e) => e.stopPropagation()}
-        className="qty-input w-11 sm:w-14 px-1 text-center text-xs sm:text-sm font-black bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 outline-none text-slate-900 dark:text-white appearance-none m-0 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 rounded-md font-mono shadow-xs select-all"
+        className="qty-input w-11 sm:w-14 px-1 text-center text-xs sm:text-sm font-black bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 outline-none text-slate-900 dark:text-white appearance-none m-0 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 rounded-md font-mono font-financial tabular-nums shadow-xs select-all"
         title="Modifier la quantité [F11]"
       />
     );

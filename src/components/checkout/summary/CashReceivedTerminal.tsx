@@ -57,7 +57,7 @@ export const CashReceivedTerminal: React.FC<CashReceivedTerminalProps> = ({
             value={receivedAmount}
             onChange={(e) => setReceivedAmount(e.target.value)}
             placeholder={total.toFixed(2)}
-            className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-white text-base font-black font-mono rounded-xl px-3 py-1.5 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner"
+            className="w-full bg-slate-50 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-white text-base font-black font-mono font-financial tabular-nums rounded-xl px-3 py-1.5 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner"
           />
           <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 font-mono">
             {currency}
@@ -74,7 +74,7 @@ export const CashReceivedTerminal: React.FC<CashReceivedTerminalProps> = ({
             if (typed > total) {
               return (
                 <>
-                  <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight tracking-tight">
+                  <span className="text-base sm:text-lg font-black font-financial tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight tracking-tight">
                     +{(typed - total).toFixed(2)} {currency}
                   </span>
                   <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-widest bg-emerald-100 dark:bg-emerald-950/80 px-1 py-0.5 rounded w-fit ml-auto mt-0.5">À RENDRE</span>
@@ -83,7 +83,7 @@ export const CashReceivedTerminal: React.FC<CashReceivedTerminalProps> = ({
             } else if (typed < total) {
               return (
                 <>
-                  <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 leading-tight tracking-tight">
+                  <span className="text-base sm:text-lg font-black font-financial tabular-nums text-amber-600 dark:text-amber-400 leading-tight tracking-tight">
                     -{(total - typed).toFixed(2)} {currency}
                   </span>
                   <span className="text-[8px] font-black text-amber-700 dark:text-amber-300 uppercase tracking-widest bg-amber-100 dark:bg-amber-950/80 px-1 py-0.5 rounded w-fit ml-auto mt-0.5">RESTE DÛ</span>
