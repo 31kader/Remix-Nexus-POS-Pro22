@@ -83,6 +83,16 @@ export const SidebarManagementSection: React.FC<SidebarManagementSectionProps> =
             )}
             {canAccess('canAccessInventory') && (
               <NavItem 
+                href="#stock_transfers" 
+                icon={<Truck size={20} className="text-indigo-400" />} 
+                label={t("Transferts Inter-Dépôts")} 
+                active={activeTab === 'stock_transfers' || activeTab === 'transfers'} 
+                onClick={() => { setActiveTab('stock_transfers'); setIsMobileOverlayOpen(false); }} 
+                collapsed={isCollapsed} 
+              />
+            )}
+            {canAccess('canAccessInventory') && (
+              <NavItem 
                 href="#expiry" 
                 icon={<CalendarClock size={20} />} 
                 label={t("Suivi Péremption")} 

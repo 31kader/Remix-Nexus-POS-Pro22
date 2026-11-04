@@ -29,6 +29,9 @@ export const TAB_PERMISSION_MAP: Record<string, keyof RolePermissions | 'admin_o
   grn: 'canAccessInventory',
   audit: 'canAccessInventory',
   inventory_audit: 'canAccessInventory',
+  transfers: 'canAccessInventory',
+  stock_transfers: 'canAccessInventory',
+  warehouses: 'canAccessInventory',
 
   // --- Gestion Commerciale & Clients ---
   transactions: 'canAccessSales',

@@ -37,6 +37,7 @@ const Checkout = lazy(() => import('./Checkout').then(m => ({ default: m.Checkou
 const Inventory = lazy(() => import('./Inventory').then(m => ({ default: m.Inventory })));
 const SyncStudio = lazy(() => import('./SyncStudio').then(m => ({ default: m.SyncStudio })));
 const Help = lazy(() => import('./Help').then(m => ({ default: m.Help })));
+const StockTransfersTab = lazy(() => import('./warehouse/StockTransfersTab').then(m => ({ default: m.StockTransfersTab })));
 
 interface TabRendererProps {
   activeTab: string;
@@ -137,6 +138,10 @@ export const TabRenderer: React.FC<TabRendererProps> = ({ activeTab, ...props })
       case 'audit':
       case 'inventory_audit':
         return <InventoryAuditTab {...props} />;
+      case 'transfers':
+      case 'stock_transfers':
+      case 'warehouses':
+        return <StockTransfersTab />;
       case 'promotions':
         return <PromotionsTab {...props} />;
       case 'customers':

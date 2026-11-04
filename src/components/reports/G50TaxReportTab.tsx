@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Landmark, Download, Printer, Calendar } from 'lucide-react';
+import { Landmark, Download, Printer, Calendar, FileSpreadsheet } from 'lucide-react';
 import { useCoreStore } from '../../store/useCoreStore';
 import { useTransactionStore } from '../../store/useTransactionStore';
 import { computeG50SummaryForPeriod, generateG50Csv } from '../../services/fiscal/g50ExportService';
+import { G50OfficialPdfTemplate } from '../../services/fiscal/g50OfficialPdfTemplate';
+import { AccountingExportModal } from './AccountingExportModal';
 import { toast } from 'sonner';
 
 export const G50TaxReportTab: React.FC = () => {
@@ -12,6 +14,7 @@ export const G50TaxReportTab: React.FC = () => {
 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [isAccountingOpen, setIsAccountingOpen] = useState(false);
 
   const summary = useMemo(() => {
     return computeG50SummaryForPeriod(transactions, purchases, selectedYear, selectedMonth);
@@ -31,7 +34,20 @@ export const G50TaxReportTab: React.FC = () => {
   };
 
   const handlePrint = () => {
-    window.print();
+    const html = G50OfficialPdfTemplate.generateOfficialG50Html(summary, {
+      companyName: settings.storeName || 'SARL NEXUS DISTRIBUTION',
+      nif: settings.nif || settings.fiscalNumber || '',
+      nis: settings.nis || '',
+      rc: settings.rc || '',
+      ai: settings.ai || ''
+    });
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 250);
+    }
   };
 
   const months = [
@@ -90,11 +106,19 @@ export const G50TaxReportTab: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={() => setIsAccountingOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-indigo-500/30 rounded-xl text-xs font-bold transition-all"
+          >
+            <FileSpreadsheet size={14} />
+            Compta PC / DLG
+          </button>
+          <button
+            type="button"
             onClick={handlePrint}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20"
           >
             <Printer size={14} />
-            Imprimer
+            Imprimer Formulaire G50
           </button>
         </div>
       </div>
@@ -182,6 +206,13 @@ export const G50TaxReportTab: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      <AccountingExportModal
+        isOpen={isAccountingOpen}
+        onClose={() => setIsAccountingOpen(false)}
+        transactions={transactions}
+        purchases={purchases}
+      />
     </div>
   );
 };

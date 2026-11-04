@@ -4,6 +4,7 @@ import { CompanySettings } from '../../types';
 import { getTerminalId, getTerminalName, setTerminalInfo } from '../../services/terminalService';
 import { isAutoDrawerEnabled, setAutoDrawerEnabled, testCashDrawer } from '../../services/hardwareService';
 import { DirectPrinterConfigCard } from './hardware/DirectPrinterConfigCard';
+import { BluetoothPrinterCard } from './hardware/BluetoothPrinterCard';
 import { ScaleConfigCard } from './hardware/ScaleConfigCard';
 import { AlgerianFiscalConfigCard } from './fiscal/AlgerianFiscalConfigCard';
 import { toast } from 'sonner';
@@ -91,6 +92,9 @@ export function ReceiptSection({ formData, setFormData }: SectionProps) {
 
       {/* 🖨️ Pilote Direct ESC/POS Réseau & USB */}
       <DirectPrinterConfigCard settings={formData} />
+
+      {/* 📱 Imprimante Mobile Bluetooth BLE (mPOS) */}
+      <BluetoothPrinterCard />
 
       {/* ⚖️ Balance Électronique de Comptoir */}
       <ScaleConfigCard />

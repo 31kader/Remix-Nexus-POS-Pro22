@@ -3,6 +3,7 @@ import { Banknote, CreditCard, Printer, Smartphone } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { CartItem } from '../../../types';
 import { BaridiMobPaymentModal } from '../payment/BaridiMobPaymentModal';
+import { TpePaymentModal } from '../payment/TpePaymentModal';
 
 export interface PaymentActionButtonsProps {
   total: number;
@@ -20,6 +21,7 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
   handleCheckout
 }) => {
   const [isBaridiOpen, setIsBaridiOpen] = useState(false);
+  const [isTpeOpen, setIsTpeOpen] = useState(false);
 
   return (
     <>
@@ -53,9 +55,9 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
               ? "bg-amber-100/50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700/50 text-amber-900 dark:text-amber-300"
               : "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white hover:border-indigo-600"
           )}
-          onClick={() => handleCheckout('card')}
+          onClick={() => setIsTpeOpen(true)}
           disabled={cart.length === 0 || isProcessing}
-          title="ENCAISSEMENT CARTE / TPE"
+          title="ENCAISSEMENT CARTE / TPE (CIB / DAHABIA)"
         >
           <CreditCard size={16} />
           <span className="truncate">CARTE / TPE</span>
@@ -105,6 +107,16 @@ export const PaymentActionButtons: React.FC<PaymentActionButtonsProps> = ({
         onClose={() => setIsBaridiOpen(false)}
         total={total}
         onConfirmPayment={() => handleCheckout('transfer', true)}
+      />
+
+      <TpePaymentModal
+        isOpen={isTpeOpen}
+        onClose={() => setIsTpeOpen(false)}
+        amountDzd={total}
+        onPaymentSuccess={() => {
+          setIsTpeOpen(false);
+          handleCheckout('card', true);
+        }}
       />
     </>
   );
