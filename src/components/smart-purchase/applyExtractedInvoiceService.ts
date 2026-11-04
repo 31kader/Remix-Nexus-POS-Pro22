@@ -133,7 +133,7 @@ export function applyExtractedInvoiceService({
           productName: item.name || 'Article Importé',
           quantity: cleanQty,
           costPrice: cleanPrice > 0 ? cleanPrice : 0,
-          taxRate: 19,
+          taxRate: 0,
           discount: cleanDiscount,
           isDraft: true
         };

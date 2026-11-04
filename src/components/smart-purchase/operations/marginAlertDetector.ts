@@ -23,7 +23,7 @@ export interface MarginStats {
 export function computeMarginStats(
   costPrice: number,
   sellingPrice: number,
-  taxRate: number = 19
+  taxRate: number = 0
 ): MarginStats {
   const safeCost = Math.max(0, Number(costPrice) || 0);
   const safeSelling = Math.max(0, Number(sellingPrice) || 0);

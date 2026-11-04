@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/library';
 import { Product } from '../../types';
 
 interface UseKioskCameraProps {
@@ -15,7 +14,7 @@ export function useKioskCamera({
 }: UseKioskCameraProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const codeReaderRef = useRef<any>(null);
 
   const stopCamera = () => {
     if (codeReaderRef.current) {
@@ -82,6 +81,7 @@ export function useKioskCamera({
           } catch (_) {}
         }
 
+        const { BrowserMultiFormatReader } = await import('@zxing/library');
         const reader = new BrowserMultiFormatReader();
         codeReaderRef.current = reader;
         const stream = await navigator.mediaDevices.getUserMedia({

@@ -68,8 +68,8 @@ export const ProfitsReport = React.memo(function ProfitsReport({
   });
 
   return (
-    <Card id="card-profits-report" className="overflow-hidden border-white/10 bg-white/5 animate-in fade-in duration-500">
-      <div className="bg-white/5 p-4 border-b border-white/10">
+    <Card id="card-profits-report" className="overflow-hidden bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xs">
+      <div className="bg-slate-50/50 dark:bg-zinc-850/60 p-4 border-b border-slate-200 dark:border-zinc-800">
         <div className="flex flex-col md:flex-row gap-4 justify-between md:items-center mb-3">
           <h4 className="font-black text-white uppercase tracking-tighter flex items-center gap-2 text-sm">
             <Banknote size={18} className="text-indigo-400" />
@@ -118,14 +118,14 @@ export const ProfitsReport = React.memo(function ProfitsReport({
       </div>
 
       {/* Premium Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-white/[0.02] border-b border-white/10">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50/30 dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800">
         {/* Card 1: Gross Revenue */}
         <div className="bg-[#0c0d12]/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-indigo-500/20 transition-all duration-300">
           <div className="absolute top-0 right-0 p-3 opacity-10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
             <Banknote size={48} />
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chiffre d'Affaires Brut</p>
-          <p className="text-2xl font-black text-white mt-1.5 font-mono tracking-tight">{Number(totals.revenue || 0).toFixed(2)} <span className="text-[10px] text-slate-500">{settings.currency}</span></p>
+          <p className="text-2xl font-black text-white mt-1.5 font-financial tabular-nums tracking-tight">{Number(totals.revenue || 0).toFixed(2)} <span className="text-[10px] text-slate-500">{settings.currency}</span></p>
           <div className="h-1 w-12 bg-indigo-500 rounded mt-3"></div>
         </div>
 
@@ -135,7 +135,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Coût Total des Ventes</p>
-          <p className="text-2xl font-black text-white mt-1.5 font-mono tracking-tight">{Number(totals.cost || 0).toFixed(2)} <span className="text-[10px] text-slate-500">{settings.currency}</span></p>
+          <p className="text-2xl font-black text-white mt-1.5 font-financial tabular-nums tracking-tight">{Number(totals.cost || 0).toFixed(2)} <span className="text-[10px] text-slate-500">{settings.currency}</span></p>
           <div className="h-1 w-12 bg-amber-500 rounded mt-3"></div>
         </div>
 
@@ -145,7 +145,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bénéfice Net</p>
-          <p className={cn("text-2xl font-black mt-1.5 font-mono tracking-tight", (Number(totals.profit) || 0) >= 0 ? "text-emerald-400" : "text-rose-400")}>
+          <p className={cn("text-2xl font-black mt-1.5 font-financial tabular-nums tracking-tight", (Number(totals.profit) || 0) >= 0 ? "text-emerald-400" : "text-rose-400")}>
             {(Number(totals.profit) || 0) >= 0 ? '+' : ''}{Number(totals.profit || 0).toFixed(2)} <span className="text-[10px] text-slate-500">{settings.currency}</span>
           </p>
           <div className="h-1 w-12 bg-emerald-500 rounded mt-3"></div>
@@ -157,7 +157,7 @@ export const ProfitsReport = React.memo(function ProfitsReport({
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
           </div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Marge Moyenne Globale</p>
-          <p className="text-2xl font-black text-white mt-1.5 font-mono tracking-tight">{Number(totals.margin || 0).toFixed(1)}%</p>
+          <p className="text-2xl font-black text-white mt-1.5 font-financial tabular-nums tracking-tight">{Number(totals.margin || 0).toFixed(1)}%</p>
           <div className="h-1 w-12 bg-indigo-500/40 rounded mt-3"></div>
         </div>
       </div>

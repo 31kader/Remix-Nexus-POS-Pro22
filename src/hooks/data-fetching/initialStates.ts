@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   labelWidthCustom: 60,
   labelHeightCustom: 40,
   currency: 'DA',
-  taxRate: 19,
+  taxRate: 0, // 0% par défaut, configurable dans les paramètres
   loyaltyPointsPerCurrencyUnit: 1, 
   loyaltyPointValue: 0.01, 
   accountingFormat: 'csv',

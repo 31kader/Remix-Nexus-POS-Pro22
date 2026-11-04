@@ -77,11 +77,11 @@ export const printReceipt = async (t: any, settings: CompanySettings) => {
   const subtotalBeforeDiscounts = ( (t.total || 0) + (t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0) );
   const totalSavings = ((t.discountAmount || 0) + (t.pointsDiscount || 0) + (t.voucherDiscount || 0));
   
-  // 🛡️ BUG-10 : Ventilation fiscale légale TVA 19%
-  const taxRate = Number(settings.taxRate) || 19;
+  // 🛡️ Ventilation fiscale : TVA issue des paramètres (défaut 0%)
+  const taxRate = typeof settings.taxRate === 'number' ? settings.taxRate : (Number(settings.taxRate) || 0);
   const totalTTC = Number(t.total) || 0;
-  const totalHT = totalTTC / (1 + taxRate / 100);
-  const totalTVA = totalTTC - totalHT;
+  const totalHT = taxRate > 0 ? (totalTTC / (1 + taxRate / 100)) : totalTTC;
+  const totalTVA = taxRate > 0 ? (totalTTC - totalHT) : 0;
 
   // Largeur utile réelle des imprimantes thermiques : 72mm (pour rouleau 80mm) et 48mm (pour rouleau 58/60mm)
   const paperWidth = settings.paperFormat === '60mm' ? '48mm' : settings.paperFormat === 'A4' ? '210mm' : '72mm';

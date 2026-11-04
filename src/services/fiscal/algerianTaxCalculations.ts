@@ -32,7 +32,8 @@ export function computeAlgerianStampDuty(amountTTC: number, paymentMethod: strin
 export function computeTaxBreakdown(
   items: Array<{ price: number; quantity: number; taxRate?: number }>,
   paymentMethod: string = 'cash',
-  discountAmount: number = 0
+  discountAmount: number = 0,
+  defaultTaxRate: number = 0
 ): TaxBreakdownResult {
   let base19 = 0;
   let vat19 = 0;
@@ -42,7 +43,7 @@ export function computeTaxBreakdown(
 
   for (const item of items) {
     const lineTotalTTC = (item.price || 0) * (item.quantity || 1);
-    const rate = Number(item.taxRate ?? 19);
+    const rate = Number(item.taxRate !== undefined && item.taxRate !== null ? item.taxRate : defaultTaxRate);
 
     if (rate === 19) {
       const lineHT = lineTotalTTC / 1.19;
@@ -52,6 +53,10 @@ export function computeTaxBreakdown(
       const lineHT = lineTotalTTC / 1.09;
       base9 += lineHT;
       vat9 += (lineTotalTTC - lineHT);
+    } else if (rate > 0) {
+      const lineHT = lineTotalTTC / (1 + rate / 100);
+      base19 += lineHT;
+      vat19 += (lineTotalTTC - lineHT);
     } else {
       baseExempt += lineTotalTTC;
     }

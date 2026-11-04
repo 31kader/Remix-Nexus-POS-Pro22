@@ -22,14 +22,16 @@ export function generateAlgerianFiscalInvoiceHtml(
   fiscalMeta?: FiscalInvoiceMetadata
 ): string {
   const currency = settings.currency || 'DA';
+  const defaultTaxRate = Number(settings.taxRate ?? 0);
   const breakdown = computeTaxBreakdown(
     (transaction.items || []).map(i => ({
       price: i.price,
       quantity: i.quantity,
-      taxRate: (i as any).taxRate ?? 19
+      taxRate: (i as any).taxRate ?? defaultTaxRate
     })),
     transaction.paymentMethod,
-    transaction.discountAmount || 0
+    transaction.discountAmount || 0,
+    defaultTaxRate
   );
 
   const amountInWords = numberToWordsAlgerianDZD(breakdown.totalTTC);
@@ -40,7 +42,7 @@ export function generateAlgerianFiscalInvoiceHtml(
 
   const rowsHtml = (transaction.items || []).map((item, idx) => {
     const qty = item.quantity || 1;
-    const rate = Number((item as any).taxRate ?? 19);
+    const rate = Number((item as any).taxRate ?? defaultTaxRate);
     const lineTotalTTC = (item.price || 0) * qty;
     const lineHT = lineTotalTTC / (1 + rate / 100);
     return `

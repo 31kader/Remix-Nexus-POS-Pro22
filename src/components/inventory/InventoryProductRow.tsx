@@ -127,7 +127,7 @@ export const InventoryProductRow = React.memo(({
             </div>
 
             {/* Prix & Marge sur Smartphone (< md) */}
-            <div className="flex md:hidden items-center gap-2 mt-1.5 flex-wrap text-xs font-financial">
+            <div className="flex md:hidden items-center gap-2 mt-1.5 flex-wrap text-xs font-mono font-financial">
               <span className="font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {(product.price || 0).toFixed(2)} {settings.currency || 'DA'}
               </span>
@@ -146,7 +146,7 @@ export const InventoryProductRow = React.memo(({
         </div>
 
         {/* Center: Prices & Margin */}
-        <div className="hidden md:flex items-center gap-5 text-right font-financial">
+        <div className="hidden md:flex items-center gap-6 text-right font-financial">
           <div className="flex flex-col items-end min-w-[78px]">
             <span className="text-[9px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider font-sans">Achat</span>
             <span className="text-xs font-bold text-slate-700 dark:text-zinc-300 tabular-nums">

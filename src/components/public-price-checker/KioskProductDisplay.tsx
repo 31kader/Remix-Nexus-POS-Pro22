@@ -133,9 +133,15 @@ export const KioskProductDisplay: React.FC<KioskProductDisplayProps> = ({
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-400 mt-2 font-medium">
-              Prix TTC • TVA {(foundProduct as any)?.vatRate || (settings as any)?.taxRate || 19}% incluse
-            </p>
+            {Number((foundProduct as any)?.vatRate ?? (settings as any)?.taxRate ?? 0) > 0 ? (
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">
+                Prix TTC • TVA {Number((foundProduct as any)?.vatRate ?? (settings as any)?.taxRate ?? 0)}% incluse
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-2 font-medium">
+                Prix Net à payer
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-400">

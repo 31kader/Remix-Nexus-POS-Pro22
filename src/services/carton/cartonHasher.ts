@@ -1,5 +1,3 @@
-import { BrowserMultiFormatReader } from '@zxing/library';
-
 /**
  * Calcul de l'empreinte visuelle (Difference Hash / dHash 64 bits) et signature couleur RGB
  * 100% Hors-Ligne, ultra-rapide (< 3ms) via Canvas
@@ -140,8 +138,9 @@ export async function detectBarcodeFromImage(dataUrl: string): Promise<string | 
       }
     }
 
-    // 2. Fallback ZXing multi-formats
+    // 2. Fallback ZXing multi-formats (chargement dynamique)
     try {
+      const { BrowserMultiFormatReader } = await import('@zxing/library');
       const codeReader = new BrowserMultiFormatReader();
       const result = await codeReader.decodeFromImageUrl(dataUrl);
       if (result && result.getText()) {

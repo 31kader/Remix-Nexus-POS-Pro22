@@ -256,7 +256,7 @@ export const Customers = memo(function Customers(props: CustomersProps) {
                 className="md:hidden p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 transition-all flex items-center gap-1.5 text-xs font-bold shadow-2xs min-h-[38px] m-2 self-start cursor-pointer"
                 title="Retour à la liste"
               >
-                <ArrowLeft className="w-4 h-4 text-indigo-500" />
+                <ArrowLeft className="w-5 h-5 text-indigo-400" />
                 <span>Retour à la liste</span>
               </button>
             )}

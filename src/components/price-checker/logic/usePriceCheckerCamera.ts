@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/library';
 import { Product } from '../../../types';
 
 interface UsePriceCheckerCameraProps {
@@ -19,7 +18,7 @@ export function usePriceCheckerCamera({
 
   // Caméra Barcode Scanner (pour tablettes/mobiles/webcam)
   useEffect(() => {
-    let codeReader: BrowserMultiFormatReader | null = null;
+    let codeReader: any = null;
     let activeStream: MediaStream | null = null;
     let lastScannedText = '';
     let lastScanTime = 0;
@@ -69,6 +68,7 @@ export function usePriceCheckerCamera({
         }
 
         try {
+          const { BrowserMultiFormatReader } = await import('@zxing/library');
           codeReader = new BrowserMultiFormatReader();
           codeReader.decodeFromVideoDevice(
             null,

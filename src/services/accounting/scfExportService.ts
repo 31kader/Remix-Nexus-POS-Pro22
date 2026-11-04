@@ -25,7 +25,7 @@ export class ScfExportService {
         .split('T')[0];
       const piece = tx.id.slice(-8).toUpperCase();
       const totalTtc = tx.total;
-      const totalTva = (tx as any).tax || (totalTtc * 0.19) / 1.19;
+      const totalTva = Number((tx as any).tax ?? (tx as any).taxAmount ?? 0);
       const totalHt = Math.max(0, totalTtc - totalTva);
 
       // Compte de trésorerie / tiers au Débit
@@ -71,7 +71,7 @@ export class ScfExportService {
           journalCode: 'VE',
           pieceNumber: piece,
           accountNumber: '445700',
-          label: `TVA Collectée 19% #${piece}`,
+          label: `TVA Collectée #${piece}`,
           debit: 0,
           credit: Number(totalTva.toFixed(2))
         });
@@ -97,7 +97,7 @@ export class ScfExportService {
         .toISOString()
         .split('T')[0];
       const piece = po.id.slice(-8).toUpperCase();
-      const totalTva = (po as any).tax || (totalTtc * 0.19) / 1.19;
+      const totalTva = Number((po as any).tax ?? (po as any).taxAmount ?? 0);
       const totalHt = Math.max(0, totalTtc - totalTva);
 
       // Ligne 1 : Débit Compte 380 (Achats de Marchandises HT)

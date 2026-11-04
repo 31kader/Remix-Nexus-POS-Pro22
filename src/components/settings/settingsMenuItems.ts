@@ -60,7 +60,7 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
   {
     id: 'accounting',
     label: 'Tarifs, Marges & Fiscalité',
-    subtitle: 'Devise DA, TVA 19%, Marges Détail/Gros',
+    subtitle: 'Devise DA, TVA paramétrée (défaut 0%), Marges',
     keywords: 'devise da dzd tva taxe marge détail gros en ligne ht ttc comptabilité',
     icon: DollarSign,
     badgeColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
@@ -119,7 +119,7 @@ export function buildInitialSettings(src: CompanySettings): CompanySettings {
     receiptTemplate: src.receiptTemplate || 'standard',
     labelTemplate: src.labelTemplate || 'standard',
     currency: src.currency || 'DA',
-    taxRate: src.taxRate ?? 19,
+    taxRate: src.taxRate ?? 0,
     loyaltyPointsPerCurrencyUnit: src.loyaltyPointsPerCurrencyUnit ?? 1,
     loyaltyPointValue: src.loyaltyPointValue ?? 0.01,
     footerText: src.footerText || '',

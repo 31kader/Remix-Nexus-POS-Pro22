@@ -17,7 +17,7 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
   phone: '+213 550 00 00 00',
   email: 'contact@nexuspos.pro',
   currency: 'DA',
-  taxRate: 19, // 19% TVA standard en Algérie
+  taxRate: 0, // 0% TVA par défaut (toujours issu des paramètres)
   footerText: 'Merci pour votre fidélité ! À bientôt chez NEXUS.',
   receiptTemplate: 'standard',
   labelTemplate: 'standard',

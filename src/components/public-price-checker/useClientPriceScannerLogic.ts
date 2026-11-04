@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { BrowserMultiFormatReader } from '@zxing/library';
 import { Product, CompanySettings, Promotion } from '../../types';
 import { playScanBeep } from './priceUtils';
 
@@ -28,7 +27,7 @@ export function useClientPriceScannerLogic({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const codeReaderRef = useRef<any>(null);
   const lastScannedCodeRef = useRef<{ code: string; time: number }>({ code: '', time: 0 });
 
   const storeName = settings?.name || 'Notre Magasin';
@@ -165,6 +164,7 @@ export function useClientPriceScannerLogic({
           } catch (_) {}
         }
 
+        const { BrowserMultiFormatReader } = await import('@zxing/library');
         const reader = new BrowserMultiFormatReader();
         codeReaderRef.current = reader;
 

@@ -17,8 +17,9 @@ export const G50TaxReportTab: React.FC = () => {
   const [isAccountingOpen, setIsAccountingOpen] = useState(false);
 
   const summary = useMemo(() => {
-    return computeG50SummaryForPeriod(transactions, purchases, selectedYear, selectedMonth);
-  }, [transactions, purchases, selectedYear, selectedMonth]);
+    const configuredTaxRate = Number(settings?.taxRate ?? 0);
+    return computeG50SummaryForPeriod(transactions, purchases, selectedYear, selectedMonth, configuredTaxRate);
+  }, [transactions, purchases, selectedYear, selectedMonth, settings?.taxRate]);
 
   const handleExportCsv = () => {
     const csvContent = generateG50Csv(summary);

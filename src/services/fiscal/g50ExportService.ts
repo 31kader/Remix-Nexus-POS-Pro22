@@ -28,8 +28,10 @@ export function computeG50SummaryForPeriod(
   transactions: Transaction[],
   purchases: Array<{ total: number; timestamp?: string }> = [],
   year: number = new Date().getFullYear(),
-  month: number = new Date().getMonth() + 1
+  month: number = new Date().getMonth() + 1,
+  defaultTaxRate?: number
 ): G50MonthlySummary {
+  const effectiveTaxRate = defaultTaxRate !== undefined ? defaultTaxRate : 19;
   const filteredSales = transactions.filter(t => {
     if (!t.timestamp) return false;
     const d = new Date(t.timestamp);
@@ -49,10 +51,11 @@ export function computeG50SummaryForPeriod(
       (tx.items || []).map(i => ({
         price: i.price,
         quantity: i.quantity,
-        taxRate: (i as any).taxRate ?? 19
+        taxRate: (i as any).taxRate !== undefined && (i as any).taxRate !== null ? (i as any).taxRate : effectiveTaxRate
       })),
       tx.paymentMethod,
-      tx.discountAmount || 0
+      tx.discountAmount || 0,
+      effectiveTaxRate
     );
 
     totalSalesTTC += breakdown.totalTTC;
@@ -72,7 +75,9 @@ export function computeG50SummaryForPeriod(
   });
 
   const totalPurchasesTTC = filteredPurchases.reduce((acc, p) => acc + (p.total || 0), 0);
-  const tvaDeductibleAchats = Math.round((totalPurchasesTTC - (totalPurchasesTTC / 1.19)) * 100) / 100;
+  const tvaDeductibleAchats = effectiveTaxRate > 0 
+    ? Math.round((totalPurchasesTTC - (totalPurchasesTTC / (1 + effectiveTaxRate / 100))) * 100) / 100 
+    : 0;
 
   const totalVenteHT = Math.round((baseImposable19 + baseImposable9 + baseExoneree) * 100) / 100;
   const totalTvaCollectee = Math.round((tvaCollectee19 + tvaCollectee9) * 100) / 100;

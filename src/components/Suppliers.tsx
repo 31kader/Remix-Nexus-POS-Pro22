@@ -112,7 +112,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
   return (
     <div className="space-y-6">
       {/* Header Principal Suppliers.hub */}
-      <div className="bg-white dark:bg-slate-900/90 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs relative overflow-hidden text-left">
+      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xs relative overflow-hidden text-left">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-3">
@@ -123,7 +123,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
                   Suppliers<span className="text-indigo-600 dark:text-indigo-400">.hub</span> & Partenaires
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-zinc-400">
                   Gestion des fournisseurs, soldes, dettes et tableau de bord des activités hebdomadaires ({todayName})
                 </p>
               </div>
@@ -131,36 +131,36 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="flex bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="flex bg-slate-100 dark:bg-zinc-800 p-1 rounded-xl border border-slate-200 dark:border-zinc-700">
               <button
                 type="button"
                 onClick={() => setActiveSupplierTab('list')}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                  "btn-touch-action px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
                   activeSupplierTab === 'list'
                     ? "bg-indigo-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                    : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
-                💼 Annuaire & Soldes ({suppliers.length})
+                Annuaire & Soldes ({suppliers.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveSupplierTab('planning')}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
+                  "btn-touch-action px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer",
                   activeSupplierTab === 'planning'
                     ? "bg-indigo-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                    : "text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
-                📆 Tableau de Bord des Activités ({metrics.todayEventsCount} auj.)
+                Tableau de Bord ({metrics.todayEventsCount} auj.)
               </button>
             </div>
 
             <Button 
               onClick={() => { setEditingSupplier(null); setIsModalOpen(true); }}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-4 py-2.5 font-black uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer shadow-sm"
+              className="btn-touch-action bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-4 py-2.5 font-black uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer shadow-xs"
             >
               <Plus size={18} /> Nouveau Fournisseur
             </Button>
@@ -168,10 +168,10 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
         </div>
 
         {/* Cartes KPIs Fournisseurs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-5 pt-5 border-t border-slate-200 dark:border-slate-800">
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/70 flex items-center justify-between">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-5 pt-5 border-t border-slate-200 dark:border-zinc-800">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 border border-slate-200 dark:border-zinc-700/60 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Total Partenaires</p>
+              <p className="text-[10px] font-black text-slate-500 dark:text-zinc-400 uppercase">Total Partenaires</p>
               <p className="text-xl font-black text-slate-900 dark:text-white mt-0.5 tabular-nums">{suppliers.length}</p>
             </div>
             <div className="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -182,7 +182,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
           <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase">Total Dettes Fournisseurs</p>
-              <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5 tabular-nums font-mono">
+              <p className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5 tabular-nums font-financial">
                 {formatPrice(metrics.totalDebt)} {settings.currency || 'DA'}
               </p>
             </div>
@@ -205,7 +205,7 @@ export const Suppliers = memo(function Suppliers(props: SuppliersProps) {
 
           <div
             onClick={() => setActiveSupplierTab('planning')}
-            className="p-3.5 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition-all"
+            className="p-3.5 rounded-xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition-all btn-touch-action"
           >
             <div>
               <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">Activités ({todayName})</p>

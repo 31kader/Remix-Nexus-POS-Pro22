@@ -45,10 +45,10 @@ export function AccountingTaxConfig({ formData, setFormData, updateField }: Acco
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase">Taux TVA par Défaut (%)</label>
+            <label className="text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase">Taux TVA par Défaut (%) (0% si non assujetti)</label>
             <input
               type="number"
-              value={formData.taxRate ?? 19}
+              value={formData.taxRate ?? 0}
               onChange={e => updateField('taxRate', parseFloat(e.target.value) || 0)}
               className="w-full h-11 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl px-3.5 text-slate-900 dark:text-white text-xs font-bold outline-none focus:border-emerald-500"
             />
@@ -93,7 +93,7 @@ export function AccountingTaxConfig({ formData, setFormData, updateField }: Acco
         <div className="space-y-2.5">
           {(formData.availableTaxes || []).length === 0 ? (
             <p className="text-xs text-slate-400 dark:text-zinc-500 py-3 text-center">
-              Seule la TVA par défaut ({formData.taxRate ?? 19}%) est active.
+              Seule la TVA par défaut ({formData.taxRate ?? 0}%) est active.
             </p>
           ) : (
             formData.availableTaxes?.map((tax, idx) => (

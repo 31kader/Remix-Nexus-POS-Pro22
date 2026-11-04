@@ -81,14 +81,14 @@ describe('Senior Full-Stack Lead Edge-Cases & Security Suite', () => {
     });
   });
 
-  describe('3. Règles Métier & Précision Monétaire Algérienne (DA / 19% TVA)', () => {
-    it('est configuré avec la monnaie nationale DA et le taux de TVA légal de 19%', () => {
+  describe('3. Règles Métier & Précision Monétaire Algérienne (DA / TVA Paramétrée)', () => {
+    it('est configuré avec la monnaie nationale DA et le taux de TVA par défaut de 0% (configurable)', () => {
       expect(DEFAULT_COMPANY_SETTINGS.currency).toBe('DA');
       expect(INTERFACE_CONFIGS.defaultCurrencySymbol).toBe('DA');
-      expect(DEFAULT_COMPANY_SETTINGS.taxRate).toBe(19);
+      expect(DEFAULT_COMPANY_SETTINGS.taxRate).toBe(0);
     });
 
-    it('évite les erreurs d’arrondi flottant sur les totaux de caisse', () => {
+    it('évite les erreurs d’arrondi flottant sur les totaux de caisse avec TVA paramétrée', () => {
       // Test classique de virgule flottante JavaScript (0.1 + 0.2 = 0.30000000000000004)
       const priceA = 100.10;
       const priceB = 200.20;
@@ -96,9 +96,10 @@ describe('Senior Full-Stack Lead Edge-Cases & Security Suite', () => {
       
       expect(roundedTotal).toBe(300.30);
 
-      // Calcul TVA 19%
+      // Calcul avec taux de TVA configuré dans les paramètres (ex: 19% si assujetti)
+      const configuredTaxRate = 19;
       const ht = 1000;
-      const tva = Math.round((ht * (DEFAULT_COMPANY_SETTINGS.taxRate / 100)) * 100) / 100;
+      const tva = Math.round((ht * (configuredTaxRate / 100)) * 100) / 100;
       const ttc = ht + tva;
 
       expect(tva).toBe(190);

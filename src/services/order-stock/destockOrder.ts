@@ -177,7 +177,7 @@ export async function destockOrder(
           price: Number(item.price || 0),
           quantity: Math.max(1, Number(item.quantity || 1)),
           costPrice: prod?.costPrice || 0,
-          taxRate: prod?.taxRate || settings.taxRate || 19,
+          taxRate: prod?.taxRate ?? settings?.taxRate ?? 0,
           stock: prod?.stock ?? 0,
           minStock: prod?.minStock || 5,
           categoryId: prod?.categoryId || 'Online',

@@ -79,7 +79,7 @@ export const DetailedReports = memo(function DetailedReports({
       'Total TTC Net (DA)',
       'Statut Transaction'
     ];
-    const vatRatePercent = Number(settings.taxRate ?? 19);
+    const vatRatePercent = Number(settings.taxRate ?? 0);
     const vatRate = vatRatePercent / 100;
     const activeTransactions = (transactions || []).filter(t => t && t.status !== 'cancelled' && t.status !== 'returned' && !isTopUpTransaction(t));
     const rows = activeTransactions.map(t => {

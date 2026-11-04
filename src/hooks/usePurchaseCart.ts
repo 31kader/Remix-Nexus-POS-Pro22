@@ -25,7 +25,7 @@ export function usePurchaseCart(initialCart: PurchaseCartItem[] = []) {
       const productId = item.productId || item.id || '';
       const productName = item.productName || item.name || 'Article';
       const costPrice = item.costPrice !== undefined ? item.costPrice : (item.cost_price !== undefined ? item.cost_price : 0);
-      // Approvisionnement : TVA à 0% par défaut (le 19% de vente au détail ne s'applique pas aux achats)
+      // Approvisionnement : TVA à 0% par défaut (la TVA de vente au détail ne s'applique pas aux achats)
       const taxRate = typeof item.purchaseTaxRate === 'number'
         ? item.purchaseTaxRate
         : (typeof item.taxRate === 'number' && item.taxRate !== 19
