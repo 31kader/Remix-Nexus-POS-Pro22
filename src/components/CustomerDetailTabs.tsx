@@ -256,34 +256,39 @@ export function CustomerDetailTabs({
 
   return (
     <>
-      {/* Tabs Navigation (Compact ~36px) */}
-      <div className="flex border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 flex-shrink-0">
+      {/* Tabs Navigation (Modern Segmented Pill ~40px) */}
+      <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-white/[0.06] bg-white/90 dark:bg-zinc-900/90 px-4 py-2 flex-shrink-0 backdrop-blur-md">
         <button 
           type="button"
           onClick={() => setActiveTab('info')}
           className={cn(
-            "px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer", 
+            "btn-touch-action px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer", 
             activeTab === 'info' 
-              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/30" 
-              : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800/50"
+              ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30" 
+              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800/60"
           )}
         >
           <UserCheck size={14} />
-          {safeTranslation("Général")}
+          <span>{safeTranslation("Général")}</span>
         </button>
         <button 
           type="button"
           onClick={() => setActiveTab('history')}
           className={cn(
-            "px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer", 
+            "btn-touch-action px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer", 
             activeTab === 'history' 
-              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/30" 
-              : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800/50"
+              ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30" 
+              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800/60"
           )}
         >
           <History size={14} />
-          {safeTranslation("Journal de bord")}
-          <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 py-0.2 px-1.5 rounded-full text-[10px] font-mono font-bold border border-indigo-200 dark:border-indigo-800">
+          <span>{safeTranslation("Journal de bord")}</span>
+          <span className={cn(
+            "py-0.2 px-1.5 rounded-full text-[10px] font-mono font-bold border",
+            activeTab === 'history'
+              ? "bg-white/20 text-white border-white/30"
+              : "bg-slate-100 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 border-slate-200 dark:border-zinc-700"
+          )}>
             {timeline.length}
           </span>
         </button>
@@ -291,14 +296,14 @@ export function CustomerDetailTabs({
           type="button"
           onClick={() => setActiveTab('card')}
           className={cn(
-            "px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 cursor-pointer", 
+            "btn-touch-action px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer", 
             activeTab === 'card' 
-              ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 bg-indigo-50/60 dark:bg-indigo-950/30" 
-              : "border-transparent text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-zinc-800/50"
+              ? "bg-indigo-600 text-white shadow-xs shadow-indigo-600/30" 
+              : "text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800/60"
           )}
         >
           <CreditCard size={14} />
-          {safeTranslation("Digital Card")}
+          <span>{safeTranslation("Digital Card")}</span>
         </button>
       </div>
 
