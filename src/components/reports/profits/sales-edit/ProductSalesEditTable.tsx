@@ -1,6 +1,7 @@
 import React from 'react';
 import { Receipt, Clock, Save, X, Edit3, Trash2 } from 'lucide-react';
 import { formatSafe } from '../../../../lib/utils';
+import { toDatetimeLocalValue } from '../../../../utils/dateHelpers';
 import { EditableSaleRow } from './salesEditTypes';
 
 interface ProductSalesEditTableProps {
@@ -81,7 +82,7 @@ export const ProductSalesEditTable: React.FC<ProductSalesEditTableProps> = ({
                       {row.isEditing ? (
                         <input
                           type="datetime-local"
-                          value={row.currentDate}
+                          value={toDatetimeLocalValue(row.currentDate)}
                           onChange={e => onUpdateRowState(row.transactionId, row.itemIndex, { currentDate: e.target.value })}
                           className="mt-1 bg-black/60 border border-indigo-500/40 rounded-lg px-2 py-1 text-[10px] text-white font-mono outline-none"
                         />

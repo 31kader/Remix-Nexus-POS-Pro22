@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Button } from '../ui';
 import { Supplier, CompanySettings } from '../../types';
+import { toDatetimeLocalValue, normalizeDateToIso } from '../../utils/dateHelpers';
 
 interface SupplierPaymentModalProps {
   isOpen: boolean;
@@ -16,21 +17,7 @@ interface SupplierPaymentModalProps {
 }
 
 function toDatetimeLocal(val?: string): string {
-  if (!val) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    return `${val}T12:00`;
-  }
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(val)) {
-    return val.slice(0, 16);
-  }
-  try {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) {
-      const pad = (n: number) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-  } catch (_) {}
-  return '';
+  return toDatetimeLocalValue(val);
 }
 
 export function SupplierPaymentModal({
@@ -109,7 +96,7 @@ export function SupplierPaymentModal({
           <input 
             type="datetime-local" 
             className="w-full p-2.5 bg-black/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white text-sm" 
-            value={toDatetimeLocal(paymentData.date)} 
+            value={toDatetimeLocalValue(paymentData.date)} 
             onChange={(e) => {
               const val = e.target.value;
               let dateIso = new Date().toISOString();
