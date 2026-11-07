@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export interface LoginIdentifierFormProps {
   loginIdentifier: string;
@@ -34,9 +34,9 @@ export const LoginIdentifierForm: React.FC<LoginIdentifierFormProps> = ({
       }} 
       className="space-y-4"
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 text-left">
         <label htmlFor="login-identifier-input" className="text-xs font-semibold text-zinc-400">
-          {t("E-mail ou Identifiant")}
+          {t("E-mail ou Identifiant caisse")}
         </label>
         <div className="relative">
           <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -45,16 +45,17 @@ export const LoginIdentifierForm: React.FC<LoginIdentifierFormProps> = ({
             type="text"
             value={loginIdentifier}
             onChange={(e) => setLoginIdentifier(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
-            placeholder="nom@exemple.com"
+            className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl pl-10 pr-3 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
+            placeholder="admin@nexuspos.dz ou caissier"
+            autoComplete="username"
             required
           />
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 text-left">
         <label htmlFor="login-password-input" className="text-xs font-semibold text-zinc-400">
-          {t("Mot de passe")}
+          {t("Mot de passe ou Code secret")}
         </label>
         <div className="relative">
           <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -63,8 +64,9 @@ export const LoginIdentifierForm: React.FC<LoginIdentifierFormProps> = ({
             type={showPassword ? "text" : "password"}
             value={loginPassword}
             onChange={(e) => setLoginPassword(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
+            className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium"
             placeholder="••••••••"
+            autoComplete="current-password"
             required
           />
           <button
@@ -81,20 +83,23 @@ export const LoginIdentifierForm: React.FC<LoginIdentifierFormProps> = ({
 
       {authError && (
         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2.5">
-          <ShieldCheck size={16} className="shrink-0 text-rose-500" />
+          <ShieldAlert size={16} className="shrink-0 text-rose-500" />
           <span>{authError}</span>
         </div>
       )}
 
       <button
         type="submit"
-        disabled={isLoggingIn}
-        className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-md shadow-indigo-600/30 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        disabled={isLoggingIn || !loginIdentifier.trim() || !loginPassword.trim()}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white text-sm font-bold shadow-lg shadow-indigo-600/25 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoggingIn ? (
           <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         ) : (
-          <span>{t("Se connecter")}</span>
+          <>
+            <span>{t("Se connecter")}</span>
+            <ArrowRight size={15} />
+          </>
         )}
       </button>
     </form>

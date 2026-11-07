@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, ShieldCheck, Zap } from 'lucide-react';
+import { ShieldCheck, Lock } from 'lucide-react';
 
 export interface LoginAlternativesProps {
   handleLogin: () => void;
@@ -33,33 +33,25 @@ export const LoginAlternatives: React.FC<LoginAlternativesProps> = ({
   handleLogin,
   isLoggingIn
 }) => {
-  const handleQuickAdminSession = () => {
-    const ownerEmail = import.meta.env.VITE_OWNER_EMAIL || 'beloutchimoriss@gmail.com';
-    const ownerUid = import.meta.env.VITE_OWNER_UID || 'a43893ce-112a-48c4-85b8-b24978f4e8d0';
-    const session = {
-      uid: ownerUid,
-      email: ownerEmail,
-      displayName: 'Administrateur Principal',
-      role: 'admin',
-      isOffline: true
-    };
-    try {
-      sessionStorage.setItem('nexus_active_offline_session', JSON.stringify(session));
-      sessionStorage.setItem('nexus_auth_user', JSON.stringify(session));
-    } catch (_) {}
-    window.location.hash = '#customers';
-    window.location.reload();
-  };
-
   return (
-    <div className="space-y-3 pt-2">
-      {/* Option 1 : Connexion Cloud Google (Gérant / Super-Admin) */}
+    <div className="space-y-4 pt-2">
+      {/* Séparateur élégant */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-zinc-800/80" />
+        </div>
+        <div className="relative bg-zinc-900/90 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          Ou connexion cloud
+        </div>
+      </div>
+
+      {/* Connexion Cloud Google (Gérant / Super-Admin Authentifié) */}
       <div className="space-y-1.5">
         <button
           type="button"
           onClick={handleLogin}
           disabled={isLoggingIn}
-          className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-zinc-950 hover:bg-zinc-800/80 border border-zinc-700/80 hover:border-zinc-500 text-xs font-bold text-white transition-all active:scale-[0.98] cursor-pointer shadow-sm disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl bg-zinc-950/80 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700 text-xs font-bold text-white transition-all active:scale-[0.98] cursor-pointer shadow-sm disabled:opacity-50"
         >
           <GoogleLogo className="w-4 h-4 shrink-0" />
           <span>Connexion Gérant avec Google</span>
@@ -69,36 +61,16 @@ export const LoginAlternatives: React.FC<LoginAlternativesProps> = ({
         </p>
       </div>
 
-      {/* Raccourcis Caisse & Dépôt */}
-      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-800/80">
-        <button
-          type="button"
-          onClick={handleQuickAdminSession}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-500/50 text-[11px] font-bold text-indigo-300 hover:text-white transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Zap size={14} className="text-indigo-400 shrink-0" />
-          <span>Admin Direct</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            window.location.hash = '#carton-reception';
-            window.location.reload();
-          }}
-          className="flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/50 text-[11px] font-bold text-amber-300 hover:text-white transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Package size={14} className="text-amber-400 shrink-0" />
-          <span>Dépôt Cartons</span>
-        </button>
-      </div>
-
-      {/* Footer Sécurisé */}
-      <div className="text-center pt-1">
-        <span className="text-[10px] text-zinc-600 font-mono flex items-center justify-center gap-1">
-          <ShieldCheck size={12} className="text-emerald-500/70 inline" />
-          Nexus POS Pro v1.2.71 • Application Mère Offline-First
-        </span>
+      {/* Badge de Conformité & Sécurité Système */}
+      <div className="pt-2 border-t border-zinc-800/50 flex flex-col items-center gap-1">
+        <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium">
+          <ShieldCheck size={13} className="text-emerald-500/80" />
+          <span>Chiffrement local bcrypt • Sessions isolées</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono">
+          <Lock size={10} className="text-zinc-600" />
+          <span>Nexus POS Pro v1.2.71 • Mode Hors-Ligne Résilient</span>
+        </div>
       </div>
     </div>
   );

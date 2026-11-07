@@ -48,8 +48,8 @@ export const UserPinEditorModal: React.FC<UserPinEditorModalProps> = ({
     }
 
     const trimmedPin = pinValue.trim();
-    if (trimmedPin.length < 4) {
-      setPinError('Le mot de passe / PIN doit faire au moins 4 caractères.');
+    if (!/^\d{4,8}$/.test(trimmedPin)) {
+      setPinError('Le code PIN doit comporter entre 4 et 8 chiffres (0 à 9 uniquement).');
       return;
     }
 
@@ -96,14 +96,20 @@ export const UserPinEditorModal: React.FC<UserPinEditorModalProps> = ({
     >
       <div className="space-y-4 text-left">
         <p className="text-xs text-slate-600 dark:text-zinc-300">
-          Saisissez le nouveau code PIN (ex: <code className="font-bold">1234</code>) ou mot de passe pour permettre à <strong>{pinEditorUser.displayName}</strong> de se connecter à la caisse. Le code sera chiffré avec <strong>bcrypt</strong>.
+          Saisissez le nouveau code PIN numérique (<strong>4 à 8 chiffres</strong>, ex: <code className="font-bold">1234</code>) pour permettre à <strong>{pinEditorUser.displayName}</strong> de se connecter rapidement au terminal caisse. Le code est sécurisé avec <strong>bcrypt</strong>.
         </p>
         <input
           type="password"
+          inputMode="numeric"
+          maxLength={8}
           value={pinValue}
-          onChange={(e) => setPinValue(e.target.value)}
-          placeholder="Nouveau code PIN (min. 4 caractères)"
-          className="w-full p-3 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-white text-base font-black focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          onChange={(e) => {
+            const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 8);
+            setPinValue(numericOnly);
+            if (pinError) setPinError('');
+          }}
+          placeholder="Code PIN (4 à 8 chiffres, ex: 1234)"
+          className="w-full p-3 rounded-xl bg-white dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 text-slate-900 dark:text-white text-base font-black focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-widest text-center"
           autoFocus
           onKeyDown={(e) => {
             if (e.key === 'Enter') {

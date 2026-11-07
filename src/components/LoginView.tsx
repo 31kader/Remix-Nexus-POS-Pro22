@@ -1,4 +1,5 @@
 import React from 'react';
+import { KeyRound, Lock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { localDb } from '../services/LocalDatabase';
 import { usePeopleStore } from '../store/usePeopleStore';
@@ -80,6 +81,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
         if (combined.length > 0) {
           const list = combined.filter((u: any) => u && typeof u === 'object' && u.role !== 'customer' && u.role !== 'supplier');
           setLocalUsers(list);
+          // Si des utilisateurs locaux existent et aucun mode sélectionné, on peut suggérer le mode PIN
+          if (list.length > 0) {
+            setLoginMode('pin');
+          }
         }
       } catch (e) {
         console.warn("Failed to load local users for PIN login:", e);
@@ -91,7 +96,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const handleKeypadPress = (val: string) => {
     if (isLoggingIn) return;
     setAuthError(null);
-    if (pinCode.length >= 6) return;
+    // Harmonisation : supporte jusqu'à 8 chiffres numériques
+    if (pinCode.length >= 8) return;
     setPinCode(prev => prev + val);
   };
 
@@ -106,7 +112,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   const handlePinSubmit = () => {
-    if (isLoggingIn || !selectedUser || pinCode.length < 4) return;
+    if (isLoggingIn || !selectedUser || pinCode.length < 4 || pinCode.length > 8) return;
     
     const identifier = selectedUser.email || selectedUser.phone || selectedUser.displayName || selectedUser.name || selectedUser.uid || selectedUser.id;
     setLoginIdentifier(identifier);
@@ -125,7 +131,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       } else if (e.key === 'Escape') {
         handleKeypadClear();
       } else if (e.key === 'Enter') {
-        if (pinCode.length >= 4) {
+        if (pinCode.length >= 4 && pinCode.length <= 8) {
           handlePinSubmit();
         }
       }
@@ -138,29 +144,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
     switch (role) {
       case 'admin':
         return {
-          bg: 'bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.05)]',
+          bg: 'bg-rose-500/10 text-rose-400 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.12)]',
           badge: 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
         };
       case 'manager':
         return {
-          bg: 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)]',
+          bg: 'bg-purple-500/10 text-purple-400 border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.12)]',
           badge: 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
         };
       case 'cashier':
         return {
-          bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)]',
+          bg: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.12)]',
           badge: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
         };
       default:
         return {
-          bg: 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)]',
-          badge: 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+          bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30 shadow-[0_0_12px_rgba(99,102,241,0.12)]',
+          badge: 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
         };
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 p-4 sm:p-6 relative select-none">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 p-4 sm:p-6 relative select-none overflow-x-hidden">
+      {/* Halo d'ambiance moderne en arrière-plan */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
       <LoginHeader
         language={language}
         setLanguage={setLanguage}
@@ -169,24 +179,9 @@ export const LoginView: React.FC<LoginViewProps> = ({
         t={t}
       />
 
-      <main className="w-full max-w-md bg-zinc-900/90 border border-zinc-800 rounded-xl p-6 sm:p-5 shadow-md space-y-6 relative">
-        {/* Tab Switcher: Identifiants vs PIN */}
-        <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800/80 text-xs">
-          <button
-            type="button"
-            onClick={() => {
-              setLoginMode('identifier');
-              setAuthError(null);
-            }}
-            className={cn(
-              "flex-1 py-2 rounded-lg font-bold transition-all text-center cursor-pointer",
-              loginMode === 'identifier'
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-zinc-400 hover:text-white"
-            )}
-          >
-            {t("Identifiants")}
-          </button>
+      <main className="w-full max-w-md bg-zinc-900/80 border border-zinc-800/90 backdrop-blur-2xl rounded-2xl p-6 sm:p-7 shadow-2xl shadow-black/60 space-y-5 relative z-10">
+        {/* Sélecteur d'onglets moderne : PIN Caisse vs Identifiants */}
+        <div className="flex bg-zinc-950/80 p-1 rounded-xl border border-zinc-800/80 text-xs shadow-inner">
           <button
             type="button"
             onClick={() => {
@@ -196,32 +191,36 @@ export const LoginView: React.FC<LoginViewProps> = ({
               setSelectedUser(null);
             }}
             className={cn(
-              "flex-1 py-2 rounded-lg font-bold transition-all text-center cursor-pointer",
+              "flex-1 py-2.5 rounded-lg font-bold transition-all text-center cursor-pointer flex items-center justify-center gap-2",
               loginMode === 'pin'
-                ? "bg-indigo-600 text-white shadow-sm"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
                 : "text-zinc-400 hover:text-white"
             )}
           >
-            {t("Code PIN")}
+            <KeyRound size={14} />
+            <span>{t("Code PIN Caisse")}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setLoginMode('identifier');
+              setAuthError(null);
+            }}
+            className={cn(
+              "flex-1 py-2.5 rounded-lg font-bold transition-all text-center cursor-pointer flex items-center justify-center gap-2",
+              loginMode === 'identifier'
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                : "text-zinc-400 hover:text-white"
+            )}
+          >
+            <Lock size={14} />
+            <span>{t("Identifiants")}</span>
           </button>
         </div>
 
-        {/* Mode 1 : Identifiant & Mot de Passe */}
-        {loginMode === 'identifier' ? (
-          <LoginIdentifierForm
-            loginIdentifier={loginIdentifier}
-            setLoginIdentifier={setLoginIdentifier}
-            loginPassword={loginPassword}
-            setLoginPassword={setLoginPassword}
-            showPassword={showPassword}
-            setShowPassword={setShowPassword}
-            isLoggingIn={isLoggingIn}
-            authError={authError}
-            handleIdentifierLogin={handleIdentifierLogin}
-            t={t}
-          />
-        ) : (
-          /* Mode 2 : Connexion PIN Rapide */
+        {/* Mode 1 : Connexion Rapide par PIN */}
+        {loginMode === 'pin' ? (
           <LoginPinPad
             selectedUser={selectedUser}
             setSelectedUser={setSelectedUser}
@@ -238,9 +237,23 @@ export const LoginView: React.FC<LoginViewProps> = ({
             getRoleStyle={getRoleStyle}
             t={t}
           />
+        ) : (
+          /* Mode 2 : Identifiant & Mot de Passe */
+          <LoginIdentifierForm
+            loginIdentifier={loginIdentifier}
+            setLoginIdentifier={setLoginIdentifier}
+            loginPassword={loginPassword}
+            setLoginPassword={setLoginPassword}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            isLoggingIn={isLoggingIn}
+            authError={authError}
+            handleIdentifierLogin={handleIdentifierLogin}
+            t={t}
+          />
         )}
 
-        {/* Options Alternatives & Footer */}
+        {/* Alternatives Sécurisées & Footer (Zero Backdoor) */}
         <LoginAlternatives
           handleLogin={handleLogin}
           isLoggingIn={isLoggingIn}
