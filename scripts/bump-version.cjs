@@ -30,6 +30,7 @@ const filesToUpdate = [
   'src/components/Sidebar.tsx',
   'src/components/Settings.tsx',
   'src/components/LoginView.tsx',
+  'src/components/login/LoginAlternatives.tsx',
   'src/components/ErrorBoundary.tsx',
   'src/components/IOSInstallModal.tsx',
   'server.ts',
