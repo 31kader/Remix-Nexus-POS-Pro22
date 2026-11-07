@@ -12,7 +12,7 @@ export function useOrdersFilters({ rawOrders, customers = [] }: UseOrdersFilters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deliveryFilter, setDeliveryFilter] = useState<string>('all');
   const [searchFilter, setSearchFilter] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState<string>('today');
+  const [dateFilter, setDateFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
 
   // Compteurs dynamiques par statut pour les onglets
@@ -95,7 +95,8 @@ export function useOrdersFilters({ rawOrders, customers = [] }: UseOrdersFilters
       if (!matchesPayment) return false;
 
       const orderTimestamp = o.timestamp || (o as any).createdAt || (o as any).created_at;
-      if (dateFilter !== 'all' && orderTimestamp) {
+      // Les commandes en attente (pending) restent toujours visibles pour traitement
+      if (dateFilter !== 'all' && orderTimestamp && oStatus !== 'pending') {
         try {
           const d = new Date(orderTimestamp);
           if (!isNaN(d.getTime())) {
