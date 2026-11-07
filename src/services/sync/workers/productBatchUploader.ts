@@ -107,3 +107,96 @@ export async function uploadNewProductBatches(
     }
   }
 }
+
+/**
+ * ⚡ Mise à jour par lots des produits existants (évite des milliers de requêtes PATCH unitaires)
+ * Tente un bulk upsert sécurisé par lots de 25 avec repli unitaire en cas d'erreur.
+ */
+export async function updateExistingProductBatches(
+  existingProductsToUpdate: any[],
+  completedKeys: Set<string>,
+  processedSnapshots: Map<string, any>,
+  updateProgress: (label: string, count?: number) => void,
+  refs: SyncContextRefs
+): Promise<void> {
+  const BATCH_SIZE = 25;
+  const chunks: any[][] = [];
+  for (let i = 0; i < existingProductsToUpdate.length; i += BATCH_SIZE) {
+    chunks.push(existingProductsToUpdate.slice(i, i + BATCH_SIZE));
+  }
+
+  for (const chunk of chunks) {
+    if (refs.hadNetworkError) break;
+    const allKeys = new Set<string>();
+    chunk.forEach(c => Object.keys(c.payload).forEach(k => allKeys.add(k)));
+    const payloads = chunk.map(c => {
+      const harmonized: any = {};
+      allKeys.forEach(k => {
+        harmonized[k] = c.payload[k] !== undefined ? c.payload[k] : null;
+      });
+      return harmonized;
+    });
+
+    try {
+      const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
+      if (!error) {
+        chunk.forEach(c => {
+          completedKeys.add(c.originalKey);
+          processedSnapshots.set(c.originalKey, { opId: c.opId });
+        });
+        updateProgress('Produits...', chunk.length);
+      } else {
+        if (isNetworkOrTimeoutError(error)) {
+          refs.hadNetworkError = true;
+          break;
+        }
+        // Repli unitaire sécurisé pour ce lot spécifique en cas d'erreur ou conflit
+        for (const single of chunk) {
+          if (refs.hadNetworkError) break;
+          try {
+            const updatePayload = { ...single.payload };
+            const targetId = single.payload.id;
+            delete updatePayload.id;
+            delete updatePayload.created_at;
+
+            const { error: updErr, status: updStatus } = await supabase
+              .from('products')
+              .update(updatePayload)
+              .eq('id', targetId);
+
+            if (!updErr) {
+              completedKeys.add(single.originalKey);
+              processedSnapshots.set(single.originalKey, { opId: single.opId });
+              updateProgress('Produits...');
+            } else {
+              if (isNetworkOrTimeoutError(updErr)) {
+                refs.hadNetworkError = true;
+                break;
+              }
+              if (updStatus === 401 || updStatus === 403 || updErr.code === '42501') {
+                console.warn(`[SyncService] Mise à jour produit ${targetId} restreinte par RLS (401/403):`, updErr);
+                completedKeys.add(single.originalKey);
+                processedSnapshots.set(single.originalKey, { opId: single.opId });
+                updateProgress('Produits...');
+              } else {
+                console.warn(`[SyncService] Échec mise à jour produit existant ${targetId}:`, updErr);
+              }
+            }
+          } catch (singleCatchErr: any) {
+            if (isNetworkOrTimeoutError(singleCatchErr)) {
+              refs.hadNetworkError = true;
+              break;
+            } else {
+              console.error('[SyncService] Exception mise à jour produit existant:', singleCatchErr);
+            }
+          }
+        }
+      }
+    } catch (chunkErr: any) {
+      if (isNetworkOrTimeoutError(chunkErr)) {
+        refs.hadNetworkError = true;
+        break;
+      }
+    }
+  }
+}

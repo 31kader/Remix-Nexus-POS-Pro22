@@ -5,7 +5,7 @@ import { isNetworkOrTimeoutError } from '../../networkErrorHandler';
 import { SyncPayload } from '../types';
 import { sanitizePayloadForSupabase } from '../syncSanitizer';
 import { fetchProductSyncContext } from './productSyncContextFetcher';
-import { uploadNewProductBatches } from './productBatchUploader';
+import { uploadNewProductBatches, updateExistingProductBatches } from './productBatchUploader';
 
 export interface SyncContextRefs {
   hadNetworkError: boolean;
@@ -215,47 +215,8 @@ export async function processProductBatch(
     }
   }
 
-  // 1. UPDATE unitaire des produits existants : PATCH natif sans on_conflict=id ni INSERT
-  for (const single of existingProductsToUpdate) {
-    if (refs.hadNetworkError) break;
-    try {
-      const updatePayload = { ...single.payload };
-      const targetId = single.payload.id;
-      delete updatePayload.id;
-      delete updatePayload.created_at;
-
-      const prodTable = supabase.from('products') as any;
-      const { error: updErr, status: updStatus } = (typeof prodTable.update === 'function')
-        ? await prodTable.update(updatePayload).eq('id', targetId)
-        : await prodTable.upsert(single.payload, { onConflict: 'id' });
-
-      if (!updErr) {
-        completedKeys.add(single.originalKey);
-        processedSnapshots.set(single.originalKey, { opId: single.opId });
-        updateProgress('Produits...');
-      } else {
-        if (isNetworkOrTimeoutError(updErr)) {
-          refs.hadNetworkError = true;
-          break;
-        }
-        if (updStatus === 401 || updStatus === 403 || updErr.code === '42501') {
-          console.warn(`[SyncService] Mise à jour produit ${targetId} restreinte par RLS (401/403):`, updErr);
-          completedKeys.add(single.originalKey);
-          processedSnapshots.set(single.originalKey, { opId: single.opId });
-          updateProgress('Produits...');
-        } else {
-          console.warn(`[SyncService] Échec mise à jour produit existant ${targetId}:`, updErr);
-        }
-      }
-    } catch (err: any) {
-      if (isNetworkOrTimeoutError(err)) {
-        refs.hadNetworkError = true;
-        break;
-      } else {
-        console.error('[SyncService] Exception mise à jour produit existant:', err);
-      }
-    }
-  }
+  // 1. UPDATE par lots des produits existants avec repli unitaire sécurisé (anti-avalanche de requêtes PATCH)
+  await updateExistingProductBatches(existingProductsToUpdate, completedKeys, processedSnapshots, updateProgress, refs);
 
   // 2. Traitement des nouveaux produits (UPSERT natif en lots de 15 avec déduplication stricte par ID)
   await uploadNewProductBatches(newProductsToInsert, completedKeys, processedSnapshots, updateProgress, refs);

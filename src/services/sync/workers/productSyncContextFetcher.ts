@@ -26,32 +26,28 @@ export async function fetchProductSyncContext(
   try {
     const promises: Promise<any>[] = [];
 
-    // 🛡️ P1-SYNC-01 : Requêtes ciblées par lots de 50 pour éviter limit(10000) et les URLs géantes
-    if (queueProductIds.length > 0) {
-      for (let i = 0; i < queueProductIds.length; i += 50) {
+    // 🛡️ P1-SYNC-01 : Requêtes ciblées par lots de 100 avec déduplication des IDs
+    const uniqueIds = Array.from(new Set([...queueProductIds, ...queueParentIds])).filter(Boolean);
+    if (uniqueIds.length > 0) {
+      for (let i = 0; i < uniqueIds.length; i += 100) {
         promises.push(
-          supabase.from('products').select('id, sku, barcode').in('id', queueProductIds.slice(i, i + 50))
+          supabase.from('products').select('id, sku, barcode').in('id', uniqueIds.slice(i, i + 100))
         );
       }
     }
-    if (queueSkus.length > 0) {
-      for (let i = 0; i < queueSkus.length; i += 50) {
+    const uniqueSkus = Array.from(new Set(queueSkus)).filter(Boolean);
+    if (uniqueSkus.length > 0) {
+      for (let i = 0; i < uniqueSkus.length; i += 100) {
         promises.push(
-          supabase.from('products').select('id, sku, barcode').in('sku', queueSkus.slice(i, i + 50))
+          supabase.from('products').select('id, sku, barcode').in('sku', uniqueSkus.slice(i, i + 100))
         );
       }
     }
-    if (queueBarcodes.length > 0) {
-      for (let i = 0; i < queueBarcodes.length; i += 50) {
+    const uniqueBarcodes = Array.from(new Set(queueBarcodes)).filter(Boolean);
+    if (uniqueBarcodes.length > 0) {
+      for (let i = 0; i < uniqueBarcodes.length; i += 100) {
         promises.push(
-          supabase.from('products').select('id, sku, barcode').in('barcode', queueBarcodes.slice(i, i + 50))
-        );
-      }
-    }
-    if (queueParentIds.length > 0) {
-      for (let i = 0; i < queueParentIds.length; i += 50) {
-        promises.push(
-          supabase.from('products').select('id, sku, barcode').in('id', queueParentIds.slice(i, i + 50))
+          supabase.from('products').select('id, sku, barcode').in('barcode', uniqueBarcodes.slice(i, i + 100))
         );
       }
     }
