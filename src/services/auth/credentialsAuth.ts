@@ -78,6 +78,8 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
     const candidateHashes = [
       foundUser?.passwordHash,
       foundUser?.password_hash,
+      foundUser?.pinHash,
+      foundUser?.pin_hash,
       foundUser?.pin,
       foundUser?.password
     ].filter((h): h is string => typeof h === 'string' && h.length > 0);
@@ -98,6 +100,8 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
     return Boolean(
       foundUser?.passwordHash ||
       foundUser?.password_hash ||
+      foundUser?.pinHash ||
+      foundUser?.pin_hash ||
       foundUser?.pin ||
       foundUser?.password
     );
@@ -105,7 +109,7 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
 
   const stripSensitiveCredentials = (record: any) => {
     if (!record || typeof record !== 'object') return record;
-    const { passwordHash, password_hash, password, pin, ...safeRecord } = record;
+    const { passwordHash, password_hash, pinHash, pin_hash, password, pin, ...safeRecord } = record;
     return safeRecord;
   };
 
@@ -173,6 +177,16 @@ export const signInWithEmailAndPassword = async (_auth: any, email: string, pass
       const isNetwork = errMsg.toLowerCase().includes('fetch') || errMsg.toLowerCase().includes('network') || err?.name === 'TypeError';
       
       let foundUser: any = findLocalUser(cleanEmail);
+      if (!foundUser || !hasAnyConfiguredCredential(foundUser)) {
+        try {
+          const [uSnap, eSnap] = await Promise.all([localDb.get('users'), localDb.get('employees')]);
+          const uList = uSnap?.exists() ? Object.values(uSnap.val()) : [];
+          const eList = eSnap?.exists() ? Object.values(eSnap.val()) : [];
+          const localMatch = matchUserInList([...uList, ...eList], cleanEmail);
+          if (localMatch) foundUser = localMatch;
+        } catch (_) {}
+      }
+
       if ((!foundUser || !hasAnyConfiguredCredential(foundUser)) && !isNetwork) {
         const remoteMatch = await findRemoteUser(cleanEmail);
         if (remoteMatch) foundUser = remoteMatch;

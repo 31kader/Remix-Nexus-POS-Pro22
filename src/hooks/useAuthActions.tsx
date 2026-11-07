@@ -68,11 +68,52 @@ export function useAuthActions(
       removeSecureItem('nexus_login_lock_until');
     };
 
-    const tryOfflineLogin = () => {
+    const tryOfflineLogin = async () => {
       try {
         const offlineCreds = getSecureItem<Record<string, any>>('nexus_offline_credentials') || {};
         const phoneKey = inputIdentifier.replace(/\s+/g, '');
-        const matchedRecord = offlineCreds[inputIdentifier.toLowerCase()] || offlineCreds[phoneKey];
+        let matchedRecord = offlineCreds[inputIdentifier.toLowerCase()] || offlineCreds[phoneKey];
+        if (!matchedRecord) {
+          try {
+            const [usersSnap, empSnap] = await Promise.all([
+              localDb.get('users'),
+              localDb.get('employees')
+            ]);
+            const usersObj = usersSnap?.exists() ? usersSnap.val() : {};
+            const empObj = empSnap?.exists() ? empSnap.val() : {};
+            const allLocal: any[] = [...Object.values(usersObj || {}), ...Object.values(empObj || {})];
+            const cleanId = inputIdentifier.toLowerCase().trim();
+            const cleanDigits = cleanId.replace(/\D/g, '');
+
+            const found: any = allLocal.find((u: any) => {
+              if (!u) return false;
+              const uEmail = (u.email || '').toLowerCase().trim();
+              const uPhone = (u.phone || '').replace(/\D/g, '');
+              const uName = (u.displayName || u.display_name || u.name || '').toLowerCase().trim();
+              const uId = (u.id || u.uid || '').toLowerCase().trim();
+              return uEmail === cleanId ||
+                     (cleanDigits && uPhone && (uPhone === cleanDigits || uPhone.endsWith(cleanDigits) || cleanDigits.endsWith(uPhone))) ||
+                     uName === cleanId ||
+                     uId === cleanId;
+            });
+
+            if (found) {
+              const candidateHash = found.passwordHash || found.password_hash || found.pinHash || found.pin_hash || found.pin;
+              if (candidateHash && (candidateHash.startsWith('$2a$') || candidateHash.startsWith('$2b$'))) {
+                matchedRecord = {
+                  displayName: found.displayName || found.name || 'Utilisateur',
+                  email: found.email || '',
+                  phone: found.phone || '',
+                  hash: candidateHash,
+                  role: found.role || 'cashier',
+                  employeeId: found.employeeId || found.id
+                };
+              }
+            }
+          } catch (e) {
+            console.warn("Offline search in localDb failed:", e);
+          }
+        }
         
         if (matchedRecord && matchedRecord.hash) {
           const isMatch = bcrypt.compareSync(cleanPassword, matchedRecord.hash);
@@ -112,7 +153,7 @@ export function useAuthActions(
     };
 
     if (!navigator.onLine) {
-      const success = tryOfflineLogin();
+      const success = await tryOfflineLogin();
       setIsLoggingIn(false);
       if (!success) {
         recordFailure();
@@ -177,7 +218,7 @@ export function useAuthActions(
         errName === 'TypeError';
 
       if (isNetworkError) {
-        const success = tryOfflineLogin();
+        const success = await tryOfflineLogin();
         if (success) {
           setIsLoggingIn(false);
           return;
@@ -190,7 +231,7 @@ export function useAuthActions(
         errMsg.includes('invalid login credentials') || 
         errMsg.includes('incorrect')
       ) {
-        const success = tryOfflineLogin();
+        const success = await tryOfflineLogin();
         if (success) {
           setIsLoggingIn(false);
           return;
