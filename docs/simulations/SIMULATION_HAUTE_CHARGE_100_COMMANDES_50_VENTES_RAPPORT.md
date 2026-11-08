@@ -14,8 +14,8 @@
 | :--- | :---: | :--- |
 | **Étape 0 : Échantillonnage Produits Réels** | ✅ Validé | 150 vrais produits extraits de la table `products` Supabase (`tests/simulations/realProductsSample.json`) |
 | **Étape 1 : Création du Shift de Travail** | ✅ Validé | Shift `shift_sim_stress_10m` ouvert avec fond de caisse de 25 000 DA sur le terminal principal. |
-| **Étape 2 : Réception de 100 Commandes en Ligne** | ✅ Validé | 100 commandes générées (3350 lignes articles, CA Total Web: 2 062 100,57 DA, Panier moyen: 20 621 DA). |
-| **Étape 3 : 50 Ventes Comptoir Directes** | ✅ Validé | 50 ventes comptoir encaissées (1650 lignes, CA Comptoir: 768 648,35 DA, Panier moyen: 15 373 DA, Déstockage consolidé sans collision). |
+| **Étape 2 : Réception de 100 Commandes en Ligne** | ✅ Validé | 100 commandes générées (3350 lignes articles, CA Total Web: 2 085 406,83 DA, Panier moyen: 20 854 DA). |
+| **Étape 3 : 50 Ventes Comptoir Directes** | ✅ Validé | 50 ventes comptoir encaissées (1650 lignes, CA Comptoir: 775 911,32 DA, Panier moyen: 15 518 DA, Déstockage consolidé sans collision). |
 | **Étape 4 : Réassort / Approvisionnement Concurrente** | ✅ Validé | Bon de réception `BL-2026-11-RUSH-001` validé (+2 960 unités sur 40 références, Montant achat: 889 871 DA). |
 | **Étape 5 : Bilan Comptable, Déstockage & Résilience** | ✅ Validé | Vérification arithmétique 100% exacte, 0 discrépance de stock, rapport final complet généré. |
 
@@ -578,6 +578,33 @@
 - **Montant des Achats Fournisseur (Réassort)** : **889 871 DA**.
 - **Fond de Caisse Initial** : **25 000 DA**.
 - **Caisse Finale à la Clôture** : **608 650,61 DA** (Écart de caisse : **0.00 DA**).
+
+### 3. Résilience & Intégrité des Stocks
+- **Consolidation Préalable par `productId` (Anti-Écrasement)** : **100% conforme** (aucune race condition, zéro ligne écrasée).
+- **Discrépance ou perte de stock détectée** : **0 anomalie sur 150 produits audités** (formule mathématique $S_f = S_i - V + A$ vérifiée avec une exactitude de 100%).
+- **Conformité Schéma Supabase / db-converters** : **100% valide** sur les colonnes déclarées dans `TABLE_COLUMNS` pour `online_orders`, `transactions` et `purchases`.
+
+
+
+---
+
+## 📊 Synthèse Finale Chiffrée de la Simulation (Période 10 Minutes)
+
+### 1. Volumétrie des Flux Traités
+- **Commandes en Ligne Ingestées** : **100 commandes** réparties de 22:00:00 à 22:10:00.
+- **Ventes Comptoir Encaissées** : **50 transactions directes** sur le terminal caisse.
+- **Lignes d'Articles Commandes Web** : **3 350 lignes** (moyenne : 33.5 articles / panier, strict > 30).
+- **Lignes d'Articles Ventes Caisse** : **1 650 lignes** (moyenne : 33.0 articles / panier, strict > 30).
+- **Lignes d'Approvisionnement Livrées** : **40 références réapprovisionnées** (**+2 960 unités** physiques).
+- **Total Mouvements d'Articles Traités** : **7 960 mouvements / unités** en 10 minutes !
+
+### 2. Performance Financière & Caisse
+- **Chiffre d'Affaires Comptoir (Caisse)** : **775 911,32 DA** (Espèces: 588 361,57 DA, Carte CIB: 187 549,75 DA).
+- **Volume Financier Commandes Web** : **2 085 406,83 DA**.
+- **Chiffre d'Affaires Global Période (10 min)** : **2 861 318,15 DA**.
+- **Montant des Achats Fournisseur (Réassort)** : **889 871 DA**.
+- **Fond de Caisse Initial** : **25 000 DA**.
+- **Caisse Finale à la Clôture** : **613 361,57 DA** (Écart de caisse : **0.00 DA**).
 
 ### 3. Résilience & Intégrité des Stocks
 - **Consolidation Préalable par `productId` (Anti-Écrasement)** : **100% conforme** (aucune race condition, zéro ligne écrasée).
