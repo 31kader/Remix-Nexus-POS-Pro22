@@ -77,77 +77,57 @@ export async function processParentEntities(
         }
       }
 
-      // 🛡️ Élimination des collisions 409 / 403 : UPDATE direct pour les réglages (settings)
+      // 🛡️ Élimination des collisions 409 / 403 : UPDATE direct pour les réglages (settings) sans SELECT préliminaire
       if (targetTable === 'settings' && (payload.id || item.recordId)) {
         const settingsId = payload.id || item.recordId;
-        let existsOnSupabase = false;
-        try {
-          if (settingsId === 'company' || settingsId === 'default' || settingsId === 'remote_label_queue_v1') {
-            existsOnSupabase = true;
-          } else {
-            const { data: existingSet } = await supabase.from('settings').select('id').eq('id', settingsId).maybeSingle();
-            if (existingSet?.id) existsOnSupabase = true;
-          }
-        } catch (_) {}
-
-        if (existsOnSupabase) {
-          const updatePayload = { ...payload };
-          delete updatePayload.id;
-          delete updatePayload.created_at;
-          const updateRes = await supabase.from('settings').update(updatePayload).eq('id', settingsId);
-          if (!updateRes.error) {
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
-            continue;
-          } else if (isAuthOrPermissionError(updateRes.error)) {
-            console.warn(`[SyncService] Écriture settings réservée aux administrateurs (401/403). Réglage conservé localement.`);
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
-            continue;
-          }
+        const updatePayload = { ...payload };
+        delete updatePayload.id;
+        delete updatePayload.created_at;
+        const updateRes = await supabase.from('settings').update(updatePayload).eq('id', settingsId);
+        if (!updateRes.error) {
+          const parentKey = `${item.table}:${item.recordId || payload.id}`;
+          completedKeys.add(parentKey);
+          if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+          if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+          processedSnapshots.set(parentKey, { opId: item.opId });
+          updateProgress(targetTable);
+          continue;
+        } else if (isAuthOrPermissionError(updateRes.error)) {
+          console.warn(`[SyncService] Écriture settings réservée aux administrateurs (401/403). Réglage conservé localement.`);
+          const parentKey = `${item.table}:${item.recordId || payload.id}`;
+          completedKeys.add(parentKey);
+          if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+          if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+          processedSnapshots.set(parentKey, { opId: item.opId });
+          updateProgress(targetTable);
+          continue;
         }
       }
 
-      // 🛡️ Élimination des collisions 409 / 403 : UPDATE direct pour les employés existants
+      // 🛡️ Élimination des collisions 409 / 403 : UPDATE direct pour les employés existants sans SELECT préliminaire
       if (targetTable === 'employees' && (payload.id || item.recordId)) {
         const empId = payload.id || item.recordId;
-        let existsOnSupabase = false;
-        try {
-          const { data: existingEmp } = await supabase.from('employees').select('id').eq('id', empId).maybeSingle();
-          if (existingEmp?.id) existsOnSupabase = true;
-        } catch (_) {}
-
-        if (existsOnSupabase) {
-          const updatePayload = { ...payload };
-          delete updatePayload.id;
-          delete updatePayload.created_at;
-          const updateRes = await supabase.from('employees').update(updatePayload).eq('id', empId);
-          if (!updateRes.error) {
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
-            continue;
-          } else if (isAuthOrPermissionError(updateRes.error)) {
-            console.warn(`[SyncService] Écriture employees réservée aux administrateurs (401/403). Fiche conservée localement.`);
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
-            continue;
-          }
+        const updatePayload = { ...payload };
+        delete updatePayload.id;
+        delete updatePayload.created_at;
+        const updateRes = await supabase.from('employees').update(updatePayload).eq('id', empId);
+        if (!updateRes.error) {
+          const parentKey = `${item.table}:${item.recordId || payload.id}`;
+          completedKeys.add(parentKey);
+          if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+          if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+          processedSnapshots.set(parentKey, { opId: item.opId });
+          updateProgress(targetTable);
+          continue;
+        } else if (isAuthOrPermissionError(updateRes.error)) {
+          console.warn(`[SyncService] Écriture employees réservée aux administrateurs (401/403). Fiche conservée localement.`);
+          const parentKey = `${item.table}:${item.recordId || payload.id}`;
+          completedKeys.add(parentKey);
+          if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+          if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+          processedSnapshots.set(parentKey, { opId: item.opId });
+          updateProgress(targetTable);
+          continue;
         }
       }
 

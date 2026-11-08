@@ -68,27 +68,19 @@ export async function processTransactionsAndOtherRecords(
     const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
     if (item.action === 'DELETE') continue;
 
-    // 🛡️ Élimination des collisions 409 : UPDATE direct pour carton_templates existants
+    // 🛡️ Élimination des collisions 409 : UPDATE direct pour carton_templates existants (sans SELECT N+1 préliminaire)
     if ((targetTable === 'carton_templates' || targetTable === 'cartonTemplates') && (item.payload?.id || item.recordId)) {
       const cartonId = item.payload?.id || item.recordId;
-      let existsOnSupabase = false;
-      try {
-        const { data: existingCarton } = await supabase.from('carton_templates').select('id').eq('id', cartonId).maybeSingle();
-        if (existingCarton?.id) existsOnSupabase = true;
-      } catch (_) {}
-
-      if (existsOnSupabase) {
-        const updatePayload = { ...item.payload };
-        delete updatePayload.id;
-        delete updatePayload.created_at;
-        const updateRes = await supabase.from('carton_templates').update(updatePayload).eq('id', cartonId);
-        if (!updateRes.error) {
-          const parentKey = `${item.table}:${cartonId}`;
-          completedKeys.add(parentKey);
-          processedSnapshots.set(parentKey, { opId: item.opId });
-          updateProgress(targetTable);
-          continue;
-        }
+      const updatePayload = { ...item.payload };
+      delete updatePayload.id;
+      delete updatePayload.created_at;
+      const updateRes = await supabase.from('carton_templates').update(updatePayload).eq('id', cartonId);
+      if (!updateRes.error) {
+        const parentKey = `${item.table}:${cartonId}`;
+        completedKeys.add(parentKey);
+        processedSnapshots.set(parentKey, { opId: item.opId });
+        updateProgress(targetTable);
+        continue;
       }
     }
 
@@ -116,28 +108,28 @@ export async function processTransactionsAndOtherRecords(
       }
     }
 
-    // 🛡️ Élimination des collisions 409 : UPDATE direct pour les transactions existantes (annulations / retours)
-    if (targetTable === 'transactions' && (item.payload?.id || item.recordId)) {
+    // 🛡️ Élimination des collisions 409 : UPDATE direct pour les transactions modifiées (annulations / retours)
+    // Ne s'exécute QUE si la transaction est une modification (évite les SELECT N+1 inutiles sur les nouvelles ventes)
+    const isTxAlteration = Boolean(
+      item.payload?.isUpdate ||
+      item.payload?.status === 'cancelled' ||
+      item.payload?.status === 'refunded' ||
+      item.payload?.status === 'partially_refunded'
+    );
+    if (targetTable === 'transactions' && isTxAlteration && (item.payload?.id || item.recordId)) {
       const txId = item.payload?.id || item.recordId;
-      let existsOnSupabase = false;
-      try {
-        const { data: existingTx } = await supabase.from('transactions').select('id').eq('id', txId).maybeSingle();
-        if (existingTx?.id) existsOnSupabase = true;
-      } catch (_) {}
-
-      if (existsOnSupabase) {
-        const updatePayload = { ...item.payload };
-        delete updatePayload.id;
-        delete updatePayload.created_at;
-        delete updatePayload.timestamp;
-        const updateRes = await supabase.from('transactions').update(updatePayload).eq('id', txId);
-        if (!updateRes.error) {
-          const parentKey = `${item.table}:${txId}`;
-          completedKeys.add(parentKey);
-          processedSnapshots.set(parentKey, { opId: item.opId });
-          updateProgress(targetTable);
-          continue;
-        }
+      const updatePayload = { ...item.payload };
+      delete updatePayload.id;
+      delete updatePayload.created_at;
+      delete updatePayload.timestamp;
+      delete updatePayload.isUpdate;
+      const updateRes = await supabase.from('transactions').update(updatePayload).eq('id', txId);
+      if (!updateRes.error) {
+        const parentKey = `${item.table}:${txId}`;
+        completedKeys.add(parentKey);
+        processedSnapshots.set(parentKey, { opId: item.opId });
+        updateProgress(targetTable);
+        continue;
       }
     }
   }

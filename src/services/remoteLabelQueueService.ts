@@ -239,12 +239,12 @@ export function subscribeToRemoteLabelQueue(
     } catch (_) {}
   }
 
-  // Periodic cloud poll every 4s when window is active as a fallback
+  // Fallback périodique cloud toutes les 30s si la fenêtre est active (Realtime WebSocket gère déjà les flux en direct)
   const interval = setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       fetchRemoteLabelQueue().then(onUpdate).catch(() => {});
     }
-  }, 4000);
+  }, 30000);
 
   return () => {
     window.removeEventListener('nexus-remote-label-queue-updated', handleCustomEvent);

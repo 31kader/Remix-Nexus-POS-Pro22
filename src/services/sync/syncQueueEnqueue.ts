@@ -229,7 +229,7 @@ export function enqueueSyncBatch(
   if (hasCriticalItem) {
     flushSyncQueueImmediate();
     if (typeof navigator !== 'undefined' && navigator.onLine) {
-      scheduleQueueProcessing(0);
+      scheduleQueueProcessing(50);
     } else {
       scheduleQueueProcessing(150);
     }
