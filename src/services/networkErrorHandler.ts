@@ -25,6 +25,8 @@ export function isNetworkOrTimeoutError(err: unknown): boolean {
   ).toLowerCase();
 
   const networkKeywords = [
+    'err_name_not_resolved',
+    'name_not_resolved',
     'err_timed_out',
     'timed out',
     'timeout',

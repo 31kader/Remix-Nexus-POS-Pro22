@@ -4,7 +4,7 @@ import { localDb } from '../services/LocalDatabase';
 import { enqueueSync } from '../services/SyncService';
 import { destockOrder } from '../services/orderStockService';
 import { supabase, isSupabaseConfigured } from '../supabase';
-import { convertKeysToSnake } from '../lib/db-converters';
+import { convertKeysToSnake, TABLE_COLUMNS } from '../lib/db-converters';
 import { Customer } from '../types';
 import { useCoreStore } from '../store/useCoreStore';
 import { useTransactionStore } from '../store/useTransactionStore';
@@ -103,8 +103,22 @@ export function useDeliveryActions({ user, profile, settings, customers, pending
       if (isSupabaseConfigured) {
         if (typeof navigator === 'undefined' || navigator.onLine) {
           try {
-            const snakeUpdates = convertKeysToSnake({ ...updates, updatedAt: new Date().toISOString() });
-            const { error: supaErr } = await supabase.from('online_orders').update(snakeUpdates).eq('id', order.id);
+            const rawSnake = convertKeysToSnake({ ...updates, updatedAt: new Date().toISOString() }) as Record<string, any>;
+            const safeCols = new Set(TABLE_COLUMNS.online_orders || []);
+            const cleanUpdates: Record<string, any> = {};
+            for (const [k, v] of Object.entries(rawSnake)) {
+              if (safeCols.has(k)) {
+                cleanUpdates[k] = v;
+              }
+            }
+            const numId = Number(order.id);
+            const targetId = (!isNaN(numId) && Number.isInteger(numId) && numId > 0) ? numId : order.id;
+            let { error: supaErr } = await supabase.from('online_orders').update(cleanUpdates).eq('id', targetId);
+            const extId = order.externalOrderId || order.external_order_id;
+            if (supaErr && extId) {
+              const retry = await supabase.from('online_orders').update(cleanUpdates).eq('external_order_id', String(extId));
+              supaErr = retry.error;
+            }
             if (supaErr) {
               enqueueSync('online_orders', order.id, 'UPSERT', { ...order, ...updates });
             }

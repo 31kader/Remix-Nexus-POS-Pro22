@@ -71,10 +71,10 @@ export async function processTransactionsAndOtherRecords(
     // 🛡️ Élimination des collisions 409 : UPDATE direct pour carton_templates existants (sans SELECT N+1 préliminaire)
     if ((targetTable === 'carton_templates' || targetTable === 'cartonTemplates') && (item.payload?.id || item.recordId)) {
       const cartonId = item.payload?.id || item.recordId;
-      const updatePayload = { ...item.payload };
-      delete updatePayload.id;
-      delete updatePayload.created_at;
-      const updateRes = await supabase.from('carton_templates').update(updatePayload).eq('id', cartonId);
+      const cleanPayload = sanitizePayloadForSupabase('carton_templates', item.payload, item.recordId);
+      delete cleanPayload.id;
+      delete cleanPayload.created_at;
+      const updateRes = await supabase.from('carton_templates').update(cleanPayload).eq('id', cartonId);
       if (!updateRes.error) {
         const parentKey = `${item.table}:${cartonId}`;
         completedKeys.add(parentKey);
@@ -84,24 +84,39 @@ export async function processTransactionsAndOtherRecords(
       }
     }
 
-    // 🛡️ Élimination des collisions 409 : UPDATE direct pour les commandes en ligne
-    if (targetTable === 'online_orders' && (item.payload?.id || item.recordId || item.payload?.external_order_id)) {
+    // 🛡️ Élimination des collisions 409 & erreurs 400 : UPDATE direct assaini pour les commandes en ligne
+    if (targetTable === 'online_orders' && (item.payload?.id || item.recordId || item.payload?.external_order_id || item.payload?.externalOrderId)) {
       const orderId = item.payload?.id || item.recordId;
-      const updatePayload = { ...item.payload };
-      delete updatePayload.id;
-      delete updatePayload.created_at;
+      const cleanPayload = sanitizePayloadForSupabase('online_orders', item.payload, item.recordId);
+      delete cleanPayload.id;
+      delete cleanPayload.created_at;
+
+      const numId = Number(orderId);
+      const hasValidNumId = !isNaN(numId) && Number.isInteger(numId) && numId > 0;
 
       let updateRes: any = null;
-      if (orderId) {
-        updateRes = await supabase.from('online_orders').update(updatePayload).eq('id', orderId);
+      if (hasValidNumId) {
+        updateRes = await supabase.from('online_orders').update(cleanPayload).eq('id', numId);
       }
-      if ((!updateRes || updateRes.error) && item.payload?.external_order_id) {
-        updateRes = await supabase.from('online_orders').update(updatePayload).eq('external_order_id', item.payload.external_order_id);
+      const extId = item.payload?.external_order_id || item.payload?.externalOrderId || cleanPayload.external_order_id;
+      if ((!updateRes || updateRes.error) && extId) {
+        updateRes = await supabase.from('online_orders').update(cleanPayload).eq('external_order_id', String(extId));
       }
 
       if (updateRes && !updateRes.error) {
         const parentKey = `${item.table}:${orderId}`;
         completedKeys.add(parentKey);
+        if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+        if (extId) completedKeys.add(`${item.table}:${extId}`);
+        processedSnapshots.set(parentKey, { opId: item.opId });
+        updateProgress(targetTable);
+        continue;
+      } else if (updateRes?.error && isAuthOrPermissionError(updateRes.error)) {
+        console.warn(`[SyncService] Écriture online_orders restreinte (session requise 401/403/42501). Commande #${orderId} conservée localement.`);
+        const parentKey = `${item.table}:${orderId}`;
+        completedKeys.add(parentKey);
+        if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+        if (extId) completedKeys.add(`${item.table}:${extId}`);
         processedSnapshots.set(parentKey, { opId: item.opId });
         updateProgress(targetTable);
         continue;
@@ -229,23 +244,41 @@ export async function processTransactionsAndOtherRecords(
                 refs.hadNetworkError = true;
                 break;
               } else if (isDuplicateKeyError(sRes.error)) {
-                if (single.payload?.id) {
-                  const updatePayload = { ...single.payload };
-                  delete updatePayload.id;
-                  delete updatePayload.created_at;
-                  if (table === 'products') {
-                    delete updatePayload.stock;
-                  }
-                  const { error: updErr } = await supabase.from(table).update(updatePayload).eq('id', single.payload.id);
-                  if (!updErr || isTableMissingError(updErr) || isDuplicateKeyError(updErr)) {
+                const targetRecordId = single.payload?.id || single.recordId;
+                const extId = single.payload?.external_order_id || single.payload?.externalOrderId;
+                const updatePayload = { ...single.payload };
+                delete updatePayload.id;
+                delete updatePayload.created_at;
+                if (table === 'products') {
+                  delete updatePayload.stock;
+                }
+                
+                let updErr: any = null;
+                if (targetRecordId) {
+                  const numId = Number(targetRecordId);
+                  const effectiveId = (table === 'online_orders' && !isNaN(numId) && Number.isInteger(numId) && numId > 0)
+                    ? numId
+                    : targetRecordId;
+                  const res = await supabase.from(table).update(updatePayload).eq('id', effectiveId);
+                  updErr = res.error;
+                }
+                if (updErr && table === 'online_orders' && extId) {
+                  const res = await supabase.from(table).update(updatePayload).eq('external_order_id', String(extId));
+                  updErr = res.error;
+                }
+
+                if (!updErr || isTableMissingError(updErr) || isDuplicateKeyError(updErr)) {
+                  markOtherRecordCompleted(table, single);
+                } else if (isAuthOrPermissionError(updErr)) {
+                  if (table === 'online_orders') {
                     markOtherRecordCompleted(table, single);
-                  } else if (isAuthOrPermissionError(updErr)) {
+                  } else {
                     refs.hadAuthOrPermissionError = true;
                     break;
-                  } else if (isNetworkOrTimeoutError(updErr)) {
-                    refs.hadNetworkError = true;
-                    break;
                   }
+                } else if (isNetworkOrTimeoutError(updErr)) {
+                  refs.hadNetworkError = true;
+                  break;
                 }
               }
             } catch (sErr) {
