@@ -25,22 +25,33 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
     if (!user) {
       const { session, isOffline } = getCachedUserSession();
       if (session) {
-        try {
-          setUser({
+        const isOwnerSession = checkIsOwner(session.email, session.uid) || session.role === 'admin';
+        const isAdminPinUnlocked = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('nexus_admin_pin_unlocked') === 'true';
+        if (isOwnerSession && !isAdminPinUnlocked && !isOffline) {
+          useAuthStore.getState().setPendingAdminUnlockUser({
             uid: session.uid,
-            email: session.email || null,
-            displayName: session.displayName || 'Utilisateur',
-            isOffline
+            email: session.email,
+            displayName: session.displayName
           });
-          setProfile({
-            uid: session.uid,
-            displayName: session.displayName || 'Utilisateur',
-            email: session.email || '',
-            role: session.role,
-            employeeId: session.employeeId || null
-          });
-        } catch (e) {
-          // ignore
+          setLoading(false);
+        } else {
+          try {
+            setUser({
+              uid: session.uid,
+              email: session.email || null,
+              displayName: session.displayName || 'Utilisateur',
+              isOffline
+            });
+            setProfile({
+              uid: session.uid,
+              displayName: session.displayName || 'Utilisateur',
+              email: session.email || '',
+              role: session.role,
+              employeeId: session.employeeId || null
+            });
+          } catch (e) {
+            // ignore
+          }
         }
       }
     }
@@ -102,16 +113,26 @@ export function useAuthUser(appMode: string, setLoading: (loading: boolean) => v
           return;
         }
 
-        setUser(currentUser);
-        setIsUnauthorized(false);
         const mainEmail = currentUser.email?.toLowerCase();
         const providerEmail = currentUser.providerData?.[0]?.email?.toLowerCase();
         const matchEmail = (mainEmail || providerEmail || '').trim();
         const isOwnerLocally = checkIsOwner(matchEmail, currentUser.uid);
 
-        if (isOwnerLocally) {
+        // 🛡️ Step-Up 2FA Gérant : Si l'utilisateur est Propriétaire / Admin, vérifier le déverrouillage par PIN
+        const isAdminPinUnlocked = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('nexus_admin_pin_unlocked') === 'true';
+        if (isOwnerLocally && !isAdminPinUnlocked) {
+          useAuthStore.getState().setPendingAdminUnlockUser(currentUser);
+          setUser(null);
+          setProfile(null);
           setIsUnauthorized(false);
+          setLoading(false);
+          return;
         }
+
+        // Si le PIN est déverrouillé, on réinitialise l'attente et on valide la session
+        useAuthStore.getState().setPendingAdminUnlockUser(null);
+        setUser(currentUser);
+        setIsUnauthorized(false);
         
         let matchPhone = null;
         if (matchEmail && matchEmail.endsWith('@nexus-pos.internal')) {

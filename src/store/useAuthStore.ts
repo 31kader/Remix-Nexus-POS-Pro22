@@ -10,12 +10,14 @@ interface AuthState {
   authError: React.ReactNode;
   isLoggingIn: boolean;
   isUnauthorized: boolean;
+  pendingAdminUnlockUser: any | null;
   
   setUser: (user: User | UserProfile | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setAuthError: (error: React.ReactNode) => void;
   setIsLoggingIn: (isLoggingIn: boolean) => void;
   setIsUnauthorized: (isUnauthorized: boolean) => void;
+  setPendingAdminUnlockUser: (user: any | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   authError: '',
   isLoggingIn: false,
   isUnauthorized: false,
+  pendingAdminUnlockUser: null,
 
   setUser: (user) => {
     set({ user });
@@ -33,4 +36,5 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuthError: (authError) => set({ authError }),
   setIsLoggingIn: (isLoggingIn) => set({ isLoggingIn }),
   setIsUnauthorized: (isUnauthorized) => set({ isUnauthorized }),
+  setPendingAdminUnlockUser: (pendingAdminUnlockUser) => set({ pendingAdminUnlockUser }),
 }));

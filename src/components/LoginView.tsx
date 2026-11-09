@@ -3,11 +3,13 @@ import { KeyRound, Lock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { localDb } from '../services/LocalDatabase';
 import { usePeopleStore } from '../store/usePeopleStore';
+import { useAuthStore } from '../store/useAuthStore';
 import {
   LoginHeader,
   LoginIdentifierForm,
   LoginPinPad,
-  LoginAlternatives
+  LoginAlternatives,
+  AdminPinUnlockModal
 } from './login';
 
 interface LoginViewProps {
@@ -47,6 +49,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   setIsLangMenuOpen,
   t
 }) => {
+  const pendingAdminUnlockUser = useAuthStore(s => s.pendingAdminUnlockUser);
   const [loginMode, setLoginMode] = React.useState<'identifier' | 'pin'>('identifier');
   const [localUsers, setLocalUsers] = React.useState<any[]>([]);
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
@@ -167,6 +170,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-zinc-100 p-4 sm:p-6 relative select-none overflow-x-hidden">
+      {/* Verrou de Sécurité 2FA Gérant après Connexion Google */}
+      {pendingAdminUnlockUser && (
+        <AdminPinUnlockModal user={pendingAdminUnlockUser} t={t} />
+      )}
+
       {/* Halo d'ambiance moderne en arrière-plan */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-purple-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />

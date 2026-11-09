@@ -255,6 +255,7 @@ export function useAuthActions(
       sessionStorage.removeItem('nexus_active_online_session');
       sessionStorage.removeItem('nexus_active_offline_session');
       sessionStorage.removeItem('nexus_auth_user');
+      sessionStorage.removeItem('nexus_admin_pin_unlocked');
       localStorage.removeItem('nexus_active_online_session');
       localStorage.removeItem('nexus_active_offline_session');
       localStorage.removeItem('nexus_auth_user');
@@ -268,6 +269,7 @@ export function useAuthActions(
       await signOut();
     } catch (e) {}
     auth.trigger(null);
+    useAuthStore.getState().setPendingAdminUnlockUser(null);
     setUser(null);
     setProfile(null);
     setIsUnauthorized(false);
