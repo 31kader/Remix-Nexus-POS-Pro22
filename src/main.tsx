@@ -33,14 +33,18 @@ export const isOAuthPopup = typeof window !== 'undefined' && (
     window.location.hash.includes('access_token=') ||
     window.location.search.includes('error=') ||
     window.location.search.includes('error_description=')
-  ))
+  )) ||
+  Boolean(
+    (window.location.search.includes('code=') || window.location.hash.includes('access_token=')) &&
+    window.innerWidth > 0 && window.innerWidth <= 700
+  )
 );
 
 // --- INITIALISATION DU MOTEUR DE DONNÉES (Fix Infinite Loop) ---
 async function bootstrap() {
   if (typeof window === 'undefined') return;
 
-  // 🔄 Rafraîchissement automatique des caches statiques (ServiceWorker / CacheStorage) lors d'une montée de version (Android APK / Web / Electron) sans toucher à IndexedDB
+  // 🔄 Rafraîchissement automatique des caches statiques (ServiceWorker / CacheStorage) lors d'une montée de version
   try {
     const lastVer = localStorage.getItem('nexus_installed_version');
     if (lastVer !== APP_CONFIG.version) {
@@ -94,7 +98,6 @@ async function bootstrap() {
         console.log('[OAuth] Code PKCE détecté, vérification et échange de session...');
         let establishedSession: any = null;
         try {
-          // Vérifier d'abord si une session valide a déjà été détectée/échangée par Supabase
           const { data: currentSess } = await supabase.auth.getSession();
           if (currentSess?.session) {
             establishedSession = currentSess.session;
@@ -117,6 +120,9 @@ async function bootstrap() {
         }
 
         if (establishedSession) {
+          try {
+            localStorage.setItem('nexus_oauth_event', JSON.stringify({ session: establishedSession, t: Date.now() }));
+          } catch (_) {}
           if (typeof BroadcastChannel !== 'undefined') {
             try {
               const bc = new BroadcastChannel('nexus_oauth_channel');
@@ -149,6 +155,9 @@ async function bootstrap() {
         }
 
         if (establishedSession) {
+          try {
+            localStorage.setItem('nexus_oauth_event', JSON.stringify({ session: establishedSession, t: Date.now() }));
+          } catch (_) {}
           if (typeof BroadcastChannel !== 'undefined') {
             try {
               const bc = new BroadcastChannel('nexus_oauth_channel');
@@ -214,7 +223,6 @@ bootstrap();
 // Handle Capacitor deep links (OAuth redirects)
 if (typeof window !== 'undefined' && (window as any).Capacitor) {
   CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
-    // 1. Fermer le navigateur externe immédiatement
     try { await Browser.close(); } catch (_) {}
 
     if (!url) return;
@@ -299,7 +307,7 @@ if (isOAuthPopup) {
       <ErrorBoundary>
         <SocketProvider>
           <LanguageProvider>
-            <App   />
+            <App />
           </LanguageProvider>
         </SocketProvider>
       </ErrorBoundary>

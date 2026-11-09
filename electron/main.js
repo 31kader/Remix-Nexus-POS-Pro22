@@ -365,7 +365,8 @@ function createWindow() {
           webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: true
+            sandbox: true,
+            preload: path.join(__dirname, 'preload.js')
           }
         }
       };
@@ -384,25 +385,60 @@ function createWindow() {
     return { action: 'deny' };
   });
 
-  // 🛡️ ELC-06 : Capture de la popup OAuth et déviation de toute redirection vers Vercel vers le serveur local
+  // 🛡️ ELC-06 : Capture de la popup OAuth et transfert direct des jetons vers mainWindow
   mainWindow.webContents.on('did-create-window', (childWindow) => {
     log('[OAuth] Fenêtre popup enfant créée');
-    const handleChildRedirect = (event, targetUrl) => {
+    try {
+      childWindow.webContents.setUserAgent(app.userAgentFallback);
+    } catch (_) {}
+
+    const handleChildNavigation = (event, targetUrl) => {
       try {
         const parsed = new URL(targetUrl);
+        const hasAuthParams = (parsed.hash && (parsed.hash.includes('access_token=') || parsed.hash.includes('code='))) ||
+                              (parsed.search && (parsed.search.includes('access_token=') || parsed.search.includes('code=')));
+
+        if (hasAuthParams) {
+          event.preventDefault();
+          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
+          log(`[OAuth ChildWindow] Jeton OAuth intercepté, redirection directe de la fenêtre principale vers : ${localTarget}`);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.loadURL(localTarget);
+            mainWindow.focus();
+          }
+          setTimeout(() => {
+            try {
+              if (childWindow && !childWindow.isDestroyed()) {
+                childWindow.close();
+              }
+            } catch (_) {}
+          }, 150);
+          return;
+        }
+
         if (parsed.hostname.endsWith('vercel.app') || parsed.hostname === 'remix-nexus-pos-pro.vercel.app') {
           event.preventDefault();
           const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
           log(`[OAuth ChildWindow] Interception et déviation de ${targetUrl} vers : ${localTarget}`);
-          childWindow.loadURL(localTarget);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.loadURL(localTarget);
+            mainWindow.focus();
+          }
+          setTimeout(() => {
+            try {
+              if (childWindow && !childWindow.isDestroyed()) {
+                childWindow.close();
+              }
+            } catch (_) {}
+          }, 150);
         }
       } catch (err) {
         logError('[OAuth ChildWindow] Erreur analyse redirection', err);
       }
     };
 
-    childWindow.webContents.on('will-redirect', handleChildRedirect);
-    childWindow.webContents.on('will-navigate', handleChildRedirect);
+    childWindow.webContents.on('will-redirect', handleChildNavigation);
+    childWindow.webContents.on('will-navigate', handleChildNavigation);
   });
 
   mainWindow.on('closed', () => {
@@ -455,6 +491,9 @@ if (!gotSingleInstanceLock) {
 // ─── Lifecycle Electron ────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   initLogging();
+  try {
+    session.defaultSession.setUserAgent(app.userAgentFallback);
+  } catch (_) {}
 
   // 🔄 Purge automatique du cache HTTP & Service Worker lors d'une mise à jour de version (100% des données IndexedDB et SQLite sont préservées)
   try {

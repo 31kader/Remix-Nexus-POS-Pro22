@@ -2,6 +2,20 @@ import { supabase } from '../../../supabase';
 import { isNetworkOrTimeoutError } from '../../networkErrorHandler';
 import { SyncContextRefs } from './productSyncWorker';
 
+function markKeysCompleted(
+  entry: any,
+  completedKeys: Set<string>,
+  processedSnapshots: Map<string, any>
+) {
+  const keys: string[] = entry.allOriginalKeys || [entry.originalKey];
+  for (const k of keys) {
+    if (k) {
+      completedKeys.add(k);
+      processedSnapshots.set(k, { opId: entry.opId });
+    }
+  }
+}
+
 export async function uploadNewProductBatches(
   newProductsToInsert: any[],
   completedKeys: Set<string>,
@@ -10,22 +24,28 @@ export async function uploadNewProductBatches(
   refs: SyncContextRefs
 ): Promise<void> {
   const PRODUCT_BATCH_SIZE = 15;
+
+  // 🛡️ ANTI-COLLISION 409 : Déduplication stricte par ID et fusion des opérations
+  const dedupMap = new Map<string, any>();
+  for (const entry of newProductsToInsert) {
+    const id = entry.payload?.id || entry.recordId;
+    if (!id) continue;
+    if (dedupMap.has(id)) {
+      const existing = dedupMap.get(id);
+      existing.payload = { ...existing.payload, ...entry.payload };
+      existing.opId = entry.opId;
+      if (!existing.allOriginalKeys) existing.allOriginalKeys = [existing.originalKey];
+      existing.allOriginalKeys.push(entry.originalKey);
+    } else {
+      dedupMap.set(id, { ...entry, allOriginalKeys: [entry.originalKey] });
+    }
+  }
+
+  const allItems = Array.from(dedupMap.values());
+  const withStockList = allItems.filter(e => 'stock' in e.payload);
+  const withoutStockList = allItems.filter(e => !('stock' in e.payload));
+
   const chunks: any[][] = [];
-
-  const dedupStockMap = new Map<string, any>();
-  newProductsToInsert.filter(e => 'stock' in e.payload).forEach(e => {
-    const id = e.payload?.id || e.recordId;
-    if (id) dedupStockMap.set(id, e);
-  });
-  const withStockList = Array.from(dedupStockMap.values());
-
-  const dedupNoStockMap = new Map<string, any>();
-  newProductsToInsert.filter(e => !('stock' in e.payload)).forEach(e => {
-    const id = e.payload?.id || e.recordId;
-    if (id) dedupNoStockMap.set(id, e);
-  });
-  const withoutStockList = Array.from(dedupNoStockMap.values());
-
   for (const list of [withStockList, withoutStockList]) {
     for (let i = 0; i < list.length; i += PRODUCT_BATCH_SIZE) {
       chunks.push(list.slice(i, i + PRODUCT_BATCH_SIZE));
@@ -48,8 +68,7 @@ export async function uploadNewProductBatches(
       const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
       if (!error) {
         chunk.forEach(c => {
-          completedKeys.add(c.originalKey);
-          processedSnapshots.set(c.originalKey, { opId: c.opId });
+          markKeysCompleted(c, completedKeys, processedSnapshots);
         });
         updateProgress('Produits...', chunk.length);
       } else {
@@ -60,10 +79,11 @@ export async function uploadNewProductBatches(
         for (const single of chunk) {
           if (refs.hadNetworkError) break;
           try {
-            const { error: singleErr, status: singleStatus } = await supabase.from('products').upsert(single.payload, { onConflict: 'id' });
+            const { error: singleErr, status: singleStatus } = await supabase
+              .from('products')
+              .upsert(single.payload, { onConflict: 'id' });
             if (!singleErr) {
-              completedKeys.add(single.originalKey);
-              processedSnapshots.set(single.originalKey, { opId: single.opId });
+              markKeysCompleted(single, completedKeys, processedSnapshots);
               updateProgress('Produits...');
             } else {
               if (isNetworkOrTimeoutError(singleErr)) {
@@ -75,17 +95,18 @@ export async function uploadNewProductBatches(
                 delete updatePayload.id;
                 delete updatePayload.created_at;
                 if (single.payload.id) {
-                  const { error: updErr } = await supabase.from('products').update(updatePayload).eq('id', single.payload.id);
+                  const { error: updErr } = await supabase
+                    .from('products')
+                    .update(updatePayload)
+                    .eq('id', single.payload.id);
                   if (!updErr) {
-                    completedKeys.add(single.originalKey);
-                    processedSnapshots.set(single.originalKey, { opId: single.opId });
+                    markKeysCompleted(single, completedKeys, processedSnapshots);
                     updateProgress('Produits...');
                   }
                 }
               } else if (singleStatus === 401 || singleStatus === 403 || singleErr.code === '42501') {
                 console.warn(`[SyncService] Insert produit ${single.payload?.id} restreint par RLS:`, singleErr);
-                completedKeys.add(single.originalKey);
-                processedSnapshots.set(single.originalKey, { opId: single.opId });
+                markKeysCompleted(single, completedKeys, processedSnapshots);
                 updateProgress('Produits...');
               }
             }
@@ -110,7 +131,7 @@ export async function uploadNewProductBatches(
 
 /**
  * ⚡ Mise à jour par lots des produits existants (évite des milliers de requêtes PATCH unitaires)
- * Tente un bulk upsert sécurisé par lots de 25 avec repli unitaire en cas d'erreur.
+ * Tente un bulk upsert sécurisé par lots de 25 avec déduplication stricte par ID et repli unitaire.
  */
 export async function updateExistingProductBatches(
   existingProductsToUpdate: any[],
@@ -120,9 +141,27 @@ export async function updateExistingProductBatches(
   refs: SyncContextRefs
 ): Promise<void> {
   const BATCH_SIZE = 25;
+
+  // 🛡️ ANTI-COLLISION 409 : Déduplication stricte par ID et fusion des opérations
+  const dedupMap = new Map<string, any>();
+  for (const entry of existingProductsToUpdate) {
+    const id = entry.payload?.id || entry.recordId;
+    if (!id) continue;
+    if (dedupMap.has(id)) {
+      const existing = dedupMap.get(id);
+      existing.payload = { ...existing.payload, ...entry.payload };
+      existing.opId = entry.opId;
+      if (!existing.allOriginalKeys) existing.allOriginalKeys = [existing.originalKey];
+      existing.allOriginalKeys.push(entry.originalKey);
+    } else {
+      dedupMap.set(id, { ...entry, allOriginalKeys: [entry.originalKey] });
+    }
+  }
+
+  const dedupedList = Array.from(dedupMap.values());
   const chunks: any[][] = [];
-  for (let i = 0; i < existingProductsToUpdate.length; i += BATCH_SIZE) {
-    chunks.push(existingProductsToUpdate.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < dedupedList.length; i += BATCH_SIZE) {
+    chunks.push(dedupedList.slice(i, i + BATCH_SIZE));
   }
 
   for (const chunk of chunks) {
@@ -141,8 +180,7 @@ export async function updateExistingProductBatches(
       const { error } = await supabase.from('products').upsert(payloads, { onConflict: 'id' });
       if (!error) {
         chunk.forEach(c => {
-          completedKeys.add(c.originalKey);
-          processedSnapshots.set(c.originalKey, { opId: c.opId });
+          markKeysCompleted(c, completedKeys, processedSnapshots);
         });
         updateProgress('Produits...', chunk.length);
       } else {
@@ -150,7 +188,7 @@ export async function updateExistingProductBatches(
           refs.hadNetworkError = true;
           break;
         }
-        // Repli unitaire sécurisé pour ce lot spécifique en cas d'erreur ou conflit
+        // Repli unitaire sécurisé pour ce lot spécifique via update direct (anti-409)
         for (const single of chunk) {
           if (refs.hadNetworkError) break;
           try {
@@ -165,8 +203,7 @@ export async function updateExistingProductBatches(
               .eq('id', targetId);
 
             if (!updErr) {
-              completedKeys.add(single.originalKey);
-              processedSnapshots.set(single.originalKey, { opId: single.opId });
+              markKeysCompleted(single, completedKeys, processedSnapshots);
               updateProgress('Produits...');
             } else {
               if (isNetworkOrTimeoutError(updErr)) {
@@ -175,8 +212,7 @@ export async function updateExistingProductBatches(
               }
               if (updStatus === 401 || updStatus === 403 || updErr.code === '42501') {
                 console.warn(`[SyncService] Mise à jour produit ${targetId} restreinte par RLS (401/403):`, updErr);
-                completedKeys.add(single.originalKey);
-                processedSnapshots.set(single.originalKey, { opId: single.opId });
+                markKeysCompleted(single, completedKeys, processedSnapshots);
                 updateProgress('Produits...');
               } else {
                 console.warn(`[SyncService] Échec mise à jour produit existant ${targetId}:`, updErr);

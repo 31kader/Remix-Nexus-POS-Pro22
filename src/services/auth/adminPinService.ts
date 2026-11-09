@@ -19,7 +19,7 @@ export async function getAdminBcryptHash(user: any): Promise<string | null> {
     const userSnap = await localDb.get(`users/${userUid}`);
     if (userSnap && userSnap.exists()) {
       const u = userSnap.val();
-      const hash = u?.passwordHash || u?.password_hash || u?.pinHash || u?.pin_hash || u?.pin;
+      const hash = u?.pin || u?.pin_hash || u?.pinHash || u?.password_hash || u?.passwordHash;
       if (typeof hash === 'string' && (hash.startsWith('$2a$') || hash.startsWith('$2b$'))) {
         return hash;
       }
@@ -41,7 +41,7 @@ export async function getAdminBcryptHash(user: any): Promise<string | null> {
       const rEmail = String(rec.email || '').toLowerCase().trim();
       const rUid = String(rec.uid || rec.id || '').toLowerCase().trim();
       if ((userEmail && rEmail === userEmail) || (userUid && rUid === userUid)) {
-        const hash = rec.passwordHash || rec.password_hash || rec.pinHash || rec.pin_hash || rec.pin;
+        const hash = rec.pin || rec.pin_hash || rec.pinHash || rec.password_hash || rec.passwordHash;
         if (typeof hash === 'string' && (hash.startsWith('$2a$') || hash.startsWith('$2b$'))) {
           return hash;
         }
@@ -89,38 +89,13 @@ export async function verifyAdminPin(
 
   const existingHash = await getAdminBcryptHash(user);
 
-  // Cas 1 : Premier enregistrement (aucun PIN/mot de passe n'existe pour cet email gérant)
+  // Cas 1 : Premier enregistrement (aucun PIN n'existe pour cet email gérant)
   if (!existingHash) {
-    try {
-      const newHash = bcrypt.hashSync(cleanPin, 10);
-      const userUid = user.uid || user.id;
-      const userEmail = user.email || '';
-      const displayName = user.displayName || user.name || 'Gérant';
-
-      const updateData: any = {
-        uid: userUid,
-        email: userEmail,
-        displayName,
-        role: 'admin',
-        pin: newHash,
-        passwordHash: newHash,
-        updatedAt: new Date().toISOString()
-      };
-
-      await localDb.insert(`users/${userUid}`, updateData);
-      enqueueSync('users', userUid, 'UPSERT', updateData);
-
-      sessionStorage.setItem('nexus_admin_pin_unlocked', 'true');
-      removeSecureItem('nexus_admin_pin_failures');
-      removeSecureItem('nexus_admin_pin_lock_until');
-
+    const res = await resetAdminPin(cleanPin, user);
+    if (res.success) {
       return { success: true, isFirstSetup: true };
-    } catch (createErr: any) {
-      return {
-        success: false,
-        message: 'Impossible de configurer le premier PIN Gérant : ' + (createErr?.message || 'Erreur inconnue')
-      };
     }
+    return res;
   }
 
   // Cas 2 : Vérification du hash existant via bcrypt
@@ -147,6 +122,75 @@ export async function verifyAdminPin(
     return {
       success: false,
       message: `Code PIN incorrect (${failures}/3 tentatives).`
+    };
+  }
+}
+
+/**
+ * 🔄 Réinitialise le code PIN secret Gérant pour l'utilisateur Propriétaire vérifié
+ */
+export async function resetAdminPin(
+  newPin: string,
+  user: any
+): Promise<{ success: boolean; message?: string }> {
+  const cleanPin = (newPin || '').trim();
+  if (cleanPin.length < 4 || cleanPin.length > 8) {
+    return {
+      success: false,
+      message: 'Le code PIN doit comporter entre 4 et 8 chiffres.'
+    };
+  }
+
+  const userUid = user?.uid || user?.id;
+  const userEmail = user?.email || '';
+
+  try {
+    const newHash = bcrypt.hashSync(cleanPin, 10);
+    const displayName = user?.displayName || user?.name || userEmail.split('@')[0] || 'Gérant';
+
+    const updateData: any = {
+      uid: userUid,
+      email: userEmail,
+      displayName,
+      role: 'admin',
+      pin: newHash,
+      passwordHash: newHash,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (userUid) {
+      await localDb.insert(`users/${userUid}`, updateData);
+      enqueueSync('users', userUid, 'UPSERT', updateData);
+    }
+
+    // Mise à jour directe sur Supabase pour propagation instantanée
+    try {
+      if (userUid) {
+        await supabase.from('users').update({
+          pin: newHash,
+          password_hash: newHash,
+          updated_at: new Date().toISOString()
+        }).eq('id', userUid);
+      } else if (userEmail) {
+        await supabase.from('users').update({
+          pin: newHash,
+          password_hash: newHash,
+          updated_at: new Date().toISOString()
+        }).eq('email', userEmail);
+      }
+    } catch (supaErr) {
+      console.warn('[AdminPinService] Synchronisation immédiate Supabase différée :', supaErr);
+    }
+
+    sessionStorage.setItem('nexus_admin_pin_unlocked', 'true');
+    removeSecureItem('nexus_admin_pin_failures');
+    removeSecureItem('nexus_admin_pin_lock_until');
+
+    return { success: true };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: 'Erreur lors de la configuration du PIN : ' + (err?.message || 'Erreur inconnue')
     };
   }
 }

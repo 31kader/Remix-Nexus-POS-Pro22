@@ -27,7 +27,7 @@ export const signInWithPopup = async (...args: any[]) => {
         }
         return { user: null };
       } else {
-        // SUR WEB & ELECTRON : Flux OAuth robuste avec support popup et redirection automatique
+        // SUR WEB & ELECTRON : Flux OAuth robuste avec support popup et synchronisation temps réel
         const redirectUrl = window.location.origin;
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
@@ -56,7 +56,13 @@ export const signInWithPopup = async (...args: any[]) => {
             popup = null;
           }
 
-          const safeClosePopup = (_win: Window | null) => {};
+          const safeClosePopup = (win: Window | null) => {
+            try {
+              if (win && !win.closed) {
+                win.close();
+              }
+            } catch (_) {}
+          };
 
           if (!popup) {
             window.location.href = data.url;
@@ -73,6 +79,7 @@ export const signInWithPopup = async (...args: any[]) => {
               if (safetyTimeout) clearTimeout(safetyTimeout);
               window.removeEventListener('message', handleMessage);
               window.removeEventListener('focus', handleWindowFocus);
+              window.removeEventListener('storage', handleStorageEvent);
               if (broadcastChannel) {
                 try { broadcastChannel.close(); } catch (_) {}
               }
@@ -123,7 +130,19 @@ export const signInWithPopup = async (...args: any[]) => {
               }
             };
 
+            const handleStorageEvent = (e: StorageEvent) => {
+              if (e.key === 'nexus_oauth_event' && e.newValue) {
+                try {
+                  const payload = JSON.parse(e.newValue);
+                  if (payload?.session) {
+                    handleSuccess(payload.session);
+                  }
+                } catch (_) {}
+              }
+            };
+
             window.addEventListener('message', handleMessage);
+            window.addEventListener('storage', handleStorageEvent);
 
             if (typeof BroadcastChannel !== 'undefined') {
               try {
