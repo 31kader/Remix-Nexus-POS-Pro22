@@ -334,8 +334,9 @@ function createWindow() {
       // 🛡️ Si la fenêtre principale tente de naviguer vers un lien Vercel (rappel OAuth Supabase)
       if (target.hostname.endsWith('vercel.app') || target.hostname === 'remix-nexus-pos-pro.vercel.app') {
         event.preventDefault();
-        const localTarget = `http://localhost:${SERVER_PORT}${target.pathname === '/' ? '' : target.pathname}${target.search}${target.hash}`;
-        log(`[OAuth MainNav] Redirection de ${navigationUrl} vers ${localTarget}`);
+        const queryAndHash = `${target.search || ''}${target.hash || ''}`;
+        const localTarget = `http://localhost:${SERVER_PORT}/${queryAndHash}`;
+        log(`[OAuth MainNav] Redirection de ${navigationUrl} vers la racine SPA : ${localTarget}`);
         mainWindow.loadURL(localTarget);
         return;
       }
@@ -400,7 +401,8 @@ function createWindow() {
 
         if (hasAuthParams) {
           event.preventDefault();
-          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
+          const queryAndHash = `${parsed.search || ''}${parsed.hash || ''}`;
+          const localTarget = `http://localhost:${SERVER_PORT}/${queryAndHash}`;
           log(`[OAuth ChildWindow] Jeton OAuth intercepté, redirection directe de la fenêtre principale vers : ${localTarget}`);
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.loadURL(localTarget);
@@ -418,7 +420,8 @@ function createWindow() {
 
         if (parsed.hostname.endsWith('vercel.app') || parsed.hostname === 'remix-nexus-pos-pro.vercel.app') {
           event.preventDefault();
-          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname === '/' ? '' : parsed.pathname}${parsed.search}${parsed.hash}`;
+          const queryAndHash = `${parsed.search || ''}${parsed.hash || ''}`;
+          const localTarget = `http://localhost:${SERVER_PORT}/${queryAndHash}`;
           log(`[OAuth ChildWindow] Interception et déviation de ${targetUrl} vers : ${localTarget}`);
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.loadURL(localTarget);
@@ -526,8 +529,8 @@ app.whenReady().then(async () => {
                                parsed.pathname === '/' ||
                                parsed.pathname === '';
         if (isAuthCallback) {
-          const localTarget = `http://localhost:${SERVER_PORT}${parsed.pathname || '/'}${parsed.search}`;
-          log(`[OAuth WebRequest] Interception Vercel 404 -> Redirection transparente vers : ${localTarget}`);
+          const localTarget = `http://localhost:${SERVER_PORT}/${parsed.search || ''}`;
+          log(`[OAuth WebRequest] Interception Vercel 404 -> Redirection transparente vers la racine SPA : ${localTarget}`);
           callback({ redirectURL: localTarget });
           return;
         }

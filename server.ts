@@ -1179,6 +1179,27 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
 
       if (distPath) {
         console.log(`[PROD] Serving application from: ${distPath}`);
+
+        // 🛡️ ELC-07 : Redirection automatique des rappels OAuth vers la racine '/' avec préservation des query params
+        app.get(['/auth/v1/callback', '/auth/callback', '/callback', '/login/callback'], (req, res) => {
+          const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+          console.log(`[OAuth Server] Redirection de rappel OAuth ${req.url} vers /${query}`);
+          res.redirect(302, `/${query}`);
+        });
+
+        // 🛡️ Desserte universelle des assets statiques même pour les requêtes imbriquées (anti-MIME type error)
+        app.use((req, res, next) => {
+          const assetsIdx = req.path.indexOf('/assets/');
+          if (assetsIdx !== -1 && distPath) {
+            const assetSubPath = req.path.substring(assetsIdx + 8);
+            const filePath = path.join(distPath, 'assets', assetSubPath);
+            if (fs.existsSync(filePath)) {
+              return res.sendFile(filePath);
+            }
+          }
+          next();
+        });
+
         // Serve static assets but do not automatically serve index.html for root requests
         app.use(express.static(distPath, { index: false }));
         app.get('*', async (req, res) => {
@@ -1208,7 +1229,7 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
                 envObj.VITE_SUPABASE_ANON_KEY = temp;
               }
 
-              const injection = `<script id="runtime-env">
+              const injection = `<base href="/" />\n<script id="runtime-env">
                 window.__ENV__ = ${JSON.stringify(envObj)};
               </script>`;
 

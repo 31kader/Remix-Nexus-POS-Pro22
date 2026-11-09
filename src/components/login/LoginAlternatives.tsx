@@ -69,7 +69,7 @@ export const LoginAlternatives: React.FC<LoginAlternativesProps> = ({
         </div>
         <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-mono">
           <Lock size={10} className="text-zinc-600" />
-          <span>Nexus POS Pro v1.2.76 • Mode Hors-Ligne Résilient</span>
+          <span>Nexus POS Pro v1.2.77 • Mode Hors-Ligne Résilient</span>
         </div>
       </div>
     </div>

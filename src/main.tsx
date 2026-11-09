@@ -89,7 +89,7 @@ async function bootstrap() {
         if (window.opener && window.opener !== window) {
           try { window.opener.postMessage({ type: 'nexus_oauth_error', error: decoded }, window.location.origin); } catch (_) {}
         }
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', '/');
         if (isOAuthPopup) {
           try { window.close(); } catch (_) {}
           return;
@@ -134,7 +134,7 @@ async function bootstrap() {
             try { window.opener.postMessage({ type: 'nexus_oauth_success', session: establishedSession }, window.location.origin); } catch (_) {}
           }
         }
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', '/');
         if (isOAuthPopup) {
           try { window.close(); } catch (_) {}
           return;
@@ -169,7 +169,7 @@ async function bootstrap() {
             try { window.opener.postMessage({ type: 'nexus_oauth_success', session: establishedSession }, window.location.origin); } catch (_) {}
           }
         }
-        window.history.replaceState(null, '', window.location.pathname);
+        window.history.replaceState(null, '', '/');
         if (isOAuthPopup) {
           try { window.close(); } catch (_) {}
           return;
