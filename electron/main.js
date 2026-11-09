@@ -396,10 +396,29 @@ function createWindow() {
     const handleChildNavigation = (event, targetUrl) => {
       try {
         const parsed = new URL(targetUrl);
-        const hasAuthParams = (parsed.hash && (parsed.hash.includes('access_token=') || parsed.hash.includes('code='))) ||
-                              (parsed.search && (parsed.search.includes('access_token=') || parsed.search.includes('code=')));
 
-        if (hasAuthParams) {
+        // 🛡️ 1. Ne jamais intercepter les pages d'autorisation Google ou Supabase dans la popup
+        const isAuthService = parsed.hostname.endsWith('google.com') ||
+                              parsed.hostname.endsWith('accounts.google.com') ||
+                              (parsed.hostname.endsWith('supabase.co') && (parsed.pathname.includes('/authorize') || parsed.pathname.includes('/callback')));
+        if (isAuthService) {
+          return; // Laisser l'utilisateur s'authentifier normalement sur Google
+        }
+
+        // 🛡️ 2. Détecter un rappel vers l'application (localhost ou vercel) contenant le code/token d'authentification
+        const isAppHost = parsed.hostname === 'localhost' ||
+                          parsed.hostname === '127.0.0.1' ||
+                          parsed.hostname.endsWith('vercel.app') ||
+                          parsed.hostname === 'remix-nexus-pos-pro.vercel.app';
+
+        const hashParams = parsed.hash ? new URLSearchParams(parsed.hash.startsWith('#') ? parsed.hash.slice(1) : parsed.hash) : null;
+        const hasAuthParams = parsed.searchParams.has('code') ||
+                              parsed.searchParams.has('access_token') ||
+                              parsed.searchParams.has('error') ||
+                              parsed.searchParams.has('error_description') ||
+                              (hashParams && (hashParams.has('code') || hashParams.has('access_token') || hashParams.has('error')));
+
+        if (isAppHost && hasAuthParams) {
           event.preventDefault();
           const queryAndHash = `${parsed.search || ''}${parsed.hash || ''}`;
           const localTarget = `http://localhost:${SERVER_PORT}/${queryAndHash}`;
@@ -523,9 +542,10 @@ app.whenReady().then(async () => {
       try {
         const parsed = new URL(details.url);
         // Rediriger tout rappel Supabase OAuth (paramètres code, error, ou racine) vers le serveur local
-        const isAuthCallback = parsed.search.includes('code=') ||
-                               parsed.search.includes('error=') ||
-                               parsed.search.includes('error_description=') ||
+        const isAuthCallback = parsed.searchParams.has('code') ||
+                               parsed.searchParams.has('access_token') ||
+                               parsed.searchParams.has('error') ||
+                               parsed.searchParams.has('error_description') ||
                                parsed.pathname === '/' ||
                                parsed.pathname === '';
         if (isAuthCallback) {

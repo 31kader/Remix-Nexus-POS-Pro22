@@ -39,7 +39,7 @@ export const supabase = isSupabaseConfigured
         flowType: 'pkce',
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
         fetch: safeSupabaseFetch
       } as any,
       realtime: {
