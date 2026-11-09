@@ -244,7 +244,7 @@ export async function processTransactionsAndOtherRecords(
                 refs.hadNetworkError = true;
                 break;
               } else if (isDuplicateKeyError(sRes.error)) {
-                const targetRecordId = single.payload?.id || single.recordId;
+                const targetRecordId = single.payload?.id || (single as any).recordId || single.originalKey?.split('/')[1];
                 const extId = single.payload?.external_order_id || single.payload?.externalOrderId;
                 const updatePayload = { ...single.payload };
                 delete updatePayload.id;

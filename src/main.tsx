@@ -60,9 +60,6 @@ async function bootstrap() {
     }
   } catch (_) {}
 
-  await loadInitialState();
-  await loadPendingSyncQueue();
-
   if (isSupabaseConfigured) {
     // 🛡️ DÉTECTION GLOBALE DU RETOUR OAUTH SUPABASE (PKCE Code, Tokens ou Erreur)
     try {
@@ -133,6 +130,14 @@ async function bootstrap() {
           if (window.opener && window.opener !== window) {
             try { window.opener.postMessage({ type: 'nexus_oauth_success', session: establishedSession }, window.location.origin); } catch (_) {}
           }
+          if (establishedSession?.user) {
+            const u = establishedSession.user;
+            auth.trigger({
+              uid: u.id,
+              email: u.email || null,
+              displayName: u.user_metadata?.full_name || u.email?.split('@')[0] || null
+            });
+          }
         }
         window.history.replaceState(null, '', '/');
         if (isOAuthPopup) {
@@ -168,6 +173,14 @@ async function bootstrap() {
           if (window.opener && window.opener !== window) {
             try { window.opener.postMessage({ type: 'nexus_oauth_success', session: establishedSession }, window.location.origin); } catch (_) {}
           }
+          if (establishedSession?.user) {
+            const u = establishedSession.user;
+            auth.trigger({
+              uid: u.id,
+              email: u.email || null,
+              displayName: u.user_metadata?.full_name || u.email?.split('@')[0] || null
+            });
+          }
         }
         window.history.replaceState(null, '', '/');
         if (isOAuthPopup) {
@@ -178,7 +191,12 @@ async function bootstrap() {
     } catch (oauthInitErr) {
       console.warn('[OAuth] Erreur inspection URL auth:', oauthInitErr);
     }
+  }
 
+  await loadInitialState();
+  await loadPendingSyncQueue();
+
+  if (isSupabaseConfigured) {
     // 1. Charger la catégorie par défaut en local sans polluer la file de synchro
     setLocalState('categories/uncategorized', { id: 'uncategorized', name: 'Sans catégorie', level: 1 });
 
