@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Timer, 
   Shield, 
   CheckCircle2, 
-  Activity 
+  RotateCcw, 
+  Users, 
+  Check, 
+  X, 
+  ChevronRight 
 } from 'lucide-react';
 import { CompanySettings, RolePermissions } from '../../types';
 import { cn } from '../../lib/utils';
 import { DEFAULT_PERMISSIONS } from '../../constants';
+import { PERMISSION_CATEGORIES, ROLE_LABELS } from './staff/permissionCategories';
 import { toast } from 'sonner';
 
 interface SectionProps {
@@ -16,6 +21,8 @@ interface SectionProps {
 }
 
 export function StaffSection({ formData, setFormData }: SectionProps) {
+  const [selectedRole, setSelectedRole] = useState<keyof typeof DEFAULT_PERMISSIONS>('cashier');
+
   const togglePermission = (role: string, permission: keyof RolePermissions) => {
     if (role === 'admin') return;
     const roleKey = role as keyof typeof DEFAULT_PERMISSIONS;
@@ -33,100 +40,160 @@ export function StaffSection({ formData, setFormData }: SectionProps) {
     });
   };
 
+  const handleResetRoleDefaults = (role: keyof typeof DEFAULT_PERMISSIONS) => {
+    setFormData({
+      ...formData,
+      rolePermissions: {
+        ...formData.rolePermissions,
+        [role]: { ...DEFAULT_PERMISSIONS[role] }
+      } as any
+    });
+    toast.success(`Permissions du rôle ${ROLE_LABELS[role]?.label || role} réinitialisées.`);
+  };
+
+  const currentRoleMeta = ROLE_LABELS[selectedRole] || { label: selectedRole, badge: 'bg-zinc-800 text-white', desc: '' };
+  const currentPermissions = (formData.rolePermissions?.[selectedRole] || DEFAULT_PERMISSIONS[selectedRole]) as any;
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center justify-between p-6 bg-slate-900 border border-white/5 rounded-xl">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* 1. Pointage des Heures */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-slate-900 border border-white/5 rounded-2xl shadow-xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shrink-0">
             <Timer size={24} />
           </div>
           <div>
             <p className="text-sm font-bold text-white uppercase tracking-wider">Pointage des Heures (Check-in)</p>
-            <p className="text-[9px] text-slate-500 uppercase mt-0.5 tracking-widest">Activer la pointeuse numérique pour le personnel</p>
+            <p className="text-xs text-slate-400 mt-0.5">Activer la pointeuse numérique pour le personnel en caisse</p>
           </div>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
           <input 
             type="checkbox" 
             className="sr-only peer"
-            checked={formData.enableTimeClock}
+            checked={formData.enableTimeClock ?? false}
             onChange={e => setFormData({ ...formData, enableTimeClock: e.target.checked })}
           />
-          <div className="w-14 h-7 bg-slate-850 border-2 border-white/5 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+          <div className="w-12 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
         </label>
       </div>
 
-      <div className="space-y-6">
-        <h4 className="text-sm font-bold text-white flex items-center gap-2 ml-1">
-          <Shield size={18} className="text-indigo-500" />
-          Matrice des Rôles & Permissions
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {['manager', 'cashier', 'delivery', 'camera_agent'].map(role => (
-            <div key={role} className="bg-slate-900 border border-white/5 rounded-xl overflow-hidden shadow-xl">
-              <div className={cn(
-                "px-6 py-4 border-l-4 flex items-center justify-between bg-white/[0.02]",
-                role === 'manager' ? "border-amber-500" : 
-                role === 'cashier' ? "border-emerald-500" : 
-                role === 'delivery' ? "border-blue-500" : "border-slate-500"
-              )}>
-                <div>
-                  <p className="text-xs font-black text-white uppercase tracking-widest">{role === 'camera_agent' ? 'AGENT AUDIT' : role}</p>
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter mt-0.5">Configuration des accès système</p>
-                </div>
-                <Shield size={16} className="text-white/10" />
-              </div>
-              
-              <div className="p-4 space-y-2">
-                {Object.keys(DEFAULT_PERMISSIONS.cashier).slice(0, 8).map(perm => {
-                  const isGranted = (formData.rolePermissions?.[role as keyof typeof DEFAULT_PERMISSIONS] as any)?.[perm];
-                  return (
-                    <button 
-                      key={perm}
-                      onClick={() => togglePermission(role, perm as any)}
-                      className={cn(
-                        "w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left",
-                        isGranted 
-                          ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-300" 
-                          : "bg-black/20 border-white/5 text-slate-600 grayscale opacity-60"
-                      )}
-                    >
-                      <span className="text-[10px] font-bold uppercase tracking-tight">
-                        {perm.replace('canAccess', '').replace(/([A-Z])/g, ' $1').replace('canApply', '').replace('canModify', '').replace('Discount', 'Remise').replace('Sales', 'Ventes').replace('Inventory', 'Stocks').replace('Customers', 'Clients').replace('Analytics', 'Rapports').replace('Shifts', 'Sessions')}
-                      </span>
-                      {isGranted ? <CheckCircle2 size={14} className="text-indigo-500" /> : <div className="w-3.5 h-3.5 rounded-full border border-white/10" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+      {/* 2. En-tête Matrice & Onglets des Rôles */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-black text-white flex items-center gap-2 tracking-wide uppercase">
+              <Shield size={18} className="text-indigo-400" />
+              Matrice Granulaire des Droits par Rôle
+            </h4>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Configurez précisément ce que chaque employé peut faire sur le système POS.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleResetRoleDefaults(selectedRole)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all self-start sm:self-auto cursor-pointer"
+            title="Rétablir les permissions recommandées pour ce rôle"
+          >
+            <RotateCcw size={13} />
+            <span>Rétablir ce rôle</span>
+          </button>
         </div>
 
-        <div className="pt-8 border-t border-white/5 space-y-4">
-          <h4 className="text-sm font-bold text-white flex items-center gap-2 ml-1">
-            <Activity size={18} className="text-indigo-500" />
-            Maintenance du personnel
-          </h4>
-          <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-1">
-              <p className="text-xs font-black text-rose-500 uppercase tracking-widest">Réinitialisation d'urgence</p>
-              <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">Supprimer tous les comptes personnels sauf l'administrateur principal</p>
-            </div>
-            <button 
-              type="button"
-              onClick={() => {
-                if (confirm("ACTION CRITIQUE : Voulez-vous vraiment supprimer tous les comptes personnels ? Cette action est irréversible.")) {
-                  toast.error("Fonctionnalité restreinte à l'administrateur système principal.");
-                }
-              }}
-              className="px-6 py-3 bg-rose-600/10 hover:bg-rose-600 text-rose-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-rose-500/20 transition-all"
-            >
-              Réinitialiser le personnel
-            </button>
+        {/* Barre d'onglets de rôles */}
+        <div className="flex flex-wrap gap-2 p-1.5 bg-slate-900/90 border border-white/5 rounded-2xl">
+          {(['cashier', 'manager', 'delivery', 'picker', 'camera_agent'] as const).map(role => {
+            const isSelected = selectedRole === role;
+            const meta = ROLE_LABELS[role];
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => setSelectedRole(role)}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                  isSelected
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <span>{meta?.label || role}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bannière du Rôle Sélectionné */}
+        <div className="p-4 bg-slate-900/60 border border-white/5 rounded-xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className={cn("px-2.5 py-1 rounded-lg text-xs font-black uppercase border", currentRoleMeta.badge)}>
+              {currentRoleMeta.label}
+            </span>
+            <p className="text-xs text-slate-300">{currentRoleMeta.desc}</p>
           </div>
         </div>
+      </div>
+
+      {/* 3. Catégories Détaillées de Permissions */}
+      <div className="space-y-4">
+        {PERMISSION_CATEGORIES.map(category => (
+          <div 
+            key={category.id} 
+            className="bg-slate-900/80 border border-white/5 rounded-2xl overflow-hidden shadow-sm"
+          >
+            <div className="px-5 py-3.5 bg-white/[0.02] border-b border-white/5 flex items-center justify-between">
+              <span className={cn("text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg border", category.badgeColor)}>
+                {category.title}
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {category.permissions.filter(p => currentPermissions?.[p.key]).length} / {category.permissions.length} actifs
+              </span>
+            </div>
+
+            <div className="divide-y divide-white/5">
+              {category.permissions.map(perm => {
+                const isGranted = Boolean(currentPermissions?.[perm.key]);
+                return (
+                  <div
+                    key={perm.key}
+                    onClick={() => togglePermission(selectedRole, perm.key)}
+                    className={cn(
+                      "px-5 py-3 flex items-center justify-between gap-4 transition-colors cursor-pointer group",
+                      isGranted ? "hover:bg-indigo-500/[0.04]" : "hover:bg-white/[0.02] opacity-75"
+                    )}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className={cn(
+                          "text-xs font-bold transition-colors",
+                          isGranted ? "text-white group-hover:text-indigo-300" : "text-slate-400"
+                        )}>
+                          {perm.label}
+                        </p>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {perm.description}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0">
+                      <div className={cn(
+                        "w-6 h-6 rounded-lg flex items-center justify-center transition-all",
+                        isGranted 
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30" 
+                          : "border border-white/10 bg-slate-800 text-transparent"
+                      )}>
+                        <Check size={14} className={isGranted ? "opacity-100" : "opacity-0"} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

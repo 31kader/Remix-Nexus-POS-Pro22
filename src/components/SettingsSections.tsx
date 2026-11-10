@@ -1,5 +1,6 @@
 export { StoreSection } from './settings/StoreSection';
 export { PosSection } from './settings/PosSection';
+export { ShortcutsSection } from './settings/ShortcutsSection';
 export { AccountingSection } from './settings/AccountingSection';
 export { StaffSection } from './settings/StaffSection';
 export { LoyaltySection } from './settings/LoyaltySection';

@@ -58,17 +58,22 @@
 - **Vérification Supabase de bout en bout** : Toute simulation Admin de A à Z doit vérifier la correspondance exacte entre le store local (`IndexedDB` / `SyncService`), `TABLE_COLUMNS` (`src/lib/db-converters.ts`) et le schéma/API réel du projet Supabase (`unlwfvldqxfccgrrgbwf`).
 
 ## Règle Anti-God Files & Plafonds de Fichiers (Tolérance Zéro)
-- **Plafond strict de 500 lignes** : Aucun fichier applicatif source dans `src/` ne doit dépasser **500 lignes** de code sous aucun prétexte.
-- **Standard d'excellence cible (< 350 lignes)** : Tout nouveau fichier, refactorisation ou ajout de fonctionnalité doit viser une taille inférieure à 350 lignes en appliquant strictement le principe de responsabilité unique (Single Responsibility Principle).
+- **Plafond strict de 500 lignes (Hard Limit)** : Aucun fichier applicatif source dans `src/` ne doit dépasser **500 lignes** de code sous aucun prétexte. Tout dépassement fait échouer la suite de tests (`tests/anti-god-files-guard.test.ts`).
+- **Standard d'excellence cible (< 350 lignes, idéalement < 250 lignes)** : Tout nouveau fichier, refactorisation ou ajout de fonctionnalité doit viser une taille inférieure à 350 lignes (et idéalement < 250 lignes) en appliquant strictement le principe de responsabilité unique (Single Responsibility Principle).
+- **Interdiction Formelle des Fichiers Monolithiques ("God Files")** :
+  - Il est strictement interdit de regrouper logique métier, formulaires, modales, états et rendu visuel dans un seul fichier.
+  - Dès qu'un composant atteint 250 lignes, il DOIT être immédiatement découpé en sous-composants dédiés.
 - **Découpage modulaire systématique** :
   - Logique métier, state et calculs ➔ Custom Hooks dédiés (`use[Feature]Logic.ts`)
-  - Affichage / Vues / Onglets ➔ Sous-composants spécialisés (`[Feature]Tab.tsx`, `[Feature]Card.tsx`)
+  - Affichage / Vues / Onglets ➔ Sous-composants spécialisés (`[Feature]Tab.tsx`, `[Feature]Card.tsx`, `[Feature]Header.tsx`)
   - Modales & Tiroirs ➔ Modales isolées avec `React.lazy()` (`[Feature]Modal.tsx`)
   - Fonctions pures & calculs ➔ Fichiers utilitaires (`[feature]Helpers.ts`)
+  - Constantes et configurations de menus ➔ Fichiers dédiés (`[feature]Constants.ts`, `[feature]MenuItems.ts`)
 - **Sanctuaires prescrits inviolables (3 exceptions uniques tolérées)** :
   - `src/lib/db-converters.ts` (mapping Supabase / DB)
   - `src/lib/supabase/sql/diagnosticQueries.ts` (requêtes SQL brutes de diagnostic)
   - `src/types/database.types.ts` (types générés automatiquement par Supabase CLI)
-- **Garde-fou CI obligatoire** : Le test automatisé `tests/anti-god-files-guard.test.ts` doit s'exécuter dans la suite de tests et interdire formellement tout fichier dépassant ce plafond.
+- **Garde-fou CI obligatoire** : Le test automatisé `tests/anti-god-files-guard.test.ts` s'exécute dans la suite de tests et interdit formellement tout fichier dépassant ce plafond.
+
 
 

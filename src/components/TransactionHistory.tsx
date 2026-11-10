@@ -8,6 +8,7 @@ import { cn, logAction, safeDate, exportToExcel, getHierarchicalCategories, form
 import { printReceipt } from '../services/printService';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isToday, subDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toDateInputValue } from '../utils/dateHelpers';
 import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -251,7 +252,7 @@ export function TransactionHistory(props: TransactionHistoryProps) {
               <input 
                 type="date" 
                 className="p-1 px-2.5 bg-slate-950/60 border border-slate-800 text-xs text-white rounded-lg outline-none focus:border-indigo-500"
-                value={tempCustomRange.start}
+                value={toDateInputValue(tempCustomRange.start)}
                 onChange={e => setTempCustomRange({...tempCustomRange, start: e.target.value})}
               />
             </div>
@@ -260,7 +261,7 @@ export function TransactionHistory(props: TransactionHistoryProps) {
               <input 
                 type="date" 
                 className="p-1 px-2.5 bg-slate-950/60 border border-slate-800 text-xs text-white rounded-lg outline-none focus:border-indigo-500"
-                value={tempCustomRange.end}
+                value={toDateInputValue(tempCustomRange.end)}
                 onChange={e => setTempCustomRange({...tempCustomRange, end: e.target.value})}
               />
             </div>

@@ -8,7 +8,8 @@ import {
   getFailedSyncQueue as dlqGetFailedSyncQueue,
   clearFailedSyncQueue as dlqClearFailedSyncQueue,
   retryFailedSyncItem as dlqRetryFailedSyncItem,
-  retryAllFailedSyncItems as dlqRetryAllFailedSyncItems
+  retryAllFailedSyncItems as dlqRetryAllFailedSyncItems,
+  autoHealDeadLetterQueue
 } from './sync/syncDeadLetterQueue';
 
 import {
@@ -48,23 +49,12 @@ import {
 
 export type { SyncAction, SyncPayload, SyncStatusCallback, EnqueueStockOptions };
 export { 
-  notifySyncStatus, 
-  LOCAL_ONLY_TABLES, 
-  ADMIN_RESTRICTED_SYNC_TABLES, 
-  isLocalOnlyTable, 
-  isTableMissingError, 
-  sanitizePayloadForSupabase, 
-  TABLE_PRIORITY,
-  ensureQueueLoaded,
-  flushSyncQueueImmediate,
-  scheduleQueueProcessing,
-  enqueueSync,
-  enqueueSyncBatch,
-  enqueueStockAdjustment,
-  enqueueCustomerBalanceAdjustment,
-  loadPendingSyncQueue,
-  getSyncQueue,
-  clearSyncQueue
+  notifySyncStatus, LOCAL_ONLY_TABLES, ADMIN_RESTRICTED_SYNC_TABLES, 
+  isLocalOnlyTable, isTableMissingError, sanitizePayloadForSupabase, 
+  TABLE_PRIORITY, ensureQueueLoaded, flushSyncQueueImmediate,
+  scheduleQueueProcessing, enqueueSync, enqueueSyncBatch,
+  enqueueStockAdjustment, enqueueCustomerBalanceAdjustment,
+  loadPendingSyncQueue, getSyncQueue, clearSyncQueue
 };
 
 let isProcessingQueue = false;
@@ -75,7 +65,10 @@ registerProcessQueueHandler(processSyncQueue);
 // Configuration des listeners de cycle de vie (persistance automatique, reprise en ligne)
 setupStorageLifecycleListeners(
   (delay) => scheduleQueueProcessing(delay),
-  () => { retryAllFailedSyncItems().catch(() => {}); }
+  () => { 
+    autoHealDeadLetterQueue(enqueueSyncBatch).catch(() => {});
+    retryAllFailedSyncItems().catch(() => {}); 
+  }
 );
 
 export function onBackgroundSyncStatus(callback: SyncStatusCallback): () => void {

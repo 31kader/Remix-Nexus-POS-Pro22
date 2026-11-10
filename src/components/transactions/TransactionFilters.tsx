@@ -1,6 +1,7 @@
 import React from 'react';
 import { Filter, Check, RotateCcw } from 'lucide-react';
 import { Button, Card } from '../ui';
+import { toDateInputValue } from '../../utils/dateHelpers';
 
 interface Props {
   tempDateFilter: string;
@@ -81,8 +82,8 @@ export const TransactionFilters: React.FC<Props> = ({
       </div>
       {tempDateFilter === 'custom' && (
         <div className="pt-3 border-t border-slate-800/20 flex gap-4">
-          <input type="date" className="p-1.5 px-3 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg" value={tempCustomRange.start} onChange={e => setTempCustomRange({...tempCustomRange, start: e.target.value})} />
-          <input type="date" className="p-1.5 px-3 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg" value={tempCustomRange.end} onChange={e => setTempCustomRange({...tempCustomRange, end: e.target.value})} />
+          <input type="date" className="p-1.5 px-3 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg" value={toDateInputValue(tempCustomRange.start)} onChange={e => setTempCustomRange({...tempCustomRange, start: e.target.value})} />
+          <input type="date" className="p-1.5 px-3 bg-slate-950 border border-slate-800 text-xs text-white rounded-lg" value={toDateInputValue(tempCustomRange.end)} onChange={e => setTempCustomRange({...tempCustomRange, end: e.target.value})} />
         </div>
       )}
     </Card>

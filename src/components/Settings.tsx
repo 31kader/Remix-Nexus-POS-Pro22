@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import {
   StoreSection,
   PosSection,
+  ShortcutsSection,
   AccountingSection,
   StaffSection,
   LoyaltySection,
@@ -82,6 +83,8 @@ export function Settings({ settings }: SettingsProps) {
         return <StoreSection formData={formData} setFormData={setFormData} />;
       case 'pos':
         return <PosSection formData={formData} setFormData={setFormData} />;
+      case 'shortcuts':
+        return <ShortcutsSection formData={formData} setFormData={setFormData} />;
       case 'receipt':
         return <ReceiptSection formData={formData} setFormData={setFormData} />;
       case 'accounting':

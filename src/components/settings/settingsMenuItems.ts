@@ -7,7 +7,8 @@ import {
   Lock,
   Printer,
   MessageSquare,
-  Network
+  Network,
+  Keyboard
 } from 'lucide-react';
 import { CompanySettings } from '../../types';
 import { DEFAULT_PERMISSIONS } from '../../constants';
@@ -15,6 +16,7 @@ import { DEFAULT_PERMISSIONS } from '../../constants';
 export type SettingsSection =
   | 'store'
   | 'pos'
+  | 'shortcuts'
   | 'receipt'
   | 'accounting'
   | 'staff'
@@ -48,6 +50,14 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
     keywords: 'caisse pos stock remise arrondi son bip grossiste panier session alerte',
     icon: ShoppingCart,
     badgeColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
+  },
+  {
+    id: 'shortcuts',
+    label: 'Raccourcis Clavier & Ergonomie',
+    subtitle: 'Touches rapides F1-F12, navigation caisse et scan',
+    keywords: 'raccourci clavier touche f1 f2 f3 f4 f6 f8 f9 f10 f12 echap enter espace scan pos',
+    icon: Keyboard,
+    badgeColor: 'text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/20'
   },
   {
     id: 'receipt',

@@ -60,7 +60,9 @@ export const SidebarSalesSection: React.FC<SidebarSalesSectionProps> = ({
               onClick={() => { 
                 setActiveTab('checkout'); 
                 setIsMobileOverlayOpen(false); 
-                if (!isMobile && setSidebarMode) setSidebarMode('closed');
+                if (!isMobile && setSidebarMode && !isCollapsed) {
+                  setSidebarMode('collapsed');
+                }
               }} 
               collapsed={isCollapsed} 
             />

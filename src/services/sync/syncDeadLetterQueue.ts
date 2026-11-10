@@ -80,3 +80,38 @@ export async function retryAllFailedSyncItems(
     console.warn('[SyncService] Erreur lors de la tentative globale de retry:', err);
   }
 }
+
+/**
+ * 🩹 Auto-guérison de la DLQ : réinjecte les entités parentes (suppliers, settings, etc.)
+ * qui ont échoué par collision 409 maintenant que la réconciliation directe est active.
+ */
+export async function autoHealDeadLetterQueue(
+  enqueueSyncBatch: (items: SyncPayload[]) => void
+): Promise<void> {
+  try {
+    const failed = (await getIDB<any[]>('nexus_sync_failed')) || [];
+    if (!failed || failed.length === 0) return;
+
+    const recoverable: SyncPayload[] = [];
+    const remaining: any[] = [];
+
+    for (const item of failed) {
+      if (['suppliers', 'settings', 'categories', 'brands'].includes(item.table)) {
+        const cleaned = { ...item };
+        delete cleaned.retryCount;
+        delete (cleaned as any).failedAt;
+        recoverable.push(cleaned);
+      } else {
+        remaining.push(item);
+      }
+    }
+
+    if (recoverable.length > 0) {
+      await setIDB('nexus_sync_failed', remaining);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nexus-sync-dlq-alert', { detail: { count: remaining.length } }));
+      }
+      enqueueSyncBatch(recoverable);
+    }
+  } catch (_) {}
+}

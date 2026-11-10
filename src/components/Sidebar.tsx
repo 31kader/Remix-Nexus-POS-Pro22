@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useTranslation } from '../translations';
 import { RolePermissions, CompanySettings } from '../types';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { SidebarBrandHeader } from './sidebar/SidebarBrandHeader';
-import { SidebarSearchFilter } from './sidebar/SidebarSearchFilter';
 import { SidebarNavCategory } from './sidebar/SidebarNavCategory';
 import { SidebarSalesSection } from './sidebar/SidebarSalesSection';
 import { SidebarManagementSection } from './sidebar/SidebarManagementSection';
@@ -38,6 +37,12 @@ interface SidebarProps {
   setIsStorePosterModalOpen?: (open: boolean) => void;
 }
 
+/**
+ * ⚡ Barre Latérale Nexus POS Pro (Version Allégée & Haute Fluidité)
+ * - Sans barre de recherche interne superflue (supprimée pour fluidité maximale).
+ * - Transitions fluides matérielles sans lag ni désassemblage brutal du DOM.
+ * - Fermeture automatique propre sur mobile à chaque sélection d'onglet.
+ */
 export const Sidebar: React.FC<SidebarProps> = ({
   user,
   profile,
@@ -76,22 +81,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     Array.isArray(s.onlineOrders) ? s.onlineOrders.filter(o => o && o.status === 'pending').length : 0
   );
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [isVentesOpen, setIsVentesOpen] = useState(true);
   const [isGestionOpen, setIsGestionOpen] = useState(true);
   const [isAdminOpen, setIsAdminOpen] = useState(true);
 
-  const isCollapsed = !isSidebarOpen && !isMobile;
+  // Sur desktop, un mode collapsed offre les icônes à 68px au lieu d'un masquage complet destructeur
+  const isCollapsed = !isMobile && (sidebarMode === 'collapsed' || !isSidebarOpen);
 
-  const handleCloseSidebar = () => {
-    if (setSidebarMode) setSidebarMode('closed');
-    else if (cycleSidebarMode) cycleSidebarMode();
-    else setIsSidebarOpen(false);
-  };
-
-  const handleExpandSidebar = () => {
-    if (setSidebarMode) setSidebarMode('open');
-    else setIsSidebarOpen(true);
+  const handleToggleCollapse = () => {
+    if (setSidebarMode) {
+      setSidebarMode(isCollapsed ? 'open' : 'collapsed');
+    } else if (cycleSidebarMode) {
+      cycleSidebarMode();
+    } else {
+      setIsSidebarOpen(!isSidebarOpen);
+    }
   };
 
   const renderSectionHeader = (
@@ -99,58 +103,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
     isOpen: boolean,
     setIsOpen: (v: boolean) => void,
     colorDot: string = 'bg-indigo-500'
-  ) => {
-    return (
-      <SidebarNavCategory
-        title={title}
-        isOpen={searchQuery ? true : isOpen}
-        onToggle={() => setIsOpen(!isOpen)}
-        isCollapsed={isCollapsed}
-        colorDot={colorDot}
-      />
-    );
-  };
-
-  // Si fermé complet sur PC (0px)
-  if (!isMobile && sidebarMode === 'closed') {
-    return null;
-  }
+  ) => (
+    <SidebarNavCategory
+      title={title}
+      isOpen={isOpen}
+      onToggle={() => setIsOpen(!isOpen)}
+      isCollapsed={isCollapsed}
+      colorDot={colorDot}
+    />
+  );
 
   return (
     <>
-      {/* 1. Backdrop sombre sur Mobile lors de l'ouverture du tiroir */}
+      {/* 1. Backdrop sombre sur Mobile avec fermeture instantanée au toucher */}
       <AnimatePresence>
         {isMobile && isMobileOverlayOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             onClick={() => setIsMobileOverlayOpen(false)}
             onTouchEnd={() => setIsMobileOverlayOpen(false)}
-            className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[70] cursor-pointer touch-manipulation"
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs z-[70] cursor-pointer touch-manipulation"
             aria-hidden="true"
           />
         )}
       </AnimatePresence>
 
-      {/* 2. Menu Latéral : Tiroir fluide sur mobile / Barre réactive sur PC */}
-      <motion.aside
-        initial={false}
-        animate={{ 
-          width: isMobile ? 285 : (sidebarMode === 'open' ? 260 : 72),
-          x: isMobile ? (isMobileOverlayOpen ? 0 : -320) : 0
-        }}
-        transition={{ type: 'spring', damping: 26, stiffness: 250 }}
+      {/* 2. Menu Latéral : Tiroir fluide sur Mobile / Barre réactive sur Desktop */}
+      <aside
         className={cn(
-          "flex flex-col h-full bg-zinc-950 border-r border-zinc-800/80 shadow-2xl select-none",
-          isCollapsed && !isMobile ? "overflow-visible" : "overflow-hidden",
-          isMobile 
+          "flex flex-col h-full bg-zinc-950 border-r border-zinc-800/80 shadow-2xl select-none transition-all duration-200 ease-in-out",
+          isCollapsed ? "overflow-visible" : "overflow-hidden",
+          isMobile
             ? cn(
-                "fixed inset-y-0 left-0 z-[75] w-[285px] max-w-[85vw] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-                !isMobileOverlayOpen && "pointer-events-none invisible"
+                "fixed inset-y-0 left-0 z-[75] w-[275px] max-w-[85vw] transform-gpu pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+                isMobileOverlayOpen ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0 pointer-events-none"
               )
-            : "relative z-40 shrink-0"
+            : cn(
+                "relative z-40 shrink-0",
+                isCollapsed ? "w-[68px]" : "w-[245px]"
+              )
         )}
       >
         {/* En-tête de marque & Dépôt Actuel */}
@@ -158,28 +152,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           isMobileOverlayOpen={isMobileOverlayOpen}
-          onCloseSidebar={handleCloseSidebar}
+          onCloseSidebar={handleToggleCollapse}
           onCloseMobileOverlay={() => setIsMobileOverlayOpen(false)}
         />
 
-        {/* Champ de recherche instantanée (Ctrl+K) */}
-        <SidebarSearchFilter
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isCollapsed={isCollapsed}
-          onExpandSidebar={handleExpandSidebar}
-        />
-
-        {/* Navigation Principale Défilante */}
+        {/* Navigation Principale Défilante (sans barre de recherche encombrante) */}
         <nav
           className={cn(
             "flex-1 overflow-y-auto custom-scrollbar touch-pan-y overscroll-contain text-left rtl:text-right relative z-10",
-            isCollapsed ? "p-2 space-y-2 overflow-x-visible" : "p-3 space-y-4 overflow-x-hidden"
+            isCollapsed ? "p-1.5 space-y-2 overflow-x-visible" : "p-2.5 space-y-3 overflow-x-hidden"
           )}
         >
           <SidebarSalesSection
             t={t}
-            isVentesOpen={searchQuery ? true : isVentesOpen}
+            isVentesOpen={isVentesOpen}
             setIsVentesOpen={setIsVentesOpen}
             isCollapsed={isCollapsed}
             activeTab={activeTab}
@@ -196,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <SidebarManagementSection
             t={t}
-            isGestionOpen={searchQuery ? true : isGestionOpen}
+            isGestionOpen={isGestionOpen}
             setIsGestionOpen={setIsGestionOpen}
             isCollapsed={isCollapsed}
             activeTab={activeTab}
@@ -208,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <SidebarAdminSection
             t={t}
-            isAdminOpen={searchQuery ? true : isAdminOpen}
+            isAdminOpen={isAdminOpen}
             setIsAdminOpen={setIsAdminOpen}
             isCollapsed={isCollapsed}
             activeTab={activeTab}
@@ -232,9 +218,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           profile={profile}
           handleInstallApp={handleInstallApp}
           handleLogout={handleLogout}
-          onCloseSidebar={handleCloseSidebar}
+          onCloseSidebar={handleToggleCollapse}
         />
-      </motion.aside>
+      </aside>
     </>
   );
 };

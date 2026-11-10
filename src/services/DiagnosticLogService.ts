@@ -76,8 +76,14 @@ class DiagnosticLogService {
     console.warn = (...args: any[]) => {
       try {
         const rawMessage = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-        // Filtrer les avertissements de routine de React DevTools ou HMR
-        if (!rawMessage.includes('[HMR]') && !rawMessage.includes('Download the React DevTools')) {
+        // Filtrer les avertissements bénins (React DevTools, HMR, format d'input date Chromium)
+        const isBenign = 
+          rawMessage.includes('[HMR]') || 
+          rawMessage.includes('Download the React DevTools') ||
+          rawMessage.includes('does not conform to the required format') ||
+          rawMessage.includes('The specified value');
+
+        if (!isBenign) {
           this.captureLog('warn', 'console', rawMessage, args);
         }
       } catch (_) {}
@@ -121,8 +127,8 @@ class DiagnosticLogService {
   } {
     const text = raw.toLowerCase();
 
-    // 1. Conflit PostgREST (409 Conflict)
-    if (text.includes('409') || text.includes('conflict') || text.includes('duplicate key') || text.includes('on_conflict')) {
+    // 1. Conflit PostgREST réel (409 Conflict)
+    if ((text.includes('409') && (text.includes('conflict') || text.includes('rest/v1'))) || text.includes('duplicate key') || text.includes('violates unique constraint')) {
       const matchTable = raw.match(/rest\/v1\/([a-z0-9_]+)/i);
       const tableName = matchTable ? matchTable[1] : 'enregistrements';
       return {

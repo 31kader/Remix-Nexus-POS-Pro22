@@ -131,15 +131,26 @@ export async function processParentEntities(
         }
       }
 
+      // 🛡️ Fonction utilitaire de validation de synchro d'une entité parente
+      const parentKey = `${item.table}:${item.recordId || payload.id}`;
+      const markParentCompleted = () => {
+        completedKeys.add(parentKey);
+        if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+        if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+        processedSnapshots.set(parentKey, { opId: item.opId });
+        updateProgress(targetTable);
+      };
+
       // 🛡️ Élimination des collisions 409 : UPDATE direct pour les fournisseurs existants
       if (targetTable === 'suppliers' && (payload.id || item.recordId)) {
         const supplierId = payload.id || item.recordId;
         let existingId: string | null = null;
         try {
-          const { data: existingSupplier } = await supabase.from('suppliers').select('id').eq('id', supplierId).maybeSingle();
-          if (existingSupplier?.id) {
-            existingId = existingSupplier.id;
-          } else if (payload.name) {
+          if (supplierId) {
+            const { data: existingSupplier } = await supabase.from('suppliers').select('id').eq('id', supplierId).maybeSingle();
+            if (existingSupplier?.id) existingId = existingSupplier.id;
+          }
+          if (!existingId && payload.name) {
             const { data: existingByName } = await supabase.from('suppliers').select('id').ilike('name', String(payload.name).trim()).maybeSingle();
             if (existingByName?.id) existingId = existingByName.id;
           }
@@ -151,12 +162,24 @@ export async function processParentEntities(
           delete updatePayload.created_at;
           const updateRes = await supabase.from('suppliers').update(updatePayload).eq('id', existingId);
           if (!updateRes.error) {
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
+            markParentCompleted();
+            continue;
+          }
+        } else {
+          // Nouveau fournisseur : tentative d'insertion directe
+          const { error: insErr } = await supabase.from('suppliers').insert(payload);
+          if (!insErr) {
+            markParentCompleted();
+            continue;
+          } else if (String(insErr?.message || insErr?.code || '').includes('409') || insErr?.code === '23505') {
+            // Collision d'unicité détectée : repli immédiat en UPDATE
+            if (payload.name) {
+              const updatePayload = { ...payload };
+              delete updatePayload.id;
+              delete updatePayload.created_at;
+              await supabase.from('suppliers').update(updatePayload).ilike('name', String(payload.name).trim());
+            }
+            markParentCompleted();
             continue;
           }
         }
@@ -182,26 +205,13 @@ export async function processParentEntities(
           delete updatePayload.created_at;
           const updateRes = await supabase.from(targetTable).update(updatePayload).eq('id', existingId);
           if (!updateRes.error) {
-            const parentKey = `${item.table}:${item.recordId || payload.id}`;
-            completedKeys.add(parentKey);
-            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-            processedSnapshots.set(parentKey, { opId: item.opId });
-            updateProgress(targetTable);
+            markParentCompleted();
             continue;
           }
         }
       }
 
       let res = await supabase.from(targetTable).upsert(payload, { onConflict: 'id' });
-      const parentKey = `${item.table}:${item.recordId || payload.id}`;
-      const markParentCompleted = () => {
-        completedKeys.add(parentKey);
-        if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
-        if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
-        processedSnapshots.set(parentKey, { opId: item.opId });
-        updateProgress(targetTable);
-      };
 
       if (!res?.error) {
         markParentCompleted();
