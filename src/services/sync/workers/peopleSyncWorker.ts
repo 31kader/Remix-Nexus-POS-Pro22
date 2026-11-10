@@ -73,6 +73,15 @@ export async function processParentEntities(
             processedSnapshots.set(parentKey, { opId: item.opId });
             updateProgress(targetTable);
             continue;
+          } else if (isAuthOrPermissionError(updateRes.error)) {
+            console.warn(`[SyncService] Écriture users réservée aux administrateurs (401/403). Compte synchronisé conservé.`);
+            const parentKey = `${item.table}:${item.recordId || payload.id}`;
+            completedKeys.add(parentKey);
+            if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
+            if (payload.id) completedKeys.add(`${item.table}:${payload.id}`);
+            processedSnapshots.set(parentKey, { opId: item.opId });
+            updateProgress(targetTable);
+            continue;
           }
         }
       }

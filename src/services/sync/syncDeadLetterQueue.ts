@@ -96,7 +96,7 @@ export async function autoHealDeadLetterQueue(
     const remaining: any[] = [];
 
     for (const item of failed) {
-      if (['suppliers', 'settings', 'categories', 'brands'].includes(item.table)) {
+      if (['suppliers', 'settings', 'categories', 'brands', 'audit_logs', 'auditLogs', 'users'].includes(item.table)) {
         const cleaned = { ...item };
         delete cleaned.retryCount;
         delete (cleaned as any).failedAt;

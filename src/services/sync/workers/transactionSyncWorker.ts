@@ -1,6 +1,7 @@
 import { supabase } from '../../../supabase';
 import { TABLE_NAME_MAPPINGS } from '../../../lib/db-converters';
 import { isNetworkOrTimeoutError } from '../../networkErrorHandler';
+import { normalizeDateToIso } from '../../../utils/dateHelpers';
 import { SyncPayload } from '../types';
 import { 
   sanitizePayloadForSupabase, 
@@ -169,10 +170,12 @@ export async function processTransactionsAndOtherRecords(
     const payload = sanitizePayloadForSupabase(targetTable, rawItemPayload, item.recordId);
     if (!payload.id && item.recordId) payload.id = item.recordId;
     
-    // Garantir les timestamps pour les transactions
+    // Garantir les timestamps pour les transactions et les journaux d'audit
     if (targetTable === 'transactions') {
       if (!payload.created_at && payload.timestamp) payload.created_at = payload.timestamp;
       if (!payload.timestamp && payload.created_at) payload.timestamp = payload.created_at;
+    } else if (targetTable === 'audit_logs') {
+      payload.timestamp = normalizeDateToIso(payload.timestamp);
     }
 
     if (!itemsByTable.has(targetTable)) {
