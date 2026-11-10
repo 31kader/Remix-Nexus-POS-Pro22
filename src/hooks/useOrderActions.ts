@@ -24,6 +24,22 @@ function toSupabaseId(id: any): number | string {
   return (!isNaN(n) && n > 0) ? n : id;
 }
 
+// Helper universel de comparaison de commandes (Anti-Désynchronisation ID / externalOrderId)
+function matchesOrder(o: OnlineOrder, target: OnlineOrder | string | number): boolean {
+  if (!o) return false;
+  const targetId = typeof target === 'object' ? String(target.id || '') : String(target);
+  const targetExt = typeof target === 'object' ? String(target.externalOrderId || '') : '';
+  const oId = String(o.id || '');
+  const oExt = String(o.externalOrderId || '');
+
+  return (
+    (targetId !== '' && oId === targetId) ||
+    (targetExt !== '' && oExt !== '' && oExt === targetExt) ||
+    (targetExt !== '' && oId === targetExt) ||
+    (targetId !== '' && oExt === targetId)
+  );
+}
+
 export function useOrderActions({
   orders,
   customers,
@@ -45,54 +61,42 @@ export function useOrderActions({
   const updateOrderPaymentStatus = async (order: OnlineOrder, newPaymentStatus: OnlineOrder['paymentStatus']) => {
     const orderId = order.id;
     const dbId = toSupabaseId(orderId);
+    const updates: Partial<OnlineOrder> = { paymentStatus: newPaymentStatus };
     
-    // 1. SUPABASE-FIRST: Update Supabase directly
-    if (isSupabaseConfigured) {
+    // 1. OFFLINE-FIRST OPTIMISTIC UPDATE : Mise à jour immédiate de l'état local et cache
+    useTransactionStore.getState().setOnlineOrders(prev => 
+      (Array.isArray(prev) ? prev : []).map(o => matchesOrder(o, order) ? { ...o, ...updates } : o)
+    );
+    await localDb.update(`onlineOrders/${orderId}`, updates);
+    const currentList = useTransactionStore.getState().onlineOrders;
+    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
+    toast.success(newPaymentStatus === 'paid' ? 'Paiement Payé validé ✅' : 'Paiement Non Payé enregistré');
+
+    // 2. SYNCHRONISATION SUPABASE (Fond de tâche)
+    if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
       try {
-        console.log('[updateOrderPaymentStatus] Supabase update:', { payment_status: newPaymentStatus, id: dbId });
-
-        const { error, status } = await supabase
-          .from('online_orders')
-          .update({ payment_status: newPaymentStatus })
-          .eq('id', dbId);
-
-        console.log('[updateOrderPaymentStatus] Response:', { error, status });
-
-        if (error) {
-          console.error('[Supabase Payment Update Failed]', JSON.stringify(error));
-          toast.error(`Erreur Supabase: ${error.message || 'Échec de mise à jour'}`);
-          return;
+        const numericId = typeof order.id === 'number' ? order.id : (!isNaN(Number(order.id)) ? Number(order.id) : null);
+        let supaQuery = supabase.from('online_orders').update({ payment_status: newPaymentStatus });
+        if (order.externalOrderId) {
+          supaQuery = supaQuery.or(`external_order_id.eq.${order.externalOrderId}${numericId ? `,id.eq.${numericId}` : ''}`);
+        } else if (numericId) {
+          supaQuery = supaQuery.eq('id', numericId);
+        } else {
+          supaQuery = supaQuery.eq('id', dbId);
         }
 
-        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB
-        useTransactionStore.getState().setOnlineOrders(prev => 
-          (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, paymentStatus: newPaymentStatus } : o)
-        );
-
-        await localDb.updateLocalOnly(`onlineOrders/${orderId}`, { paymentStatus: newPaymentStatus });
-        const currentList = useTransactionStore.getState().onlineOrders;
-        idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-
-        toast.success(newPaymentStatus === 'paid' ? 'Paiement Payé validé sur Supabase ✅' : 'Paiement Non Payé enregistré sur Supabase');
-        return;
+        const { error } = await supaQuery;
+        if (error) {
+          console.warn('[Supabase Payment Sync Warning - Fallback Queue]', error);
+          enqueueSync('online_orders', String(dbId), 'UPSERT', { id: dbId, payment_status: newPaymentStatus });
+        }
       } catch (e: any) {
         console.warn('[Supabase Payment Catch - Queued Offline]', e);
-        useTransactionStore.getState().setOnlineOrders(prev => 
-          (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, paymentStatus: newPaymentStatus } : o)
-        );
-        await localDb.update(`onlineOrders/${orderId}`, { paymentStatus: newPaymentStatus });
         enqueueSync('online_orders', String(dbId), 'UPSERT', { id: dbId, payment_status: newPaymentStatus });
-        toast.info('Paiement mis à jour hors-ligne (synchronisation différée).');
-        return;
       }
+    } else {
+      enqueueSync('online_orders', String(dbId), 'UPSERT', { id: dbId, payment_status: newPaymentStatus });
     }
-
-    // Standalone fallback if no Supabase configured
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).map(o => String(o.id) === String(orderId) ? { ...o, paymentStatus: newPaymentStatus } : o)
-    );
-    await localDb.update(`onlineOrders/${orderId}`, { paymentStatus: newPaymentStatus });
-    toast.success('Paiement mis à jour en local.');
   };
 
   // 🛡️ SYNCHRONISATION / ROLLBACK : Si une commande est annulée, annuler sa transaction de caisse et réintégrer le stock
@@ -109,12 +113,12 @@ export function useOrderActions({
     const orderId = order.id;
     const dbId = toSupabaseId(orderId);
 
-    // Si la commande est annulée, déclencher le rollback de sa recette et du stock (garde stricte et idempotente dans restockOrder)
+    // Si la commande est annulée, déclencher le rollback de sa recette et du stock
     if (newStatus === 'cancelled') {
       await rollbackCancelledOrderTransactions(order);
     }
 
-    // 📦 OPTION 1 : Dès confirmation (ou tout statut actif >= confirmed), déstocker immédiatement
+    // 📦 Déstockage dès confirmation ou statut actif
     const activeDestockStatuses = ['confirmed', 'paid', 'processing', 'shipped', 'delivered'];
     let didDestock = false;
     if (activeDestockStatuses.includes(newStatus) && !order.syncedToPos) {
@@ -130,85 +134,57 @@ export function useOrderActions({
       ...(isSyncedToPos ? { syncedToPos: true } : {})
     };
 
-    // 1. SUPABASE-FIRST: Update Supabase directly with only valid columns
-    if (isSupabaseConfigured) {
+    // 1. OFFLINE-FIRST OPTIMISTIC UPDATE IMMÉDIAT (Zéro latence perçue par le caissier)
+    useTransactionStore.getState().setOnlineOrders(prev => 
+      (Array.isArray(prev) ? prev : []).map(o => matchesOrder(o, order) ? { ...o, ...orderUpdates } : o)
+    );
+    await localDb.update(`onlineOrders/${orderId}`, orderUpdates);
+    const currentList = useTransactionStore.getState().onlineOrders;
+    idbSet('nexus_online_orders_cache', currentList).catch(() => {});
+    toast.success(`Statut mis à jour : ${statusLabels[newStatus] || newStatus} ✅`);
+
+    // 2. SYNCHRONISATION SUPABASE EN TÂCHE DE FOND
+    const supaPayload: Record<string, any> = {
+      status: newStatus,
+      ...(isSyncedToPos ? { synced_to_pos: true } : {})
+    };
+
+    if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
       try {
-        console.log('[updateOrderStatus] Supabase update:', { status: newStatus, id: dbId, originalId: orderId, typeOfId: typeof orderId });
-
-        const supaPayload: Record<string, any> = {
-          status: newStatus,
-          ...(isSyncedToPos ? { synced_to_pos: true } : {})
-        };
-
-        // Step 1: Update without .select() to avoid RLS issues on SELECT after UPDATE
-        const { error, status } = await supabase
-          .from('online_orders')
-          .update(supaPayload)
-          .eq('id', dbId);
-
-        // Also update any row sharing the same external_order_id to prevent phantom duplicates
+        const numericId = typeof order.id === 'number' ? order.id : (!isNaN(Number(order.id)) ? Number(order.id) : null);
+        let supaQuery = supabase.from('online_orders').update(supaPayload);
         if (order.externalOrderId) {
-          await supabase
-            .from('online_orders')
-            .update(supaPayload)
-            .eq('external_order_id', order.externalOrderId);
+          supaQuery = supaQuery.or(`external_order_id.eq.${order.externalOrderId}${numericId ? `,id.eq.${numericId}` : ''}`);
+        } else if (numericId) {
+          supaQuery = supaQuery.eq('id', numericId);
+        } else {
+          supaQuery = supaQuery.eq('id', dbId);
         }
 
-        console.log('[updateOrderStatus] Supabase response:', { error, status });
-
+        const { error } = await supaQuery;
         if (error) {
-          console.error('[Supabase Status Update Error]', JSON.stringify(error));
-          toast.error(`Erreur Supabase (${error.code || status}): ${error.message || 'Impossible de mettre à jour le statut'}`);
-          return;
+          console.warn('[Supabase Order Status Sync Warning - Fallback Queue]', error);
+          enqueueSync('online_orders', String(dbId), 'UPSERT', {
+            id: dbId,
+            ...supaPayload,
+            ...(order.externalOrderId ? { external_order_id: order.externalOrderId } : {})
+          });
         }
-
-        // 2. SUCCESS ON SUPABASE -> SYNC TO LOCAL STORE & LOCAL DB
-        useTransactionStore.getState().setOnlineOrders(prev => 
-          (Array.isArray(prev) ? prev : []).map(o => {
-            const matchesId = String(o.id) === String(orderId);
-            const matchesExt = order.externalOrderId && o.externalOrderId === order.externalOrderId;
-            return (matchesId || matchesExt) ? { ...o, ...orderUpdates } : o;
-          })
-        );
-
-        await localDb.updateLocalOnly(`onlineOrders/${orderId}`, orderUpdates);
-        const currentList = useTransactionStore.getState().onlineOrders;
-        idbSet('nexus_online_orders_cache', currentList).catch(() => {});
-
-        toast.success(`Statut synchronisé sur Supabase ✅ : ${statusLabels[newStatus] || newStatus}`);
-        return;
       } catch (e: any) {
         console.warn('[Supabase Status Catch - Queued Offline]', e);
-        useTransactionStore.getState().setOnlineOrders(prev => 
-          (Array.isArray(prev) ? prev : []).map(o => {
-            const matchesId = String(o.id) === String(orderId);
-            const matchesExt = order.externalOrderId && o.externalOrderId === order.externalOrderId;
-            return (matchesId || matchesExt) ? { ...o, ...orderUpdates } : o;
-          })
-        );
-        await localDb.update(`onlineOrders/${orderId}`, orderUpdates);
         enqueueSync('online_orders', String(dbId), 'UPSERT', {
           id: dbId,
-          ...orderUpdates,
+          ...supaPayload,
           ...(order.externalOrderId ? { external_order_id: order.externalOrderId } : {})
         });
-
-        toast.info(`Statut enregistré hors-ligne : ${statusLabels[newStatus] || newStatus} (synchronisation automatique dès reconnexion).`);
-        return;
       }
+    } else {
+      enqueueSync('online_orders', String(dbId), 'UPSERT', {
+        id: dbId,
+        ...supaPayload,
+        ...(order.externalOrderId ? { external_order_id: order.externalOrderId } : {})
+      });
     }
-
-    // Standalone fallback if Supabase is not configured
-    useTransactionStore.getState().setOnlineOrders(prev => 
-      (Array.isArray(prev) ? prev : []).map(o => {
-        const matchesId = String(o.id) === String(orderId);
-        const matchesExt = order.externalOrderId && o.externalOrderId === order.externalOrderId;
-        return (matchesId || matchesExt) ? { ...o, status: newStatus } : o;
-      })
-    );
-    await localDb.update(`onlineOrders/${orderId}`, { status: newStatus });
-
-    toast.success(`Statut local mis à jour : ${statusLabels[newStatus] || newStatus}`);
   };
 
   const bulkUpdateOrderStatus = async (targetOrders: OnlineOrder[], newStatus: OnlineOrder['status']) => {

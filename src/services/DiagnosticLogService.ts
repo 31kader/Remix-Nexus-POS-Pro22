@@ -65,7 +65,15 @@ class DiagnosticLogService {
     console.error = (...args: any[]) => {
       try {
         const rawMessage = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-        this.captureLog('error', 'console', rawMessage, args);
+        const isBenign = 
+          rawMessage.includes('[HMR]') || 
+          rawMessage.includes('Download the React DevTools') ||
+          rawMessage.includes('does not conform to the required format') ||
+          rawMessage.includes('The specified value');
+
+        if (!isBenign) {
+          this.captureLog('error', 'console', rawMessage, args);
+        }
       } catch (_) {}
       if (this.originalConsoleError) {
         this.originalConsoleError(...args);

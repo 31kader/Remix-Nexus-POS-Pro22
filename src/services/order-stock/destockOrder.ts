@@ -62,8 +62,7 @@ export async function destockOrder(
         }
       }
       if (issues.length > 0) {
-        toast.error(`Rupture de stock : ${issues.join(', ')}`);
-        return { success: false, reason: 'stock_shortage' };
+        toast.warning(`Stock insuffisant : ${issues.join(', ')}. Déstockage appliqué.`);
       }
     }
 
