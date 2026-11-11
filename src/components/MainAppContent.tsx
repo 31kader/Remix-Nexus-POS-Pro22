@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Menu } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Sidebar } from './Sidebar';
 import { BottomBar } from './BottomBar';
@@ -141,6 +142,18 @@ export const MainAppContent: React.FC<MainAppContentProps> = ({
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative bg-transparent overflow-hidden">
+        {/* Languette d'ouverture rapide sur PC si le menu est fermé (0px) */}
+        {!isMobile && sidebarMode === 'closed' && (
+          <button
+            type="button"
+            onClick={cycleSidebarMode}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-50 p-2 bg-zinc-900/95 hover:bg-indigo-600 border border-l-0 border-zinc-700/80 rounded-r-xl text-zinc-400 hover:text-white shadow-xl transition-all cursor-pointer group"
+            title="Ouvrir le menu latéral (Échap ou clic)"
+          >
+            <Menu size={16} className="group-hover:scale-110 transition-transform" />
+          </button>
+        )}
+
         {activeTab !== 'checkout' && (
           <AppHeader 
             isMobile={isMobile}

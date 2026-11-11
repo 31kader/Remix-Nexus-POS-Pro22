@@ -41,7 +41,17 @@ export async function destockOrder(
       return { success: true, reason: 'already_synced' };
     }
 
-    const items: OrderItemLike[] = Array.isArray(freshOrder.items) ? (freshOrder.items as OrderItemLike[]) : [];
+    let items: OrderItemLike[] = [];
+    if (Array.isArray(freshOrder.items)) {
+      items = freshOrder.items as OrderItemLike[];
+    } else if (typeof freshOrder.items === 'string') {
+      try {
+        const parsed = JSON.parse(freshOrder.items);
+        items = Array.isArray(parsed) ? (parsed as OrderItemLike[]) : [];
+      } catch (_) {
+        items = [];
+      }
+    }
     if (items.length === 0) {
       return { success: false, reason: 'no_items' };
     }

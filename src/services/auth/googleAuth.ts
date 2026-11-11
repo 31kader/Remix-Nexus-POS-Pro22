@@ -5,6 +5,14 @@ import { auth, User } from './AuthEmulator';
 export class GoogleAuthProvider {}
 export const googleProvider = new GoogleAuthProvider();
 
+function safeClosePopup(popup: Window | null) {
+  try {
+    if (popup && !popup.closed) {
+      popup.close();
+    }
+  } catch (_) {}
+}
+
 export const signInWithPopup = async (...args: any[]) => {
   if (isSupabaseConfigured) {
     try {
@@ -56,14 +64,6 @@ export const signInWithPopup = async (...args: any[]) => {
             popup = null;
           }
 
-          const safeClosePopup = (win: Window | null) => {
-            try {
-              if (win && !win.closed) {
-                win.close();
-              }
-            } catch (_) {}
-          };
-
           if (!popup) {
             window.location.href = data.url;
             return { user: null };
@@ -92,7 +92,6 @@ export const signInWithPopup = async (...args: any[]) => {
               if (resolved) return;
               resolved = true;
               cleanup();
-              safeClosePopup(popup);
               try {
                 if (sessionPayload) {
                   await supabase.auth.setSession(sessionPayload);
@@ -117,7 +116,6 @@ export const signInWithPopup = async (...args: any[]) => {
               if (resolved) return;
               resolved = true;
               cleanup();
-              safeClosePopup(popup);
               reject(new Error(errMsg || "Échec de connexion Google"));
             };
 

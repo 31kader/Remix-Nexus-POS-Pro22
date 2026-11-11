@@ -98,8 +98,18 @@ export async function restockOrder(
     }
 
     // 2. Réintégration physique du stock
-    const rawItems = (Array.isArray(freshOrder.items) && freshOrder.items.length > 0)
-      ? freshOrder.items
+    let parsedFreshItems: any[] = [];
+    if (Array.isArray(freshOrder.items)) {
+      parsedFreshItems = freshOrder.items;
+    } else if (typeof freshOrder.items === 'string') {
+      try {
+        const p = JSON.parse(freshOrder.items);
+        if (Array.isArray(p)) parsedFreshItems = p;
+      } catch (_) {}
+    }
+
+    const rawItems = (parsedFreshItems.length > 0)
+      ? parsedFreshItems
       : (matchingTxs.length > 0 && Array.isArray(matchingTxs[0].items) ? matchingTxs[0].items : []);
     const items: OrderItemLike[] = rawItems as OrderItemLike[];
 

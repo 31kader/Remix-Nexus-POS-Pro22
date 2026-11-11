@@ -85,14 +85,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isGestionOpen, setIsGestionOpen] = useState(true);
   const [isAdminOpen, setIsAdminOpen] = useState(true);
 
-  // Sur desktop, un mode collapsed offre les icônes à 68px au lieu d'un masquage complet destructeur
-  const isCollapsed = !isMobile && (sidebarMode === 'collapsed' || !isSidebarOpen);
+  // Support des 3 modes sur Desktop : 'open' (245px), 'collapsed' (68px), 'closed' (0px fermé total)
+  const isClosed = !isMobile && sidebarMode === 'closed';
+  const isCollapsed = !isMobile && !isClosed && (sidebarMode === 'collapsed' || !isSidebarOpen);
 
   const handleToggleCollapse = () => {
-    if (setSidebarMode) {
-      setSidebarMode(isCollapsed ? 'open' : 'collapsed');
-    } else if (cycleSidebarMode) {
+    if (cycleSidebarMode) {
       cycleSidebarMode();
+    } else if (setSidebarMode) {
+      setSidebarMode(isClosed ? 'open' : 'closed');
     } else {
       setIsSidebarOpen(!isSidebarOpen);
     }
@@ -131,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* 2. Menu Latéral : Tiroir fluide sur Mobile / Barre réactive sur Desktop */}
+      {/* 2. Menu Latéral : Tiroir fluide sur Mobile / Fermeture totale (0px) ou Barre réactive sur Desktop */}
       <aside
         className={cn(
           "flex flex-col h-full bg-zinc-950 border-r border-zinc-800/80 shadow-2xl select-none transition-all duration-200 ease-in-out",
@@ -143,7 +144,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )
             : cn(
                 "relative z-40 shrink-0",
-                isCollapsed ? "w-[68px]" : "w-[245px]"
+                isClosed
+                  ? "w-0 max-w-0 opacity-0 pointer-events-none -translate-x-full overflow-hidden border-none shadow-none"
+                  : isCollapsed
+                    ? "w-[68px]"
+                    : "w-[245px]"
               )
         )}
       >

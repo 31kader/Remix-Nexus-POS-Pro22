@@ -103,6 +103,12 @@ export const emulateUpsert = async (
     const patchBody: Record<string, any> = { ...row };
     conflictCols.forEach(c => delete patchBody[c]);
     delete patchBody.created_at;
+    delete patchBody.isUpdate;
+
+    // Assainissement auth_uid : supprimer les chaînes vides ou invalides qui violent les index uniques PostgreSQL
+    if (patchBody.auth_uid !== undefined && (typeof patchBody.auth_uid !== 'string' || !patchBody.auth_uid.trim() || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(patchBody.auth_uid))) {
+      delete patchBody.auth_uid;
+    }
 
     const patchHeaders = new Headers(patchBaseInit.headers);
     cleanHeadersInstance(patchHeaders);
@@ -118,6 +124,7 @@ export const emulateUpsert = async (
       console.warn(`[emulateUpsert] PATCH repli sur ${baseUrl}?${filter} code ${patched.status}`);
       return patched;
     }
+    try { await patched.text(); } catch (_) {}
   }
   return new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } });
 };

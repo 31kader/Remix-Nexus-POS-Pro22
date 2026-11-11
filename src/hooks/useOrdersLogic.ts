@@ -56,7 +56,10 @@ export function useOrdersLogic(props: OrdersProps) {
   // Navigation & interaction states
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const selectedOrder = useMemo(
-    () => rawOrders.find(o => String(o?.id) === String(selectedOrderId)) || null,
+    () => rawOrders.find(o => 
+      String(o?.id) === String(selectedOrderId) || 
+      (o?.externalOrderId && String(o.externalOrderId) === String(selectedOrderId))
+    ) || null,
     [rawOrders, selectedOrderId]
   );
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);

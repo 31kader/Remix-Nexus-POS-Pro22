@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OnlineOrder } from '../../../types';
 import { Button } from '../../ui';
 import { CheckCircle2, Package, Truck, Printer, Edit3, X, Loader2 } from 'lucide-react';
@@ -23,14 +23,25 @@ export function OrderActionButtons({
   t
 }: OrderActionButtonsProps) {
   const [isPending, setIsPending] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState<OnlineOrder['status'] | null>(null);
+
+  useEffect(() => {
+    if (optimisticStatus && order.status === optimisticStatus) {
+      setOptimisticStatus(null);
+    }
+  }, [order.status, optimisticStatus]);
+
+  const activeStatus = optimisticStatus || order.status;
 
   const handleStatusChange = async (targetStatus: OnlineOrder['status']) => {
     if (isPending) return;
     setIsPending(true);
+    setOptimisticStatus(targetStatus);
     try {
       await updateOrderStatus(order, targetStatus);
     } catch (err) {
       console.error('[OrderActionButtons] Erreur mise à jour statut:', err);
+      setOptimisticStatus(null);
     } finally {
       setIsPending(false);
     }
@@ -39,7 +50,7 @@ export function OrderActionButtons({
   return (
     <div className="space-y-2 pt-2">
       {/* A. Action Principale Contextuelle (CTA Majeur) */}
-      {order.status === 'pending' && (
+      {activeStatus === 'pending' && (
         <Button 
           onClick={() => handleStatusChange('confirmed')} 
           disabled={isPending}
@@ -57,7 +68,7 @@ export function OrderActionButtons({
         </Button>
       )}
 
-      {order.status === 'confirmed' && (
+      {activeStatus === 'confirmed' && (
         <Button 
           onClick={() => handleStatusChange('processing')} 
           disabled={isPending}
@@ -75,7 +86,7 @@ export function OrderActionButtons({
         </Button>
       )}
 
-      {order.status === 'processing' && (
+      {activeStatus === 'processing' && (
         <Button 
           onClick={() => handleStatusChange(order.deliveryMethod === 'delivery' ? 'shipped' : 'delivered')} 
           disabled={isPending}
@@ -97,7 +108,7 @@ export function OrderActionButtons({
         </Button>
       )}
 
-      {order.status === 'shipped' && (
+      {activeStatus === 'shipped' && (
         <Button 
           onClick={() => handleStatusChange('delivered')} 
           disabled={isPending}
@@ -126,7 +137,7 @@ export function OrderActionButtons({
           <Printer size={15} /> Imprimer Ticket
         </Button>
 
-        {order.status === 'pending' && (
+        {activeStatus === 'pending' && (
           <Button 
             variant="secondary" 
             onClick={() => setIsEditingItems(true)} 
@@ -137,7 +148,7 @@ export function OrderActionButtons({
           </Button>
         )}
 
-        {order.status !== 'cancelled' && order.status !== 'delivered' && (
+        {activeStatus !== 'cancelled' && activeStatus !== 'delivered' && (
           <button 
             type="button" 
             disabled={isPending}

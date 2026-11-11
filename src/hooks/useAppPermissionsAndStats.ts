@@ -28,8 +28,11 @@ export function useAppPermissionsAndTheme() {
     }
   });
 
-  const [theme, setTheme] = useState<'dark' | 'light' | 'emerald' | 'gold' | 'nardo'>(() => {
-    return (localStorage.getItem('nexus-pos-theme-v3') as 'dark' | 'light' | 'emerald' | 'gold' | 'nardo') || 'light';
+  const [theme, setTheme] = useState<'titanium' | 'brutalist' | 'albatros'>(() => {
+    const raw = localStorage.getItem('nexus-pos-theme-v4') || localStorage.getItem('nexus-pos-theme-v3') || '';
+    if (raw === 'albatros' || raw === 'light') return 'albatros';
+    if (raw === 'brutalist') return 'brutalist';
+    return 'titanium';
   });
   const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
@@ -41,16 +44,19 @@ export function useAppPermissionsAndTheme() {
   }, [autoSyncOrders]);
 
   useEffect(() => {
+    localStorage.setItem('nexus-pos-theme-v4', theme);
     localStorage.setItem('nexus-pos-theme-v3', theme);
     localStorage.setItem('nexus-pos-theme', theme);
-    document.documentElement.classList.remove('light', 'dark', 'emerald', 'gold', 'nardo-grey-racing');
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
+    document.documentElement.classList.remove(
+      'light', 'dark', 'emerald', 'gold', 'nardo-grey-racing',
+      'theme-titanium', 'theme-brutalist', 'theme-albatros'
+    );
+    if (theme === 'albatros') {
+      document.documentElement.classList.add('light', 'theme-albatros');
+    } else if (theme === 'brutalist') {
+      document.documentElement.classList.add('dark', 'theme-brutalist');
     } else {
-      document.documentElement.classList.add('dark');
-      if (theme === 'emerald') document.documentElement.classList.add('emerald');
-      else if (theme === 'gold') document.documentElement.classList.add('gold');
-      else if (theme === 'nardo') document.documentElement.classList.add('nardo-grey-racing');
+      document.documentElement.classList.add('dark', 'theme-titanium');
     }
   }, [theme]);
 

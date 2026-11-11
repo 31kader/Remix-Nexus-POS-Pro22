@@ -1129,6 +1129,46 @@ Retourne un JSON valide avec : items (un tableau d'objets contenant :
       res.status(404).send("Fichier d'installation Windows non trouvé dans le dossier release.");
     });
 
+    // ⚡ Route de téléchargement direct du patch ultra-léger (3 Mo)
+    app.get('/download/patch', (req, res) => {
+      const releaseDirs = [
+        path.join(process.cwd(), 'release'),
+        path.join(_dirname, '..', 'release'),
+        path.join(_dirname, 'release'),
+        path.join('C:\\Users\\ks2\\antigravity\\Remix-Nexus-POS-Pro', 'release')
+      ];
+      for (const dir of releaseDirs) {
+        if (fs.existsSync(dir)) {
+          try {
+            const files = fs.readdirSync(dir)
+              .filter(f => f.toLowerCase().startsWith('nexuspospro-patch-') && f.endsWith('.zip'))
+              .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+            if (files.length > 0) {
+              const zipPath = path.join(dir, files[0]);
+              return res.download(zipPath, files[0]);
+            }
+          } catch (_) {}
+        }
+      }
+      return res.redirect('https://unlwfvldqxfccgrrgbwf.supabase.co/storage/v1/object/public/KSSGOP/NexusPOSPro-Patch-latest.zip');
+    });
+
+    // ⚡ Route de téléchargement du lanceur de mise à jour 1-clic Windows
+    app.get('/download/patch-launcher', (req, res) => {
+      const releaseDirs = [
+        path.join(process.cwd(), 'release'),
+        path.join(_dirname, '..', 'release'),
+        path.join(_dirname, 'release')
+      ];
+      for (const dir of releaseDirs) {
+        const batPath = path.join(dir, 'Mise-A-Jour-Rapide.bat');
+        if (fs.existsSync(batPath)) {
+          return res.download(batPath, 'Mise-A-Jour-Rapide.bat');
+        }
+      }
+      res.status(404).send('Script Mise-A-Jour-Rapide.bat introuvable.');
+    });
+
     // Ensure we correctly detect development mode with Vite HMR in local environment
     if (!IS_PROD) {
       try {

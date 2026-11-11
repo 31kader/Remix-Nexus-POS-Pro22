@@ -75,7 +75,21 @@ export function SmartPurchaseModals({
         <form onSubmit={(e) => { e.preventDefault(); handleSupplierPayment(paymentData); }} className="p-2 space-y-5 text-left">
           <div className="space-y-1.5">
             <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider px-1">Montant à verser (DA)</label>
-            <input required type="number" step="0.01" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-2xl font-mono font-black text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-indigo-500" value={paymentData.amount || ''} onChange={e => setPaymentData({...paymentData, amount: parseFloat(e.target.value) || 0})} />
+            <input 
+              required 
+              type="text" 
+              inputMode="decimal"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-2xl font-mono font-black text-emerald-600 dark:text-emerald-400 outline-none focus:ring-2 focus:ring-indigo-500" 
+              value={paymentData.amount === 0 ? '' : paymentData.amount} 
+              onChange={e => {
+                const normalized = e.target.value.replace(',', '.');
+                if (/^[0-9]*\.?[0-9]*$/.test(normalized)) {
+                  const val = parseFloat(normalized);
+                  setPaymentData({ ...paymentData, amount: normalized.endsWith('.') ? (normalized as any) : (isNaN(val) ? 0 : val) });
+                }
+              }} 
+              placeholder="0.00"
+            />
           </div>
           <div className="space-y-1.5">
             <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider px-1">Date du versement</label>

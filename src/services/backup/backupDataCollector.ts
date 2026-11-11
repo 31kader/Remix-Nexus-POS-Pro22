@@ -7,6 +7,7 @@ import { useInventoryStore } from '../../store/useInventoryStore';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { get as idbGet } from 'idb-keyval';
 import { BackupData } from './backupRestoreProcessor';
+import { APP_CONFIG } from '../../config/appConfig';
 
 /**
  * 📦 Récupère l'intégralité des données en cache local et stores pour archivage
@@ -38,7 +39,7 @@ export async function collectCurrentBackupData(): Promise<BackupData> {
   (transStore.transactions || []).forEach(t => { if (t && t.id) txMap.set(t.id, t); });
 
   return {
-    version: '1.2.70',
+    version: APP_CONFIG.version || '1.2.81',
     createdAt: new Date().toISOString(),
     appName: 'Nexus POS Pro',
     settings: coreStore.settings,

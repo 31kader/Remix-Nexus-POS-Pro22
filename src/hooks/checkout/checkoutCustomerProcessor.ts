@@ -106,7 +106,8 @@ export async function processCheckoutCustomer({
       balance: finalBalance,
       deltaBalance,
       deltaSpent,
-      deltaPoints
+      deltaPoints,
+      idempotencyKey: `adj_${selectedCustomer.id}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
     };
 
     await localDb.update(`customers/${selectedCustomer.id}`, updatedCustomerData);

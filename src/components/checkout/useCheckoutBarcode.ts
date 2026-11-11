@@ -134,7 +134,13 @@ export function useCheckoutBarcode({
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       
-      // Si l'utilisateur est dans une boîte modale ou un champ de texte spécifique (hors recherche principale)
+      // Détection des champs de saisie spécifiques
+      const isSearchInput = Boolean(
+        target?.id === 'product-search-input' ||
+        target?.id === 'direct-barcode-input' ||
+        target?.getAttribute?.('data-search-input') === 'true' ||
+        (typeof target?.closest === 'function' && (target.closest('[data-search-container]') || target.closest('.search-container')))
+      );
       const isQuantityOrPriceInput = Boolean(
         target?.classList?.contains?.('qty-input') || 
         target?.classList?.contains?.('price-input') ||
@@ -148,7 +154,8 @@ export function useCheckoutBarcode({
       const diff = now - scannerBuffer.current.lastTime;
       
       if (e.key === 'Enter') {
-        if (isQuantityOrPriceInput || isModalInput) {
+        // Ne jamais court-circuiter la barre de recherche produit, les inputs de prix/quantité ou les modales
+        if (isSearchInput || isQuantityOrPriceInput || isModalInput) {
           scannerBuffer.current.text = '';
           return;
         }
@@ -162,6 +169,11 @@ export function useCheckoutBarcode({
           scannerBuffer.current.text = '';
         }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Ne pas capturer les frappes dans la barre de recherche produit
+        if (isSearchInput) {
+          scannerBuffer.current.text = '';
+          return;
+        }
         // Détection de frappe rapide typique d'une douchette code-barres (< 65ms) ou saisie hors champ texte
         const isFastScan = diff < 65;
         const isNotInModal = !isModalInput && !isQuantityOrPriceInput && (!isTextInput || isFastScan);

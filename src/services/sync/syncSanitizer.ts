@@ -4,7 +4,7 @@ import { TABLE_NAME_MAPPINGS, preparePayload } from '../../lib/db-converters';
 export const LOCAL_ONLY_TABLES = new Set<string>(['cart_drafts', 'cartDrafts']);
 
 // Tables protégées par RLS exigeant une session Supabase active (évite le spam 403 Forbidden hors connexion)
-export const ADMIN_RESTRICTED_SYNC_TABLES = new Set<string>(['employees', 'settings', 'audit_logs', 'users']);
+export const ADMIN_RESTRICTED_SYNC_TABLES = new Set<string>(['employees', 'settings', 'users', 'audit_logs']);
 
 export function isLocalOnlyTable(table: string): boolean {
   if (!table) return false;
@@ -88,6 +88,28 @@ export function sanitizePayloadForSupabase(table: string, payload: any, fallback
     if (typeof cleaned.parent_id === 'string') {
       cleaned.parent_id = cleaned.parent_id.trim();
       if (!cleaned.parent_id) cleaned.parent_id = null;
+    }
+  }
+
+  // Handle specific customer constraints (avoid 22P02 UUID syntax error and index collision on auth_uid)
+  if (normTable === 'customers' || table === 'customers') {
+    if (typeof cleaned.name === 'string') {
+      cleaned.name = cleaned.name.trim();
+    }
+    if (typeof cleaned.phone === 'string') {
+      cleaned.phone = cleaned.phone.trim();
+    }
+    if (typeof cleaned.email === 'string') {
+      cleaned.email = cleaned.email.trim();
+      if (!cleaned.email) cleaned.email = null;
+    }
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (cleaned.auth_uid !== undefined) {
+      if (!cleaned.auth_uid || typeof cleaned.auth_uid !== 'string' || !uuidRegex.test(cleaned.auth_uid.trim())) {
+        cleaned.auth_uid = null;
+      } else {
+        cleaned.auth_uid = cleaned.auth_uid.trim();
+      }
     }
   }
 

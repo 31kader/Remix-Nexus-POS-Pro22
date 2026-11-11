@@ -30,6 +30,7 @@ export async function processParentEntities(
   for (const item of parentItems) {
     const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
     if (ADMIN_RESTRICTED_SYNC_TABLES.has(targetTable) && !hasActiveSupabaseSession) {
+      refs.hadAuthOrPermissionError = true;
       continue;
     }
     try {

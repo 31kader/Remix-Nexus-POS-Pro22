@@ -53,8 +53,21 @@ export function OrderDetailModal({
 }: OrderDetailModalProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string } | null>(null);
+  const [localStatus, setLocalStatus] = useState<OnlineOrder['status'] | null>(null);
 
   if (!selectedOrder) return null;
+
+  const currentStatus = localStatus || selectedOrder.status;
+
+  const handleOptimisticUpdateStatus = async (order: OnlineOrder, targetStatus: any) => {
+    setLocalStatus(targetStatus);
+    try {
+      await updateOrderStatus(order, targetStatus);
+    } catch (err) {
+      setLocalStatus(null);
+      throw err;
+    }
+  };
 
   const orderItems: any[] = Array.isArray(selectedOrder.items)
     ? selectedOrder.items
@@ -84,7 +97,7 @@ export function OrderDetailModal({
     }
   };
 
-  const statusBadge = getStatusBadge(selectedOrder.status);
+  const statusBadge = getStatusBadge(currentStatus);
 
   const openImageZoom = (imageUrl: string, title: string) => {
     setLightboxImage({ url: imageUrl, title });
@@ -205,8 +218,8 @@ export function OrderDetailModal({
 
               {/* 4. Barre d'Actions Hiérarchisée & Claire */}
               <OrderActionButtons 
-                order={selectedOrder}
-                updateOrderStatus={updateOrderStatus}
+                order={{ ...selectedOrder, status: currentStatus }}
+                updateOrderStatus={handleOptimisticUpdateStatus}
                 handlePrintOrder={handlePrintOrder}
                 setIsEditingItems={setIsEditingItems}
                 handleYassirRequest={handleYassirRequest}

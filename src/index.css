@@ -134,77 +134,125 @@ table tbody td {
 }
 
 /* ==========================================================================
-   THEMES SYSTEM (Onyx, Albâtre / Light, Émeraude, Or Luxe, Nardo)
+   LES 3 STYLES VISUELS D'EXCELLENCE NEXUS
+   1. Nexus Slate Titanium (Moderne, Sombre Ardoise & Cyan, Confort Caisse)
+   2. Néo-Brutalisme Industriel (Monospace, Grille Marquée, Angles Vifs & Ambre)
+   3. Albâtre Minimaliste (Clarté Scandinave, Blanc Perle & Tableaux Aérés)
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. Cyber Émeraude (Matrix Sci-Fi Neon Green)
+   1. Nexus Slate Titanium (Moderne Sombre, Ardoise & Cyan)
    -------------------------------------------------------------------------- */
-.emerald {
-  --bg-industrial-950: #020904;
-  --bg-industrial-900: #041407;
-  --bg-industrial-800: #06200c;
-  --bg-industrial-700: #0f391a;
-  --text-industrial-400: #ecfdf5;
-  --text-industrial-500: #34d399;
-  --bg-nardo: #020904;
-  --bg-workspace: #041407;
-  --card-border: rgba(16, 185, 129, 0.15);
-  --text-primary: #ffffff;
-  --text-secondary: #a7f3d0;
-  --input-bg: rgba(16, 185, 129, 0.04);
-  --input-border: rgba(16, 185, 129, 0.2);
-  --neon-indigo: none;
-  --neon-cyan: none;
-  --soft-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
-  --brand-primary: #10b981;
-  --brand-hover: #059669;
-  --brand-shadow: rgba(16, 185, 129, 0.15);
+html.theme-titanium {
+  --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family-base);
+  --brand-primary: #06b6d4;
+  --brand-hover: #0891b2;
+}
+
+html.theme-titanium table th {
+  background-color: #1e293b !important;
+  color: #38bdf8 !important;
+  border-bottom: 2px solid #06b6d4 !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+html.theme-titanium table td {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.45) !important;
+}
+
+html.theme-titanium table tbody tr:hover {
+  background-color: rgba(30, 41, 59, 0.65) !important;
 }
 
 /* --------------------------------------------------------------------------
-   2. Obsidienne Or Luxe (Warm Obsidian Gold)
+   2. Néo-Brutalisme Industriel (Monospace Technique, Grille & Angles Vifs)
    -------------------------------------------------------------------------- */
-.gold {
-  --bg-industrial-950: #080603;
-  --bg-industrial-900: #100c06;
-  --bg-industrial-800: #1a140b;
-  --bg-industrial-700: #2c2112;
-  --text-industrial-400: #fffdf5;
-  --text-industrial-500: #f59e0b;
-  --bg-nardo: #080603;
-  --bg-workspace: #100c06;
-  --card-border: rgba(217, 119, 6, 0.15);
-  --text-primary: #ffffff;
-  --text-secondary: #fde68a;
-  --input-bg: rgba(217, 119, 6, 0.04);
-  --input-border: rgba(217, 119, 6, 0.2);
-  --soft-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+html.theme-brutalist,
+html.theme-brutalist body,
+html.theme-brutalist button,
+html.theme-brutalist input,
+html.theme-brutalist select,
+html.theme-brutalist table,
+html.theme-brutalist textarea {
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, Monaco, monospace !important;
+}
+
+html.theme-brutalist {
   --brand-primary: #f59e0b;
   --brand-hover: #d97706;
-  --brand-shadow: rgba(245, 158, 11, 0.15);
+}
+
+/* Grille de tableau industrielle franche */
+html.theme-brutalist table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border: 1.5px solid #52525b !important;
+}
+
+html.theme-brutalist table th {
+  background-color: #18181b !important;
+  color: #f59e0b !important;
+  border: 1px solid #52525b !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border-radius: 0 !important;
+}
+
+html.theme-brutalist table td {
+  border: 1px solid #3f3f46 !important;
+  border-radius: 0 !important;
+}
+
+html.theme-brutalist table tbody tr:hover {
+  background-color: #27272a !important;
+}
+
+/* Angles vifs et carrés pour l'ambiance brutale */
+html.theme-brutalist [class*="rounded-xl"],
+html.theme-brutalist [class*="rounded-2xl"],
+html.theme-brutalist [class*="rounded-lg"],
+html.theme-brutalist .rounded-xl,
+html.theme-brutalist .rounded-2xl {
+  border-radius: 2px !important;
 }
 
 /* --------------------------------------------------------------------------
-   3. Nardo Motorsport (Grey Racing & Track Atmosphere)
+   3. Albâtre Minimaliste (Clarté Pure, Blanc Perle & Tableaux Aérés)
    -------------------------------------------------------------------------- */
-.nardo-grey-racing {
-  --bg-industrial-950: #111216;
-  --bg-industrial-900: #18191f;
-  --bg-industrial-800: #22242c;
-  --bg-industrial-700: #2e303b;
-  --text-industrial-400: #f8fafc;
-  --text-industrial-500: #94a3b8;
-  --bg-nardo: #111216;
-  --bg-workspace: #18191f;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --text-primary: #ffffff;
-  --text-secondary: #94a3b8;
-  --input-bg: #22242c;
-  --input-border: #3b3e4c;
-  --brand-primary: #f97316;
-  --brand-hover: #ea580c;
-  --brand-shadow: rgba(249, 115, 22, 0.15);
+html.theme-albatros {
+  --font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-family-base);
+  --brand-primary: #4f46e5;
+  --brand-hover: #4338ca;
+}
+
+html.theme-albatros table th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 2px solid #cbd5e1 !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+html.theme-albatros table td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+html.theme-albatros table tbody tr:hover {
+  background-color: #f1f5f9 !important;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Arrondis généreux et confort chic pour Albâtre */
+html.theme-albatros [class*="rounded-xl"],
+html.theme-albatros .rounded-xl {
+  border-radius: 16px !important;
 }
 
 /* --------------------------------------------------------------------------

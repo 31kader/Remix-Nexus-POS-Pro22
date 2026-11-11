@@ -100,6 +100,28 @@ export const CashReceivedTerminal: React.FC<CashReceivedTerminalProps> = ({
         </div>
       </div>
 
+      {/* Raccourcis Coupures Rapides DA (Billets Algérie) */}
+      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+        {[500, 1000, 2000].map(val => (
+          <button
+            key={val}
+            type="button"
+            onClick={() => {
+              const current = parseFloat(receivedAmount || '0') || 0;
+              if (current === 0 || Math.abs(current - total) < 0.01) {
+                setReceivedAmount(val.toString());
+              } else {
+                setReceivedAmount((current + val).toString());
+              }
+            }}
+            className="py-1 px-1 bg-slate-50 hover:bg-emerald-50 dark:bg-zinc-900 dark:hover:bg-emerald-950/50 text-slate-700 dark:text-zinc-300 hover:text-emerald-700 dark:hover:text-emerald-300 text-[10px] font-black font-mono rounded-lg border border-slate-200 dark:border-zinc-800 hover:border-emerald-300 dark:hover:border-emerald-700/60 transition-all active:scale-95 text-center cursor-pointer shadow-2xs"
+            title={`Billet de ${val} DA`}
+          >
+            +{val} {currency}
+          </button>
+        ))}
+      </div>
+
       {/* Options & alertes de crédit/solde pour le client sélectionné */}
       {selectedCustomer && (() => {
         const typed = parseFloat(receivedAmount || '');

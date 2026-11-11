@@ -87,7 +87,7 @@ export const CheckoutHeader: React.FC<Props> = ({
         </div>
 
         {/* BARRE DE RECHERCHE PRINCIPALE (F3) */}
-        <div className="relative flex-1 min-w-[180px] group">
+        <div data-search-container="true" className="relative flex-1 min-w-[180px] group">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors pointer-events-none"
             size={16}
@@ -95,6 +95,7 @@ export const CheckoutHeader: React.FC<Props> = ({
           <input
             ref={searchRef}
             id="product-search-input"
+            data-search-input="true"
             type="text"
             placeholder="Rechercher par nom, SKU... (F3)"
             className="w-full h-11 pl-10 pr-16 bg-slate-50 hover:bg-slate-100/70 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700/80 rounded-xl outline-none focus:bg-white dark:focus:bg-zinc-900 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 text-xs sm:text-sm font-medium text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 transition-all shadow-xs"
@@ -102,6 +103,12 @@ export const CheckoutHeader: React.FC<Props> = ({
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
               const val = e.currentTarget.value;
+
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setSearch('');
+                return;
+              }
 
               if (e.key === 'ArrowDown') {
                 e.preventDefault();

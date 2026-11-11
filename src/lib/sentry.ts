@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * NEXUS POS PRO — MODULE D'INTÉGRATION SENTRY (v1.2.70)
+ * NEXUS POS PRO — MODULE D'INTÉGRATION SENTRY
  * Monitoring d'erreurs, télémétrie et résilience en environnement de caisse.
  * ==============================================================================
  */
@@ -35,7 +35,7 @@ export function initSentry(): void {
   try {
     Sentry.init({
       dsn,
-      release: `nexus-pos-pro@${APP_CONFIG.version || '1.2.70'}`,
+      release: `nexus-pos-pro@${APP_CONFIG.version || '1.2.81'}`,
       environment: import.meta.env.MODE || 'production',
 
       // Échantillonnage modéré des transactions pour respecter le quota gratuit (5k/mois)
@@ -72,7 +72,7 @@ export function initSentry(): void {
     });
 
     isSentryInitialized = true;
-    console.info('[Sentry] Monitoring Sentry initialisé avec succès (release: v' + (APP_CONFIG.version || '1.2.70') + ').');
+    console.info('[Sentry] Monitoring Sentry initialisé avec succès (release: v' + (APP_CONFIG.version || '1.2.81') + ').');
   } catch (err) {
     console.warn('[Sentry] Erreur lors de l\'initialisation de Sentry:', err);
   }

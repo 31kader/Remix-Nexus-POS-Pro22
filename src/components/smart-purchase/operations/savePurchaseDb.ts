@@ -195,26 +195,49 @@ export async function savePurchaseDb({
 
     // 3. Apprentissage OCR / Fournisseur (Local d'abord, réplication cloud non-bloquante)
     try {
-      const patternId = existingPattern?.id || (
-        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : 'pat_' + Math.random().toString(36).substring(2, 11)
-      );
+      const generateUuid = () => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      };
+
+      const patternId = existingPattern?.id || generateUuid();
       await localDb.insert(`invoicePatterns/${patternId}`, { ...patternData, id: patternId });
 
       if (isSupabaseConfigured && (typeof navigator === 'undefined' || navigator.onLine)) {
-        if (existingPattern) {
+        if (existingPattern?.id) {
           safeOptionalMutation(
             'invoice_patterns.update',
             () => supabase.from('invoice_patterns').update(snakePattern).eq('id', existingPattern.id),
             { module: 'purchaseDbOperations', action: 'updatePattern' }
           ).catch(() => {});
         } else {
-          safeOptionalMutation(
-            'invoice_patterns.upsert',
-            () => supabase.from('invoice_patterns').upsert({ ...snakePattern, id: patternId }, { onConflict: 'id' }),
-            { module: 'purchaseDbOperations', action: 'insertPattern' }
-          ).catch(() => {});
+          // Évite tout 409 Conflict : vérifie d'abord si le pattern existe déjà sur Supabase
+          const targetQuery = selectedSupplierId
+            ? supabase.from('invoice_patterns').select('id').eq('system_supplier_id', selectedSupplierId).maybeSingle()
+            : (supplierName && supplierName !== 'Inconnu')
+              ? supabase.from('invoice_patterns').select('id').eq('supplier_name', supplierName).maybeSingle()
+              : Promise.resolve({ data: null, error: null });
+
+          targetQuery.then(({ data: remotePattern }: any) => {
+            if (remotePattern?.id) {
+              return safeOptionalMutation(
+                'invoice_patterns.update',
+                () => supabase.from('invoice_patterns').update(snakePattern).eq('id', remotePattern.id),
+                { module: 'purchaseDbOperations', action: 'updatePattern' }
+              );
+            }
+            return safeOptionalMutation(
+              'invoice_patterns.insert',
+              () => supabase.from('invoice_patterns').insert({ ...snakePattern, id: patternId }),
+              { module: 'purchaseDbOperations', action: 'insertPattern' }
+            );
+          }).catch(() => {});
         }
       }
     } catch (patErr) {

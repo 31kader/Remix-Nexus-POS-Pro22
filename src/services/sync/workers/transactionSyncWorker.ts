@@ -12,45 +12,7 @@ import {
 } from '../syncSanitizer';
 import { SyncContextRefs } from './productSyncWorker';
 
-/**
- * 🗑️ Traitement des suppressions de la file
- */
-export async function processDeletions(
-  deleteList: SyncPayload[],
-  completedKeys: Set<string>,
-  processedSnapshots: Map<string, any>,
-  updateProgress: (label: string) => void,
-  refs: SyncContextRefs
-): Promise<void> {
-  for (const item of deleteList) {
-    try {
-      const targetTable = TABLE_NAME_MAPPINGS[item.table] || item.table;
-      const targetId = (targetTable === 'online_orders' && !isNaN(Number(item.recordId)) && Number(item.recordId) > 0)
-        ? Number(item.recordId)
-        : item.recordId;
-      const res = await supabase.from(targetTable).delete().eq('id', targetId);
-      if (!res.error || isTableMissingError(res.error)) {
-        const k = `${item.table}:${item.recordId}`;
-        completedKeys.add(k);
-        processedSnapshots.set(k, { opId: item.opId });
-        updateProgress(targetTable);
-      } else if (isNetworkOrTimeoutError(res.error)) {
-        refs.hadNetworkError = true;
-      }
-    } catch (delErr) {
-      if (isTableMissingError(delErr)) {
-        const k = `${item.table}:${item.recordId}`;
-        completedKeys.add(k);
-        processedSnapshots.set(k, { opId: item.opId });
-        updateProgress(item.table);
-      } else if (isNetworkOrTimeoutError(delErr)) {
-        refs.hadNetworkError = true;
-      } else {
-        console.warn(`[SyncService] Delete skipped on ${item.table}/${item.recordId}`);
-      }
-    }
-  }
-}
+export { processDeletions } from './deletionSyncWorker';
 
 /**
  * 🧾 Traitement des Ventes (Transactions), Commandes en ligne, Achats et autres entités
@@ -118,6 +80,31 @@ export async function processTransactionsAndOtherRecords(
         completedKeys.add(parentKey);
         if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
         if (extId) completedKeys.add(`${item.table}:${extId}`);
+        processedSnapshots.set(parentKey, { opId: item.opId });
+        updateProgress(targetTable);
+        continue;
+      }
+    }
+
+    // 🛡️ Élimination des collisions 409 : UPDATE direct pour les clients existants, ou INSERT si nouveau client
+    if (targetTable === 'customers' && (item.payload?.id || item.recordId)) {
+      const custId = item.payload?.id || item.recordId;
+      const cleanPayload = sanitizePayloadForSupabase('customers', item.payload, item.recordId);
+      delete cleanPayload.id;
+      delete cleanPayload.created_at;
+      if (!cleanPayload.auth_uid) delete cleanPayload.auth_uid;
+
+      // Si le client a des deltas solde/points, ils sont traités par customerBalanceSyncWorker
+      // On applique directement une mise à jour (UPDATE/PATCH) pour éliminer les collisions 409
+      const updateRes = await supabase
+        .from('customers')
+        .update(cleanPayload)
+        .eq('id', custId);
+
+      if (!updateRes.error) {
+        const parentKey = `${item.table}:${custId}`;
+        completedKeys.add(parentKey);
+        if (item.recordId) completedKeys.add(`${item.table}:${item.recordId}`);
         processedSnapshots.set(parentKey, { opId: item.opId });
         updateProgress(targetTable);
         continue;
@@ -202,6 +189,7 @@ export async function processTransactionsAndOtherRecords(
 
   for (const [table, records] of itemsByTable.entries()) {
     if (ADMIN_RESTRICTED_SYNC_TABLES.has(table) && !hasActiveSupabaseSession) {
+      refs.hadAuthOrPermissionError = true;
       continue;
     }
     for (let i = 0; i < records.length; i += 50) {
@@ -255,6 +243,11 @@ export async function processTransactionsAndOtherRecords(
                 if (table === 'products') {
                   delete updatePayload.stock;
                 }
+                if (table === 'customers') {
+                  if (!updatePayload.auth_uid) {
+                    delete updatePayload.auth_uid;
+                  }
+                }
                 
                 let updErr: any = null;
                 if (targetRecordId) {
@@ -264,6 +257,11 @@ export async function processTransactionsAndOtherRecords(
                     : targetRecordId;
                   const res = await supabase.from(table).update(updatePayload).eq('id', effectiveId);
                   updErr = res.error;
+                  if (updErr && table === 'customers' && updatePayload.auth_uid) {
+                    delete updatePayload.auth_uid;
+                    const retryRes = await supabase.from('customers').update(updatePayload).eq('id', effectiveId);
+                    updErr = retryRes.error;
+                  }
                 }
                 if (updErr && table === 'online_orders' && extId) {
                   const res = await supabase.from(table).update(updatePayload).eq('external_order_id', String(extId));
@@ -273,7 +271,7 @@ export async function processTransactionsAndOtherRecords(
                 if (!updErr || isTableMissingError(updErr) || isDuplicateKeyError(updErr)) {
                   markOtherRecordCompleted(table, single);
                 } else if (isAuthOrPermissionError(updErr)) {
-                  if (table === 'online_orders') {
+                  if (table === 'online_orders' || table === 'audit_logs') {
                     markOtherRecordCompleted(table, single);
                   } else {
                     refs.hadAuthOrPermissionError = true;

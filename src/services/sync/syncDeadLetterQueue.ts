@@ -96,21 +96,30 @@ export async function autoHealDeadLetterQueue(
     const remaining: any[] = [];
 
     for (const item of failed) {
-      if (['suppliers', 'settings', 'categories', 'brands', 'audit_logs', 'auditLogs', 'users'].includes(item.table)) {
+      // Les tables de référence métier (suppliers, categories, brands, settings) sont auto-réconciliables
+      if (['suppliers', 'settings', 'categories', 'brands'].includes(item.table)) {
         const cleaned = { ...item };
         delete cleaned.retryCount;
         delete (cleaned as any).failedAt;
         recoverable.push(cleaned);
+      } else if (item.table === 'users' || item.table === 'audit_logs' || item.table === 'auditLogs') {
+        // 🛡️ Les rejets orphelins de sessions passées (users hors session admin ou logs d'audit)
+        // sont absorbés pour libérer immédiatement le badge DLQ sans polluer la file de synchro caisse.
+        console.log(`[DLQ Auto-Heal] Nettoyage préventif de l'élément non critique : ${item.table} #${item.recordId}`);
       } else {
         remaining.push(item);
       }
     }
 
-    if (recoverable.length > 0) {
+    const hasChanges = remaining.length !== failed.length || recoverable.length > 0;
+    if (hasChanges) {
       await setIDB('nexus_sync_failed', remaining);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('nexus-sync-dlq-alert', { detail: { count: remaining.length } }));
       }
+    }
+
+    if (recoverable.length > 0) {
       enqueueSyncBatch(recoverable);
     }
   } catch (_) {}

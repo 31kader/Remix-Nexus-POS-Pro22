@@ -27,11 +27,39 @@ export const SearchOverlay = memo(function SearchOverlay({
   selectedIndex = 0
 }: SearchOverlayProps) {
   const currency = settings?.currency || 'DA';
+  const overlayRef = React.useRef<HTMLDivElement>(null);
+
+  // Fermeture au clic extérieur ou appui sur Échap
+  React.useEffect(() => {
+    if (!search || search.trim().length === 0) return;
+
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (overlayRef.current?.contains(target)) return;
+      if (searchRef.current?.contains(target)) return;
+      setSearch('');
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSearch('');
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [search, setSearch, searchRef]);
 
   return (
     <AnimatePresence>
       {search && search.trim().length >= 1 && (
         <motion.div 
+          ref={overlayRef}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6 }}

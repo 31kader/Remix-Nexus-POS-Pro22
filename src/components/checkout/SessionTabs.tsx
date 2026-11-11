@@ -186,6 +186,8 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
               const nextState = !showQuickSelect;
               setShowQuickSelect(nextState);
               if (nextState) {
+                // Exclusivité mutuelle : fermer le panneau client/paiement quand les favoris s'ouvrent
+                if (setShowControlsPanel) setShowControlsPanel(false);
                 window.dispatchEvent(new CustomEvent('nexus-collapse-sidebar'));
               }
             }}
@@ -210,6 +212,10 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
             onClick={() => {
               const nextState = !showControlsPanel;
               setShowControlsPanel(nextState);
+              if (nextState) {
+                // Exclusivité mutuelle : fermer le panneau favoris quand le client/paiement s'ouvre
+                if (setShowQuickSelect) setShowQuickSelect(false);
+              }
             }}
             className={cn(
               "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shadow-sm",

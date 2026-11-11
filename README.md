@@ -1,4 +1,4 @@
-# 🛒 Nexus POS Pro (v1.2.78)
+# 🛒 Nexus POS Pro (v1.2.81)
 
 Système de Point de Vente (POS) moderne, ultra-performant et **offline-first**, conçu pour les commerces de détail et supermarchés. Adapté aux normes comptables et commerciales algériennes (Devise **DA**, TVA paramétrable `0%` par défaut).
 
@@ -37,7 +37,7 @@ Système de Point de Vente (POS) moderne, ultra-performant et **offline-first**,
 * **Base de Données & Backend** : Supabase Pro (PostgreSQL 15+, Row-Level Security, RPCs), Express 4 + Socket.io (serveur local pour afficheur client / imprimante).
 * **Stockage Local** : IndexedDB (`idb-keyval`), Web Storage API (`sessionStorage`).
 * **Packaging & Desktop** : Electron 42, electron-builder, Capacitor 8 (Android).
-* **Tests & Qualité** : Vitest 4 (302 tests sur 41 suites), Testing Library, TypeScript strict `tsc --noEmit`.
+* **Tests & Qualité** : Vitest 4 (75+ suites de tests unitaires, d'intégration, pentest et chaos), TypeScript strict `tsc --noEmit` (0 erreur), Garde-fou Anti-God Files (< 500 lignes), Benchmarks de performance haute vélocité.
 
 ---
 

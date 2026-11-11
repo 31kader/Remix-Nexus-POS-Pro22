@@ -68,8 +68,8 @@ class DiagnosticLogService {
         const isBenign = 
           rawMessage.includes('[HMR]') || 
           rawMessage.includes('Download the React DevTools') ||
-          rawMessage.includes('does not conform to the required format') ||
-          rawMessage.includes('The specified value');
+          rawMessage.toLowerCase().includes('does not conform to the required format') ||
+          rawMessage.toLowerCase().includes('the specified value');
 
         if (!isBenign) {
           this.captureLog('error', 'console', rawMessage, args);
@@ -88,8 +88,8 @@ class DiagnosticLogService {
         const isBenign = 
           rawMessage.includes('[HMR]') || 
           rawMessage.includes('Download the React DevTools') ||
-          rawMessage.includes('does not conform to the required format') ||
-          rawMessage.includes('The specified value');
+          rawMessage.toLowerCase().includes('does not conform to the required format') ||
+          rawMessage.toLowerCase().includes('the specified value');
 
         if (!isBenign) {
           this.captureLog('warn', 'console', rawMessage, args);
@@ -140,10 +140,10 @@ class DiagnosticLogService {
       const matchTable = raw.match(/rest\/v1\/([a-z0-9_]+)/i);
       const tableName = matchTable ? matchTable[1] : 'enregistrements';
       return {
-        title: `Conflit de données (${tableName})`,
+        title: `Auto-Résolution : Conflit géré (${tableName})`,
         code: 409,
-        significance: `Un enregistrement avec cet identifiant ou ce nom existe déjà sur le serveur Supabase.`,
-        actionTaken: `L'application a détecté le doublon et bascule automatiquement en mise à jour (UPDATE) pour préserver vos données sans écrasement.`
+        significance: `Un enregistrement existe déjà sur le serveur cloud Supabase. Aucune perte de données.`,
+        actionTaken: `L'application bascule automatiquement en mise à jour (UPDATE) pour préserver vos données sans interruption.`
       };
     }
 
@@ -226,6 +226,12 @@ class DiagnosticLogService {
   ) {
     if (!rawMessage || typeof rawMessage !== 'string') return;
 
+    // Ignorer les avertissements bénins de format date natif Chromium
+    const lower = rawMessage.toLowerCase();
+    if (lower.includes('does not conform to the required format') || lower.includes('the specified value')) {
+      return;
+    }
+
     // Déduplication immédiate (si même message dans les 3 dernières secondes)
     const now = new Date();
     const timeFormatted = now.toLocaleTimeString('fr-FR');
@@ -239,12 +245,13 @@ class DiagnosticLogService {
     const url = urlMatch ? urlMatch[0] : undefined;
 
     const analysis = this.analyze(level, source, rawMessage, extra);
+    const effectiveLevel = analysis.code === 409 ? 'info' : level;
 
     const entry: DiagnosticEntry = {
       id: `diag_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: now.toISOString(),
       timeFormatted,
-      level,
+      level: effectiveLevel,
       source,
       rawMessage,
       title: analysis.title,

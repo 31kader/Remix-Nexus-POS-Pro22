@@ -33,6 +33,8 @@ const filesToUpdate = [
   'src/components/login/LoginAlternatives.tsx',
   'src/components/ErrorBoundary.tsx',
   'src/components/IOSInstallModal.tsx',
+  'src/services/backup/backupDataCollector.ts',
+  'src/lib/sentry.ts',
   'server.ts',
   'build/license.txt',
   'GEMINI.md',
@@ -53,11 +55,15 @@ for (const relPath of filesToUpdate) {
   }
 }
 
-// Mettre à jour aussi android/app/build.gradle (versionCode + versionName) pour Google Play Store
+// Mettre à jour aussi android/app/build.gradle (versionCode calculé + versionName)
+// Le schéma standard Android (major*10000 + minor*100 + patch) évite tout problème de downgrade
+const vParts = newVersion.split('.').map(n => parseInt(n, 10));
+const canonicalVersionCode = (vParts[0] || 1) * 10000 + (vParts[1] || 2) * 100 + (vParts[2] || 80);
+
 const gradlePath = path.join(rootDir, 'android/app/build.gradle');
 if (fs.existsSync(gradlePath)) {
   let gradleContent = fs.readFileSync(gradlePath, 'utf8');
-  gradleContent = gradleContent.replace(/versionCode\s+(\d+)/, (_, code) => `versionCode ${parseInt(code, 10) + 1}`);
+  gradleContent = gradleContent.replace(/versionCode\s+(\d+)/, `versionCode ${canonicalVersionCode}`);
   gradleContent = gradleContent.replace(/versionName\s+"[^"]+"/, `versionName "${newVersion}"`);
   fs.writeFileSync(gradlePath, gradleContent, 'utf8');
 }

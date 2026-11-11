@@ -44,6 +44,25 @@ export function PurchaseSummaryFooter({
   editingPurchaseId,
   purchaseStatus
 }: PurchaseSummaryFooterProps) {
+  // Saisie textuelle contrôlée pour tolérer le point "." ou la virgule "," sans effacer le montant
+  const [paidInput, setPaidInput] = React.useState<string>(() => (paidAmount > 0 ? String(paidAmount) : ''));
+
+  React.useEffect(() => {
+    const num = parseFloat(paidInput.replace(',', '.'));
+    if (num !== paidAmount && !paidInput.endsWith('.') && !paidInput.endsWith(',')) {
+      setPaidInput(paidAmount > 0 ? String(paidAmount) : '');
+    }
+  }, [paidAmount]);
+
+  const handlePaidChange = (rawVal: string) => {
+    const normalized = rawVal.replace(',', '.');
+    if (/^[0-9]*\.?[0-9]*$/.test(normalized)) {
+      setPaidInput(rawVal);
+      const parsed = parseFloat(normalized);
+      setPaidAmount(isNaN(parsed) ? 0 : parsed);
+    }
+  };
+
   return (
     <div className="p-5 bg-industrial-950 border-t border-industrial-800 grid grid-cols-1 md:grid-cols-2 gap-12">
       <div className="space-y-6">
@@ -52,7 +71,14 @@ export function PurchaseSummaryFooter({
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-[10px] font-black text-industrial-500 block mb-2 uppercase tracking-widest px-1">Montant Payé</label>
-              <input type="number" value={paidAmount} onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)} className="w-full p-3 bg-industrial-950 border border-industrial-700 rounded-xl text-emerald-400 font-black text-lg outline-none focus:ring-2 focus:ring-emerald-500/30 font-mono" />
+              <input 
+                type="text" 
+                inputMode="decimal"
+                value={paidInput} 
+                onChange={(e) => handlePaidChange(e.target.value)} 
+                placeholder="0.00"
+                className="w-full p-3 bg-industrial-950 border border-industrial-700 rounded-xl text-emerald-400 font-black text-lg outline-none focus:ring-2 focus:ring-emerald-500/30 font-mono" 
+              />
             </div>
             <div>
               <label className="text-[10px] font-black text-industrial-500 block mb-2 uppercase tracking-widest px-1">Mode de Règlement</label>

@@ -196,12 +196,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Bascule Rapide Sombre/Clair */}
         <button
           type="button"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          onClick={() => setTheme(theme === 'albatros' ? 'titanium' : 'albatros')}
           className="p-2 rounded-xl bg-slate-100 dark:bg-zinc-850 border border-slate-200 dark:border-zinc-700/80 text-amber-500 dark:text-indigo-400 hover:bg-slate-200 dark:hover:bg-zinc-750 transition-all shadow-2xs flex items-center justify-center cursor-pointer"
-          title={theme === 'light' ? 'Passer en Mode Sombre' : 'Passer en Mode Clair'}
+          title={theme === 'albatros' ? 'Passer en Mode Sombre Titanium' : 'Passer en Mode Clair Albâtre'}
           aria-label="Basculer thème sombre/clair"
         >
-          {theme === 'light' ? <Moon size={15} className="text-indigo-600" /> : <Sun size={15} className="text-amber-400" />}
+          {theme === 'albatros' ? <Moon size={15} className="text-indigo-600" /> : <Sun size={15} className="text-amber-400" />}
         </button>
 
         {/* Sélecteur Multi-Thèmes */}
